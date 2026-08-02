@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include <string>
 #include <filesystem>
+#include <vector>
 
 // EditorLayer implementa o esqueleto do Kizuri Editor: dockspace ImGui,
 // painel de hierarquia de entidades e inspetor de componentes básico.
@@ -30,6 +31,13 @@ private:
     void DrawAddComponentButton();
     void DrawSceneFileModals();
     void DrawProjectModals();
+    void DrawHub();
+    void DrawLoadingScreen();
+    void LoadRecentProjects();
+    void SaveRecentProjects();
+    void RememberProject(const kizuri::Ref<kizuri::Project>& project);
+    void OnProjectOpened(const kizuri::Ref<kizuri::Project>& project);
+    void OpenRecentProject(const std::string& path);
     void DrawGameModuleModal();
     void DrawConsole();
     void DrawContentBrowser();
@@ -109,6 +117,18 @@ private:
     char m_NewProjectNameBuffer[128] = "MeuJogo";
     int m_NewProjectModeIndex = 2; // 0 = 2D, 1 = 3D, 2 = Vazio
     char m_OpenProjectPathBuffer[256] = "";
+
+    // Fluxo de entrada estilo hub (Unity): o editor abre numa tela de
+    // seleção de projeto (recentes + novo/abrir) e só entra no editor
+    // depois de um projeto aberto — com uma telinha de "Carregando
+    // projeto" no meio. m_RecentProjects persiste em KizuriRecents.json.
+    enum class EditorState { Hub = 0, Loading, Editor };
+    EditorState m_EditorState = EditorState::Hub;
+    struct RecentProject { std::string Name; std::string Path; std::string Mode; };
+    std::vector<RecentProject> m_RecentProjects;
+    float m_LoadingElapsed = 0.0f;
+    std::string m_LoadingProjectName;
+    static constexpr float kHubLoadingMinSeconds = 0.8f;
 
     bool m_RequestOpenGameModulePopup = false;
     char m_GameModulePathBuffer[256] = "";

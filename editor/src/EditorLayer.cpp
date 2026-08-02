@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <vector>
 #include <cstring>
+#include <nlohmann/json.hpp>
 
 using namespace kizuri;
 
@@ -66,6 +67,9 @@ void EditorLayer::OnAttach() {
 
     m_ActiveScene = CreateRef<Scene>("Nova Cena");
     CreateDefaultSceneContent();
+
+    // Projetos recentes pro hub (KizuriRecents.json no diretório de trabalho).
+    LoadRecentProjects();
 }
 
 void EditorLayer::SyncEditorCameraToRuntimeScene() {
@@ -162,6 +166,25 @@ void EditorLayer::OnDetach() {}
 
 void EditorLayer::OnUpdate(Timestep ts) {
     KZ_CORE_TRACE("EditorLayer::OnUpdate — início (viewport {0}x{1})", m_ViewportSize.x, m_ViewportSize.y);
+
+    // Telinha de carregamento: avança o relógio e entra no editor quando o
+    // tempo mínimo passa (o carregamento em si é quase instantâneo — o
+    // mínimo existe pra tela ser percebida, como em engines maiores).
+    if (m_EditorState == EditorState::Loading) {
+        m_LoadingElapsed += (float)ts;
+        if (m_LoadingElapsed >= kHubLoadingMinSeconds)
+            m_EditorState = EditorState::Editor;
+    }
+
+    // Hub/telinha de carregamento: nada de cena pra renderizar — a tela é
+    // 100% ImGui. Só garante o viewport da janela pra UI desenhar certinho.
+    if (m_EditorState != EditorState::Editor) {
+        Application& app = Application::Get();
+        auto& window = app.GetWindow();
+        RenderCommand::SetViewport(0, 0, window.GetWidth(), window.GetHeight());
+        return;
+    }
+
     if (m_ViewportSize.x > 0.0f && m_ViewportSize.y > 0.0f) {
         m_Framebuffer->Resize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
         m_ActiveScene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
@@ -801,6 +824,9 @@ void EditorLayer::DrawDockspace() {
         if (ImGui::MenuItem("Abrir Projeto...")) {
             m_RequestOpenLoadProjectPopup = true;
         }
+        if (ImGui::MenuItem("Voltar ao Início", nullptr, false, m_SceneState == SceneState::Edit)) {
+            m_EditorState = EditorState::Hub;
+        }
         ImGui::Separator();
         if (ImGui::MenuItem("Carregar GameModule...")) {
             m_RequestOpenGameModulePopup = true;
@@ -1022,14 +1048,9 @@ void EditorLayer::DrawProjectModals() {
                 strncpy(m_ScenePathBuffer, suggested.c_str(), sizeof(m_ScenePathBuffer));
                 m_ScenePathBuffer[sizeof(m_ScenePathBuffer) - 1] = '\0';
 
-                m_ContentBrowserRoot = project->GetAssetDirectory();
-                m_ContentBrowserCurrentDir = m_ContentBrowserRoot;
-
-                // "Vazio" não mexe no que já estava selecionado — é
-                // literalmente pra não empurrar uma opinião de câmera
-                // padrão. 2D/3D aplicam o botão correspondente na toolbar.
-                if (mode == ProjectMode::TwoD) m_ViewportMode = ViewportMode::Mode2D;
-                else if (mode == ProjectMode::ThreeD) m_ViewportMode = ViewportMode::Mode3D;
+                // Content browser, modo do viewport, recentes e telinha de
+                // carregamento — tudo em um lugar só.
+                OnProjectOpened(project);
             }
             ImGui::CloseCurrentPopup();
         } else if (cancel) {
@@ -1062,21 +1083,235 @@ void EditorLayer::DrawProjectModals() {
         if (open && m_OpenProjectPathBuffer[0] != '\0') {
             Ref<Project> project = Project::Load(m_OpenProjectPathBuffer);
             if (project) {
-                m_ContentBrowserRoot = project->GetAssetDirectory();
-                m_ContentBrowserCurrentDir = m_ContentBrowserRoot;
-
-                ProjectMode savedMode = project->GetConfig().DefaultMode;
-                if (savedMode == ProjectMode::TwoD) m_ViewportMode = ViewportMode::Mode2D;
-                else if (savedMode == ProjectMode::ThreeD) m_ViewportMode = ViewportMode::Mode3D;
+                // Content browser, modo do viewport, recentes e telinha de
+                // carregamento — tudo em um lugar só.
+                OnProjectOpened(project);
             }
             ImGui::CloseCurrentPopup();
         } else if (cancel) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
+    }}
+
+void EditorLayer::LoadRecentProjects() {
+    KZ_TRACE_SCOPE("EditorLayer::LoadRecentProjects");
+    m_RecentProjects.clear();
+    std::ifstream in(std::filesystem::current_path() / "KizuriRecents.json");
+    if (!in.is_open()) return;
+    try {
+        nlohmann::json root = nlohmann::json::parse(in);
+        for (auto& item : root["recentProjects"]) {
+            RecentProject rp;
+            rp.Name = item.value("name", "");
+            rp.Path = item.value("path", "");
+            rp.Mode = item.value("mode", "");
+            if (!rp.Path.empty()) m_RecentProjects.push_back(rp);
+        }
+    } catch (...) {
+        KZ_CORE_WARN("KizuriRecents.json corrompido ou inválido — ignorado.");
+        m_RecentProjects.clear();
     }
 }
 
+void EditorLayer::SaveRecentProjects() {
+    KZ_TRACE_SCOPE("EditorLayer::SaveRecentProjects");
+    nlohmann::json root;
+    for (auto& rp : m_RecentProjects) {
+        root["recentProjects"].push_back({ { "name", rp.Name }, { "path", rp.Path }, { "mode", rp.Mode } });
+    }
+    std::ofstream out(std::filesystem::current_path() / "KizuriRecents.json");
+    if (out.is_open()) out << root.dump(4);
+}
+
+void EditorLayer::RememberProject(const kizuri::Ref<kizuri::Project>& project) {
+    if (!project) return;
+    std::string path = project->GetFilePath();
+    m_RecentProjects.erase(std::remove_if(m_RecentProjects.begin(), m_RecentProjects.end(),
+        [&](const RecentProject& rp) { return rp.Path == path; }), m_RecentProjects.end());
+
+    RecentProject rp;
+    rp.Name = project->GetConfig().Name;
+    rp.Path = path;
+    switch (project->GetConfig().DefaultMode) {
+        case ProjectMode::TwoD:   rp.Mode = "2D"; break;
+        case ProjectMode::ThreeD: rp.Mode = "3D"; break;
+        default:                  rp.Mode = "Vazio"; break;
+    }
+    m_RecentProjects.insert(m_RecentProjects.begin(), rp);
+    if (m_RecentProjects.size() > 8) m_RecentProjects.resize(8);
+    SaveRecentProjects();
+}
+
+void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
+    if (!project) return;
+    m_ContentBrowserRoot = project->GetAssetDirectory();
+    m_ContentBrowserCurrentDir = m_ContentBrowserRoot;
+
+    ProjectMode mode = project->GetConfig().DefaultMode;
+    if (mode == ProjectMode::TwoD) m_ViewportMode = ViewportMode::Mode2D;
+    else if (mode == ProjectMode::ThreeD) m_ViewportMode = ViewportMode::Mode3D;
+
+    RememberProject(project);
+
+    // Entra com a telinha de carregamento (transição Hub -> Editor).
+    m_LoadingProjectName = project->GetConfig().Name;
+    m_LoadingElapsed = 0.0f;
+    m_EditorState = EditorState::Loading;
+}
+
+void EditorLayer::OpenRecentProject(const std::string& path) {
+    KZ_TRACE_SCOPE("EditorLayer::OpenRecentProject");
+    Ref<Project> project = Project::Load(path);
+    if (project) OnProjectOpened(project);
+}
+
+void EditorLayer::DrawHub() {
+    KZ_TRACE_SCOPE("EditorLayer::DrawHub");
+    ImGuiIO& io = ImGui::GetIO();
+    ImVec2 display = io.DisplaySize;
+
+    ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+    ImGui::SetNextWindowSize(display);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.055f, 0.055f, 0.065f, 1.0f));
+    ImGui::Begin("##KizuriHub", nullptr,
+        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoBringToFrontOnFocus |
+        ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoSavedSettings);
+    ImGui::PopStyleVar();
+    ImGui::PopStyleColor();
+
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    ImFont* titleFont = Application::Get().GetImGuiLayer()->GetFont(KizuriFont::Titlebar);
+    ImFont* boldFont = Application::Get().GetImGuiLayer()->GetFont(KizuriFont::Bold);
+    ImU32 accent = IM_COL32(217, 64, 77, 255);
+    ImU32 textBright = IM_COL32(229, 229, 234, 255);
+    ImU32 textDim = IM_COL32(130, 130, 140, 255);
+
+    // ---- Coluna esquerda: marca + ações ----
+    const float leftCol = 420.0f;
+    dl->AddLine(ImVec2(leftCol, 0.0f), ImVec2(leftCol, display.y), IM_COL32(45, 45, 52, 255), 1.0f);
+
+    float markSize = 76.0f;
+    kizuri::editor::icons::Torii(dl, ImVec2(52.0f, 56.0f), markSize, accent);
+    dl->AddText(titleFont, 46.0f, ImVec2(52.0f, 150.0f), textBright, "KIZURI");
+    dl->AddText(ImGui::GetFont(), 16.0f, ImVec2(54.0f, 204.0f), textDim, "Editor de jogos 2D e 3D");
+    dl->AddText(ImGui::GetFont(), 13.0f, ImVec2(54.0f, 228.0f), IM_COL32(95, 95, 105, 255), "v0.1.0");
+
+    ImGui::SetCursorPos(ImVec2(52.0f, 280.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(14.0f, 9.0f));
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.82f, 0.24f, 0.27f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.93f, 0.30f, 0.33f, 1.0f));
+    if (ImGui::Button("Novo Projeto", ImVec2(316.0f, 0.0f))) {
+        strncpy(m_NewProjectDirBuffer, "MeuJogo", sizeof(m_NewProjectDirBuffer));
+        strncpy(m_NewProjectNameBuffer, "MeuJogo", sizeof(m_NewProjectNameBuffer));
+        m_RequestOpenNewProjectPopup = true;
+    }
+    ImGui::PopStyleColor(2);
+
+    ImGui::SetCursorPos(ImVec2(52.0f, 336.0f));
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.14f, 0.14f, 0.17f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.20f, 0.20f, 0.24f, 1.0f));
+    if (ImGui::Button("Abrir Projeto", ImVec2(316.0f, 0.0f))) {
+        m_RequestOpenLoadProjectPopup = true;
+    }
+    ImGui::PopStyleColor(2);
+
+    ImGui::SetCursorPos(ImVec2(52.0f, 392.0f));
+    if (ImGui::Button("Continuar sem projeto", ImVec2(316.0f, 0.0f))) {
+        m_EditorState = EditorState::Editor;
+    }
+    ImGui::PopStyleVar();
+
+    dl->AddText(ImGui::GetFont(), 12.0f, ImVec2(54.0f, display.y - 40.0f), IM_COL32(85, 85, 95, 255), "© 2026 Kizuri Engine");
+
+    // ---- Coluna direita: projetos recentes ----
+    float listX = leftCol + 44.0f;
+    float listW = display.x - listX - 44.0f;
+    ImGui::SetCursorPos(ImVec2(listX, 48.0f));
+    kizuri::editor::icons::PanelHeader("PROJETOS RECENTES", kizuri::editor::icons::Folder);
+
+    if (m_RecentProjects.empty()) {
+        ImGui::SetCursorPos(ImVec2(listX, 110.0f));
+        ImGui::TextDisabled("Nenhum projeto recente ainda. Crie ou abra um projeto para começar.");
+    }
+
+    float itemY = 112.0f;
+    for (const auto& rp : m_RecentProjects) {
+        ImGui::SetCursorPos(ImVec2(listX, itemY));
+        ImGui::PushID(rp.Path.c_str());
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.09f, 0.09f, 0.11f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.15f, 0.15f, 0.18f, 1.0f));
+        bool clicked = ImGui::Button("##recent", ImVec2(listW, 58.0f));
+        ImGui::PopStyleColor(2);
+
+        ImVec2 min = ImGui::GetItemRectMin();
+        dl->AddText(boldFont, boldFont->FontSize, ImVec2(min.x + 16.0f, min.y + 8.0f), textBright, rp.Name.c_str());
+        dl->AddText(ImGui::GetFont(), 12.0f, ImVec2(min.x + 16.0f, min.y + 34.0f), textDim, rp.Path.c_str());
+        dl->AddText(ImGui::GetFont(), 13.0f, ImVec2(min.x + listW - 48.0f, min.y + 20.0f), accent, rp.Mode.c_str());
+
+        if (clicked) OpenRecentProject(rp.Path);
+        ImGui::PopID();
+        itemY += 66.0f;
+        if (itemY > display.y - 60.0f) break;
+    }
+
+    // Botão fechar (o hub não tem titlebar nativa)
+    ImGui::SetCursorPos(ImVec2(display.x - 52.0f, 16.0f));
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.82f, 0.24f, 0.27f, 0.9f));
+    if (ImGui::Button("X", ImVec2(36.0f, 30.0f))) Application::Get().Close();
+    ImGui::PopStyleColor(2);
+
+    ImGui::End();
+}
+
+void EditorLayer::DrawLoadingScreen() {
+    KZ_TRACE_SCOPE("EditorLayer::DrawLoadingScreen");
+    ImGuiIO& io = ImGui::GetIO();
+    ImVec2 display = io.DisplaySize;
+
+    ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+    ImGui::SetNextWindowSize(display);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.055f, 0.055f, 0.065f, 1.0f));
+    ImGui::Begin("##KizuriLoading", nullptr,
+        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoBringToFrontOnFocus |
+        ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoSavedSettings);
+    ImGui::PopStyleVar();
+    ImGui::PopStyleColor();
+
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    ImFont* titleFont = Application::Get().GetImGuiLayer()->GetFont(KizuriFont::Titlebar);
+    ImFont* boldFont = Application::Get().GetImGuiLayer()->GetFont(KizuriFont::Bold);
+    ImU32 accent = IM_COL32(217, 64, 77, 255);
+    ImVec2 center(display.x * 0.5f, display.y * 0.5f);
+
+    float markSize = 84.0f;
+    kizuri::editor::icons::Torii(dl, ImVec2(center.x - markSize * 0.5f, center.y - 190.0f), markSize, accent);
+
+    const char* title = "Carregando projeto";
+    ImVec2 ts = titleFont->CalcTextSizeA(34.0f, FLT_MAX, 0.0f, title);
+    dl->AddText(titleFont, 34.0f, ImVec2(center.x - ts.x * 0.5f, center.y - 70.0f), IM_COL32(229, 229, 234, 255), title);
+    ImVec2 ns = boldFont->CalcTextSizeA(boldFont->FontSize, FLT_MAX, 0.0f, m_LoadingProjectName.c_str());
+    dl->AddText(boldFont, boldFont->FontSize, ImVec2(center.x - ns.x * 0.5f, center.y - 22.0f), IM_COL32(150, 150, 160, 255), m_LoadingProjectName.c_str());
+
+    float t = m_LoadingElapsed / kHubLoadingMinSeconds;
+    if (t > 1.0f) t = 1.0f;
+    float barW = 320.0f, barH = 6.0f;
+    ImVec2 barMin(center.x - barW * 0.5f, center.y + 24.0f);
+    dl->AddRectFilled(barMin, ImVec2(barMin.x + barW, barMin.y + barH), IM_COL32(45, 45, 52, 255), 3.0f);
+    dl->AddRectFilled(barMin, ImVec2(barMin.x + barW * t, barMin.y + barH), accent, 3.0f);
+
+    // Spinner girando (arco) ao lado da barra
+    float angle = m_LoadingElapsed * 3.0f;
+    dl->PathArcTo(ImVec2(center.x + barW * 0.5f + 30.0f, barMin.y + barH * 0.5f), 10.0f, angle, angle + 4.4f, 20);
+    dl->PathStroke(accent, false, 3.0f);
+
+    ImGui::End();
+}
 
 void EditorLayer::DrawGameModuleModal() {
     KZ_TRACE_SCOPE("EditorLayer::DrawGameModuleModal");
@@ -1926,6 +2161,16 @@ void EditorLayer::OnImGuiRender() {
     // (dockspace, viewport, etc), então fica logo no topo da função.
     ImGuizmo::SetImGuiContext(ImGui::GetCurrentContext());
     ImGuizmo::BeginFrame();
+
+    // Hub / telinha de carregamento: o editor completo não é desenhado —
+    // a seleção de projeto (ou o loading) cobre tudo, e os popups de
+    // projeto continuam funcionando por cima.
+    if (m_EditorState != EditorState::Editor) {
+        if (m_EditorState == EditorState::Hub) DrawHub();
+        else DrawLoadingScreen();
+        DrawProjectModals();
+        return;
+    }
 
     // Atalhos de undo/redo. Só valem no modo de edição: durante o Play o
     // undo/redo mexeria na CÓPIA em runtime (e a pilha de comandos foi

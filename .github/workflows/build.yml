@@ -1,0 +1,62 @@
+name: Build Kizuri Engine
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            preset: windows
+          - os: ubuntu-latest
+            preset: linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Instalar dependências de sistema (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            xorg-dev libgl1-mesa-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxi-dev libx11-dev libasound2-dev ninja-build
+
+      - name: Instalar Ninja (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Cache do FetchContent (_deps)
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: ${{ runner.os }}-kizuri-deps-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-kizuri-deps-
+
+      - name: Configurar (CMake)
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Compilar
+        run: cmake --build build --config Release --parallel
+
+      - name: Empacotar artefatos
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp -r build/bin/* dist/ || true
+
+      - name: Publicar artefatos de build
+        uses: actions/upload-artifact@v4
+        with:
+          name: KizuriEngine-${{ matrix.os }}
+          path: dist/
+          if-no-files-found: warn

@@ -132,6 +132,10 @@ private:
 
     bool m_RequestOpenGameModulePopup = false;
     char m_GameModulePathBuffer[256] = "";
+    // Log da última compilação de scripts (botão "Compilar Scripts" do modal)
+    // + toggle pra exibir/diminuir no próprio popup.
+    std::string m_GameModuleBuildLog;
+    bool m_ShowGameModuleBuildLog = false;
 
     bool m_RequestOpenExportPopup = false;
     char m_ExportDirBuffer[512] = "export";

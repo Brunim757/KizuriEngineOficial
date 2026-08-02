@@ -14,6 +14,10 @@ namespace fs = std::filesystem;
 
 namespace kizuri {
 
+// Executa um comando via popen e captura a saída. Definida mais abaixo;
+// declarada aqui porque FindCompiler/BuildCompileScripts usam ela.
+static std::string RunCommandCapture(const std::string& cmd, int& outExit);
+
 static bool DirLooksLikeEngineRoot(const fs::path& p) {
     return fs::exists(p / "engine" / "CMakeLists.txt") && fs::exists(p / "CMakeLists.txt");
 }
@@ -45,6 +49,173 @@ std::string GameModuleBuilder::FindEngineSourceDir() {
         if (DirLooksLikeEngineRoot(c)) return fs::absolute(c).string();
     }
     return {};
+}
+
+// ---------------------------------------------------------------------------
+// "Compilar Scripts" estilo Unity (SDK embutido). Ver
+// cmake/StageSDK.cmake pra como o bin/sdk é montado no build da engine.
+// ---------------------------------------------------------------------------
+
+std::string GameModuleBuilder::FindSdkDir(const std::string& editorBinDir) {
+    if (const char* env = std::getenv("KIZURI_SDK_DIR")) {
+        if (fs::exists(fs::path(env) / "include")) return fs::absolute(env).string();
+    }
+
+    std::vector<fs::path> candidates;
+    if (!editorBinDir.empty()) {
+        candidates.push_back(fs::path(editorBinDir) / "sdk");
+        candidates.push_back(fs::path(editorBinDir) / ".." / "sdk");
+        candidates.push_back(fs::path(editorBinDir) / ".." / ".." / "sdk");
+    }
+    candidates.push_back(fs::current_path() / "sdk");
+    candidates.push_back(fs::path("/storage/emulated/0/Download/Kizuri-Engine-main") / "build" / "bin" / "sdk");
+
+    for (auto& c : candidates) {
+        std::error_code ec;
+        fs::path canon = fs::weakly_canonical(c, ec);
+        if (!ec && fs::exists(canon / "include")) return canon.string();
+        if (fs::exists(c / "include")) return fs::absolute(c).string();
+    }
+    return {};
+}
+
+static std::string FindCompiler() {
+    if (const char* env = std::getenv("KIZURI_CXX")) {
+        // Env apontando pra um caminho existente (g++/clang++/cl do usuário).
+        std::error_code ec;
+        if (fs::exists(env, ec)) return env;
+        // Não é um caminho — pode ser um nome de binário no PATH; o popen
+        // resolve quando rodarmos.
+        return env;
+    }
+
+#if defined(_WIN32)
+    const char* names[] = { "g++", "g++.exe", "clang++", "clang++.exe", "cl", "cl.exe", nullptr };
+#else
+    const char* names[] = { "c++", "g++", "clang++", "cc", "gcc", nullptr };
+#endif
+    for (int i = 0; names[i]; ++i) {
+        int out;
+        std::string cmd = std::string(names[i]) + " --version";
+        std::string res = RunCommandCapture(cmd, out);
+        if (!res.empty() && out == 0)
+            return names[i];
+    }
+    return {};
+}
+
+static std::string ShellQuote(const std::string& s) {
+    // Aspas simples quando possível (como em popen não passa por shell num
+    // parser complexo no Windows... usamos dupla, escapando) — simples:
+    if (s.find_first_of(" \t") == std::string::npos) return s;
+    std::string quoted = "\"";
+    for (char c : s) {
+        if (c == '"') quoted += "\\\"";
+        else quoted += c;
+    }
+    quoted += "\"";
+    return quoted;
+}
+
+static std::string MakeModuleName() {
+#if defined(_WIN32)
+    return "GameModule.dll";
+#else
+    return "libGameModule.so";
+#endif
+}
+
+GameModuleBuildResult GameModuleBuilder::BuildCompileScripts(
+    const std::string& projectSourceDir,
+    const std::string& sdkDir) {
+
+    GameModuleBuildResult result;
+    if (projectSourceDir.empty() || !fs::exists(projectSourceDir)) {
+        result.Log = "Pasta Source/ do projeto não encontrada.";
+        return result;
+    }
+    if (sdkDir.empty() || !fs::exists(sdkDir / "include")) {
+        result.Log =
+            "SDK embutido não encontrado (procurei em bin/sdk e KIZURI_SDK_DIR).\n"
+            "Rode o build da engine uma vez (gera bin/sdk) ou baixe o release.";
+        return result;
+    }
+
+    std::string compiler = FindCompiler();
+    if (compiler.empty()) {
+        result.Log =
+            "Nenhum compilador C++20 encontrado. Instale MinGW/GCC/Clang\n"
+            "(ou defina a variável de ambiente KIZURI_CXX apontando pra ele).";
+        return result;
+    }
+
+    // Coleta os .cpp do projeto (e subpastas).
+    std::vector<std::string> sources;
+    for (fs::recursive_directory_iterator it(projectSourceDir), end; it != end; ++it) {
+        if (!it->is_regular_file()) continue;
+        auto ext = it->path().extension();
+        if (ext == ".cpp" || ext == ".cc" || ext == ".cxx")
+            sources.push_back(it->path().string());
+    }
+    if (sources.empty()) {
+        result.Log = "Nenhum arquivo .cpp encontrado em Source/.";
+        return result;
+    }
+
+    fs::path buildDir = fs::path(projectSourceDir) / "build";
+    fs::create_directories(buildDir);
+    fs::path outModule = buildDir / MakeModuleName();
+
+    // Flags básicas; o MSVC é contornado via cl com /EHsc (mais simples usar MinGW).
+    std::string flags;
+#if defined(_WIN32)
+    // MinGW: SHARED é o padrão pro GCC; -shared explicita. O executável roda
+    // com gcc; a stack de exceção iguais do DLL do editor (SHARED runtime C++).
+    flags = "-std=c++20 -shared -O2 -fPIC -fvisibility=default";
+#else
+    flags = "-std=c++20 -shared -fPIC -O2";
+#endif
+
+    std::string cmd = ShellQuote(compiler) + " " + flags +
+        " -I" + ShellQuote(sdkDir + "/include") +
+        " -I" + ShellQuote(projectSourceDir);
+    for (auto& s : sources) cmd += " " + ShellQuote(s);
+
+    // Link contra a engine. O SDK guarda a lib de import (Windows) em sdk/lib;
+    // no Linux linkamos direto contra o libKizuriEngine.so, que vive no bin do
+    // editor (que, no layout padrão, é justamente o pai de sdk/).
+#if defined(_WIN32)
+    cmd += " -L" + ShellQuote(fs::path(sdkDir) + "/lib") + " -l:libKizuriEngine.dll.a";
+#else
+    // Linux: RPATH aponta pro diretório onde a libKizuriEngine.so vive (bin do
+    // editor). O módulo fica em <Source>/build, longe da engine — $ORIGIN não
+    // acharia ela em runtime.
+    std::string engineLibDir = (fs::path(sdkDir) / "..").string();
+    if (fs::exists(fs::path(sdkDir) / "lib" / "libKizuriEngine.so"))
+        engineLibDir = (fs::path(sdkDir) / "lib").string();
+    cmd += " -L" + ShellQuote(engineLibDir) + " -l:libKizuriEngine.so";
+    cmd += " -Wl,-rpath," + ShellQuote(engineLibDir);
+#endif
+    cmd += " -o " + ShellQuote(outModule.string());
+
+    result.Log += "$ " + cmd + "\n\n";
+    int exitCode = 0;
+    std::string output = RunCommandCapture(cmd, exitCode);
+    result.Log += output;
+    if (exitCode != 0) {
+        result.ModulePath.clear();
+        result.Log += "\n\nCompilação falhou (código " + std::to_string(exitCode) + ").";
+        return result;
+    }
+    if (!fs::exists(outModule)) {
+        result.Log += "\n\nO link terminou mas o módulo não foi gerado.";
+        return result;
+    }
+
+    result.Ok = true;
+    result.ModulePath = fs::absolute(outModule).string();
+    result.Log += "\n\nMódulo gerado: " + result.ModulePath;
+    return result;
 }
 
 static std::string RunCommandCapture(const std::string& cmd, int& outExit) {

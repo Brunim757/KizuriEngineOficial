@@ -100,9 +100,18 @@ Sem argumentos, procura por `Start.kzscene` na pasta atual. Os caminhos de
 assets na cena são relativos ao diretório de trabalho.
 
 **Scripting** — crie classes herdeiras de `kizuri::NativeScript`, registre-as
-num `RegisterScripts(ScriptRegistry&)` e compile como GameModule; o editor
-carrega pelo menu *Carregar GameModule...*. APIs de gameplay: `OnCollisionBegin/End`,
-`Instantiate(".kzprefab")`, `LoadScene(".kzscene")`, `DestroyEntity()`.
+num `RegisterScripts(ScriptRegistry&)` e compile como GameModule. Dois fluxos:
+
+- **Estilo Unity (recomendado)** — o editor traz um SDK embutido (`bin/sdk`)
+  com os headers da engine e deps. Abra *Arquivo > Carregar GameModule...* e
+  use **Compilar Scripts**: ele recompila a pasta `Source/` do projeto com o
+  compilador instalado (auto-detectado; ou `KIZURI_CXX`) e carrega o módulo
+  na hora. Sem checkout do código-fonte e sem rodar cmake externo.
+- **Via CMake** — compile a pasta `Source/` do projeto como antes
+  (`cmake -B build -DKIZURI_ENGINE_DIR=...`), gerando o `.dll`/`.so`.
+
+Apis de gameplay: `OnCollisionBegin/End`, `Instantiate(".kzprefab")`,
+`LoadScene(".kzscene")`, `DestroyEntity()`.
 
 **Exportar** — salve a cena, carregue o GameModule, use *Arquivo > Exportar Jogo...*
 para gerar uma pasta com `KizuriGame`, `Start.kzscene`, assets e o módulo.

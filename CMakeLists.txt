@@ -206,6 +206,33 @@ endif()
 
 add_subdirectory(engine)
 
+# ---------------------------------------------------------------------------
+# SDK embutido ("compile scripts" estilo Unity)
+# ---------------------------------------------------------------------------
+# A partir de bin/, monta uma pasta bin/sdk com os headers da engine, os
+# headers de terceiros que a API pública expõe (glm, entt, spdlog+fmt,
+# nlohmann/json) e a lib de import/da engine. É TUDO que o passo
+# "Compilar GameModule" do editor (GameModuleBuilder) precisa pra recompilar
+# a pasta Source/ de um projeto com o compilador instalado, sem checkout do
+# código-fonte da engine e sem rodar um cmake externo.
+#
+# Isso é o equivalente prático de "o Unity embute o compilador de scripts":
+# aqui a golden fonte é o próprio checkout, e o SDK vira um dado entregável.
+set(KZ_SDK_DIR ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/sdk)
+add_custom_target(KizuriSDK ALL
+    COMMAND ${CMAKE_COMMAND}
+        -D KZ_SDK_DIR=${KZ_SDK_DIR}
+        -D KZ_ENGINE_INCLUDE=${CMAKE_CURRENT_SOURCE_DIR}/engine/include
+        -D KZ_GLM_SRC=${glm_SOURCE_DIR}
+        -D KZ_ENTT_SRC=${entt_SOURCE_DIR}
+        -D KZ_SPDLOG_SRC=${spdlog_SOURCE_DIR}
+        -D KZ_JSON_SRC=${json_SOURCE_DIR}
+        -D KZ_IMPORT_LIB_DIR=${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/StageSDK.cmake
+    COMMENT "Montando SDK embutido (bin/sdk) para Compilar GameModule"
+)
+add_dependencies(KizuriSDK KizuriEngine)
+
 # Guarda a existência da pasta: a v2 ainda não tem código, então mesmo que
 # alguém ligue KZ_BUILD_V2 antes de criar kizuri_v2/, o configure não quebra.
 # Quando a pasta existir, o subdiretório entra no build automaticamente.

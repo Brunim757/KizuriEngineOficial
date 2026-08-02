@@ -4,6 +4,7 @@
 #include "kizuri/renderer/Texture.hpp"
 #include "kizuri/renderer/Renderer3D.hpp"
 #include "kizuri/renderer/Camera.hpp"
+#include "kizuri/renderer/TextRenderer.hpp" // TextAlignment (TextComponent)
 #include "kizuri/audio/AudioEngine.hpp"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -58,11 +59,13 @@ struct CircleRendererComponent {
 };
 
 // Texto 2D de jogo (HUD, pontuação, diálogo). Renderizado pelo
-// TextRenderer com a fonte embutida (JetBrains Mono).
+// TextRenderer com a fonte embutida (JetBrains Mono). Suporta multilinha
+// ('\n' quebra a linha) e alinhamento horizontal (ver TextAlignment).
 struct TextComponent {
     std::string Text = "Texto";
     glm::vec4 Color = { 1.0f, 1.0f, 1.0f, 1.0f };
     float FontSize = 48.0f;  // altura em pixels de tela
+    TextAlignment Alignment = TextAlignment::Left;
 };
 
 // Animação de sprite 2D por frames numa folha de sprites (sprite sheet).
@@ -91,6 +94,10 @@ struct TilemapComponent {
     uint32_t MapWidth = 0, MapHeight = 0;
     glm::vec2 TileSize = { 1.0f, 1.0f };
     std::vector<uint32_t> Tiles;   // serializável — row-major, 0 = vazio
+
+    // Valores de tile (1-based, os mesmos usados em Tiles) que geram
+    // collider estático Box2D no Play — a base pra níveis de platformer.
+    std::vector<uint32_t> SolidTileValues; // serializável
 };
 
 struct MeshRendererComponent {

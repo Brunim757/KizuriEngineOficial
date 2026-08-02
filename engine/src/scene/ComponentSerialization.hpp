@@ -61,7 +61,8 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
         je["Text"] = {
             { "Text", tc.Text },
             { "Color", Vec4ToJson(tc.Color) },
-            { "FontSize", tc.FontSize }
+            { "FontSize", tc.FontSize },
+            { "Alignment", (int)tc.Alignment }
         };
     }
 
@@ -85,7 +86,8 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
             { "MapWidth", tmc.MapWidth },
             { "MapHeight", tmc.MapHeight },
             { "TileSize", Vec3ToJson({ tmc.TileSize.x, tmc.TileSize.y, 0.0f }) },
-            { "Tiles", tmc.Tiles }
+            { "Tiles", tmc.Tiles },
+            { "SolidTileValues", tmc.SolidTileValues }
         };
     }
 
@@ -226,6 +228,7 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         tc.Text = jt.value("Text", "Texto");
         tc.Color = JsonToVec4(jt["Color"]);
         tc.FontSize = jt.value("FontSize", 48.0f);
+        tc.Alignment = (TextAlignment)jt.value("Alignment", 0);
     }
 
     if (je.contains("SpriteAnimation")) {
@@ -250,6 +253,7 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         auto ts = JsonToVec3(jtm.value("TileSize", nlohmann::json::array({ 1.0f, 1.0f, 0.0f })));
         tmc.TileSize = { ts.x, ts.y };
         tmc.Tiles = jtm.value("Tiles", std::vector<uint32_t>{});
+        tmc.SolidTileValues = jtm.value("SolidTileValues", std::vector<uint32_t>{});
         if (!tmc.AtlasPath.empty()) tmc.AtlasTexture = Texture2D::Create(tmc.AtlasPath);
     }
 
@@ -406,6 +410,7 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         tc.Text = jt.value("Text", "Texto");
         tc.Color = JsonToVec4(jt["Color"]);
         tc.FontSize = jt.value("FontSize", 48.0f);
+        tc.Alignment = (TextAlignment)jt.value("Alignment", 0);
     } else if (entity.HasComponent<TextComponent>()) {
         entity.RemoveComponent<TextComponent>();
     }
@@ -438,6 +443,7 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         auto ts = JsonToVec3(jtm.value("TileSize", nlohmann::json::array({ 1.0f, 1.0f, 0.0f })));
         tmc.TileSize = { ts.x, ts.y };
         tmc.Tiles = jtm.value("Tiles", std::vector<uint32_t>{});
+        tmc.SolidTileValues = jtm.value("SolidTileValues", std::vector<uint32_t>{});
         tmc.AtlasTexture = tmc.AtlasPath.empty() ? nullptr : Texture2D::Create(tmc.AtlasPath);
     } else if (entity.HasComponent<TilemapComponent>()) {
         entity.RemoveComponent<TilemapComponent>();

@@ -49,6 +49,20 @@ private:
     // Browser no viewport): .obj -> MeshRenderer, imagem -> SpriteRenderer.
     kizuri::Entity CreateEntityFromAsset(const std::string& path, const glm::vec3& worldPos);
 
+    // Play usa a CameraComponent da PRÓPRIA cena pra renderizar (não a câmera
+    // livre do editor) — essa função copia a pose atual da câmera de edição
+    // (3D: pos+yaw/pitch; 2D: pos+zoom) pra entidade de câmera primária da
+    // cena copiada. Sem isso, o Play sempre renderizava do ponto fixo onde a
+    // câmera da cena foi criada (o cubo inicial), ignorando pra onde o
+    // usuário navegou no viewport antes de apertar Play.
+    void SyncEditorCameraToRuntimeScene();
+
+    // Ao selecionar uma entidade, troca o modo do viewport pro que faz
+    // sentido pra ela: 3D (MeshRenderer/Light/Câmera 3D) ou 2D
+    // (Sprite/Círculo/Texto/Tilemap/Animação). Híbrido sem esses componentes
+    // não mexe em nada. Só em modo edição.
+    void AutoSwitchViewportMode();
+
     void CreateDefaultSceneContent();
 
     // Play = m_ActiveScene aponta pra uma CÓPIA (ver Scene::Copy) que roda OnUpdateRuntime de
@@ -131,6 +145,14 @@ private:
     // todo (ver docs/NOTAS_INTERNAS.md).
     enum class ViewportMode { Mode2D, Mode3D };
     ViewportMode m_ViewportMode = ViewportMode::Mode3D;
+
+    // Pintor de tilemap no viewport 2D: com uma entidade Tilemap selecionada,
+    // botão esquerdo pinta o valor do pincel, botão direito apaga (0).
+    // m_TilePaintBefore captura o estado antes do gesto pra empurrar um
+    // EntityEditCommand (undo) quando o mouse solta.
+    int m_TilemapBrushValue = 1;
+    bool m_TilePainting = false;
+    kizuri::EntitySnapshot m_TilePaintBefore;
 
     // Câmera livre do editor ("fly camera"): navega o viewport 3D
     // independente de qualquer CameraComponent da cena. Segurar botão

@@ -182,15 +182,35 @@ Entity Scene::PickEntity2D(const glm::vec2& worldPoint) {
         if (1.0f < closestArea) { closestArea = 1.0f; closest = entity; }
     }
 
-    // Texto: bounding aproximado pela medida da fonte.
+    // Texto: bounding aproximado pela medida da fonte (linha mais larga ×
+    // altura total multilinha, incluindo os descenders).
     auto texts = m_Registry.view<TransformComponent, TextComponent>();
     for (auto e : texts) {
         Entity entity{ e, this };
         auto& tc = texts.get<TextComponent>(e);
         glm::vec3 pos = glm::vec3(GetWorldTransform(entity)[3]);
         float w = TextRenderer::MeasureWidth(tc.Text, tc.FontSize);
-        float h = tc.FontSize;
-        if (worldPoint.x < pos.x || worldPoint.x > pos.x + w || worldPoint.y < pos.y - h || worldPoint.y > pos.y) continue;
+        uint32_t lineCount = 1;
+        for (char c : tc.Text) if (c == '\n') ++lineCount;
+        float h = tc.FontSize * 1.2f * (float)lineCount;
+        if (worldPoint.x < pos.x || worldPoint.x > pos.x + w ||
+            worldPoint.y < pos.y - h || worldPoint.y > pos.y) continue;
+        if (w * h < closestArea) { closestArea = w * h; closest = entity; }
+    }
+
+    // Tilemap: ponto dentro do retângulo do mapa inteiro. Os tiles são
+    // desenhados a partir da origem subindo (+y), então o retângulo vai de
+    // pos.y até pos.y + h (diferente do texto, que desce de pos.y).
+    auto tilemaps = m_Registry.view<TransformComponent, TilemapComponent>();
+    for (auto e : tilemaps) {
+        Entity entity{ e, this };
+        auto& tmc = tilemaps.get<TilemapComponent>(e);
+        if (tmc.MapWidth == 0 || tmc.MapHeight == 0) continue;
+        glm::vec3 pos = glm::vec3(GetWorldTransform(entity)[3]);
+        float w = (float)tmc.MapWidth * tmc.TileSize.x;
+        float h = (float)tmc.MapHeight * tmc.TileSize.y;
+        if (worldPoint.x < pos.x || worldPoint.x > pos.x + w ||
+            worldPoint.y < pos.y || worldPoint.y > pos.y + h) continue;
         if (w * h < closestArea) { closestArea = w * h; closest = entity; }
     }
 
@@ -266,6 +286,53 @@ void Scene::OnPhysics2DStart() {
             fixtureDef.restitution = bc2d.Restitution;
             fixtureDef.restitutionThreshold = bc2d.RestitutionThreshold;
             body->CreateFixture(&fixtureDef);
+        }
+    }
+
+    // Tilemaps sólidos: cada tile cujo valor esteja em SolidTileValues vira
+    // um corpo estático (mesclando runs horizontais contíguos numa caixa só,
+    // pra não explodir a quantidade de corpos em plataformers). Os corpos
+    // usam só a translação mundial do mapa (assumem mapa sem rotação/escala
+    // — típico pra tilemaps; se hierarquias rotacionadas virarem comuns,
+    // isso precisa ser revisitado).
+    auto tilemaps = m_Registry.view<TransformComponent, TilemapComponent>();
+    for (auto te : tilemaps) {
+        auto& tmc = tilemaps.get<TilemapComponent>(te);
+        if (tmc.SolidTileValues.empty() || tmc.MapWidth == 0 || tmc.MapHeight == 0) continue;
+
+        glm::vec3 mapPos = glm::vec3(GetWorldTransform(Entity{ te, this })[3]);
+        auto isSolid = [&tmc](uint32_t v) {
+            return std::find(tmc.SolidTileValues.begin(), tmc.SolidTileValues.end(), v) != tmc.SolidTileValues.end();
+        };
+
+        for (uint32_t row = 0; row < tmc.MapHeight; ++row) {
+            uint32_t x = 0;
+            while (x < tmc.MapWidth) {
+                uint32_t idx = row * tmc.MapWidth + x;
+                if (idx >= tmc.Tiles.size() || !isSolid(tmc.Tiles[idx])) { ++x; continue; }
+
+                // Mescla o run contíguo de tiles sólidos nesta linha.
+                uint32_t runStart = x;
+                while (x < tmc.MapWidth) {
+                    uint32_t i = row * tmc.MapWidth + x;
+                    if (i >= tmc.Tiles.size() || !isSolid(tmc.Tiles[i])) break;
+                    ++x;
+                }
+                uint32_t runEnd = x; // exclusivo
+
+                float cx = mapPos.x + (float)(runStart + runEnd) * 0.5f * tmc.TileSize.x;
+                float cy = mapPos.y + ((float)row + 0.5f) * tmc.TileSize.y;
+                float hw = (float)(runEnd - runStart) * 0.5f * tmc.TileSize.x;
+                float hh = 0.5f * tmc.TileSize.y;
+
+                b2BodyDef bodyDef;
+                bodyDef.type = b2_staticBody;
+                bodyDef.position.Set(cx, cy);
+                b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
+                b2PolygonShape shape;
+                shape.SetAsBox(hw, hh);
+                body->CreateFixture(&shape, 0.0f);
+            }
         }
     }
 }
@@ -596,13 +663,14 @@ void Scene::Render2DEntities() {
         }
     }
 
-    // Texto de jogo (HUD etc) — posicionado pelo transform da entidade.
+    // Texto de jogo (HUD etc) — posicionado pelo transform da entidade,
+    // com alinhamento configurável (esquerda/centro/direita).
     auto texts = m_Registry.view<TransformComponent, TextComponent>();
     for (auto te : texts) {
         auto& tc = texts.get<TextComponent>(te);
         glm::mat4 world = GetWorldTransform(Entity{ te, this });
         glm::vec3 pos = glm::vec3(world[3]);
-        TextRenderer::DrawString(tc.Text, pos, tc.FontSize, tc.Color);
+        TextRenderer::DrawString(tc.Text, pos, tc.FontSize, tc.Color, tc.Alignment);
     }
 }
 

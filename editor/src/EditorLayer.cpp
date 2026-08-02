@@ -68,6 +68,59 @@ void EditorLayer::OnAttach() {
     CreateDefaultSceneContent();
 }
 
+void EditorLayer::SyncEditorCameraToRuntimeScene() {
+    KZ_TRACE_SCOPE("EditorLayer::SyncEditorCameraToRuntimeScene");
+    // RenderScene3D/RenderScene2D do Play usam a CameraComponent da cena, não
+    // a câmera livre do editor — então copia a pose da câmera de edição pra
+    // entidade de câmera primária da cópia runtime. Sem isso o Play sempre
+    // olhava pro ponto fixo onde a câmera da cena foi criada.
+    auto view = m_ActiveScene->GetRegistry().view<TransformComponent, CameraComponent>();
+    for (auto e : view) {
+        auto& cc = view.get<CameraComponent>(e);
+        if (!cc.Primary) continue;
+        auto& tc = view.get<TransformComponent>(e);
+
+        if (m_ViewportMode == ViewportMode::Mode3D && cc.Type == CameraComponent::ProjectionType::Perspective3D) {
+            tc.Translation = m_EditorCamPos;
+            tc.Rotation = { glm::radians(m_EditorCamPitch), glm::radians(m_EditorCamYaw), 0.0f };
+            break;
+        } else if (m_ViewportMode == ViewportMode::Mode2D && cc.Type == CameraComponent::ProjectionType::Orthographic2D) {
+            tc.Translation = { m_Editor2DCamPos.x, m_Editor2DCamPos.y, 0.0f };
+            cc.OrthoSize = m_Editor2DZoom;
+            break;
+        }
+        // Câmera primária com tipo diferente do modo do viewport: ignora e
+        // procura a próxima (ex: câmera 2D primária enquanto o viewport está em 3D).
+    }
+}
+
+void EditorLayer::AutoSwitchViewportMode() {
+    // Seleção mudou (essa função é chamada em toda troca de seleção) — aborta
+    // o gesto de pintura em andamento, senão o snapshot "antes" ficaria
+    // preso da entidade anterior e o próximo undo seria de outro objeto.
+    m_TilePainting = false;
+    if (m_SceneState != SceneState::Edit || !m_SelectedEntity) return;
+
+    if (m_SelectedEntity.HasComponent<MeshRendererComponent>() || m_SelectedEntity.HasComponent<LightComponent>()) {
+        m_ViewportMode = ViewportMode::Mode3D;
+        return;
+    }
+    if (m_SelectedEntity.HasComponent<CameraComponent>()) {
+        auto& cc = m_SelectedEntity.GetComponent<CameraComponent>();
+        m_ViewportMode = (cc.Type == CameraComponent::ProjectionType::Perspective3D)
+            ? ViewportMode::Mode3D : ViewportMode::Mode2D;
+        return;
+    }
+    if (m_SelectedEntity.HasComponent<SpriteRendererComponent>() ||
+        m_SelectedEntity.HasComponent<CircleRendererComponent>() ||
+        m_SelectedEntity.HasComponent<TextComponent>() ||
+        m_SelectedEntity.HasComponent<TilemapComponent>() ||
+        m_SelectedEntity.HasComponent<SpriteAnimationComponent>()) {
+        m_ViewportMode = ViewportMode::Mode2D;
+        return;
+    }
+}
+
 void EditorLayer::CreateDefaultSceneContent() {
     KZ_TRACE_SCOPE("EditorLayer::CreateDefaultSceneContent");
     Entity camera = m_ActiveScene->CreateEntity("Câmera Principal");
@@ -210,7 +263,13 @@ void EditorLayer::UpdateEditor2DCamera(Timestep ts) {
     // Pan: segurar botão direito e arrastar. Zoom: scroll do mouse — só
     // quando o viewport está sob o cursor, senão rolar a página inteira
     // (ex: painel de Inspetor) zoomaria a câmera por engano.
-    bool panning = m_ViewportHovered && Input::IsMouseButtonPressed(Mouse::Right);
+    // Com um Tilemap selecionado, o botão direito vira a borracha do pintor
+    // (ver OnImGuiRender) — então o pan é suprimido nesse caso, senão os
+    // dois lutariam pelo mesmo gesto.
+    bool erasingTilemap = m_SceneState == SceneState::Edit && m_ViewportMode == ViewportMode::Mode2D &&
+        m_SelectedEntity && m_SelectedEntity.HasComponent<TilemapComponent>() &&
+        Input::IsMouseButtonPressed(Mouse::Right);
+    bool panning = m_ViewportHovered && Input::IsMouseButtonPressed(Mouse::Right) && !erasingTilemap;
 
     auto [mx, my] = Input::GetMousePosition();
     glm::vec2 mousePos{ mx, my };
@@ -418,6 +477,7 @@ void EditorLayer::OnScenePlay() {
     m_EditorScene = m_ActiveScene;
     m_ActiveScene = Scene::Copy(m_EditorScene);
     m_ActiveScene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
+    SyncEditorCameraToRuntimeScene(); // Play começa de onde a câmera do editor estava
     m_SelectedEntity = {}; // handle da cena antiga não é válido na cópia
     m_SceneState = SceneState::Play;
     m_ActiveScene->OnRuntimeStart();
@@ -1352,7 +1412,10 @@ void EditorLayer::DrawEntityNode(Entity entity, Entity& outEntityToDelete, bool 
 
     bool opened = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)entity, flags, "%s", tag.c_str());
     // Só o modo edição seleciona por clique — no Play a árvore é leitura.
-    if (editable && ImGui::IsItemClicked()) m_SelectedEntity = entity;
+    if (editable && ImGui::IsItemClicked()) {
+        m_SelectedEntity = entity;
+        AutoSwitchViewportMode(); // selecionar 3D/2D troca o modo do viewport
+    }
 
     if (editable) {
         // Arrastar esta entidade pra reparentar em outra.
@@ -1443,6 +1506,12 @@ void EditorLayer::DrawInspector() {
                     sc.TexturePath = texBuf;
                     sc.Texture = sc.TexturePath.empty() ? nullptr : kizuri::Texture2D::Create(sc.TexturePath);
                 }
+                if (sc.Texture) {
+                    uint32_t texID = sc.Texture->GetRendererID();
+                    ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(96.0f, 96.0f), ImVec2(0, 1), ImVec2(1, 0));
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("%ux%u", sc.Texture->GetWidth(), sc.Texture->GetHeight());
+                }
                 ImGui::ColorEdit4("Cor", &sc.Color.x);
                 ImGui::DragFloat("Tiling", &sc.TilingFactor, 0.1f);
                 ImGui::TreePop();
@@ -1503,9 +1572,17 @@ void EditorLayer::DrawInspector() {
                     mat.AlbedoMapPath = albBuf;
                     mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.AlbedoMapPath);
                 }
+                if (mat.AlbedoMap) {
+                    uint32_t texID = mat.AlbedoMap->GetRendererID();
+                    ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(64.0f, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
+                }
                 if (ImGui::InputText("Normal Map", nrmBuf, sizeof(nrmBuf))) {
                     mat.NormalMapPath = nrmBuf;
                     mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.NormalMapPath);
+                }
+                if (mat.NormalMap) {
+                    uint32_t texID = mat.NormalMap->GetRendererID();
+                    ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(64.0f, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
                 }
                 ImGui::TreePop();
             }
@@ -1521,7 +1598,11 @@ void EditorLayer::DrawInspector() {
                 if (ImGui::InputText("Conteúdo", textBuf, sizeof(textBuf))) tc.Text = textBuf;
                 ImGui::ColorEdit4("Cor", &tc.Color.x);
                 ImGui::DragFloat("Tamanho (px)", &tc.FontSize, 1.0f, 8.0f, 512.0f);
-                ImGui::TextDisabled("Fonte embutida JetBrains Mono.");
+                const char* alignItems[] = { "Esquerda", "Centro", "Direita" };
+                int alignIdx = (int)tc.Alignment;
+                if (ImGui::Combo("Alinhamento", &alignIdx, alignItems, 3))
+                    tc.Alignment = (kizuri::TextAlignment)alignIdx;
+                ImGui::TextDisabled("Fonte embutida JetBrains Mono. Use \\n pra quebrar linha.");
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<TextComponent>();
@@ -1536,6 +1617,12 @@ void EditorLayer::DrawInspector() {
                 if (ImGui::InputText("Folha (sprite sheet)", sheetBuf, sizeof(sheetBuf))) {
                     sac.SheetPath = sheetBuf;
                     sac.SheetTexture = sac.SheetPath.empty() ? nullptr : kizuri::Texture2D::Create(sac.SheetPath);
+                }
+                if (sac.SheetTexture) {
+                    uint32_t texID = sac.SheetTexture->GetRendererID();
+                    ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(96.0f, 96.0f), ImVec2(0, 1), ImVec2(1, 0));
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("%ux%u", sac.SheetTexture->GetWidth(), sac.SheetTexture->GetHeight());
                 }
                 int cols = (int)sac.FramesPerRow, total = (int)sac.TotalFrames;
                 if (ImGui::DragInt("Frames por linha", &cols, 1, 1, 64)) sac.FramesPerRow = (uint32_t)cols;
@@ -1559,6 +1646,12 @@ void EditorLayer::DrawInspector() {
                     tmc.AtlasPath = atlasBuf;
                     tmc.AtlasTexture = tmc.AtlasPath.empty() ? nullptr : kizuri::Texture2D::Create(tmc.AtlasPath);
                 }
+                if (tmc.AtlasTexture) {
+                    uint32_t texID = tmc.AtlasTexture->GetRendererID();
+                    ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(96.0f, 96.0f), ImVec2(0, 1), ImVec2(1, 0));
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("%ux%u", tmc.AtlasTexture->GetWidth(), tmc.AtlasTexture->GetHeight());
+                }
                 int atCols = (int)tmc.AtlasColumns, atRows = (int)tmc.AtlasRows;
                 if (ImGui::DragInt("Colunas no atlas", &atCols, 1, 1, 256)) tmc.AtlasColumns = (uint32_t)atCols;
                 if (ImGui::DragInt("Linhas no atlas", &atRows, 1, 1, 256)) tmc.AtlasRows = (uint32_t)atRows;
@@ -1567,6 +1660,11 @@ void EditorLayer::DrawInspector() {
                 if (ImGui::DragInt("Altura do mapa", &mh, 1, 1, 4096)) tmc.MapHeight = (uint32_t)mh;
                 ImGui::DragFloat2("Tamanho do tile", &tmc.TileSize.x, 0.1f, 0.1f, 100.0f);
                 tmc.Tiles.resize((size_t)tmc.MapWidth * tmc.MapHeight);
+
+                // Pincel do pintor de tilemap (funciona no viewport 2D).
+                ImGui::DragInt("Pincel", &m_TilemapBrushValue, 1, 0, 4096);
+                ImGui::TextDisabled("Pinte no viewport 2D (botão esquerdo). Botão direito apaga.");
+
                 if (tmc.Tiles.size() > 0 && ImGui::CollapsingHeader("Tiles (valores)")) {
                     ImGui::TextDisabled("%zu tiles — 0=vazio, N=posição (N-1) no atlas.", tmc.Tiles.size());
                     static int s_EditIdx = -1;
@@ -1576,6 +1674,29 @@ void EditorLayer::DrawInspector() {
                         if (ImGui::InputInt("Tile", &tv, 1, 16))
                             tmc.Tiles[s_EditIdx] = (uint32_t)glm::max(tv, 0);
                     }
+                }
+
+                // Tiles sólidos: valores que geram collider Box2D no Play.
+                if (ImGui::CollapsingHeader("Colisão (tiles sólidos)")) {
+                    ImGui::TextDisabled("Valores de tile com collider estático. Ex: chão=1, plataforma=2.");
+                    static int s_AddSolid = 1;
+                    ImGui::SetNextItemWidth(80.0f);
+                    ImGui::InputInt("Valor", &s_AddSolid, 1, 4);
+                    ImGui::SameLine();
+                    if (ImGui::Button("Adicionar") && s_AddSolid > 0) {
+                        uint32_t v = (uint32_t)s_AddSolid;
+                        if (std::find(tmc.SolidTileValues.begin(), tmc.SolidTileValues.end(), v) == tmc.SolidTileValues.end())
+                            tmc.SolidTileValues.push_back(v);
+                    }
+                    int removeIdx = -1;
+                    for (size_t i = 0; i < tmc.SolidTileValues.size(); ++i) {
+                        ImGui::PushID((int)i);
+                        ImGui::Text("Tile %u", tmc.SolidTileValues[i]);
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("remover")) removeIdx = (int)i;
+                        ImGui::PopID();
+                    }
+                    if (removeIdx >= 0) tmc.SolidTileValues.erase(tmc.SolidTileValues.begin() + removeIdx);
                 }
                 ImGui::TreePop();
             }
@@ -1941,7 +2062,10 @@ void EditorLayer::OnImGuiRender() {
                 }
             }
             Entity created = CreateEntityFromAsset(path, spawn);
-            if (created) m_SelectedEntity = created;
+            if (created) {
+                m_SelectedEntity = created;
+                AutoSwitchViewportMode();
+            }
         }
         ImGui::EndDragDropTarget();
     }
@@ -1978,7 +2102,51 @@ void EditorLayer::OnImGuiRender() {
                 worldP /= worldP.w;
                 m_SelectedEntity = m_ActiveScene->PickEntity2D({ worldP.x, worldP.y });
             }
+            AutoSwitchViewportMode(); // clicar num objeto 3D/2D ajusta o modo do viewport
             KZ_CORE_TRACE("EditorLayer::OnImGuiRender — picking por clique ok");
+        }
+    }
+
+    // Pintor de tilemap: com uma entidade Tilemap selecionada no modo 2D,
+    // arrastar com o botão esquerdo pinta o valor do pincel
+    // (m_TilemapBrushValue) e o botão direito apaga (0). Só em modo edição
+    // e sem conflitar com o gizmo. O undo é por gesto: snapshot no início e
+    // um EntityEditCommand ao soltar o mouse.
+    if (m_SceneState == SceneState::Edit && m_ViewportMode == ViewportMode::Mode2D &&
+        m_SelectedEntity && m_SelectedEntity.HasComponent<TilemapComponent>() &&
+        ImGui::IsItemHovered() && !ImGuizmo::IsOver() && !ImGuizmo::IsUsing()) {
+        auto& tmc = m_SelectedEntity.GetComponent<TilemapComponent>();
+        bool painting = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+        bool erasing = ImGui::IsMouseDown(ImGuiMouseButton_Right);
+        if (painting || erasing) {
+            if (!m_TilePainting) {
+                m_TilePainting = true;
+                m_TilePaintBefore = EntitySnapshot::Capture(m_SelectedEntity);
+            }
+            glm::vec2 mouse{ ImGui::GetMousePos().x, ImGui::GetMousePos().y };
+            glm::vec2 local = mouse - m_ViewportBounds[0];
+            glm::vec2 size = m_ViewportBounds[1] - m_ViewportBounds[0];
+            if (size.x > 0.0f && size.y > 0.0f &&
+                local.x >= 0.0f && local.y >= 0.0f && local.x <= size.x && local.y <= size.y) {
+                glm::vec2 ndc{ (local.x / size.x) * 2.0f - 1.0f, 1.0f - (local.y / size.y) * 2.0f };
+                glm::mat4 invViewProj = glm::inverse(m_Editor2DCamera.GetProjectionMatrix() * m_Editor2DCamera.GetViewMatrix());
+                glm::vec4 worldP = invViewProj * glm::vec4(ndc.x, ndc.y, 0.0f, 1.0f);
+                worldP /= worldP.w;
+
+                glm::vec3 mapPos = glm::vec3(m_ActiveScene->GetWorldTransform(m_SelectedEntity)[3]);
+                int tx = (int)glm::floor((worldP.x - mapPos.x) / tmc.TileSize.x);
+                int ty = (int)glm::floor((worldP.y - mapPos.y) / tmc.TileSize.y);
+                if (tx >= 0 && ty >= 0 && tx < (int)tmc.MapWidth && ty < (int)tmc.MapHeight) {
+                    uint32_t idx = (uint32_t)ty * tmc.MapWidth + (uint32_t)tx;
+                    if (idx < tmc.Tiles.size())
+                        tmc.Tiles[idx] = erasing ? 0 : (uint32_t)glm::max(m_TilemapBrushValue, 0);
+                }
+            }
+        } else if (m_TilePainting) {
+            m_TilePainting = false;
+            EntitySnapshot after = EntitySnapshot::Capture(m_SelectedEntity);
+            if (m_TilePaintBefore.DiffersFrom(after))
+                m_History.Push(CreateRef<EntityEditCommand>(m_SelectedEntity.GetUUID(), m_TilePaintBefore, after));
         }
     }
 

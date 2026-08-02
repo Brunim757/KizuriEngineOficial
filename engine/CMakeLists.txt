@@ -6,10 +6,16 @@ file(GLOB_RECURSE KIZURI_HEADERS CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp
 )
 
+# Raiz do repositório (pasta que contém engine/) — glad e cmake/
+# (EmbedResource.cmake) ficam lá. CMAKE_SOURCE_DIR aponta pra raiz do projeto
+# do build atual; num build standalone do GameModule isso é a pasta do módulo,
+# não a engine. O pai de CMAKE_CURRENT_SOURCE_DIR cobre os dois casos.
+get_filename_component(KIZURI_REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}" DIRECTORY)
+
 # ---- glad (bindings gerados pelo glad2 para GL 4.5 core, comitados em
 # third_party_generated/glad — ver README nessa pasta para como regerar) ----
-add_library(glad STATIC ${CMAKE_SOURCE_DIR}/third_party_generated/glad/src/gl.c)
-target_include_directories(glad PUBLIC ${CMAKE_SOURCE_DIR}/third_party_generated/glad/include)
+add_library(glad STATIC ${KIZURI_REPO_ROOT}/third_party_generated/glad/src/gl.c)
+target_include_directories(glad PUBLIC ${KIZURI_REPO_ROOT}/third_party_generated/glad/include)
 
 # ---- Fontes embutidas (JetBrains Mono) -------------------------------------
 # Em vez de carregar os .ttf de um caminho relativo em tempo de execução (o
@@ -28,8 +34,8 @@ add_custom_command(
         -DINPUT_FILE=${KZ_FONT_REGULAR_TTF}
         -DOUTPUT_FILE=${KZ_FONT_REGULAR_HPP}
         -DVAR_NAME=kFontRegularTTF
-        -P ${CMAKE_SOURCE_DIR}/cmake/EmbedResource.cmake
-    DEPENDS ${KZ_FONT_REGULAR_TTF} ${CMAKE_SOURCE_DIR}/cmake/EmbedResource.cmake
+        -P ${KIZURI_REPO_ROOT}/cmake/EmbedResource.cmake
+    DEPENDS ${KZ_FONT_REGULAR_TTF} ${KIZURI_REPO_ROOT}/cmake/EmbedResource.cmake
     COMMENT "Embutindo JetBrainsMono-Regular.ttf no executável"
 )
 add_custom_command(
@@ -38,8 +44,8 @@ add_custom_command(
         -DINPUT_FILE=${KZ_FONT_BOLD_TTF}
         -DOUTPUT_FILE=${KZ_FONT_BOLD_HPP}
         -DVAR_NAME=kFontBoldTTF
-        -P ${CMAKE_SOURCE_DIR}/cmake/EmbedResource.cmake
-    DEPENDS ${KZ_FONT_BOLD_TTF} ${CMAKE_SOURCE_DIR}/cmake/EmbedResource.cmake
+        -P ${KIZURI_REPO_ROOT}/cmake/EmbedResource.cmake
+    DEPENDS ${KZ_FONT_BOLD_TTF} ${KIZURI_REPO_ROOT}/cmake/EmbedResource.cmake
     COMMENT "Embutindo JetBrainsMono-Bold.ttf no executável"
 )
 add_custom_target(KizuriEmbeddedFonts DEPENDS ${KZ_FONT_REGULAR_HPP} ${KZ_FONT_BOLD_HPP})

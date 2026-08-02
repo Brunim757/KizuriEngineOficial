@@ -20,6 +20,7 @@ endif()
 option(KZ_BUILD_SANDBOX "Build the sandbox example game" ON)
 option(KZ_BUILD_EDITOR  "Build the Kizuri Editor"        ON)
 option(KZ_BUILD_GAME    "Build the standalone game exe"   ON)
+option(KZ_BUILD_GAMEMODULE "Build the GameModule template (example scripts)" ON)
 option(KZ_BUILD_TESTS   "Build unit tests"                OFF)
 # v2 ainda é só documentação (docs/v2/); fica OFF por padrão até existir
 # código real em kizuri_v2/.
@@ -218,6 +219,10 @@ endif()
 
 if(KZ_BUILD_GAME)
     add_subdirectory(examples/KizuriGame)
+endif()
+
+if(KZ_BUILD_GAMEMODULE)
+    add_subdirectory(examples/GameModule)
 endif()
 
 if(KZ_BUILD_EDITOR)

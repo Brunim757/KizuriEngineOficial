@@ -3,6 +3,7 @@
 #include "kizuri/scripting/ScriptEngine.hpp"
 #include "kizuri/audio/AudioEngine.hpp"
 #include "kizuri/core/Log.hpp"
+#include <box2d/box2d.h>
 
 namespace kizuri {
 
@@ -25,6 +26,11 @@ void AudioSourceComponent::Stop() {
 
 bool AudioSourceComponent::IsPlaying() const {
     return Handle != kInvalidSound && AudioEngine::IsSoundPlaying(Handle);
+}
+
+void Rigidbody2DComponent::ApplyLinearImpulse(const glm::vec2& impulse, bool wake) {
+    if (!RuntimeBody) return; // corpo ainda não criado (só existe durante o Play)
+    static_cast<b2Body*>(RuntimeBody)->ApplyLinearImpulseToCenter({ impulse.x, impulse.y }, wake);
 }
 
 void NativeScriptComponent::BindByName(const std::string& className) {

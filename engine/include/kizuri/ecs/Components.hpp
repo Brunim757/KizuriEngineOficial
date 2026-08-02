@@ -184,6 +184,13 @@ struct Rigidbody2DComponent {
     BodyType Type = BodyType::Dynamic;
     bool FixedRotation = false;
     void* RuntimeBody = nullptr; // b2Body*
+
+    // Aplica um impulso linear no centro do corpo (Box2D) — só tem efeito
+    // durante o Play, quando RuntimeBody já foi criado. Fica aqui na engine
+    // (e não no script) porque o b2Body é interno ao motor; também evita
+    // que scripts precisem enxergar o Box2D (cujos símbolos não são
+    // exportados da KizuriEngine no Windows).
+    void ApplyLinearImpulse(const glm::vec2& impulse, bool wake = true);
 };
 
 struct BoxCollider2DComponent {

@@ -185,7 +185,7 @@ GameModuleBuildResult GameModuleBuilder::BuildCompileScripts(
     // no Linux linkamos direto contra o libKizuriEngine.so, que vive no bin do
     // editor (que, no layout padrão, é justamente o pai de sdk/).
 #if defined(_WIN32)
-    cmd += " -L" + ShellQuote(fs::path(sdkDir) / "lib") + " -l:libKizuriEngine.dll.a";
+    cmd += " -L" + ShellQuote((fs::path(sdkDir) / "lib").string()) + " -l:libKizuriEngine.dll.a";
 #else
     // Linux: RPATH aponta pro diretório onde a libKizuriEngine.so vive (bin do
     // editor). O módulo fica em <Source>/build, longe da engine — $ORIGIN não

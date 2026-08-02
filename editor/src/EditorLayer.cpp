@@ -13,7 +13,11 @@
 #include "UI/Icons.hpp"
 #include <kizuri/project/GameExporter.hpp>
 #include <kizuri/project/GameModuleBuilder.hpp>
-#include <kizuri/core/EntryPoint.hpp>
+// GetCommandLineArgs vive em EntryPoint.hpp, mas esse header define main();
+// o editor já tem main() em EditorApp.cpp — declaramos só a função aqui.
+namespace kizuri {
+    inline std::vector<std::string>& GetCommandLineArgs();
+}
 #include <fstream>
 #include <cfloat>
 #include <cctype>

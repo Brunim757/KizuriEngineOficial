@@ -55,7 +55,7 @@ bool ScriptEngine::LoadModule(const std::string& path) {
 
     s_LastError.clear();
     s_LoadedPath = path;
-    KZ_CORE_INFO("GameModule carregado: {0} ({1} script(s) registrado(s))", path, s_Registry.GetClassNames().size());
+    KZ_CORE_INFO("Módulo de jogo carregado: {0} ({1} scripts registrados).", path, s_Registry.GetClassNames().size());
     return true;
 }
 

@@ -26,7 +26,7 @@ Texture2D::Texture2D(const std::string& path) : m_Path(path) {
     stbi_set_flip_vertically_on_load(1);
     stbi_uc* data = stbi_load(path.c_str(), &width, &height, &channels, 0);
     if (!data) {
-        KZ_CORE_ERROR("Falha ao carregar textura: {0}", path);
+        KZ_CORE_ERROR("Falha ao carregar a textura: {0}", path);
         return;
     }
 
@@ -46,7 +46,7 @@ Texture2D::Texture2D(const std::string& path) : m_Path(path) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     stbi_image_free(data);
-    KZ_CORE_INFO("Textura carregada: {0} ({1}x{2})", path, width, height);
+    KZ_CORE_INFO("Textura carregada: {0} ({1}x{2}).", path, width, height);
 }
 
 Texture2D::~Texture2D() { glDeleteTextures(1, &m_RendererID); }

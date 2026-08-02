@@ -21,7 +21,7 @@ static uint32_t CompileStage(GLenum type, const std::string& source, const std::
         glGetShaderiv(shader, 0x8B84 /*GL_INFO_LOG_LENGTH*/, &len);
         std::vector<char> info(len);
         glGetShaderInfoLog(shader, len, &len, info.data());
-        KZ_CORE_ERROR("Falha ao compilar shader '{0}': {1}", shaderName, info.data());
+        KZ_CORE_ERROR("Falha ao compilar o shader '{0}': {1}", shaderName, info.data());
         glDeleteShader(shader);
         return 0;
     }
@@ -46,12 +46,12 @@ Shader::Shader(const std::string& name, const std::string& vertexSrc, const std:
         glGetProgramiv(m_RendererID, 0x8B84, &len);
         std::vector<char> info(len);
         glGetProgramInfoLog(m_RendererID, len, &len, info.data());
-        KZ_CORE_ERROR("Falha ao linkar shader program '{0}': {1}", name, info.data());
+        KZ_CORE_ERROR("Falha ao vincular o programa de shader '{0}': {1}", name, info.data());
     }
 
     glDeleteShader(vs);
     glDeleteShader(fs);
-    KZ_CORE_INFO("Shader '{0}' compilado com sucesso (id={1})", name, m_RendererID);
+    KZ_CORE_INFO("Shader '{0}' compilado com sucesso (id={1}).", name, m_RendererID);
 }
 
 Shader::~Shader() { glDeleteProgram(m_RendererID); }

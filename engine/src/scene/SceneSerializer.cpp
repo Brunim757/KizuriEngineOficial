@@ -15,7 +15,7 @@ namespace kizuri {
 void SceneSerializer::Serialize(const std::string& filepath) {
     std::ofstream out(filepath);
     out << SerializeToJson().dump(4);
-    KZ_CORE_INFO("Cena salva em: {0}", filepath);
+    KZ_CORE_INFO("Cena salva com sucesso em: {0}", filepath);
 }
 
 json SceneSerializer::SerializeToJson() {
@@ -33,7 +33,7 @@ json SceneSerializer::SerializeToJson() {
 bool SceneSerializer::Deserialize(const std::string& filepath) {
     std::ifstream in(filepath);
     if (!in.is_open()) {
-        KZ_CORE_ERROR("Não foi possível abrir arquivo de cena: {0}", filepath);
+        KZ_CORE_ERROR("Não foi possível abrir o arquivo de cena: {0}", filepath);
         return false;
     }
 
@@ -41,7 +41,7 @@ bool SceneSerializer::Deserialize(const std::string& filepath) {
     in >> root;
     if (!DeserializeFromJson(root)) return false;
 
-    KZ_CORE_INFO("Cena carregada de: {0}", filepath);
+    KZ_CORE_INFO("Cena carregada com sucesso de: {0}", filepath);
     return true;
 }
 

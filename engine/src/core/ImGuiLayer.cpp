@@ -53,7 +53,7 @@ void ImGuiLayer::OnAttach() {
         glslVersion = "#version 450 core";
     else if (win.GetGLVersionMajor() == 4)
         glslVersion = "#version 410 core";
-    KZ_CORE_INFO("ImGuiLayer: inicializando backend OpenGL3 com '{0}' (contexto real: {1}.{2})",
+    KZ_CORE_INFO("ImGuiLayer: inicializando o backend OpenGL3 com '{0}' (contexto real: {1}.{2})",
                  glslVersion, win.GetGLVersionMajor(), win.GetGLVersionMinor());
     ImGui_ImplOpenGL3_Init(glslVersion);
 }
@@ -90,7 +90,7 @@ void ImGuiLayer::LoadFonts() {
         20.0f, &config, ranges);
 
     if (!m_FontRegular || !m_FontBold || !m_FontTitlebar) {
-        KZ_CORE_WARN("Não foi possível carregar as fontes JetBrains Mono embutidas — usando fonte padrão do ImGui.");
+        KZ_CORE_WARN("Não foi possível carregar as fontes JetBrains Mono integradas; usando a fonte padrão do ImGui.");
         if (!m_FontRegular) m_FontRegular = io.Fonts->AddFontDefault();
         if (!m_FontBold) m_FontBold = m_FontRegular;
         if (!m_FontTitlebar) m_FontTitlebar = m_FontRegular;

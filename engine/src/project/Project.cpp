@@ -126,7 +126,7 @@ Ref<Project> Project::New(const std::string& directory, const std::string& name,
 
     std::error_code ec;
     fs::create_directories(fs::path(directory) / project->m_Config.AssetDirectory, ec);
-    if (ec) KZ_CORE_ERROR("Falha ao criar pasta de assets do projeto: {0}", ec.message());
+    if (ec) KZ_CORE_ERROR("Falha ao criar o diretório de assets do projeto: {0}", ec.message());
 
     // Source/ com um CMakeLists.txt e um script de exemplo já funcionando
     // — não só a pasta vazia. É o que faz "o C++ vem no projeto" ser uma
@@ -147,7 +147,7 @@ Ref<Project> Project::New(const std::string& directory, const std::string& name,
 Ref<Project> Project::Load(const std::string& kzprojFilePath) {
     std::ifstream in(kzprojFilePath);
     if (!in.is_open()) {
-        KZ_CORE_ERROR("Não foi possível abrir projeto: {0}", kzprojFilePath);
+        KZ_CORE_ERROR("Não foi possível abrir o projeto: {0}", kzprojFilePath);
         return nullptr;
     }
 
@@ -164,7 +164,7 @@ Ref<Project> Project::Load(const std::string& kzprojFilePath) {
     cfg.AssetDirectory = root.value("AssetDirectory", "Assets");
     cfg.StartScenePath = root.value("StartScenePath", "");
 
-    KZ_CORE_INFO("Projeto carregado: {0}", cfg.Name);
+    KZ_CORE_INFO("Projeto carregado: {0}.", cfg.Name);
     GetActive() = project;
     return project;
 }
@@ -180,7 +180,7 @@ bool Project::Save() {
 
     std::ofstream out(m_FilePath);
     if (!out.is_open()) {
-        KZ_CORE_ERROR("Não foi possível salvar projeto em: {0}", m_FilePath);
+        KZ_CORE_ERROR("Não foi possível salvar o projeto em: {0}", m_FilePath);
         return false;
     }
     out << root.dump(4);

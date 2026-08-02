@@ -37,7 +37,7 @@ void NativeScriptComponent::BindByName(const std::string& className) {
     InstantiateScript = [className]() -> NativeScript* {
         NativeScript* instance = ScriptEngine::GetRegistry().Create(className);
         if (!instance)
-            KZ_CORE_ERROR("Script '{0}' não encontrado no GameModule carregado.", className);
+            KZ_CORE_ERROR("O script '{0}' não foi encontrado no módulo de jogo carregado.", className);
         return instance;
     };
     DestroyScript = [](NativeScriptComponent* nsc) { delete nsc->Instance; nsc->Instance = nullptr; };

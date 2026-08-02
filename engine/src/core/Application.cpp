@@ -84,7 +84,7 @@ bool Application::OnWindowResize(WindowResizeEvent& e) {
 }
 
 void Application::Run() {
-    KZ_CORE_INFO("Kizuri Engine — iniciando loop principal");
+    KZ_CORE_INFO("Kizuri Engine: iniciando o loop principal.");
     while (m_Running) {
         float time = (float)glfwGetTime();
         Timestep timestep(time - m_LastFrameTime);

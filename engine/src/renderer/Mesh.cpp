@@ -103,10 +103,10 @@ Ref<Mesh> Mesh::LoadFromOBJ(const std::string& path) {
     std::string warn, err;
 
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str())) {
-        KZ_CORE_ERROR("Falha ao carregar OBJ '{0}': {1}", path, err);
+        KZ_CORE_ERROR("Falha ao carregar a malha OBJ '{0}': {1}", path, err);
         return CreateCube();
     }
-    if (!warn.empty()) KZ_CORE_WARN("tinyobjloader ({0}): {1}", path, warn);
+    if (!warn.empty()) KZ_CORE_WARN("Aviso do tinyobjloader ({0}): {1}", path, warn);
 
     std::vector<Vertex3D> vertices;
     std::vector<uint32_t> indices;
@@ -136,7 +136,7 @@ Ref<Mesh> Mesh::LoadFromOBJ(const std::string& path) {
             vertices.push_back(vertex);
         }
     }
-    KZ_CORE_INFO("OBJ carregado: {0} ({1} vértices)", path, vertices.size());
+    KZ_CORE_INFO("Malha OBJ carregada: {0} ({1} vértices).", path, vertices.size());
     return CreateRef<Mesh>(vertices, indices);
 }
 

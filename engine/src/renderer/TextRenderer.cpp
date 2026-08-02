@@ -33,7 +33,7 @@ void TextRenderer::EnsureAtlas() {
         (float)kPixelHeight, bitmap.data(), kAtlasWidth, kAtlasHeight,
         kFirstChar, kCharCount, s_BakedChars);
     if (baked <= 0) {
-        KZ_CORE_ERROR("TextRenderer: falha ao cozinhar o atlas da fonte (chars={0}).", baked);
+        KZ_CORE_ERROR("TextRenderer: falha ao gerar o atlas da fonte ({0} caracteres).", baked);
         return;
     }
 
@@ -50,7 +50,7 @@ void TextRenderer::EnsureAtlas() {
     s_AtlasTexture = Texture2D::Create(kAtlasWidth, kAtlasHeight);
     s_AtlasTexture->SetData(rgba.data(), (uint32_t)rgba.size());
     s_Ready = true;
-    KZ_CORE_INFO("TextRenderer: atlas {0}x{1} pronto ({2} glifos).", kAtlasWidth, kAtlasHeight, baked);
+    KZ_CORE_INFO("TextRenderer: atlas {0}x{1} gerado com {2} glifos.", kAtlasWidth, kAtlasHeight, baked);
 }
 
 void TextRenderer::Init() {

@@ -719,7 +719,7 @@ void Renderer3D::Init() {
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-            KZ_CORE_ERROR("Framebuffer de sombra da cascata {0} incompleto!", i);
+            KZ_CORE_ERROR("Framebuffer de sombra da cascata {0} incompleto.", i);
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -818,7 +818,7 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height) {
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_HDRColorBuffer, 0);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, s_HDRDepthRBO);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        KZ_CORE_ERROR("Framebuffer HDR incompleto!");
+        KZ_CORE_ERROR("Framebuffer HDR incompleto.");
 
     glGenFramebuffers(2, s_BloomFBO);
     glGenTextures(2, s_BloomColorBuffer);
@@ -832,7 +832,7 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height) {
         glBindFramebuffer(GL_FRAMEBUFFER, s_BloomFBO[i]);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_BloomColorBuffer[i], 0);
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-            KZ_CORE_ERROR("Framebuffer de bloom {0} incompleto!", i);
+            KZ_CORE_ERROR("Framebuffer de bloom {0} incompleto.", i);
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -997,7 +997,7 @@ void Renderer3D::GenerateEnvironment() {
     glDeleteFramebuffers(1, &captureFBO);
     glDeleteRenderbuffers(1, &captureRBO);
 
-    KZ_CORE_INFO("Renderer3D::GenerateEnvironment — bake concluído (ambiente {0}x{1}, irradiância {2}x{3}, prefiltro {4}x{4} com {5} mips)",
+    KZ_CORE_INFO("Renderer3D::GenerateEnvironment: bake concluído (ambiente {0}x{1}, irradiância {2}x{3}, pré-filtro {4}x{4} com {5} mips)",
                  kEnvironmentSize, kEnvironmentSize, kIrradianceSize, kIrradianceSize, kPrefilterBaseSize, kPrefilterMipLevels);
 }
 

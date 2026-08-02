@@ -3,7 +3,7 @@
 using namespace kizuri;
 
 void PlayerController::OnCreate() {
-    KZ_INFO("PlayerController: entidade criada!");
+    KZ_INFO("PlayerController: entidade criada.");
 }
 
 void PlayerController::OnUpdate(Timestep ts) {

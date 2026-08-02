@@ -45,7 +45,7 @@ public:
         // AudioEngine::LoadSound("bg_music", "assets/audio/theme.wav", true);
         // AudioEngine::Play(...) — descomente ao adicionar arquivos de áudio reais.
 
-        KZ_INFO("Kizuri Sandbox iniciado. WASD/setas para mover o player.");
+        KZ_INFO("Kizuri Sandbox iniciado. Use WASD ou as setas para mover o jogador.");
         m_Scene->OnRuntimeStart();
     }
 

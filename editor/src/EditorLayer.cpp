@@ -330,9 +330,9 @@ void EditorLayer::DrawViewportToolbar() {
 
     ImGui::SameLine(0.0f, 16.0f);
     if (is2D)
-        ImGui::TextDisabled("Botão direito arrasta, scroll dá zoom");
+        ImGui::TextDisabled("Arraste com o botão direito para navegar; role para aplicar zoom");
     else
-        ImGui::TextDisabled("Botão direito + WASD navega, Q/E sobe-desce");
+        ImGui::TextDisabled("Navegue com botão direito + WASD; Q/E para subir e descer");
 
     // Play/Stop: física, scripts, partículas e áudio só rodam de verdade numa cópia da cena
     // (ver Scene::Copy) — a cena que você edita nunca é tocada, então Stop nunca "perde" nada.
@@ -893,7 +893,7 @@ void EditorLayer::DrawSceneFileModals() {
     ImGui::SetNextWindowSize(ImVec2(420.0f, 0.0f), ImGuiCond_Appearing);
 
     if (ImGui::BeginPopupModal("Salvar Cena Como", nullptr, ImGuiWindowFlags_NoResize)) {
-        ImGui::TextUnformatted("Caminho do arquivo .kzscene:");
+        ImGui::TextUnformatted("Caminho do arquivo de cena (.kzscene):");
         ImGui::SetNextItemWidth(-84.0f);
         bool enterPressed = ImGui::InputText("##save_path", m_ScenePathBuffer, sizeof(m_ScenePathBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
         ImGui::SameLine();
@@ -924,7 +924,7 @@ void EditorLayer::DrawSceneFileModals() {
     ImGui::SetNextWindowSize(ImVec2(420.0f, 0.0f), ImGuiCond_Appearing);
 
     if (ImGui::BeginPopupModal("Abrir Cena", nullptr, ImGuiWindowFlags_NoResize)) {
-        ImGui::TextUnformatted("Caminho do arquivo .kzscene:");
+        ImGui::TextUnformatted("Caminho do arquivo de cena (.kzscene):");
         ImGui::SetNextItemWidth(-84.0f);
         bool enterPressed = ImGui::InputText("##open_path", m_ScenePathBuffer, sizeof(m_ScenePathBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
         ImGui::SameLine();
@@ -967,7 +967,7 @@ void EditorLayer::DrawProjectModals() {
     ImGui::SetNextWindowSize(ImVec2(460.0f, 0.0f), ImGuiCond_Appearing);
 
     if (ImGui::BeginPopupModal("Novo Projeto", nullptr, ImGuiWindowFlags_NoResize)) {
-        ImGui::TextUnformatted("Pasta do projeto (criada se não existir):");
+        ImGui::TextUnformatted("Diretório do projeto (será criado se não existir):");
         ImGui::SetNextItemWidth(-84.0f);
         ImGui::InputText("##new_project_dir", m_NewProjectDirBuffer, sizeof(m_NewProjectDirBuffer));
         ImGui::SameLine();
@@ -985,7 +985,7 @@ void EditorLayer::DrawProjectModals() {
         ImGui::InputText("##new_project_name", m_NewProjectNameBuffer, sizeof(m_NewProjectNameBuffer));
 
         ImGui::Spacing();
-        ImGui::TextUnformatted("Modo padrão (só sugere câmera/grid iniciais — nunca uma restrição):");
+        ImGui::TextUnformatted("Modo inicial (define apenas câmera/grade iniciais, sem restrições):");
         ImGui::RadioButton("2D", &m_NewProjectModeIndex, 0); ImGui::SameLine();
         ImGui::RadioButton("3D", &m_NewProjectModeIndex, 1); ImGui::SameLine();
         ImGui::RadioButton("Vazio", &m_NewProjectModeIndex, 2);
@@ -1028,7 +1028,7 @@ void EditorLayer::DrawProjectModals() {
     ImGui::SetNextWindowSize(ImVec2(460.0f, 0.0f), ImGuiCond_Appearing);
 
     if (ImGui::BeginPopupModal("Abrir Projeto", nullptr, ImGuiWindowFlags_NoResize)) {
-        ImGui::TextUnformatted("Caminho do arquivo .kzproj:");
+        ImGui::TextUnformatted("Caminho do arquivo de projeto (.kzproj):");
         ImGui::SetNextItemWidth(-84.0f);
         bool enterPressed = ImGui::InputText("##open_project_path", m_OpenProjectPathBuffer, sizeof(m_OpenProjectPathBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
         ImGui::SameLine();
@@ -1079,9 +1079,9 @@ void EditorLayer::DrawGameModuleModal() {
         kizuri::editor::icons::PanelHeader("CARREGAR GAMEMODULE", kizuri::editor::icons::Folder);
 
         ImGui::TextWrapped(
-            "Biblioteca dinâmica (.dll/.so) com o código C++ do jogo, compilada a partir da "
-            "pasta Source/ do projeto. Precisa exportar uma função RegisterScripts(ScriptRegistry&) "
-            "com linkage C — ver docs/NOTAS_INTERNAS.md.");
+            "Carregue a biblioteca dinâmica (.dll/.so) com o código do jogo em C++, compilada a "
+            "partir da pasta Source/ do projeto. A biblioteca deve exportar a função "
+            "RegisterScripts(ScriptRegistry&) com linkage C. Consulte docs/NOTAS_INTERNAS.md para mais detalhes.");
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
@@ -1106,11 +1106,11 @@ void EditorLayer::DrawGameModuleModal() {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.35f, 0.85f, 0.45f, 1.0f));
             ImGui::Bullet();
             ImGui::SameLine();
-            ImGui::TextWrapped("Carregado: %s", ScriptEngine::GetLoadedPath().c_str());
+            ImGui::TextWrapped("Módulo carregado: %s", ScriptEngine::GetLoadedPath().c_str());
             ImGui::PopStyleColor();
 
             auto classNames = ScriptEngine::GetRegistry().GetClassNames();
-            ImGui::TextDisabled("%d script(s) registrado(s):", (int)classNames.size());
+            ImGui::TextDisabled("Scripts registrados (%d):", (int)classNames.size());
             if (!classNames.empty()) {
                 ImGui::Indent();
                 for (auto& name : classNames) ImGui::BulletText("%s", name.c_str());
@@ -1120,7 +1120,7 @@ void EditorLayer::DrawGameModuleModal() {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f, 0.35f, 0.35f, 1.0f));
             ImGui::Bullet();
             ImGui::SameLine();
-            ImGui::TextWrapped("Falha ao carregar: %s", lastError.c_str());
+            ImGui::TextWrapped("Falha no carregamento: %s", lastError.c_str());
             ImGui::PopStyleColor();
         } else {
             ImGui::TextDisabled("Nenhum módulo carregado.");
@@ -1169,10 +1169,10 @@ void EditorLayer::DrawConsole() {
     ImGui::Checkbox("Info", &m_ConsoleShowInfo); ImGui::SameLine();
     ImGui::Checkbox("Aviso", &m_ConsoleShowWarn); ImGui::SameLine();
     ImGui::Checkbox("Erro", &m_ConsoleShowError); ImGui::SameLine();
-    ImGui::Checkbox("Auto-scroll", &m_ConsoleAutoScroll);
+    ImGui::Checkbox("Rolagem automática", &m_ConsoleAutoScroll);
 
     ImGui::SetNextItemWidth(-1.0f);
-    ImGui::InputTextWithHint("##console_search", "Buscar...", m_ConsoleSearchBuffer, sizeof(m_ConsoleSearchBuffer));
+    ImGui::InputTextWithHint("##console_search", "Pesquisar...", m_ConsoleSearchBuffer, sizeof(m_ConsoleSearchBuffer));
 
     ImGui::Separator();
     ImGui::BeginChild("##console_scroll", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
@@ -1215,7 +1215,7 @@ void EditorLayer::DrawContentBrowser() {
 
     auto& project = Project::GetActive();
     if (!project) {
-        ImGui::TextDisabled("Nenhum projeto aberto — use Arquivo > Novo Projeto ou Abrir Projeto.");
+        ImGui::TextDisabled("Nenhum projeto aberto. Use Arquivo > Novo Projeto ou Abrir Projeto para começar.");
         ImGui::End();
         return;
     }
@@ -1230,7 +1230,7 @@ void EditorLayer::DrawContentBrowser() {
     std::error_code eqEc;
     bool atRoot = std::filesystem::equivalent(m_ContentBrowserCurrentDir, m_ContentBrowserRoot, eqEc) || eqEc;
     ImGui::BeginDisabled(atRoot);
-    if (ImGui::Button("<- Voltar") && !atRoot)
+    if (ImGui::Button("← Voltar") && !atRoot)
         m_ContentBrowserCurrentDir = m_ContentBrowserCurrentDir.parent_path();
     ImGui::EndDisabled();
     ImGui::SameLine();
@@ -1317,7 +1317,7 @@ void EditorLayer::DrawContentBrowser() {
         (void)clicked;
 
         if (ImGui::BeginPopupContextItem()) {
-            if (ImGui::MenuItem("Deletar")) {
+            if (ImGui::MenuItem("Excluir")) {
                 std::error_code delEc;
                 std::filesystem::remove_all(entry.path(), delEc);
             }
@@ -1438,8 +1438,8 @@ void EditorLayer::DrawEntityNode(Entity entity, Entity& outEntityToDelete, bool 
         }
 
         if (ImGui::BeginPopupContextItem()) {
-            if (ImGui::MenuItem("Deletar Entidade")) outEntityToDelete = entity;
-            if (entity.GetParent() && ImGui::MenuItem("Desanexar do Pai")) Reparent(entity, {});
+            if (ImGui::MenuItem("Excluir Entidade")) outEntityToDelete = entity;
+            if (entity.GetParent() && ImGui::MenuItem("Desvincular do pai")) Reparent(entity, {});
             ImGui::EndPopup();
         }
     }
@@ -1533,7 +1533,7 @@ void EditorLayer::DrawInspector() {
         if (m_SelectedEntity.HasComponent<CameraComponent>()) {
             auto& cc = m_SelectedEntity.GetComponent<CameraComponent>();
             if (DrawComponentHeader("Camera", &removeThis)) {
-                ImGui::Checkbox("Primária", &cc.Primary);
+                ImGui::Checkbox("Principal", &cc.Primary);
                 ImGui::DragFloat("Tamanho Ortho", &cc.OrthoSize, 0.1f);
                 ImGui::TreePop();
             }
@@ -1557,7 +1557,7 @@ void EditorLayer::DrawInspector() {
                 char meshBuf[512];
                 strncpy(meshBuf, mr.MeshSource.c_str(), sizeof(meshBuf) - 1);
                 meshBuf[sizeof(meshBuf) - 1] = '\0';
-                if (ImGui::InputText("Mesh (.obj)", meshBuf, sizeof(meshBuf))) {
+                if (ImGui::InputText("Malha (.obj)", meshBuf, sizeof(meshBuf))) {
                     mr.MeshSource = meshBuf;
                     if (!mr.MeshSource.empty()) mr.MeshAsset = kizuri::Mesh::FromSource(mr.MeshSource);
                 }
@@ -1568,7 +1568,7 @@ void EditorLayer::DrawInspector() {
                 char albBuf[512], nrmBuf[512];
                 strncpy(albBuf, mat.AlbedoMapPath.c_str(), sizeof(albBuf) - 1); albBuf[sizeof(albBuf) - 1] = '\0';
                 strncpy(nrmBuf, mat.NormalMapPath.c_str(), sizeof(nrmBuf) - 1); nrmBuf[sizeof(nrmBuf) - 1] = '\0';
-                if (ImGui::InputText("Albedo Map", albBuf, sizeof(albBuf))) {
+                if (ImGui::InputText("Mapa de Albedo", albBuf, sizeof(albBuf))) {
                     mat.AlbedoMapPath = albBuf;
                     mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.AlbedoMapPath);
                 }
@@ -1576,7 +1576,7 @@ void EditorLayer::DrawInspector() {
                     uint32_t texID = mat.AlbedoMap->GetRendererID();
                     ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(64.0f, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
                 }
-                if (ImGui::InputText("Normal Map", nrmBuf, sizeof(nrmBuf))) {
+                if (ImGui::InputText("Mapa de Normais", nrmBuf, sizeof(nrmBuf))) {
                     mat.NormalMapPath = nrmBuf;
                     mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.NormalMapPath);
                 }
@@ -1595,14 +1595,14 @@ void EditorLayer::DrawInspector() {
                 char textBuf[1024];
                 strncpy(textBuf, tc.Text.c_str(), sizeof(textBuf) - 1);
                 textBuf[sizeof(textBuf) - 1] = '\0';
-                if (ImGui::InputText("Conteúdo", textBuf, sizeof(textBuf))) tc.Text = textBuf;
+                if (ImGui::InputText("Texto", textBuf, sizeof(textBuf))) tc.Text = textBuf;
                 ImGui::ColorEdit4("Cor", &tc.Color.x);
                 ImGui::DragFloat("Tamanho (px)", &tc.FontSize, 1.0f, 8.0f, 512.0f);
                 const char* alignItems[] = { "Esquerda", "Centro", "Direita" };
                 int alignIdx = (int)tc.Alignment;
                 if (ImGui::Combo("Alinhamento", &alignIdx, alignItems, 3))
                     tc.Alignment = (kizuri::TextAlignment)alignIdx;
-                ImGui::TextDisabled("Fonte embutida JetBrains Mono. Use \\n pra quebrar linha.");
+                ImGui::TextDisabled("Fonte integrada JetBrains Mono. Use \\n para quebrar linha.");
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<TextComponent>();
@@ -1614,7 +1614,7 @@ void EditorLayer::DrawInspector() {
                 char sheetBuf[512];
                 strncpy(sheetBuf, sac.SheetPath.c_str(), sizeof(sheetBuf) - 1);
                 sheetBuf[sizeof(sheetBuf) - 1] = '\0';
-                if (ImGui::InputText("Folha (sprite sheet)", sheetBuf, sizeof(sheetBuf))) {
+                if (ImGui::InputText("Sprite Sheet", sheetBuf, sizeof(sheetBuf))) {
                     sac.SheetPath = sheetBuf;
                     sac.SheetTexture = sac.SheetPath.empty() ? nullptr : kizuri::Texture2D::Create(sac.SheetPath);
                 }
@@ -1628,9 +1628,9 @@ void EditorLayer::DrawInspector() {
                 if (ImGui::DragInt("Frames por linha", &cols, 1, 1, 64)) sac.FramesPerRow = (uint32_t)cols;
                 if (ImGui::DragInt("Total de frames", &total, 1, 1, 4096)) sac.TotalFrames = (uint32_t)total;
                 ImGui::DragFloat("FPS", &sac.FPS, 0.5f, 1.0f, 120.0f);
-                ImGui::Checkbox("Loop", &sac.Loop);
+                ImGui::Checkbox("Em loop", &sac.Loop);
                 ImGui::SameLine();
-                ImGui::Checkbox("Rodando", &sac.Playing);
+                ImGui::Checkbox("Em execução", &sac.Playing);
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<SpriteAnimationComponent>();
@@ -1642,7 +1642,7 @@ void EditorLayer::DrawInspector() {
                 char atlasBuf[512];
                 strncpy(atlasBuf, tmc.AtlasPath.c_str(), sizeof(atlasBuf) - 1);
                 atlasBuf[sizeof(atlasBuf) - 1] = '\0';
-                if (ImGui::InputText("Atlas de tiles", atlasBuf, sizeof(atlasBuf))) {
+                if (ImGui::InputText("Atlas de Tiles", atlasBuf, sizeof(atlasBuf))) {
                     tmc.AtlasPath = atlasBuf;
                     tmc.AtlasTexture = tmc.AtlasPath.empty() ? nullptr : kizuri::Texture2D::Create(tmc.AtlasPath);
                 }
@@ -1663,10 +1663,10 @@ void EditorLayer::DrawInspector() {
 
                 // Pincel do pintor de tilemap (funciona no viewport 2D).
                 ImGui::DragInt("Pincel", &m_TilemapBrushValue, 1, 0, 4096);
-                ImGui::TextDisabled("Pinte no viewport 2D (botão esquerdo). Botão direito apaga.");
+                ImGui::TextDisabled("Pinte no viewport 2D: o botão esquerdo aplica o pincel, o botão direito apaga.");
 
                 if (tmc.Tiles.size() > 0 && ImGui::CollapsingHeader("Tiles (valores)")) {
-                    ImGui::TextDisabled("%zu tiles — 0=vazio, N=posição (N-1) no atlas.", tmc.Tiles.size());
+                    ImGui::TextDisabled("%zu tiles — 0=vazio; N=posição (N-1) no atlas.", tmc.Tiles.size());
                     static int s_EditIdx = -1;
                     ImGui::DragInt("Índice", &s_EditIdx, 1, -1, (int)tmc.Tiles.size() - 1);
                     if (s_EditIdx >= 0 && s_EditIdx < (int)tmc.Tiles.size()) {
@@ -1678,7 +1678,7 @@ void EditorLayer::DrawInspector() {
 
                 // Tiles sólidos: valores que geram collider Box2D no Play.
                 if (ImGui::CollapsingHeader("Colisão (tiles sólidos)")) {
-                    ImGui::TextDisabled("Valores de tile com collider estático. Ex: chão=1, plataforma=2.");
+                    ImGui::TextDisabled("Tiles com colisor estático. Ex.: chão=1, plataforma=2.");
                     static int s_AddSolid = 1;
                     ImGui::SetNextItemWidth(80.0f);
                     ImGui::InputInt("Valor", &s_AddSolid, 1, 4);
@@ -1719,7 +1719,7 @@ void EditorLayer::DrawInspector() {
                     ImGui::DragFloat("Cone Externo (°)", &lc.OuterConeDeg, 0.5f, lc.InnerConeDeg, 89.0f);
                 }
                 if (lc.Type != LightType::Point)
-                    ImGui::TextDisabled("Direção segue a Rotação do Transform da entidade.");
+                    ImGui::TextDisabled("A direção acompanha a rotação do Transform da entidade.");
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<LightComponent>();
@@ -1728,9 +1728,9 @@ void EditorLayer::DrawInspector() {
         if (m_SelectedEntity.HasComponent<ParticleSystemComponent>()) {
             auto& pc = m_SelectedEntity.GetComponent<ParticleSystemComponent>();
             if (DrawComponentHeader("Particle System", &removeThis)) {
-                ImGui::Checkbox("Rodando", &pc.Playing);
+                ImGui::Checkbox("Em execução", &pc.Playing);
                 ImGui::SameLine();
-                ImGui::Checkbox("Aditivo (fogo/faísca)", &pc.Additive);
+                ImGui::Checkbox("Modo aditivo (fogo/faíscas)", &pc.Additive);
                 ImGui::DragFloat("Taxa (partículas/s)", &pc.EmissionRate, 0.5f, 0.0f, FLT_MAX);
                 int maxP = (int)pc.MaxParticles;
                 if (ImGui::DragInt("Máx. de partículas", &maxP, 1.0f, 1, (int)kMaxParticlesPerBatch))
@@ -1743,8 +1743,8 @@ void EditorLayer::DrawInspector() {
                 ImGui::ColorEdit4("Cor final", &pc.EndColor.x);
                 ImGui::DragFloat("Tamanho inicial", &pc.StartSize, 0.01f, 0.0f, FLT_MAX);
                 ImGui::DragFloat("Tamanho final", &pc.EndSize, 0.01f, 0.0f, FLT_MAX);
-                ImGui::TextDisabled("%d partícula(s) ativa(s) agora.", (int)pc.ActiveParticles.size());
-                ImGui::TextDisabled("Só simula durante Play (igual física).");
+                ImGui::TextDisabled("%d partículas ativas.", (int)pc.ActiveParticles.size());
+                ImGui::TextDisabled("A simulação ocorre apenas durante o Play, assim como a física.");
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<ParticleSystemComponent>();
@@ -1756,19 +1756,19 @@ void EditorLayer::DrawInspector() {
                 char pathBuf[512];
                 strncpy(pathBuf, ac.ClipPath.c_str(), sizeof(pathBuf) - 1);
                 pathBuf[sizeof(pathBuf) - 1] = '\0';
-                if (ImGui::InputText("Arquivo (.wav/.mp3/.ogg/.flac)", pathBuf, sizeof(pathBuf)))
+                if (ImGui::InputText("Arquivo de áudio (.wav/.mp3/.ogg/.flac)", pathBuf, sizeof(pathBuf)))
                     ac.ClipPath = pathBuf;
-                ImGui::Checkbox("Loop", &ac.Loop);
+                ImGui::Checkbox("Em loop", &ac.Loop);
                 ImGui::SameLine();
-                ImGui::Checkbox("Tocar ao iniciar", &ac.PlayOnStart);
-                ImGui::Checkbox("Espacial (3D)", &ac.Spatial);
+                ImGui::Checkbox("Reproduzir ao iniciar", &ac.PlayOnStart);
+                ImGui::Checkbox("Áudio espacial (3D)", &ac.Spatial);
                 ImGui::DragFloat("Volume", &ac.Volume, 0.01f, 0.0f, 2.0f);
                 if (ac.Spatial) {
                     ImGui::DragFloat("Distância mín.", &ac.MinDistance, 0.1f, 0.01f, ac.MaxDistance);
                     ImGui::DragFloat("Distância máx.", &ac.MaxDistance, 0.5f, ac.MinDistance, FLT_MAX);
                 }
                 ImGui::TextDisabled(ac.Handle != kInvalidSound ? "Carregado." : "Ainda não carregado.");
-                ImGui::TextDisabled("Só toca durante Play (igual física/partículas).");
+                ImGui::TextDisabled("A reprodução ocorre apenas durante o Play, assim como física e partículas.");
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<AudioSourceComponent>();
@@ -1781,7 +1781,7 @@ void EditorLayer::DrawInspector() {
                 int current = (int)rb.Type;
                 if (ImGui::Combo("Tipo", &current, types, IM_ARRAYSIZE(types)))
                     rb.Type = (Rigidbody2DComponent::BodyType)current;
-                ImGui::Checkbox("Rotação Fixa", &rb.FixedRotation);
+                ImGui::Checkbox("Rotação fixa", &rb.FixedRotation);
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<Rigidbody2DComponent>();
@@ -1805,9 +1805,9 @@ void EditorLayer::DrawInspector() {
             if (DrawComponentHeader("Script Nativo", &removeThis)) {
                 auto classNames = ScriptEngine::GetRegistry().GetClassNames();
                 if (classNames.empty()) {
-                    ImGui::TextDisabled("Nenhum GameModule carregado — use Arquivo > Carregar GameModule.");
+                    ImGui::TextDisabled("Nenhum módulo carregado. Use Arquivo > Carregar GameModule.");
                     if (!nsc.ClassName.empty())
-                        ImGui::TextDisabled("Classe salva na cena: %s (será religada quando o módulo carregar)", nsc.ClassName.c_str());
+                        ImGui::TextDisabled("Classe vinculada na cena: %s (será religada ao carregar o módulo)", nsc.ClassName.c_str());
                 } else {
                     std::string preview = nsc.ClassName.empty() ? "(nenhuma classe)" : nsc.ClassName;
                     if (ImGui::BeginCombo("Classe", preview.c_str())) {

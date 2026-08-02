@@ -43,7 +43,7 @@ void Framebuffer::Invalidate() {
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, m_DepthAttachment, 0);
 
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        KZ_CORE_ERROR("Framebuffer incompleto! (status inválido)");
+        KZ_CORE_ERROR("Framebuffer incompleto (status inválido).");
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

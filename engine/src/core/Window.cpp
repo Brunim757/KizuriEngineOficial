@@ -37,7 +37,7 @@ static void ShowFatalErrorPopup(const std::string& title, const std::string& mes
 static uint8_t s_GLFWWindowCount = 0;
 
 static void GLFWErrorCallback(int error, const char* description) {
-    KZ_CORE_ERROR("GLFW Erro ({0}): {1}", error, description);
+    KZ_CORE_ERROR("Erro do GLFW ({0}): {1}", error, description);
 }
 
 Window::Window(const WindowProps& props) {
@@ -54,7 +54,7 @@ void Window::Init(const WindowProps& props) {
     m_Data.Height = props.Height;
     m_Data.VSync = props.VSync;
 
-    KZ_CORE_INFO("Criando janela '{0}' ({1}x{2})", props.Title, props.Width, props.Height);
+    KZ_CORE_INFO("Criando a janela '{0}' ({1}x{2}).", props.Title, props.Width, props.Height);
 
     if (s_GLFWWindowCount == 0) {
         int success = glfwInit();
@@ -84,7 +84,7 @@ void Window::Init(const WindowProps& props) {
             KZ_CORE_INFO("Contexto OpenGL {0}.{1} core criado com sucesso.", version[0], version[1]);
             break;
         }
-        KZ_CORE_WARN("Falha ao criar contexto OpenGL {0}.{1} core, tentando versão anterior...", version[0], version[1]);
+        KZ_CORE_WARN("Falha ao criar o contexto OpenGL {0}.{1} core; tentando uma versão anterior...", version[0], version[1]);
     }
 
     if (!m_Window) {
@@ -124,9 +124,9 @@ void Window::Init(const WindowProps& props) {
         std::exit(1);
     }
 
-    KZ_CORE_INFO("OpenGL Vendor:   {0}", (const char*)glGetString(0x1F00));
-    KZ_CORE_INFO("OpenGL Renderer: {0}", (const char*)glGetString(0x1F01));
-    KZ_CORE_INFO("OpenGL Versão:   {0}", (const char*)glGetString(0x1F02));
+    KZ_CORE_INFO("Fabricante OpenGL: {0}", (const char*)glGetString(0x1F00));
+    KZ_CORE_INFO("Renderer OpenGL: {0}", (const char*)glGetString(0x1F01));
+    KZ_CORE_INFO("Versão do OpenGL: {0}", (const char*)glGetString(0x1F02));
 
     glfwSetWindowUserPointer(m_Window, &m_Data);
     SetVSync(props.VSync);

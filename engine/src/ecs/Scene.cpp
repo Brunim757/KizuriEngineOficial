@@ -99,7 +99,7 @@ void Scene::SetParent(Entity child, Entity newParent) {
     if (newParent) {
         for (Entity walker = newParent; walker; walker = walker.GetParent()) {
             if (walker.GetUUID() == child.GetUUID()) {
-                KZ_CORE_ERROR("SetParent: operação criaria um ciclo na hierarquia, ignorada.");
+                KZ_CORE_ERROR("SetParent: a operação criaria um ciclo na hierarquia e foi ignorada.");
                 return;
             }
         }

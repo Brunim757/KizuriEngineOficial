@@ -26,13 +26,13 @@ void Prefab::CreateFromEntity(Entity root, const std::string& filepath) {
 
     std::ofstream file(filepath);
     file << out.dump(4);
-    KZ_CORE_INFO("Prefab salva em: {0}", filepath);
+    KZ_CORE_INFO("Prefab salva com sucesso em: {0}", filepath);
 }
 
 Entity Prefab::Instantiate(Scene& scene, const std::string& filepath, const glm::vec3& position) {
     std::ifstream in(filepath);
     if (!in.is_open()) {
-        KZ_CORE_ERROR("Não foi possível abrir prefab: {0}", filepath);
+        KZ_CORE_ERROR("Não foi possível abrir o prefab: {0}", filepath);
         return {};
     }
 
@@ -72,7 +72,7 @@ Entity Prefab::Instantiate(Scene& scene, const std::string& filepath, const glm:
     Entity rootEntity = created.front();
     rootEntity.GetComponent<TransformComponent>().Translation = position;
 
-    KZ_CORE_INFO("Prefab instanciada de: {0}", filepath);
+    KZ_CORE_INFO("Prefab instanciada com sucesso de: {0}", filepath);
     return rootEntity;
 }
 

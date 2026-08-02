@@ -26,11 +26,11 @@ static SoundHandle s_NextHandle = 1;
 void AudioEngine::Init() {
     ma_result result = ma_engine_init(nullptr, &s_Engine);
     if (result != MA_SUCCESS) {
-        KZ_CORE_ERROR("Falha ao inicializar o AudioEngine (miniaudio)!");
+        KZ_CORE_ERROR("Falha ao inicializar o motor de áudio (miniaudio).");
         return;
     }
     s_Initialized = true;
-    KZ_CORE_INFO("AudioEngine inicializado (miniaudio)");
+    KZ_CORE_INFO("Motor de áudio inicializado (miniaudio).");
 }
 
 void AudioEngine::Shutdown() {
@@ -47,14 +47,14 @@ SoundHandle AudioEngine::LoadSound(const std::string& name, const std::string& p
     ma_uint32 flags = stream ? MA_SOUND_FLAG_STREAM : 0;
     ma_result result = ma_sound_init_from_file(&s_Engine, path.c_str(), flags, nullptr, nullptr, &loaded->Sound);
     if (result != MA_SUCCESS) {
-        KZ_CORE_ERROR("Falha ao carregar som '{0}' em '{1}'", name, path);
+        KZ_CORE_ERROR("Falha ao carregar o áudio '{0}' em '{1}'.", name, path);
         return kInvalidSound;
     }
 
     SoundHandle handle = s_NextHandle++;
     s_Sounds[handle] = std::move(loaded);
     s_NameToHandle[name] = handle;
-    KZ_CORE_INFO("Som carregado: {0} ({1})", name, path);
+    KZ_CORE_INFO("Áudio carregado: {0} ({1}).", name, path);
     return handle;
 }
 

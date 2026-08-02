@@ -185,12 +185,15 @@ struct Rigidbody2DComponent {
     bool FixedRotation = false;
     void* RuntimeBody = nullptr; // b2Body*
 
-    // Aplica um impulso linear no centro do corpo (Box2D) — só tem efeito
-    // durante o Play, quando RuntimeBody já foi criado. Fica aqui na engine
-    // (e não no script) porque o b2Body é interno ao motor; também evita
-    // que scripts precisem enxergar o Box2D (cujos símbolos não são
-    // exportados da KizuriEngine no Windows).
+    // API de física pro script — só tem efeito durante o Play, quando
+    // RuntimeBody já foi criado. Fica aqui (não no script) porque o b2Body
+    // é interno; scripts não precisam linkar Box2D.
     void ApplyLinearImpulse(const glm::vec2& impulse, bool wake = true);
+    void SetLinearVelocity(const glm::vec2& velocity);
+    glm::vec2 GetLinearVelocity() const;
+    // Sincroniza o corpo com Translation/Rotation.z do Transform (útil
+    // pra Kinematic, ou pra teleportar um Dynamic sem lutar com o Step).
+    void SetTransform(const glm::vec2& position, float angleRadians);
 };
 
 struct BoxCollider2DComponent {

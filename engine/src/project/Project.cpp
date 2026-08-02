@@ -173,6 +173,7 @@ Ref<Project> Project::Load(const std::string& kzprojFilePath) {
     cfg.DefaultMode = ModeFromString(root.value("DefaultMode", "Empty"));
     cfg.AssetDirectory = root.value("AssetDirectory", "Assets");
     cfg.StartScenePath = root.value("StartScenePath", "");
+    cfg.GameModulePath = root.value("GameModulePath", "");
 
     KZ_CORE_INFO("Projeto carregado: {0}.", cfg.Name);
     GetActive() = project;
@@ -187,6 +188,7 @@ bool Project::Save() {
     root["DefaultMode"] = ModeToString(m_Config.DefaultMode);
     root["AssetDirectory"] = m_Config.AssetDirectory;
     root["StartScenePath"] = m_Config.StartScenePath;
+    root["GameModulePath"] = m_Config.GameModulePath;
 
     std::ofstream out(m_FilePath);
     if (!out.is_open()) {
@@ -199,6 +201,40 @@ bool Project::Save() {
 
 std::string Project::GetAssetDirectory() const {
     return (fs::path(m_ProjectDirectory) / m_Config.AssetDirectory).string();
+}
+
+std::string Project::MakeRelativePath(const std::string& path) {
+    if (path.empty()) return path;
+    if (path.rfind("builtin:", 0) == 0) return path;
+
+    auto& active = GetActive();
+    if (!active) return path;
+
+    std::error_code ec;
+    fs::path absPath = fs::weakly_canonical(fs::absolute(path), ec);
+    if (ec) absPath = fs::absolute(path);
+    fs::path root = fs::weakly_canonical(fs::absolute(active->GetProjectDirectory()), ec);
+    if (ec) root = fs::absolute(active->GetProjectDirectory());
+
+    fs::path rel = fs::relative(absPath, root, ec);
+    if (ec || rel.empty() || *rel.begin() == "..") return path;
+    return rel.generic_string();
+}
+
+std::string Project::ResolvePath(const std::string& path) {
+    if (path.empty()) return path;
+    if (path.rfind("builtin:", 0) == 0) return path;
+
+    fs::path p(path);
+    if (p.is_absolute()) return path;
+
+    auto& active = GetActive();
+    if (active) {
+        fs::path candidate = fs::path(active->GetProjectDirectory()) / p;
+        std::error_code ec;
+        if (fs::exists(candidate, ec)) return candidate.string();
+    }
+    return path;
 }
 
 } // namespace kizuri

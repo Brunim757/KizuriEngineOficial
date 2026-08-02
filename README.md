@@ -99,9 +99,14 @@ KizuriGame <cena.kzscene> [GameModule.dll/.so]
 Sem argumentos, procura por `Start.kzscene` na pasta atual. Os caminhos de
 assets na cena são relativos ao diretório de trabalho.
 
-**Scripting** — crie classes de jogo herdeiras de `kizuri::ScriptableEntity`,
-registre-as num `RegisterScripts(ScriptRegistry&)` e compile como GameModule;
-o editor carrega pelo menu *Carregar GameModule...*.
+**Scripting** — crie classes herdeiras de `kizuri::NativeScript`, registre-as
+num `RegisterScripts(ScriptRegistry&)` e compile como GameModule; o editor
+carrega pelo menu *Carregar GameModule...*. APIs de gameplay: `OnCollisionBegin/End`,
+`Instantiate(".kzprefab")`, `LoadScene(".kzscene")`, `DestroyEntity()`.
+
+**Exportar** — salve a cena, carregue o GameModule, use *Arquivo > Exportar Jogo...*
+para gerar uma pasta com `KizuriGame`, `Start.kzscene`, assets e o módulo.
+Opcional: *Definir cena como inicial* grava `StartScenePath` no `.kzproj`.
 
 ---
 

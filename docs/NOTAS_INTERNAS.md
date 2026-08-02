@@ -143,21 +143,26 @@ dor de cabeça em CI antes.
 
 ## 3. Lacunas conhecidas, por prioridade
 
-1. **Pipeline de Assets** — mesh/textura não têm caminho serializável. Bloqueia: salvar
-   Mesh Renderer em `.kzscene`, editor de materiais de verdade, import de `.obj`/texturas
-   pela UI (hoje só por código).
-2. **CSM sem blend/texel snapping** — cosmético, não bloqueia uso.
+1. **Pipeline de import avançado** — reimport, previews em disco, geração de
+   normais. Salvar MeshRenderer/texturas em `.kzscene` e caminhos relativos
+   ao projeto **já funcionam**.
+2. **CSM sem blend/texel snapping** — cosmético.
 3. **Bloom sem UI de ajuste** — limiar/intensidade fixos no shader.
-4. **Áudio sem trigger por evento** — só `PlayOnStart`.
-5. **Sem animação de esqueleto** (bones/skinning) — não iniciado.
-6. **Sem KZScript** — scripting é só C++ nativo via `NativeScript` + GameModule (`.dll`/`.so`)
-   carregado em runtime. A API (`OnCreate`/`OnUpdate`/`OnDestroy`) foi desenhada pra já ser
-   compatível com o que a KZScript vai gerar no futuro.
-7. **Sem build/export do jogo final** — hoje só roda via `Sandbox`/editor, não existe um
-   "empacotar .exe standalone" ainda.
-8. **Diálogo nativo de arquivo só no Windows** — Linux/macOS sem backend.
-9. **`cmake/glad_stub/`** é lixo morto, pode ser apagado (`git rm -r cmake/glad_stub`) — não
-   referenciado em nenhum CMakeLists desde a troca pro glad2 de verdade.
+4. **Sem animação de esqueleto** (bones/skinning) — não iniciado.
+5. **Sem KZScript** — scripting é C++ nativo via `NativeScript` + GameModule.
+   Já tem colisão, Instantiate, LoadScene e Exportar Jogo.
+6. **Diálogo nativo de arquivo só no Windows** — Linux/macOS sem backend.
+7. **`cmake/glad_stub/`** é lixo morto — pode apagar.
+
+---
+
+## 3b. Fluxo v1 pra criar e empacotar um jogo
+
+1. Hub → Novo/Abrir projeto (cria `Assets/` + `Source/` com GameModule template).
+2. Monte a cena (sprites, física, scripts do GameModule).
+3. Play no editor pra testar (colisões / spawn / troca de cena).
+4. *Definir cena como inicial* + *Exportar Jogo...* → pasta jogável.
+5. Ou rode `KizuriGame Start.kzscene GameModule.dll` na pasta exportada.
 
 ---
 

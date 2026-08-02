@@ -20,6 +20,7 @@ struct ProjectConfig {
     // PC não quebra nenhuma referência.
     std::string AssetDirectory = "Assets";
     std::string StartScenePath; // vazio = nenhuma cena inicial definida ainda
+    std::string GameModulePath; // relativo ao projeto ou absoluto — auto-carrega ao abrir
 };
 
 // Um projeto Kizuri é uma pasta com um arquivo .kzproj na raiz, uma pasta
@@ -49,6 +50,15 @@ public:
     // caminho relativo ao diretório de trabalho do processo (que muda
     // dependendo de como o editor foi lançado).
     std::string GetAssetDirectory() const;
+
+    // Se o caminho estiver dentro do projeto ativo, devolve relativo à
+    // pasta do .kzproj (ex: "Assets/hero.png"). Caso contrário, devolve
+    // o original. Sem projeto aberto, devolve o original.
+    static std::string MakeRelativePath(const std::string& path);
+
+    // Resolve caminho relativo contra a pasta do projeto ativo (ou CWD).
+    // Caminhos absolutos e "builtin:..." passam intactos.
+    static std::string ResolvePath(const std::string& path);
 
     static Ref<Project>& GetActive();
 

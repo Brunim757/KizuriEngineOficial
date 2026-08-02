@@ -11,6 +11,8 @@
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "UI/Icons.hpp"
+#include <kizuri/project/GameExporter.hpp>
+#include <kizuri/core/EntryPoint.hpp>
 #include <fstream>
 #include <cfloat>
 #include <cctype>
@@ -201,6 +203,22 @@ void EditorLayer::OnUpdate(Timestep ts) {
 
     if (m_SceneState == SceneState::Play) {
         m_ActiveScene->OnUpdateRuntime(ts);
+
+        std::string nextScene;
+        if (m_ActiveScene->PollPendingLoad(nextScene)) {
+            m_ActiveScene->OnRuntimeStop();
+            AudioEngine::StopAll();
+            auto loaded = CreateRef<Scene>("Cena");
+            if (SceneSerializer(loaded).Deserialize(Project::ResolvePath(nextScene))) {
+                loaded->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
+                m_ActiveScene = loaded;
+                m_SelectedEntity = {};
+                m_ActiveScene->OnRuntimeStart();
+            } else {
+                KZ_CORE_ERROR("Falha ao carregar cena pedida pelo script: {0}", nextScene);
+                OnSceneStop();
+            }
+        }
     } else if (m_ViewportMode == ViewportMode::Mode3D) {
         UpdateEditorCamera(ts);
         KZ_CORE_TRACE("EditorLayer::OnUpdate — chamando OnUpdateEditor3D");
@@ -571,10 +589,15 @@ Entity EditorLayer::CreateEntityFromAsset(const std::string& path, const glm::ve
     std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return (char)std::tolower(c); });
 
     Entity created;
+    if (lower.size() > 8 && lower.substr(lower.size() - 8) == ".kzprefab") {
+        created = m_ActiveScene->Instantiate(path, worldPos);
+        if (created) m_History.Push(CreateRef<CreateEntityCommand>(created));
+        return created;
+    }
     if (lower.size() > 4 && lower.substr(lower.size() - 4) == ".obj") {
         created = m_ActiveScene->CreateEntity(std::filesystem::path(path).stem().string());
         auto& mr = created.AddComponent<MeshRendererComponent>();
-        mr.MeshSource = path;
+        mr.MeshSource = Project::MakeRelativePath(path);
         mr.MeshAsset = Mesh::FromSource(path);
     } else {
         std::string ext = lower.size() >= 4 ? lower.substr(lower.size() - 4) : "";
@@ -582,7 +605,7 @@ Entity EditorLayer::CreateEntityFromAsset(const std::string& path, const glm::ve
         if (!isImage) return {};
         created = m_ActiveScene->CreateEntity(std::filesystem::path(path).stem().string());
         auto& sc = created.AddComponent<SpriteRendererComponent>();
-        sc.TexturePath = path;
+        sc.TexturePath = Project::MakeRelativePath(path);
         sc.Texture = Texture2D::Create(path);
     }
 
@@ -830,6 +853,17 @@ void EditorLayer::DrawDockspace() {
         ImGui::Separator();
         if (ImGui::MenuItem("Carregar GameModule...")) {
             m_RequestOpenGameModulePopup = true;
+        }
+        if (ImGui::MenuItem("Exportar Jogo...", nullptr, false,
+                            m_SceneState == SceneState::Edit && !m_ScenePath.empty())) {
+            m_RequestOpenExportPopup = true;
+        }
+        if (ImGui::MenuItem("Definir cena como inicial", nullptr, false,
+                            m_SceneState == SceneState::Edit && !m_ScenePath.empty() && (bool)Project::GetActive())) {
+            auto& project = Project::GetActive();
+            project->GetConfig().StartScenePath = Project::MakeRelativePath(m_ScenePath);
+            project->Save();
+            KZ_CORE_INFO("Cena inicial do projeto: {0}", project->GetConfig().StartScenePath);
         }
         ImGui::Separator();
         // Nova/Abrir Cena travados durante o Play (igual Salvar): trocar a
@@ -1406,6 +1440,110 @@ void EditorLayer::DrawGameModuleModal() {
     }
 }
 
+void EditorLayer::ExportGame(const std::string& outputDir) {
+    GameExportRequest req;
+    req.OutputDirectory = outputDir;
+    req.ScenePath = m_ScenePath;
+    req.GameModulePath = ScriptEngine::IsModuleLoaded() ? ScriptEngine::GetLoadedPath() : std::string{};
+
+    // Pasta do executável do editor (= pasta bin/ do build).
+    req.EngineBinDirectory = std::filesystem::current_path().string();
+    const auto& args = GetCommandLineArgs();
+    if (!args.empty()) {
+        std::filesystem::path exePath = args[0];
+        if (exePath.has_parent_path())
+            req.EngineBinDirectory = std::filesystem::absolute(exePath.parent_path()).string();
+    }
+
+    std::string err;
+    if (GameExporter::Export(req, err))
+        KZ_CORE_INFO("Exportação concluída em: {0}", outputDir);
+    else
+        KZ_CORE_ERROR("Exportação falhou: {0}", err);
+}
+
+void EditorLayer::DrawExportModal() {
+    if (m_RequestOpenExportPopup) {
+        m_RequestOpenExportPopup = false;
+        if (Project::GetActive()) {
+            auto def = (std::filesystem::path(Project::GetActive()->GetProjectDirectory()) / "Export").string();
+            strncpy(m_ExportDirBuffer, def.c_str(), sizeof(m_ExportDirBuffer) - 1);
+            m_ExportDirBuffer[sizeof(m_ExportDirBuffer) - 1] = '\0';
+        }
+        ImGui::OpenPopup("Exportar Jogo");
+    }
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(520.0f, 0.0f), ImGuiCond_Appearing);
+
+    if (ImGui::BeginPopupModal("Exportar Jogo", nullptr, ImGuiWindowFlags_NoResize)) {
+        kizuri::editor::icons::PanelHeader("EXPORTAR JOGO", kizuri::editor::icons::Folder);
+        ImGui::TextWrapped(
+            "Copia KizuriGame, a engine, a cena atual (como Start.kzscene), assets "
+            "referenciados e o GameModule carregado (se houver) para uma pasta pronta pra distribuir.");
+        ImGui::Spacing();
+
+        ImGui::SetNextItemWidth(-84.0f);
+        ImGui::InputText("##export_dir", m_ExportDirBuffer, sizeof(m_ExportDirBuffer));
+        ImGui::SameLine();
+        if (ImGui::Button("Procurar...##export_browse")) {
+            std::string folder = FileDialog::SelectFolder();
+            if (!folder.empty()) {
+                strncpy(m_ExportDirBuffer, folder.c_str(), sizeof(m_ExportDirBuffer) - 1);
+                m_ExportDirBuffer[sizeof(m_ExportDirBuffer) - 1] = '\0';
+            }
+        }
+
+        ImGui::Spacing();
+        ImGui::TextDisabled("Cena: %s", m_ScenePath.c_str());
+        if (ScriptEngine::IsModuleLoaded())
+            ImGui::TextDisabled("GameModule: %s", ScriptEngine::GetLoadedPath().c_str());
+        else
+            ImGui::TextDisabled("GameModule: (nenhum carregado)");
+
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        if (ImGui::Button("Exportar", ImVec2(100.0f, 0.0f)) && m_ExportDirBuffer[0] != '\0') {
+            ExportGame(m_ExportDirBuffer);
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancelar", ImVec2(100.0f, 0.0f)))
+            ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
+}
+
+void EditorLayer::DrawSavePrefabModal() {
+    if (m_RequestOpenSavePrefabPopup) {
+        m_RequestOpenSavePrefabPopup = false;
+        ImGui::OpenPopup("Salvar Prefab");
+    }
+
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(480.0f, 0.0f), ImGuiCond_Appearing);
+
+    if (ImGui::BeginPopupModal("Salvar Prefab", nullptr, ImGuiWindowFlags_NoResize)) {
+        ImGui::TextWrapped("Caminho do arquivo .kzprefab:");
+        ImGui::SetNextItemWidth(-1.0f);
+        ImGui::InputText("##prefab_path", m_PrefabPathBuffer, sizeof(m_PrefabPathBuffer));
+
+        if (ImGui::Button("Salvar", ImVec2(100.0f, 0.0f)) && m_PrefabPathBuffer[0] != '\0') {
+            Entity e = m_ActiveScene->GetEntityByUUID(m_PrefabEntityUUID);
+            if (e) Prefab::CreateFromEntity(e, m_PrefabPathBuffer);
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancelar", ImVec2(100.0f, 0.0f)))
+            ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
+}
+
 void EditorLayer::DrawConsole() {
     KZ_TRACE_SCOPE("EditorLayer::DrawConsole");
     BeginPanelNoMenuButton();
@@ -1689,6 +1827,20 @@ void EditorLayer::DrawEntityNode(Entity entity, Entity& outEntityToDelete, bool 
         if (ImGui::BeginPopupContextItem()) {
             if (ImGui::MenuItem("Excluir Entidade")) outEntityToDelete = entity;
             if (entity.GetParent() && ImGui::MenuItem("Desvincular do pai")) Reparent(entity, {});
+            if (ImGui::MenuItem("Salvar Prefab...")) {
+                std::string defaultName = entity.GetName() + ".kzprefab";
+                if (Project::GetActive())
+                    defaultName = (std::filesystem::path(Project::GetActive()->GetAssetDirectory()) / defaultName).string();
+                std::string path = FileDialog::SaveFile("Prefab Kizuri", "*.kzprefab", "kzprefab");
+                if (path.empty()) {
+                    strncpy(m_PrefabPathBuffer, defaultName.c_str(), sizeof(m_PrefabPathBuffer) - 1);
+                    m_PrefabPathBuffer[sizeof(m_PrefabPathBuffer) - 1] = '\0';
+                    m_PrefabEntityUUID = entity.GetUUID();
+                    m_RequestOpenSavePrefabPopup = true;
+                } else {
+                    Prefab::CreateFromEntity(entity, path);
+                }
+            }
             ImGui::EndPopup();
         }
     }
@@ -2232,6 +2384,8 @@ void EditorLayer::OnImGuiRender() {
     DrawSceneFileModals();
     DrawProjectModals();
     DrawGameModuleModal();
+    DrawExportModal();
+    DrawSavePrefabModal();
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — modais ok");
     DrawSceneHierarchy();
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — DrawSceneHierarchy ok");

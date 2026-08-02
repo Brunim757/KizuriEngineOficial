@@ -52,6 +52,7 @@ public:
 
     UUID GetUUID() { return GetComponent<IDComponent>().ID; }
     const std::string& GetName() { return GetComponent<TagComponent>().Tag; }
+    Scene* GetScene() { return m_Scene; }
 
     // Hierarquia — ver RelationshipComponent e Scene::SetParent para as
     // regras (anti-ciclo, transform mundial etc).

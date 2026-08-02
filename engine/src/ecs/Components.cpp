@@ -2,6 +2,7 @@
 #include "kizuri/scripting/NativeScript.hpp"
 #include "kizuri/scripting/ScriptEngine.hpp"
 #include "kizuri/audio/AudioEngine.hpp"
+#include "kizuri/project/Project.hpp"
 #include "kizuri/core/Log.hpp"
 #include <box2d/box2d.h>
 
@@ -11,7 +12,7 @@ void AudioSourceComponent::Play() {
     if (ClipPath.empty()) return;
     // Carrega sob demanda (primeira vez) e já configura a atenuação.
     if (Handle == kInvalidSound) {
-        Handle = AudioEngine::LoadSound(ClipPath, ClipPath, false);
+        Handle = AudioEngine::LoadSound(Project::ResolvePath(ClipPath), ClipPath, false);
         if (Handle == kInvalidSound) return;
         AudioEngine::SetSoundAttenuation(Handle, MinDistance, MaxDistance);
     }
@@ -31,6 +32,22 @@ bool AudioSourceComponent::IsPlaying() const {
 void Rigidbody2DComponent::ApplyLinearImpulse(const glm::vec2& impulse, bool wake) {
     if (!RuntimeBody) return; // corpo ainda não criado (só existe durante o Play)
     static_cast<b2Body*>(RuntimeBody)->ApplyLinearImpulseToCenter({ impulse.x, impulse.y }, wake);
+}
+
+void Rigidbody2DComponent::SetLinearVelocity(const glm::vec2& velocity) {
+    if (!RuntimeBody) return;
+    static_cast<b2Body*>(RuntimeBody)->SetLinearVelocity({ velocity.x, velocity.y });
+}
+
+glm::vec2 Rigidbody2DComponent::GetLinearVelocity() const {
+    if (!RuntimeBody) return { 0.0f, 0.0f };
+    const auto& v = static_cast<b2Body*>(RuntimeBody)->GetLinearVelocity();
+    return { v.x, v.y };
+}
+
+void Rigidbody2DComponent::SetTransform(const glm::vec2& position, float angleRadians) {
+    if (!RuntimeBody) return;
+    static_cast<b2Body*>(RuntimeBody)->SetTransform({ position.x, position.y }, angleRadians);
 }
 
 void NativeScriptComponent::BindByName(const std::string& className) {

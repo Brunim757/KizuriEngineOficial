@@ -54,3 +54,4 @@
 
 // ---- Assets ----
 #include "kizuri/assets/AssetManager.hpp"
+#include "kizuri/project/GameExporter.hpp"

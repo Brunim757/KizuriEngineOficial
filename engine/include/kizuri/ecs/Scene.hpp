@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
+#include <utility>
 
 class b2World;
 class btDiscreteDynamicsWorld;
@@ -33,37 +35,26 @@ public:
     Entity CreateEntityWithUUID(uint64_t uuid, const std::string& name);
     void DestroyEntity(Entity entity);
 
-    // Cópia profunda de toda a cena, preservando UUIDs — é o que o Play do editor usa: entra em
-    // Play numa CÓPIA, edição original fica intocada, Stop só descarta a cópia e volta pro original.
-    // MeshRendererComponent é copiado direto (Ref<Mesh>/Material compartilhados, não vai por JSON —
-    // ainda não existe um Pipeline de Assets com caminho serializável pra mesh/textura, ver ROADMAP).
+    // Instancia um .kzprefab. Em runtime (Play/KizuriGame) também cria
+    // corpos de física e dispara OnCreate do NativeScript, se houver.
+    Entity Instantiate(const std::string& prefabPath, const glm::vec3& position = { 0.0f, 0.0f, 0.0f });
+
+    // Pedido diferido: a troca real acontece no fim do frame (host chama
+    // PollPendingLoad). Evita destruir a cena no meio de OnUpdate/colisão.
+    void RequestLoad(const std::string& scenePath);
+    bool PollPendingLoad(std::string& outPath);
+
+    bool IsRuntime() const { return m_Running; }
+
+    // Cópia profunda de toda a cena, preservando UUIDs — é o que o Play do editor usa.
     static Ref<Scene> Copy(const Ref<Scene>& source);
 
-    // Hierarquia: reparenta 'child' embaixo de 'newParent'. Passar uma
-    // Entity inválida desanexa (vira entidade de topo). Rejeita operações
-    // que criariam ciclos (ex: tornar um ancestral filho do próprio
-    // descendente).
     void SetParent(Entity child, Entity newParent);
     Entity GetEntityByUUID(UUID id);
 
-    // Transform mundial acumulado subindo a cadeia de pais — é o que
-    // Renderer2D/3D e física devem usar, não TransformComponent::GetTransform()
-    // isolado (que é só o transform local em relação ao pai).
     glm::mat4 GetWorldTransform(Entity entity);
 
-    // Picking por raio (usado pelo editor pra selecionar clicando no
-    // viewport): testa contra o AABB local de cada MeshRendererComponent,
-    // transformado pro espaço do mundo. Retorna a entidade cujo AABB é
-    // atingido mais perto de rayOrigin, ou uma Entity inválida se nenhuma
-    // for atingida. É uma aproximação por caixa, não por triângulo — mais
-    // barato e preciso o suficiente pra clicar em objetos na cena.
     Entity PickEntity(const glm::vec3& rayOrigin, const glm::vec3& rayDir);
-
-    // Picking 2D (editor, modo 2D do viewport): ponto do mundo -> entidade
-    // sob ele. Testa sprite (quad do transform), círculo e texto (bounding
-    // do texto medido pela fonte). Retorna a entidade mais próxima ou
-    // inválida. Animação de sprite e tilemap são amostrados pelo próprio
-    // quad/sprite se tiverem o componente base correspondente.
     Entity PickEntity2D(const glm::vec2& worldPoint);
 
     void OnRuntimeStart();
@@ -71,10 +62,6 @@ public:
 
     void OnUpdateRuntime(Timestep ts);
 
-    // Modo editor: duas variantes, uma pra cada modo do viewport (ver
-    // EditorLayer — botão 2D/3D na toolbar). Nenhuma mexe na
-    // CameraComponent da própria cena; "o jogo visto pela câmera do jogo"
-    // é a Game View, ainda não implementada (docs/NOTAS_INTERNAS.md).
     void OnUpdateEditor3D(Timestep ts, class PerspectiveCamera& editorCamera);
     void OnUpdateEditor2D(Timestep ts, class OrthographicCamera& editorCamera);
     void OnViewportResize(uint32_t width, uint32_t height);
@@ -88,26 +75,39 @@ public:
 private:
     void RenderScene2D(class OrthographicCamera* overrideCamera = nullptr);
     void RenderScene3D(class PerspectiveCamera* overrideCamera = nullptr);
-    void Render2DEntities(); // desenha sprites/círculos/animações/tilemap/texto dentro de um BeginScene aberto
-    void SubmitLights(); // junta LightComponent da cena; sem nenhuma, cai num sol default
-    void UpdateParticleSystems(Timestep ts); // emissão + integração (só roda em Play, como a física)
-    void SubmitParticleSystems(); // monta os lotes de ParticleInstance e chama Renderer3D::SubmitParticles
-    void UpdateSpriteAnimations(Timestep ts); // avança FrameTimer dos SpriteAnimationComponent
-    void UpdateAudio(Timestep ts); // toca/posiciona AudioSourceComponent + atualiza o listener (câmera 3D ativa)
+    void Render2DEntities();
+    void SubmitLights();
+    void UpdateParticleSystems(Timestep ts);
+    void SubmitParticleSystems();
+    void UpdateSpriteAnimations(Timestep ts);
+    void UpdateAudio(Timestep ts);
     void OnPhysics2DStart();
     void OnPhysics2DStop();
     void UpdatePhysics2D(Timestep ts);
+    void RegisterPhysics2DEntity(Entity entity);
+    void UnregisterPhysics2DEntity(Entity entity);
+    void BuildTilemapColliders();
 
     void OnPhysics3DStart();
     void OnPhysics3DStop();
     void UpdatePhysics3D(Timestep ts);
+    void RegisterPhysics3DEntity(Entity entity);
+    void UnregisterPhysics3DEntity(Entity entity);
+    void FlushCollisionEvents();
+    void DispatchCollisionBegin(entt::entity self, entt::entity other);
+    void DispatchCollisionEnd(entt::entity self, entt::entity other);
+    void StartScriptIfNeeded(Entity entity);
 
     std::string m_Name;
     entt::registry m_Registry;
     std::unordered_map<UUID, entt::entity> m_EntityMap;
     uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
+    bool m_Running = false;
+    std::string m_PendingScenePath;
 
     b2World* m_PhysicsWorld2D = nullptr;
+    void* m_ContactListener2D = nullptr; // ContactListener2D* (Box2D)
+
     btDiscreteDynamicsWorld* m_PhysicsWorld3D = nullptr;
     btDefaultCollisionConfiguration* m_CollisionConfig = nullptr;
     btCollisionDispatcher* m_Dispatcher = nullptr;
@@ -115,6 +115,11 @@ private:
     btSequentialImpulseConstraintSolver* m_Solver = nullptr;
     std::vector<btCollisionShape*> m_PhysicsShapes3D;
     std::vector<btMotionState*> m_PhysicsMotionStates3D;
+
+    std::vector<std::pair<entt::entity, entt::entity>> m_CollisionBeginQueue;
+    std::vector<std::pair<entt::entity, entt::entity>> m_CollisionEndQueue;
+    // Pares ordenados (min,max) de corpos 3D em contato no frame anterior.
+    std::unordered_set<uint64_t> m_ActiveContacts3D;
 
     friend class Entity;
 };

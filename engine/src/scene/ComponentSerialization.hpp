@@ -6,10 +6,15 @@
 #include "kizuri/ecs/Entity.hpp"
 #include "kizuri/ecs/Components.hpp"
 #include "kizuri/ecs/Scene.hpp"
+#include "kizuri/project/Project.hpp"
 
 #include <nlohmann/json.hpp>
 
 namespace kizuri::detail {
+
+inline std::string ResolveSerializedPath(const std::string& path) {
+    return Project::ResolvePath(path);
+}
 
 inline nlohmann::json Vec3ToJson(const glm::vec3& v) { return { v.x, v.y, v.z }; }
 inline nlohmann::json Vec4ToJson(const glm::vec4& v) { return { v.x, v.y, v.z, v.w }; }
@@ -211,7 +216,7 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         sc.Color = JsonToVec4(js["Color"]);
         sc.TilingFactor = js.value("TilingFactor", 1.0f);
         sc.TexturePath = js.value("TexturePath", "");
-        if (!sc.TexturePath.empty()) sc.Texture = Texture2D::Create(sc.TexturePath);
+        if (!sc.TexturePath.empty()) sc.Texture = Texture2D::Create(ResolveSerializedPath(sc.TexturePath));
     }
 
     if (je.contains("CircleRenderer")) {
@@ -239,7 +244,7 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         ac.TotalFrames = ja.value("TotalFrames", 1u);
         ac.FPS = ja.value("FPS", 12.0f);
         ac.Loop = ja.value("Loop", true);
-        if (!ac.SheetPath.empty()) ac.SheetTexture = Texture2D::Create(ac.SheetPath);
+        if (!ac.SheetPath.empty()) ac.SheetTexture = Texture2D::Create(ResolveSerializedPath(ac.SheetPath));
     }
 
     if (je.contains("Tilemap")) {
@@ -254,14 +259,14 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         tmc.TileSize = { ts.x, ts.y };
         tmc.Tiles = jtm.value("Tiles", std::vector<uint32_t>{});
         tmc.SolidTileValues = jtm.value("SolidTileValues", std::vector<uint32_t>{});
-        if (!tmc.AtlasPath.empty()) tmc.AtlasTexture = Texture2D::Create(tmc.AtlasPath);
+        if (!tmc.AtlasPath.empty()) tmc.AtlasTexture = Texture2D::Create(ResolveSerializedPath(tmc.AtlasPath));
     }
 
     if (je.contains("MeshRenderer")) {
         auto& jm = je["MeshRenderer"];
         auto& mr = entity.AddComponent<MeshRendererComponent>();
         mr.MeshSource = jm.value("MeshSource", "builtin:cube");
-        mr.MeshAsset = Mesh::FromSource(mr.MeshSource);
+        mr.MeshAsset = Mesh::FromSource(ResolveSerializedPath(mr.MeshSource));
         auto& mat = mr.MeshMaterial;
         mat.Albedo = JsonToVec3(jm["Albedo"]);
         mat.Metallic = jm.value("Metallic", 0.0f);
@@ -269,8 +274,8 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         mat.AO = jm.value("AO", 1.0f);
         mat.AlbedoMapPath = jm.value("AlbedoMapPath", "");
         mat.NormalMapPath = jm.value("NormalMapPath", "");
-        if (!mat.AlbedoMapPath.empty()) mat.AlbedoMap = Texture2D::Create(mat.AlbedoMapPath);
-        if (!mat.NormalMapPath.empty()) mat.NormalMap = Texture2D::Create(mat.NormalMapPath);
+        if (!mat.AlbedoMapPath.empty()) mat.AlbedoMap = Texture2D::Create(ResolveSerializedPath(mat.AlbedoMapPath));
+        if (!mat.NormalMapPath.empty()) mat.NormalMap = Texture2D::Create(ResolveSerializedPath(mat.NormalMapPath));
     }
 
     if (je.contains("Camera")) {
@@ -397,7 +402,7 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         sc.Color = JsonToVec4(js["Color"]);
         sc.TilingFactor = js.value("TilingFactor", 1.0f);
         sc.TexturePath = js.value("TexturePath", "");
-        sc.Texture = sc.TexturePath.empty() ? nullptr : Texture2D::Create(sc.TexturePath);
+        sc.Texture = sc.TexturePath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(sc.TexturePath));
     } else if (entity.HasComponent<SpriteRendererComponent>()) {
         entity.RemoveComponent<SpriteRendererComponent>();
     }
@@ -425,7 +430,7 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         ac.TotalFrames = ja.value("TotalFrames", 1u);
         ac.FPS = ja.value("FPS", 12.0f);
         ac.Loop = ja.value("Loop", true);
-        ac.SheetTexture = ac.SheetPath.empty() ? nullptr : Texture2D::Create(ac.SheetPath);
+        ac.SheetTexture = ac.SheetPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(ac.SheetPath));
     } else if (entity.HasComponent<SpriteAnimationComponent>()) {
         entity.RemoveComponent<SpriteAnimationComponent>();
     }
@@ -444,7 +449,7 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         tmc.TileSize = { ts.x, ts.y };
         tmc.Tiles = jtm.value("Tiles", std::vector<uint32_t>{});
         tmc.SolidTileValues = jtm.value("SolidTileValues", std::vector<uint32_t>{});
-        tmc.AtlasTexture = tmc.AtlasPath.empty() ? nullptr : Texture2D::Create(tmc.AtlasPath);
+        tmc.AtlasTexture = tmc.AtlasPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(tmc.AtlasPath));
     } else if (entity.HasComponent<TilemapComponent>()) {
         entity.RemoveComponent<TilemapComponent>();
     }
@@ -455,7 +460,7 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
             ? entity.GetComponent<MeshRendererComponent>()
             : entity.AddComponent<MeshRendererComponent>();
         mr.MeshSource = jm.value("MeshSource", "builtin:cube");
-        mr.MeshAsset = Mesh::FromSource(mr.MeshSource);
+        mr.MeshAsset = Mesh::FromSource(ResolveSerializedPath(mr.MeshSource));
         auto& mat = mr.MeshMaterial;
         mat.Albedo = JsonToVec3(jm["Albedo"]);
         mat.Metallic = jm.value("Metallic", 0.0f);
@@ -463,8 +468,8 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         mat.AO = jm.value("AO", 1.0f);
         mat.AlbedoMapPath = jm.value("AlbedoMapPath", "");
         mat.NormalMapPath = jm.value("NormalMapPath", "");
-        mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : Texture2D::Create(mat.AlbedoMapPath);
-        mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : Texture2D::Create(mat.NormalMapPath);
+        mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.AlbedoMapPath));
+        mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.NormalMapPath));
     } else if (entity.HasComponent<MeshRendererComponent>()) {
         entity.RemoveComponent<MeshRendererComponent>();
     }

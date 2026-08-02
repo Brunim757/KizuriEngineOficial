@@ -1,6 +1,8 @@
 #include <Kizuri.hpp>
 #include <kizuri/core/EntryPoint.hpp>
+#include <kizuri/project/Project.hpp>
 #include <imgui.h>
+#include <filesystem>
 
 using namespace kizuri;
 
@@ -14,9 +16,12 @@ public:
         : Layer("GameLayer"), m_ScenePath(scenePath), m_ModulePath(modulePath) {}
 
     void OnAttach() override {
+        auto& window = Application::Get().GetWindow();
+        m_ViewportWidth = window.GetWidth();
+        m_ViewportHeight = window.GetHeight();
+
         m_Scene = CreateRef<Scene>("Jogo");
 
-        // Scripts C++ do jogo (opcional — o jogo pode ser só cena).
         if (!m_ModulePath.empty()) {
             if (ScriptEngine::LoadModule(m_ModulePath))
                 KZ_CORE_INFO("GameModule carregado: {0}", m_ModulePath);
@@ -30,30 +35,50 @@ public:
             KZ_CORE_ERROR("Não foi possível carregar a cena inicial: {0}", m_ScenePath);
         }
 
+        m_Scene->OnViewportResize(m_ViewportWidth, m_ViewportHeight);
         m_Scene->OnRuntimeStart();
     }
 
     void OnDetach() override {
-        m_Scene->OnRuntimeStop();
+        if (m_Scene) m_Scene->OnRuntimeStop();
         ScriptEngine::UnloadModule();
     }
 
     void OnUpdate(Timestep ts) override {
+        RenderCommand::SetViewport(0, 0, m_ViewportWidth, m_ViewportHeight);
         RenderCommand::SetClearColor({ 0.08f, 0.09f, 0.11f, 1.0f });
         RenderCommand::Clear();
         m_Scene->OnUpdateRuntime(ts);
+
+        std::string nextScene;
+        if (m_Scene->PollPendingLoad(nextScene)) {
+            m_Scene->OnRuntimeStop();
+            AudioEngine::StopAll();
+            auto loaded = CreateRef<Scene>("Jogo");
+            if (SceneSerializer(loaded).Deserialize(Project::ResolvePath(nextScene))) {
+                loaded->OnViewportResize(m_ViewportWidth, m_ViewportHeight);
+                m_Scene = loaded;
+                m_Scene->OnRuntimeStart();
+                KZ_CORE_INFO("Cena trocada para: {0}", nextScene);
+            } else {
+                KZ_CORE_ERROR("Falha ao carregar cena: {0}", nextScene);
+                Application::Get().Close();
+            }
+        }
     }
 
-    void OnImGuiRender() override {
-        // Sem nenhuma UI de debug por padrão — o jogo final é só o render.
-        // (A janela "Debug" do Sandbox não existe aqui; se um dia quiser um
-        // overlay de FPS, é só adicionar.)
-    }
+    void OnImGuiRender() override {}
 
     void OnEvent(Event& e) override {
         EventDispatcher dispatcher(e);
         dispatcher.Dispatch<KeyPressedEvent>([this](KeyPressedEvent& ev) {
             if (ev.GetKeyCode() == Key::Escape) Application::Get().Close();
+            return false;
+        });
+        dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& ev) {
+            m_ViewportWidth = ev.GetWidth();
+            m_ViewportHeight = ev.GetHeight();
+            if (m_Scene) m_Scene->OnViewportResize(m_ViewportWidth, m_ViewportHeight);
             return false;
         });
     }
@@ -62,19 +87,38 @@ private:
     Ref<Scene> m_Scene;
     std::string m_ScenePath;
     std::string m_ModulePath;
+    uint32_t m_ViewportWidth = 1600;
+    uint32_t m_ViewportHeight = 900;
 };
 
 class GameApp : public Application {
 public:
     GameApp() : Application(MakeSpec()) {
         const auto& args = kizuri::GetCommandLineArgs();
-        std::string scenePath = "Start.kzscene";  // padrão: cena inicial na pasta atual
+        std::string scenePath = "Start.kzscene";
         std::string modulePath;
+
+        // Se existir .kzproj no CWD com StartScenePath, usa como padrão.
+        if (auto project = TryLoadProjectFromCwd()) {
+            if (!project->GetConfig().StartScenePath.empty())
+                scenePath = Project::ResolvePath(project->GetConfig().StartScenePath);
+        }
 
         if (args.size() > 1) scenePath = args[1];
         if (args.size() > 2) modulePath = args[2];
 
         PushLayer(new GameLayer(scenePath, modulePath));
+    }
+
+    static Ref<Project> TryLoadProjectFromCwd() {
+        namespace fs = std::filesystem;
+        std::error_code ec;
+        for (auto& entry : fs::directory_iterator(fs::current_path(), ec)) {
+            if (!entry.is_regular_file()) continue;
+            if (entry.path().extension() == ".kzproj")
+                return Project::Load(entry.path().string());
+        }
+        return nullptr;
     }
 
     static ApplicationSpec MakeSpec() {

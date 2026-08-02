@@ -133,6 +133,16 @@ private:
     bool m_RequestOpenGameModulePopup = false;
     char m_GameModulePathBuffer[256] = "";
 
+    bool m_RequestOpenExportPopup = false;
+    char m_ExportDirBuffer[512] = "export";
+
+    bool m_RequestOpenSavePrefabPopup = false;
+    char m_PrefabPathBuffer[512] = "Assets/entidade.kzprefab";
+    kizuri::UUID m_PrefabEntityUUID;
+
+    void DrawExportModal();
+    void DrawSavePrefabModal();
+    void ExportGame(const std::string& outputDir);
     // Console: filtro por severidade + busca por texto. m_ConsoleAutoScroll
     // gruda a rolagem no final enquanto está true, e se solta assim que a
     // pessoa rola manualmente pra cima (comportamento padrão de console).

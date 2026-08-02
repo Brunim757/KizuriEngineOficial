@@ -3,10 +3,13 @@
 #include "kizuri/ecs/Components.hpp"
 #include "kizuri/scripting/NativeScript.hpp"
 #include "kizuri/scene/SceneSerializer.hpp"
+#include "kizuri/scene/Prefab.hpp"
+#include "kizuri/project/Project.hpp"
 #include "kizuri/renderer/Renderer2D.hpp"
 #include "kizuri/renderer/Renderer3D.hpp"
 #include "kizuri/renderer/TextRenderer.hpp"
 #include "kizuri/core/Log.hpp"
+#include "kizuri/audio/AudioEngine.hpp"
 
 #include <box2d/box2d.h>
 #include <btBulletDynamicsCommon.h>
@@ -14,8 +17,46 @@
 #include <algorithm>
 #include <limits>
 #include <cmath>
+#include <cstring>
 
 namespace kizuri {
+
+namespace {
+
+struct ContactListener2D : public b2ContactListener {
+    std::vector<std::pair<entt::entity, entt::entity>>* BeginQueue = nullptr;
+    std::vector<std::pair<entt::entity, entt::entity>>* EndQueue = nullptr;
+
+    static entt::entity EntityFromBody(b2Body* body) {
+        if (!body) return entt::null;
+        uintptr_t ptr = body->GetUserData().pointer;
+        if (ptr == 0) return entt::null;
+        return static_cast<entt::entity>(static_cast<uint32_t>(ptr));
+    }
+
+    void BeginContact(b2Contact* contact) override {
+        auto a = EntityFromBody(contact->GetFixtureA()->GetBody());
+        auto b = EntityFromBody(contact->GetFixtureB()->GetBody());
+        if (a == entt::null && b == entt::null) return;
+        BeginQueue->emplace_back(a, b);
+    }
+
+    void EndContact(b2Contact* contact) override {
+        auto a = EntityFromBody(contact->GetFixtureA()->GetBody());
+        auto b = EntityFromBody(contact->GetFixtureB()->GetBody());
+        if (a == entt::null && b == entt::null) return;
+        EndQueue->emplace_back(a, b);
+    }
+};
+
+static uint64_t PackEntityPair(entt::entity a, entt::entity b) {
+    uint32_t x = static_cast<uint32_t>(a);
+    uint32_t y = static_cast<uint32_t>(b);
+    if (x > y) std::swap(x, y);
+    return (uint64_t(x) << 32) | uint64_t(y);
+}
+
+} // namespace
 
 static b2BodyType ToBox2DBody(Rigidbody2DComponent::BodyType type) {
     switch (type) {
@@ -27,7 +68,9 @@ static b2BodyType ToBox2DBody(Rigidbody2DComponent::BodyType type) {
 }
 
 Scene::Scene(std::string name) : m_Name(std::move(name)) {}
-Scene::~Scene() = default;
+Scene::~Scene() {
+    if (m_Running) OnRuntimeStop();
+}
 
 Ref<Scene> Scene::Copy(const Ref<Scene>& source) {
     KZ_TRACE_SCOPE("Scene::Copy");
@@ -38,9 +81,6 @@ Ref<Scene> Scene::Copy(const Ref<Scene>& source) {
     SceneSerializer srcSerializer(source);
     SceneSerializer dstSerializer(copy);
     dstSerializer.DeserializeFromJson(srcSerializer.SerializeToJson());
-    // MeshRenderer/Material agora são serializados (ComponentSerialization.hpp),
-    // então o roundtrip JSON acima já carrega mesh, material e texturas.
-
     return copy;
 }
 
@@ -65,8 +105,6 @@ Entity Scene::CreateEntityWithUUID(uint64_t uuid, const std::string& name) {
 void Scene::DestroyEntity(Entity entity) {
     if (!entity) return;
 
-    // Destrói a subárvore inteira primeiro (cópia da lista: DestroyEntity
-    // recursivo vai mexer em RelationshipComponent enquanto iteramos).
     if (entity.HasComponent<RelationshipComponent>()) {
         auto childrenCopy = entity.GetComponent<RelationshipComponent>().Children;
         for (UUID childId : childrenCopy) {
@@ -75,13 +113,66 @@ void Scene::DestroyEntity(Entity entity) {
         }
     }
 
-    // Desanexa do pai (remove da lista de filhos dele) antes de sumir.
     SetParent(entity, {});
+
+    // Scripts: OnDestroy antes de sumir com física/registry.
+    if (entity.HasComponent<NativeScriptComponent>()) {
+        auto& nsc = entity.GetComponent<NativeScriptComponent>();
+        if (nsc.Instance && nsc.DestroyScript) {
+            nsc.Instance->OnDestroy();
+            nsc.DestroyScript(&nsc);
+        }
+    }
+
+    UnregisterPhysics2DEntity(entity);
+    UnregisterPhysics3DEntity(entity);
 
     if (entity.HasComponent<IDComponent>())
         m_EntityMap.erase(entity.GetComponent<IDComponent>().ID);
 
     m_Registry.destroy(entity.GetHandle());
+}
+
+Entity Scene::Instantiate(const std::string& prefabPath, const glm::vec3& position) {
+    Entity root = Prefab::Instantiate(*this, prefabPath, position);
+    if (!root) return {};
+
+    // Prefab pode trazer uma subárvore — registra física/scripts em todo mundo.
+    std::vector<Entity> stack{ root };
+    while (!stack.empty()) {
+        Entity e = stack.back();
+        stack.pop_back();
+        if (m_Running) {
+            RegisterPhysics2DEntity(e);
+            RegisterPhysics3DEntity(e);
+            StartScriptIfNeeded(e);
+        }
+        for (Entity child : e.GetChildren())
+            stack.push_back(child);
+    }
+    return root;
+}
+
+void Scene::RequestLoad(const std::string& scenePath) {
+    if (!scenePath.empty()) m_PendingScenePath = scenePath;
+}
+
+bool Scene::PollPendingLoad(std::string& outPath) {
+    if (m_PendingScenePath.empty()) return false;
+    outPath = std::move(m_PendingScenePath);
+    m_PendingScenePath.clear();
+    return true;
+}
+
+void Scene::StartScriptIfNeeded(Entity entity) {
+    if (!m_Running || !entity.HasComponent<NativeScriptComponent>()) return;
+    auto& nsc = entity.GetComponent<NativeScriptComponent>();
+    if (nsc.Instance || !nsc.InstantiateScript) return;
+    nsc.Instance = nsc.InstantiateScript();
+    if (nsc.Instance) {
+        nsc.Instance->BindEntity(entity);
+        nsc.Instance->OnCreate();
+    }
 }
 
 Entity Scene::GetEntityByUUID(UUID id) {
@@ -93,9 +184,6 @@ Entity Scene::GetEntityByUUID(UUID id) {
 void Scene::SetParent(Entity child, Entity newParent) {
     if (!child || !child.HasComponent<RelationshipComponent>()) return;
 
-    // Anti-ciclo primeiro, ANTES de mexer em qualquer lista — uma operação
-    // rejeitada não pode deixar a hierarquia num estado inconsistente
-    // (ex: filho removido do pai antigo mas nunca anexado ao novo).
     if (newParent) {
         for (Entity walker = newParent; walker; walker = walker.GetParent()) {
             if (walker.GetUUID() == child.GetUUID()) {
@@ -107,7 +195,6 @@ void Scene::SetParent(Entity child, Entity newParent) {
 
     auto& rel = child.GetComponent<RelationshipComponent>();
 
-    // Remove da lista de filhos do pai anterior, se houver.
     if (rel.Parent.IsValid()) {
         Entity oldParent = GetEntityByUUID(rel.Parent);
         if (oldParent && oldParent.HasComponent<RelationshipComponent>()) {
@@ -124,6 +211,7 @@ void Scene::SetParent(Entity child, Entity newParent) {
     rel.Parent = newParent.GetUUID();
     newParent.GetComponent<RelationshipComponent>().Children.push_back(child.GetUUID());
 }
+
 
 glm::mat4 Scene::GetWorldTransform(Entity entity) {
     if (!entity || !entity.HasComponent<TransformComponent>()) return glm::mat4(1.0f);
@@ -255,46 +343,49 @@ Entity Scene::PickEntity(const glm::vec3& rayOrigin, const glm::vec3& rayDir) {
     return closest;
 }
 
-void Scene::OnPhysics2DStart() {
-    m_PhysicsWorld2D = new b2World({ 0.0f, -9.81f });
+void Scene::RegisterPhysics2DEntity(Entity entity) {
+    if (!m_PhysicsWorld2D || !entity.HasComponent<Rigidbody2DComponent>()) return;
+    auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
+    if (rb2d.RuntimeBody) return;
 
-    auto view = m_Registry.view<Rigidbody2DComponent>();
-    for (auto e : view) {
-        Entity entity{ e, this };
-        auto& transform = entity.GetComponent<TransformComponent>();
-        auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
+    auto& transform = entity.GetComponent<TransformComponent>();
+    b2BodyDef bodyDef;
+    bodyDef.type = ToBox2DBody(rb2d.Type);
+    bodyDef.position.Set(transform.Translation.x, transform.Translation.y);
+    bodyDef.angle = transform.Rotation.z;
 
-        b2BodyDef bodyDef;
-        bodyDef.type = ToBox2DBody(rb2d.Type);
-        bodyDef.position.Set(transform.Translation.x, transform.Translation.y);
-        bodyDef.angle = transform.Rotation.z;
+    b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
+    body->GetUserData().pointer = static_cast<uintptr_t>(static_cast<uint32_t>(entity.GetHandle()));
+    body->SetFixedRotation(rb2d.FixedRotation);
+    rb2d.RuntimeBody = body;
 
-        b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
-        body->SetFixedRotation(rb2d.FixedRotation);
-        rb2d.RuntimeBody = body;
+    if (entity.HasComponent<BoxCollider2DComponent>()) {
+        auto& bc2d = entity.GetComponent<BoxCollider2DComponent>();
+        b2PolygonShape shape;
+        shape.SetAsBox(bc2d.Size.x * transform.Scale.x, bc2d.Size.y * transform.Scale.y,
+                        { bc2d.Offset.x, bc2d.Offset.y }, 0.0f);
 
-        if (entity.HasComponent<BoxCollider2DComponent>()) {
-            auto& bc2d = entity.GetComponent<BoxCollider2DComponent>();
-            b2PolygonShape shape;
-            shape.SetAsBox(bc2d.Size.x * transform.Scale.x, bc2d.Size.y * transform.Scale.y,
-                            { bc2d.Offset.x, bc2d.Offset.y }, 0.0f);
-
-            b2FixtureDef fixtureDef;
-            fixtureDef.shape = &shape;
-            fixtureDef.density = bc2d.Density;
-            fixtureDef.friction = bc2d.Friction;
-            fixtureDef.restitution = bc2d.Restitution;
-            fixtureDef.restitutionThreshold = bc2d.RestitutionThreshold;
-            body->CreateFixture(&fixtureDef);
-        }
+        b2FixtureDef fixtureDef;
+        fixtureDef.shape = &shape;
+        fixtureDef.density = bc2d.Density;
+        fixtureDef.friction = bc2d.Friction;
+        fixtureDef.restitution = bc2d.Restitution;
+        fixtureDef.restitutionThreshold = bc2d.RestitutionThreshold;
+        body->CreateFixture(&fixtureDef);
     }
+}
 
-    // Tilemaps sólidos: cada tile cujo valor esteja em SolidTileValues vira
-    // um corpo estático (mesclando runs horizontais contíguos numa caixa só,
-    // pra não explodir a quantidade de corpos em plataformers). Os corpos
-    // usam só a translação mundial do mapa (assumem mapa sem rotação/escala
-    // — típico pra tilemaps; se hierarquias rotacionadas virarem comuns,
-    // isso precisa ser revisitado).
+void Scene::UnregisterPhysics2DEntity(Entity entity) {
+    if (!m_PhysicsWorld2D || !entity.HasComponent<Rigidbody2DComponent>()) return;
+    auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
+    if (!rb2d.RuntimeBody) return;
+    m_PhysicsWorld2D->DestroyBody(static_cast<b2Body*>(rb2d.RuntimeBody));
+    rb2d.RuntimeBody = nullptr;
+}
+
+void Scene::BuildTilemapColliders() {
+    if (!m_PhysicsWorld2D) return;
+
     auto tilemaps = m_Registry.view<TransformComponent, TilemapComponent>();
     for (auto te : tilemaps) {
         auto& tmc = tilemaps.get<TilemapComponent>(te);
@@ -311,14 +402,13 @@ void Scene::OnPhysics2DStart() {
                 uint32_t idx = row * tmc.MapWidth + x;
                 if (idx >= tmc.Tiles.size() || !isSolid(tmc.Tiles[idx])) { ++x; continue; }
 
-                // Mescla o run contíguo de tiles sólidos nesta linha.
                 uint32_t runStart = x;
                 while (x < tmc.MapWidth) {
                     uint32_t i = row * tmc.MapWidth + x;
                     if (i >= tmc.Tiles.size() || !isSolid(tmc.Tiles[i])) break;
                     ++x;
                 }
-                uint32_t runEnd = x; // exclusivo
+                uint32_t runEnd = x;
 
                 float cx = mapPos.x + (float)(runStart + runEnd) * 0.5f * tmc.TileSize.x;
                 float cy = mapPos.y + ((float)row + 0.5f) * tmc.TileSize.y;
@@ -329,6 +419,8 @@ void Scene::OnPhysics2DStart() {
                 bodyDef.type = b2_staticBody;
                 bodyDef.position.Set(cx, cy);
                 b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
+                // Tilemap: userData=0 — scripts recebem Entity inválida no "other".
+                body->GetUserData().pointer = 0;
                 b2PolygonShape shape;
                 shape.SetAsBox(hw, hh);
                 body->CreateFixture(&shape, 0.0f);
@@ -337,9 +429,37 @@ void Scene::OnPhysics2DStart() {
     }
 }
 
+void Scene::OnPhysics2DStart() {
+    m_PhysicsWorld2D = new b2World({ 0.0f, -9.81f });
+
+    auto* listener = new ContactListener2D();
+    listener->BeginQueue = &m_CollisionBeginQueue;
+    listener->EndQueue = &m_CollisionEndQueue;
+    m_PhysicsWorld2D->SetContactListener(listener);
+    m_ContactListener2D = listener;
+
+    auto view = m_Registry.view<Rigidbody2DComponent>();
+    for (auto e : view)
+        RegisterPhysics2DEntity(Entity{ e, this });
+
+    BuildTilemapColliders();
+}
+
 void Scene::OnPhysics2DStop() {
+    if (m_PhysicsWorld2D) {
+        m_PhysicsWorld2D->SetContactListener(nullptr);
+        auto view = m_Registry.view<Rigidbody2DComponent>();
+        for (auto e : view) {
+            auto& rb2d = m_Registry.get<Rigidbody2DComponent>(e);
+            rb2d.RuntimeBody = nullptr;
+        }
+    }
     delete m_PhysicsWorld2D;
     m_PhysicsWorld2D = nullptr;
+    delete static_cast<ContactListener2D*>(m_ContactListener2D);
+    m_ContactListener2D = nullptr;
+    m_CollisionBeginQueue.clear();
+    m_CollisionEndQueue.clear();
 }
 
 void Scene::UpdatePhysics2D(Timestep ts) {
@@ -357,10 +477,88 @@ void Scene::UpdatePhysics2D(Timestep ts) {
         auto* body = static_cast<b2Body*>(rb2d.RuntimeBody);
         if (!body) continue;
 
-        const auto& pos = body->GetPosition();
-        transform.Translation.x = pos.x;
-        transform.Translation.y = pos.y;
-        transform.Rotation.z = body->GetAngle();
+        // Dynamic: corpo manda. Kinematic/Static: Transform manda (scripts
+        // podem mover com SetLinearVelocity ou SetTransform).
+        if (rb2d.Type == Rigidbody2DComponent::BodyType::Dynamic) {
+            const auto& pos = body->GetPosition();
+            transform.Translation.x = pos.x;
+            transform.Translation.y = pos.y;
+            transform.Rotation.z = body->GetAngle();
+        } else {
+            body->SetTransform({ transform.Translation.x, transform.Translation.y }, transform.Rotation.z);
+        }
+    }
+}
+
+void Scene::RegisterPhysics3DEntity(Entity entity) {
+    if (!m_PhysicsWorld3D || !entity.HasComponent<Rigidbody3DComponent>()) return;
+    auto& rb3d = entity.GetComponent<Rigidbody3DComponent>();
+    if (rb3d.RuntimeBody) return;
+
+    auto& transform = entity.GetComponent<TransformComponent>();
+
+    btCollisionShape* shape = nullptr;
+    if (entity.HasComponent<BoxCollider3DComponent>()) {
+        auto& bc3d = entity.GetComponent<BoxCollider3DComponent>();
+        shape = new btBoxShape(btVector3(bc3d.HalfExtents.x * transform.Scale.x,
+                                          bc3d.HalfExtents.y * transform.Scale.y,
+                                          bc3d.HalfExtents.z * transform.Scale.z));
+    } else if (entity.HasComponent<SphereCollider3DComponent>()) {
+        auto& sc3d = entity.GetComponent<SphereCollider3DComponent>();
+        shape = new btSphereShape(sc3d.Radius * transform.Scale.x);
+    } else {
+        shape = new btBoxShape(btVector3(0.5f, 0.5f, 0.5f));
+    }
+    m_PhysicsShapes3D.push_back(shape);
+
+    bool isDynamic = rb3d.Type == Rigidbody3DComponent::BodyType::Dynamic;
+    btScalar mass = isDynamic ? rb3d.Mass : 0.0f;
+    btVector3 localInertia(0, 0, 0);
+    if (isDynamic) shape->calculateLocalInertia(mass, localInertia);
+
+    btQuaternion rotation;
+    rotation.setEulerZYX(transform.Rotation.z, transform.Rotation.y, transform.Rotation.x);
+    btTransform startTransform;
+    startTransform.setIdentity();
+    startTransform.setOrigin(btVector3(transform.Translation.x, transform.Translation.y, transform.Translation.z));
+    startTransform.setRotation(rotation);
+
+    auto* motionState = new btDefaultMotionState(startTransform);
+    m_PhysicsMotionStates3D.push_back(motionState);
+
+    btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motionState, shape, localInertia);
+    auto* body = new btRigidBody(rbInfo);
+    if (rb3d.Type == Rigidbody3DComponent::BodyType::Kinematic) {
+        body->setCollisionFlags(body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+        body->setActivationState(DISABLE_DEACTIVATION);
+    }
+    body->setUserPointer(reinterpret_cast<void*>(static_cast<uintptr_t>(static_cast<uint32_t>(entity.GetHandle()))));
+
+    m_PhysicsWorld3D->addRigidBody(body);
+    rb3d.RuntimeBody = body;
+}
+
+void Scene::UnregisterPhysics3DEntity(Entity entity) {
+    if (!m_PhysicsWorld3D || !entity.HasComponent<Rigidbody3DComponent>()) return;
+    auto& rb3d = entity.GetComponent<Rigidbody3DComponent>();
+    auto* body = static_cast<btRigidBody*>(rb3d.RuntimeBody);
+    if (!body) return;
+
+    btCollisionShape* shape = body->getCollisionShape();
+    btMotionState* motion = body->getMotionState();
+    m_PhysicsWorld3D->removeRigidBody(body);
+    delete body;
+    rb3d.RuntimeBody = nullptr;
+
+    if (motion) {
+        auto it = std::find(m_PhysicsMotionStates3D.begin(), m_PhysicsMotionStates3D.end(), motion);
+        if (it != m_PhysicsMotionStates3D.end()) m_PhysicsMotionStates3D.erase(it);
+        delete motion;
+    }
+    if (shape) {
+        auto it = std::find(m_PhysicsShapes3D.begin(), m_PhysicsShapes3D.end(), shape);
+        if (it != m_PhysicsShapes3D.end()) m_PhysicsShapes3D.erase(it);
+        delete shape;
     }
 }
 
@@ -371,54 +569,11 @@ void Scene::OnPhysics3DStart() {
     m_Solver = new btSequentialImpulseConstraintSolver();
     m_PhysicsWorld3D = new btDiscreteDynamicsWorld(m_Dispatcher, m_Broadphase, m_Solver, m_CollisionConfig);
     m_PhysicsWorld3D->setGravity(btVector3(0, -9.81f, 0));
+    m_ActiveContacts3D.clear();
 
     auto view = m_Registry.view<Rigidbody3DComponent>();
-    for (auto e : view) {
-        Entity entity{ e, this };
-        auto& transform = entity.GetComponent<TransformComponent>();
-        auto& rb3d = entity.GetComponent<Rigidbody3DComponent>();
-
-        btCollisionShape* shape = nullptr;
-        if (entity.HasComponent<BoxCollider3DComponent>()) {
-            auto& bc3d = entity.GetComponent<BoxCollider3DComponent>();
-            shape = new btBoxShape(btVector3(bc3d.HalfExtents.x * transform.Scale.x,
-                                              bc3d.HalfExtents.y * transform.Scale.y,
-                                              bc3d.HalfExtents.z * transform.Scale.z));
-        } else if (entity.HasComponent<SphereCollider3DComponent>()) {
-            auto& sc3d = entity.GetComponent<SphereCollider3DComponent>();
-            shape = new btSphereShape(sc3d.Radius * transform.Scale.x);
-        } else {
-            // Sem collider explícito: usa uma caixa unitária como padrão
-            // seguro, em vez de silenciosamente não simular a entidade.
-            shape = new btBoxShape(btVector3(0.5f, 0.5f, 0.5f));
-        }
-        m_PhysicsShapes3D.push_back(shape);
-
-        bool isDynamic = rb3d.Type == Rigidbody3DComponent::BodyType::Dynamic;
-        btScalar mass = isDynamic ? rb3d.Mass : 0.0f;
-        btVector3 localInertia(0, 0, 0);
-        if (isDynamic) shape->calculateLocalInertia(mass, localInertia);
-
-        btQuaternion rotation;
-        rotation.setEulerZYX(transform.Rotation.z, transform.Rotation.y, transform.Rotation.x);
-        btTransform startTransform;
-        startTransform.setIdentity();
-        startTransform.setOrigin(btVector3(transform.Translation.x, transform.Translation.y, transform.Translation.z));
-        startTransform.setRotation(rotation);
-
-        auto* motionState = new btDefaultMotionState(startTransform);
-        m_PhysicsMotionStates3D.push_back(motionState);
-
-        btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, motionState, shape, localInertia);
-        auto* body = new btRigidBody(rbInfo);
-        if (rb3d.Type == Rigidbody3DComponent::BodyType::Kinematic) {
-            body->setCollisionFlags(body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
-            body->setActivationState(DISABLE_DEACTIVATION);
-        }
-
-        m_PhysicsWorld3D->addRigidBody(body);
-        rb3d.RuntimeBody = body;
-    }
+    for (auto e : view)
+        RegisterPhysics3DEntity(Entity{ e, this });
 }
 
 void Scene::OnPhysics3DStop() {
@@ -439,6 +594,7 @@ void Scene::OnPhysics3DStop() {
     for (auto* shape : m_PhysicsShapes3D) delete shape;
     m_PhysicsMotionStates3D.clear();
     m_PhysicsShapes3D.clear();
+    m_ActiveContacts3D.clear();
 
     delete m_PhysicsWorld3D; m_PhysicsWorld3D = nullptr;
     delete m_Solver; m_Solver = nullptr;
@@ -470,42 +626,98 @@ void Scene::UpdatePhysics3D(Timestep ts) {
         bt.getRotation().getEulerZYX(yaw, pitch, roll);
         transform.Rotation = { roll, pitch, yaw };
     }
+
+    // Manifolds Bullet → begin/end de colisão (comparando com o frame anterior).
+    std::unordered_set<uint64_t> current;
+    int numManifolds = m_Dispatcher->getNumManifolds();
+    for (int i = 0; i < numManifolds; ++i) {
+        btPersistentManifold* manifold = m_Dispatcher->getManifoldByIndexInternal(i);
+        if (!manifold || manifold->getNumContacts() <= 0) continue;
+
+        auto* objA = const_cast<btCollisionObject*>(manifold->getBody0());
+        auto* objB = const_cast<btCollisionObject*>(manifold->getBody1());
+        if (!objA || !objB) continue;
+
+        void* upA = objA->getUserPointer();
+        void* upB = objB->getUserPointer();
+        if (!upA && !upB) continue;
+
+        auto ea = upA
+            ? static_cast<entt::entity>(static_cast<uint32_t>(reinterpret_cast<uintptr_t>(upA)))
+            : entt::null;
+        auto eb = upB
+            ? static_cast<entt::entity>(static_cast<uint32_t>(reinterpret_cast<uintptr_t>(upB)))
+            : entt::null;
+
+        uint64_t key = PackEntityPair(ea, eb);
+        current.insert(key);
+        if (m_ActiveContacts3D.find(key) == m_ActiveContacts3D.end())
+            m_CollisionBeginQueue.emplace_back(ea, eb);
+    }
+    for (uint64_t key : m_ActiveContacts3D) {
+        if (current.find(key) == current.end()) {
+            entt::entity a = static_cast<entt::entity>(static_cast<uint32_t>(key >> 32));
+            entt::entity b = static_cast<entt::entity>(static_cast<uint32_t>(key & 0xffffffffu));
+            m_CollisionEndQueue.emplace_back(a, b);
+        }
+    }
+    m_ActiveContacts3D.swap(current);
+}
+
+void Scene::DispatchCollisionBegin(entt::entity self, entt::entity other) {
+    if (self == entt::null || !m_Registry.valid(self)) return;
+    if (!m_Registry.all_of<NativeScriptComponent>(self)) return;
+    auto& nsc = m_Registry.get<NativeScriptComponent>(self);
+    if (!nsc.Instance) return;
+    Entity otherE = (other != entt::null && m_Registry.valid(other)) ? Entity{ other, this } : Entity{};
+    nsc.Instance->OnCollisionBegin(otherE);
+}
+
+void Scene::DispatchCollisionEnd(entt::entity self, entt::entity other) {
+    if (self == entt::null || !m_Registry.valid(self)) return;
+    if (!m_Registry.all_of<NativeScriptComponent>(self)) return;
+    auto& nsc = m_Registry.get<NativeScriptComponent>(self);
+    if (!nsc.Instance) return;
+    Entity otherE = (other != entt::null && m_Registry.valid(other)) ? Entity{ other, this } : Entity{};
+    nsc.Instance->OnCollisionEnd(otherE);
+}
+
+void Scene::FlushCollisionEvents() {
+    auto begins = std::move(m_CollisionBeginQueue);
+    auto ends = std::move(m_CollisionEndQueue);
+    m_CollisionBeginQueue.clear();
+    m_CollisionEndQueue.clear();
+
+    for (auto [a, b] : begins) {
+        DispatchCollisionBegin(a, b);
+        DispatchCollisionBegin(b, a);
+    }
+    for (auto [a, b] : ends) {
+        DispatchCollisionEnd(a, b);
+        DispatchCollisionEnd(b, a);
+    }
 }
 
 void Scene::OnRuntimeStart() {
     KZ_TRACE_SCOPE("Scene::OnRuntimeStart");
+    m_Running = true;
     OnPhysics2DStart();
     OnPhysics3DStart();
 
     m_Registry.view<NativeScriptComponent>().each([this](auto entityHandle, auto& nsc) {
-        if (!nsc.Instance && nsc.InstantiateScript) {
-            nsc.Instance = nsc.InstantiateScript();
-            // InstantiateScript() pode retornar nullptr agora que scripts
-            // vinculados por nome (BindByName) dependem de um GameModule
-            // carregado — sem essa checagem, uma cena referenciando um
-            // script ainda não carregado derrubava o Play inteiro.
-            if (nsc.Instance) {
-                // Sem isso, m_Entity da instância fica default-construído
-                // (m_Scene == nullptr) e a primeira chamada a GetComponent()/
-                // GetEntity().GetName() dentro de OnCreate() segfaulta.
-                nsc.Instance->BindEntity(Entity{ entityHandle, this });
-                nsc.Instance->OnCreate();
-            }
-        }
+        (void)nsc;
+        StartScriptIfNeeded(Entity{ entityHandle, this });
     });
 }
 
 void Scene::OnRuntimeStop() {
     KZ_TRACE_SCOPE("Scene::OnRuntimeStop");
+    m_Running = false;
+    m_PendingScenePath.clear();
+
     OnPhysics2DStop();
     OnPhysics3DStop();
 
-    // Sem isso, a instância de script sobrevivia entre sessões de Play —
-    // na segunda vez que apertava Play, o `if (!nsc.Instance)` em
-    // OnRuntimeStart nunca era verdadeiro de novo, então OnCreate() não
-    // disparava e o objeto antigo continuava rodando. Agora ficou também
-    // uma questão de segurança: se o GameModule for descarregado (recarga
-    // de script), uma instância viva apontaria pra memória desmapeada.
     m_Registry.view<NativeScriptComponent>().each([](auto entityHandle, auto& nsc) {
         (void)entityHandle;
         if (nsc.Instance && nsc.DestroyScript) {
@@ -517,23 +729,19 @@ void Scene::OnRuntimeStop() {
 
 void Scene::OnUpdateRuntime(Timestep ts) {
     KZ_TRACE_SCOPE("Scene::OnUpdateRuntime");
-    // 1. Scripts nativos (KZScript C++ v1)
     m_Registry.view<NativeScriptComponent>().each([=](auto entityHandle, auto& nsc) {
         (void)entityHandle;
         if (nsc.Instance) nsc.Instance->OnUpdate(ts);
     });
 
-    // 2. Física
     UpdatePhysics2D(ts);
     UpdatePhysics3D(ts);
+    FlushCollisionEvents();
 
-    // 2b. Partículas — só simula em Play, mesma convenção da física (não roda em modo edição)
     UpdateParticleSystems(ts);
-    UpdateSpriteAnimations(ts); // animação roda em Play e em edição (preview)
+    UpdateSpriteAnimations(ts);
     UpdateAudio(ts);
 
-    // 3. Render — jogo rodando de verdade, cada passe usa a câmera
-    // primária da própria cena (não a do editor).
     RenderScene2D(nullptr);
     RenderScene3D(nullptr);
 }
@@ -787,7 +995,7 @@ void Scene::UpdateAudio(Timestep) {
         if (ac.ClipPath.empty()) continue;
 
         if (ac.Handle == kInvalidSound) {
-            ac.Handle = AudioEngine::LoadSound(ac.ClipPath, ac.ClipPath, false);
+            ac.Handle = AudioEngine::LoadSound(Project::ResolvePath(ac.ClipPath), ac.ClipPath, false);
             if (ac.Handle == kInvalidSound) continue; // falhou (arquivo não encontrado etc) — tenta de novo no próximo frame
             AudioEngine::SetSoundAttenuation(ac.Handle, ac.MinDistance, ac.MaxDistance);
         }

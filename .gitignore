@@ -14,7 +14,7 @@ cmake_install.cmake
 install_manifest.txt
 CTestTestfile.cmake
 Testing/
-cmake/glad_stub/CMakeFiles/
+compile_commands.json
 
 # Compiler / IDE
 *.o

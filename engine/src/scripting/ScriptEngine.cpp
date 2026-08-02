@@ -26,7 +26,12 @@ bool ScriptEngine::LoadModule(const std::string& path) {
         KZ_CORE_ERROR("Não foi possível carregar o GameModule: {0}", path);
         return false;
     }
-    auto registerFn = reinterpret_cast<RegisterScriptsFn>(GetProcAddress(handle, "RegisterScripts"));
+    // GetProcAddress devolve FARPROC (ponteiro de função sem tipo definido);
+    // o cast direto pra RegisterScriptsFn dispara -Wcast-function-type no
+    // MinGW/Clang. Passar por void* primeiro evita o aviso sem mudar o
+    // comportamento (mesma reinterpretação de bits).
+    void* symbol = reinterpret_cast<void*>(GetProcAddress(handle, "RegisterScripts"));
+    auto registerFn = reinterpret_cast<RegisterScriptsFn>(symbol);
     if (!registerFn) {
         s_LastError = "A biblioteca carregou, mas não exporta RegisterScripts (esqueceu extern \"C\"?).";
         KZ_CORE_ERROR("GameModule '{0}' não exporta RegisterScripts (esqueceu extern \"C\"?)", path);

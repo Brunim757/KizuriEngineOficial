@@ -57,7 +57,7 @@ void Window::Init(const WindowProps& props) {
     KZ_CORE_INFO("Criando a janela '{0}' ({1}x{2}).", props.Title, props.Width, props.Height);
 
     if (s_GLFWWindowCount == 0) {
-        int success = glfwInit();
+        [[maybe_unused]] int success = glfwInit();
         KZ_ASSERT(success, "Falha ao inicializar GLFW!");
         glfwSetErrorCallback(GLFWErrorCallback);
     }

@@ -843,7 +843,7 @@ void EditorLayer::DrawDockspace() {
     // o ImGui desenha no canto de cada nó de dock (undock/hide tab bar
     // pelo menu) — decoração que não combina com o resto da UI da Kizuri,
     // que já tem seu próprio PanelHeader fazendo esse papel visualmente.
-    ImGui::DockSpace(dockspaceID, dockSize, ImGuiDockNodeFlags_AutoHideTabBar | ImGuiDockNodeFlags_NoWindowMenuButton);
+    ImGui::DockSpace(dockspaceID, dockSize, (ImGuiDockNodeFlags)((int)ImGuiDockNodeFlags_AutoHideTabBar | (int)ImGuiDockNodeFlags_NoWindowMenuButton));
     KZ_CORE_TRACE("EditorLayer::DrawDockspace — DockSpace ok");
 
     // Layout padrão de fábrica do Kizuri Editor: Hierarquia e Content
@@ -1495,7 +1495,8 @@ void EditorLayer::DrawInspector() {
     if (m_SelectedEntity) {
         auto& tag = m_SelectedEntity.GetComponent<TagComponent>().Tag;
         char buffer[256];
-        strncpy(buffer, tag.c_str(), sizeof(buffer));
+        strncpy(buffer, tag.c_str(), sizeof(buffer) - 1);
+        buffer[sizeof(buffer) - 1] = '\0';
         if (ImGui::InputText("Nome", buffer, sizeof(buffer))) tag = std::string(buffer);
 
         if (m_SelectedEntity.HasComponent<TransformComponent>()) {

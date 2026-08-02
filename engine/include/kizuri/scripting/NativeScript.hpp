@@ -17,6 +17,12 @@ public:
 
     Entity GetEntity() { return m_Entity; }
 
+    // Chamado pela Scene antes de OnCreate(), pra vincular o script à
+    // entidade/cena de verdade. Sem isso, m_Entity fica default-construído
+    // (m_Scene == nullptr) e qualquer GetComponent()/GetEntity() dentro de
+    // OnCreate()/OnUpdate() derruba o processo.
+    void BindEntity(Entity entity) { m_Entity = entity; }
+
 protected:
     virtual void OnCreate() {}
     virtual void OnDestroy() {}

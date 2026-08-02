@@ -477,15 +477,20 @@ void Scene::OnRuntimeStart() {
     OnPhysics2DStart();
     OnPhysics3DStart();
 
-    m_Registry.view<NativeScriptComponent>().each([](auto entityHandle, auto& nsc) {
-        (void)entityHandle;
+    m_Registry.view<NativeScriptComponent>().each([this](auto entityHandle, auto& nsc) {
         if (!nsc.Instance && nsc.InstantiateScript) {
             nsc.Instance = nsc.InstantiateScript();
             // InstantiateScript() pode retornar nullptr agora que scripts
             // vinculados por nome (BindByName) dependem de um GameModule
             // carregado — sem essa checagem, uma cena referenciando um
             // script ainda não carregado derrubava o Play inteiro.
-            if (nsc.Instance) nsc.Instance->OnCreate();
+            if (nsc.Instance) {
+                // Sem isso, m_Entity da instância fica default-construído
+                // (m_Scene == nullptr) e a primeira chamada a GetComponent()/
+                // GetEntity().GetName() dentro de OnCreate() segfaulta.
+                nsc.Instance->BindEntity(Entity{ entityHandle, this });
+                nsc.Instance->OnCreate();
+            }
         }
     });
 }

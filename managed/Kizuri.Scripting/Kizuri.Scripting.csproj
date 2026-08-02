@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Kizuri.Scripting — API managed do jogo (a única parte "pública" da engine).
+    O motor C++ expõe um ABI C ('kz_*') e este assembly encapsula para C#:
+    Unity/Godot .NET usam exatamente esse padrão. O dev NUNCA vê C++ nem deps.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>Kizuri</RootNamespace>
+    <AssemblyName>Kizuri.Scripting</AssemblyName>
+  </PropertyGroup>
+
+</Project>

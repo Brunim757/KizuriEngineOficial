@@ -60,3 +60,44 @@ jobs:
           name: KizuriEngine-${{ matrix.os }}
           path: dist/
           if-no-files-found: warn
+
+  # ------- Scripting C# (Kizuri.Scripting) -------
+  # O motor é C++ privado; o jogo é um assembly .NET. Este job valida que o
+  # assembly compila em ambos OS, e gera o artefato Kizuri.Scripting.dll que
+  # o editor/export exemplo usa pra vincular um jogo.
+  managed:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+          - os: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        working-directory: managed
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configurar .NET SDK 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Compilar Kizuri.Scripting
+        run: dotnet build Kizuri.Scripting/Kizuri.Scripting.csproj -c Release --nologo
+
+      - name: Compilar jogo de exemplo (SampleGame)
+        run: dotnet build SampleGame/SampleGame.csproj -c Release --nologo
+
+      - name: Publicar artefato Kizuri.Scripting
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kizuri.Scripting-${{ matrix.os }}
+          path: managed/Kizuri.Scripting/bin/Release/net8.0/
+          if-no-files-found: warn

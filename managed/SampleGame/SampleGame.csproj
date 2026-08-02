@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Exemplo: jogo em C# usando a API managed. O dev só vê Kizuri.Scripting;
+       o motor (e glm/entt/box2d) fica 100% fechado. -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>SampleGame</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Kizuri.Scripting/Kizuri.Scripting.csproj" />
+  </ItemGroup>
+
+</Project>

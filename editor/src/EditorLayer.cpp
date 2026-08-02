@@ -12,7 +12,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "UI/Icons.hpp"
 #include <kizuri/project/GameExporter.hpp>
-#include <kizuri/project/GameModuleBuilder.hpp>
+#include <kizuri/scripting/ScriptEngine.hpp>
 #include <kizuri/core/CommandLineArgs.hpp>
 #include <fstream>
 #include <cfloat>
@@ -1414,49 +1414,12 @@ void EditorLayer::DrawGameModuleModal() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        // --- Compilar e Carregar (estilo Unity) ---
-        if (kizuri::Project::GetActive()) {
-            std::string srcDir = (std::filesystem::path(kizuri::Project::GetActive()->GetProjectDirectory()) / "Source").string();
-            if (std::filesystem::exists(srcDir)) {
-                // Pasta bin/ do editor (pai do executável) pra localizar o SDK.
-                std::string editorBinDir = std::filesystem::current_path().string();
-                const auto& buildArgs = GetCommandLineArgs();
-                if (!buildArgs.empty()) {
-                    std::filesystem::path exe = buildArgs[0];
-                    if (exe.has_parent_path())
-                        editorBinDir = std::filesystem::absolute(exe.parent_path()).string();
-                }
-                const std::string& sdkDir = kizuri::GameModuleBuilder::FindSdkDir(editorBinDir);
-                ImGui::TextWrapped(
-                    "Compilar os scripts da pasta Source/ do projeto. O editor monta o "
-                    "GameModule.so/.dll sozinho (estilo Unity) usando o SDK embutido — "
-                    "sem precisar de checkout do código-fonte nem de cmake externo.");
-                ImGui::Spacing();
-                if (ImGui::Button("Compilar Scripts##game_module_build", ImVec2(160.0f, 0.0f))) {
-                    auto result = kizuri::GameModuleBuilder::BuildCompileScripts(srcDir, sdkDir);
-                    if (result.Ok) {
-                        // Auto-carrega o módulo recém-compilado.
-                        if (ScriptEngine::LoadModule(result.ModulePath))
-                            ImGui::CloseCurrentPopup();
-                        else
-                            m_GameModuleBuildLog = result.Log + "\nFalha ao carregar o módulo compilado.";
-                    } else {
-                        m_GameModuleBuildLog = result.Log;
-                    }
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("Ver Build Log##game_module_build_log", ImVec2(160.0f, 0.0f)))
-                    m_ShowGameModuleBuildLog = !m_ShowGameModuleBuildLog;
-
-                if (m_ShowGameModuleBuildLog) {
-                    ImGui::Spacing();
-                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.80f, 0.80f, 0.80f, 1.0f));
-                    ImGui::TextWrapped("%s", m_GameModuleBuildLog.c_str());
-                    ImGui::PopStyleColor();
-                }
-                ImGui::Spacing();
-            }
-        }
+        // --- Compilar Scripts ---
+        // Com a migração para scripts em C#, a compilação de scripts C++ via
+        // SDK embutido foi removida. O assembly do jogo (Kizuri.Scripting.dll)
+        // é construído com `dotnet build` (gerenciado pela Phase 3) e carregado
+        // no runtime do jogo; aqui ainda é possível carregar um módulo já
+        // compilado pelo caminho nativo abaixo.
 
         const ImVec4 accent(0.82f, 0.24f, 0.27f, 1.0f);
         const ImVec4 accentHover(0.90f, 0.32f, 0.35f, 1.0f);

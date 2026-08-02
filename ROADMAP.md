@@ -1,7 +1,11 @@
-# Roadmap — Kizuri Engine v1
+# Roadmap — Kizuri Engine
+
+> Objetivo final: motor C++ 100% privado; o jogo é um assembly **C#**
+> (`Kizuri.Scripting.dll`), conversando com a engine só por um ABI C. Nada
+> de headers/libs internos expostos. (Antes era "GameModule em C++".)
 
 > Objetivo da v1: engine **funcional e jogável** — criar no editor, scriptar
-> em C++ (GameModule) e exportar um executável standalone.
+> em C# (assembly managed) e exportar um executável standalone.
 
 ---
 
@@ -15,7 +19,7 @@
 - [x] **Callbacks de colisão** `OnCollisionBegin/End` nos NativeScripts
 - [x] **Instantiate** de `.kzprefab` em runtime (física + OnCreate)
 - [x] **LoadScene** diferido a partir de scripts
-- [x] Áudio (Play/Stop) + scripting C++ via GameModule
+- [x] Áudio (Play/Stop)
 - [x] `SetLinearVelocity` / sync kinematic no Rigidbody2D
 
 ### Editor / produto
@@ -39,7 +43,7 @@
 ### Produção
 - [ ] Pipeline de import (normais, reimport, previews)
 - [ ] Animações 3D (skinning)
-- [ ] KZScript (gera C++ no fluxo NativeScript atual)
+- [ ] Runtime C# na engine (host CoreCLR carrega `Kizuri.Scripting`).
 - [ ] Testes automatizados (`KZ_BUILD_TESTS`)
 
 ---

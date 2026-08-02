@@ -35,8 +35,9 @@
 - **Física** — Box2D (2D) e Bullet3 (3D), simuladas em runtime
 - **Áudio** — miniaudio, espacial 3D (atenuação por distância) ou fixo; `Play()/Stop()`
   por script/colisão/evento, além do `PlayOnStart`
-- **Scripting** — C++ nativo via `NativeScript` + GameModule (`.dll`/`.so`) carregado
-  em runtime, com API `OnCreate/OnUpdate/OnDestroy` pronta para a futura KZScript
+- **Scripting** — **C#** via `Kizuri.Scripting` (única API pública, estilo
+  Unity/Godot .NET). A engine C++ fica 100% privada: o assembly .NET conversa
+  com ela apenas por um ABI C (`kz_*`), sem expor headers/deps internos
 - **Serialização** — cenas em `.kzscene` (JSON legível), incluindo mesh, material e texturas
 
 ### Editor (KizuriEditor)
@@ -99,19 +100,17 @@ KizuriGame <cena.kzscene> [GameModule.dll/.so]
 Sem argumentos, procura por `Start.kzscene` na pasta atual. Os caminhos de
 assets na cena são relativos ao diretório de trabalho.
 
-**Scripting** — crie classes herdeiras de `kizuri::NativeScript`, registre-as
-num `RegisterScripts(ScriptRegistry&)` e compile como GameModule. Dois fluxos:
+**Scripting (C#)** — o jogo é um **assembly .NET** (`net8.0`). O dev
+referencia `Kizuri.Scripting.dll` (gerada em `managed/Kizuri.Scripting`),
+herda de `Kizuri.Script` e registra as classes com
+`GameModule.Register<T>(...)`.
 
-- **Estilo Unity (recomendado)** — o editor traz um SDK embutido (`bin/sdk`)
-  com os headers da engine e deps. Abra *Arquivo > Carregar GameModule...* e
-  use **Compilar Scripts**: ele recompila a pasta `Source/` do projeto com o
-  compilador instalado (auto-detectado; ou `KIZURI_CXX`) e carrega o módulo
-  na hora. Sem checkout do código-fonte e sem rodar cmake externo.
-- **Via CMake** — compile a pasta `Source/` do projeto como antes
-  (`cmake -B build -DKIZURI_ENGINE_DIR=...`), gerando o `.dll`/`.so`.
+```bash
+dotnet build managed/SampleGame/SampleGame.csproj -c Release
+```
 
-Apis de gameplay: `OnCollisionBegin/End`, `Instantiate(".kzprefab")`,
-`LoadScene(".kzscene")`, `DestroyEntity()`.
+API de gameplay: `OnCreate/OnUpdate`, `OnCollisionBegin/End`,
+`Input.IsKeyPressed`, `Entity.TryGetTransform`, `Entity.TryGetRigidbody2D`.
 
 **Exportar** — salve a cena, carregue o GameModule, use *Arquivo > Exportar Jogo...*
 para gerar uma pasta com `KizuriGame`, `Start.kzscene`, assets e o módulo.
@@ -129,12 +128,15 @@ Kizuri-Engine/
 │   │   ├── renderer/             Shader, Buffer, Texture, Camera, Renderer2D/3D, TextRenderer, Mesh
 │   │   ├── ecs/                  Scene, Entity, Components
 │   │   ├── scene/                SceneSerializer (.kzscene), Prefab, EditorHistory
-│   │   ├── scripting/            NativeScript, ScriptEngine, ScriptRegistry
-│   │   ├── project/              Project (.kzproj)
+│   │   ├── scripting/            CSharpBridge (.h) + NativeScript + ScriptEngine
+│   │   ├── project/              Project (.kzproj), GameExporter
 │   │   ├── audio/                AudioEngine (miniaudio)
 │   │   └── assets/               AssetManager
 │   └── src/                      implementação
 ├── editor/                       KizuriEditor — dockspace ImGui + ImGuizmo
+├── managed/
+│   ├── Kizuri.Scripting/         API pública C# do jogo (P/Invoke para o ABI 'kz_*')
+│   └── SampleGame/               exemplo de jogo em C#
 ├── examples/
 │   ├── sandbox/                  exemplo mínimo de jogo em C++
 │   └── KizuriGame/               executável de jogo standalone

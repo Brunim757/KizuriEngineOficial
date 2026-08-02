@@ -29,6 +29,10 @@ compile_commands.json
 *.out
 *.app
 
+# .NET (scripting managed)
+managed/**/bin/
+managed/**/obj/
+
 # Editor / IDE
 .vscode/
 .idea/

@@ -70,7 +70,6 @@ static void WriteSourceTemplate(const fs::path& sourceDir) {
         "set(KZ_BUILD_SANDBOX    OFF CACHE BOOL \"\" FORCE)\n"
         "set(KZ_BUILD_EDITOR     OFF CACHE BOOL \"\" FORCE)\n"
         "set(KZ_BUILD_GAME       OFF CACHE BOOL \"\" FORCE)\n"
-        "set(KZ_BUILD_GAMEMODULE OFF CACHE BOOL \"\" FORCE) # evita recursão\n"
         "add_subdirectory(${KIZURI_ENGINE_DIR} ${CMAKE_BINARY_DIR}/_kizuri_root)\n\n"
         "file(GLOB_RECURSE GAME_SOURCES CONFIGURE_DEPENDS \"${CMAKE_CURRENT_SOURCE_DIR}/*.cpp\")\n\n"
         "add_library(GameModule SHARED ${GAME_SOURCES})\n"

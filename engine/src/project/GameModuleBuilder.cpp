@@ -1,6 +1,5 @@
 #include "kizuri/project/GameModuleBuilder.hpp"
 #include "kizuri/core/Log.hpp"
-#include "kizuri/core/EntryPoint.hpp"
 
 #include <filesystem>
 #include <fstream>

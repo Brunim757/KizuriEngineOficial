@@ -1,5 +1,6 @@
 #pragma once
 #include "kizuri/core/Application.hpp"
+#include "kizuri/core/CommandLineArgs.hpp"
 #include "kizuri/core/Log.hpp"
 #include <exception>
 
@@ -12,19 +13,6 @@
 // precisa implementar kizuri::CreateApplication() e incluir este header uma
 // única vez no arquivo que contém main().
 extern kizuri::Application* kizuri::CreateApplication();
-
-namespace kizuri {
-
-// Argumentos da linha de comando, capturados pelo main() do EntryPoint e
-// disponíveis pro CreateApplication() (que não recebe parâmetros). Usado
-// pelo KizuriGame pra saber qual .kzscene abrir e qual GameModule carregar;
-// editor e sandbox simplesmente ignoram.
-inline std::vector<std::string>& GetCommandLineArgs() {
-    static std::vector<std::string> s_Args;
-    return s_Args;
-}
-
-} // namespace kizuri
 
 static void KzShowUnhandledExceptionPopup(const char* what) {
 #if defined(_WIN32)

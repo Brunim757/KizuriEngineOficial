@@ -26,7 +26,7 @@ private:
     void DrawDockspace();
     void DrawSceneHierarchy();
     void DrawInspector();
-    void DrawEntityNode(kizuri::Entity entity, kizuri::Entity& outEntityToDelete);
+    void DrawEntityNode(kizuri::Entity entity, kizuri::Entity& outEntityToDelete, bool editable);
     void DrawAddComponentButton();
     void DrawSceneFileModals();
     void DrawProjectModals();

@@ -310,17 +310,23 @@ uniform vec3 u_SunColor;
 void main() {
     vec3 dir = normalize(v_LocalPos);
 
-    vec3 horizonColor = vec3(0.45, 0.58, 0.75);
-    vec3 zenithColor   = vec3(0.10, 0.35, 0.72);
-    vec3 groundColor   = vec3(0.14, 0.13, 0.12);
+    // Cores em HDR linear. Cuidado: passam por tonemap ACES + gamma no fim do
+    // pipeline — valores claros demais (ex: horizonte 0.45) explodem pra ~0.8
+    // depois do ACES e viram um branco "névoa" em vez de céu azul (era esse o
+    // sintoma reportado: céu parecendo neblina e uma faixa clara sobre o grid,
+    // que fica exatamente na linha do horizonte). Por isso o horizonte e o
+    // zenite ficam propositalmente escuros/saturados aqui.
+    vec3 horizonColor = vec3(0.12, 0.22, 0.42);
+    vec3 zenithColor   = vec3(0.04, 0.13, 0.40);
+    vec3 groundColor   = vec3(0.07, 0.08, 0.10);
 
     vec3 sky = (dir.y >= 0.0)
         ? mix(horizonColor, zenithColor, smoothstep(-0.05, 0.35, dir.y))
         : mix(horizonColor, groundColor, smoothstep(0.0, 0.6, -dir.y));
 
     float sunDot = max(dot(dir, normalize(u_SunDir)), 0.0);
-    sky += u_SunColor * pow(sunDot, 900.0) * 40.0; // disco do sol, pequeno e intenso
-    sky += u_SunColor * pow(sunDot, 16.0) * 0.20;  // halo suave ao redor
+    sky += u_SunColor * pow(sunDot, 900.0) * 12.0; // disco do sol, pequeno e intenso
+    sky += u_SunColor * pow(sunDot, 16.0) * 0.10;  // halo suave ao redor
 
     o_Color = vec4(sky, 1.0);
 }
@@ -1246,7 +1252,7 @@ void Renderer3D::EndScene() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, s_HDRColorBuffer);
     s_BrightPassShader->SetInt("u_SceneColor", 0);
-    s_BrightPassShader->SetFloat("u_Threshold", 1.1f);
+    s_BrightPassShader->SetFloat("u_Threshold", 1.2f);
     RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
 
     // --- Passe 3: blur gaussiano separável, ping-pong entre os dois FBOs de bloom ---
@@ -1275,7 +1281,7 @@ void Renderer3D::EndScene() {
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, s_BloomColorBuffer[readIdx]);
     s_CompositeShader->SetInt("u_BloomBlur", 1);
-    s_CompositeShader->SetFloat("u_BloomIntensity", 0.6f);
+    s_CompositeShader->SetFloat("u_BloomIntensity", 0.45f);
     RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
     RenderCommand::SetDepthTest(true);
 

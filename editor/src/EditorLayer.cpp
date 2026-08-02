@@ -434,6 +434,10 @@ void EditorLayer::OnSceneStop() {
 
 void EditorLayer::NewScene() {
     KZ_TRACE_SCOPE("EditorLayer::NewScene");
+    if (m_SceneState == SceneState::Play) {
+        KZ_CORE_WARN("EditorLayer::NewScene — ignorado durante o Play (trocar a cena no meio do runtime descartaria a cópia em execução).");
+        return;
+    }
     m_ActiveScene = CreateRef<Scene>("Nova Cena");
     m_SelectedEntity = {};
     m_ScenePath.clear();
@@ -468,6 +472,10 @@ void EditorLayer::SaveSceneAs() {
 
 void EditorLayer::OpenScene(const std::string& path) {
     KZ_TRACE_SCOPE("EditorLayer::OpenScene");
+    if (m_SceneState == SceneState::Play) {
+        KZ_CORE_WARN("EditorLayer::OpenScene — ignorado durante o Play (trocar a cena no meio do runtime descartaria a cópia em execução).");
+        return;
+    }
     auto newScene = CreateRef<Scene>("Nova Cena");
     SceneSerializer serializer(newScene);
     if (!serializer.Deserialize(path)) return;
@@ -694,9 +702,12 @@ void EditorLayer::DrawDockspace() {
             m_RequestOpenGameModulePopup = true;
         }
         ImGui::Separator();
-        if (ImGui::MenuItem("Nova Cena")) NewScene();
+        // Nova/Abrir Cena travados durante o Play (igual Salvar): trocar a
+        // m_ActiveScene no meio do runtime descartaria a cópia em execução
+        // por baixo e é comportamento de modo edição dentro do jogo.
+        if (ImGui::MenuItem("Nova Cena", nullptr, false, m_SceneState == SceneState::Edit)) NewScene();
         ImGui::Separator();
-        if (ImGui::MenuItem("Abrir Cena...")) {
+        if (ImGui::MenuItem("Abrir Cena...", nullptr, false, m_SceneState == SceneState::Edit)) {
             strncpy(m_ScenePathBuffer, m_ScenePath.empty() ? "cena.kzscene" : m_ScenePath.c_str(), sizeof(m_ScenePathBuffer));
             m_ScenePathBuffer[sizeof(m_ScenePathBuffer) - 1] = '\0';
             m_RequestOpenLoadPopup = true;
@@ -1228,6 +1239,12 @@ void EditorLayer::DrawSceneHierarchy() {
     ImGui::Begin("Hierarquia");
     kizuri::editor::icons::PanelHeader("HIERARQUIA", kizuri::editor::icons::Hierarchy);
 
+    // Durante o Play a hierarquia vira leitura: mostra a cena que está
+    // rodando (a cópia), mas sem selecionar/criar/deletar/reparentar —
+    // essas operações são de modo edição e mexeriam na cópia efêmera, que
+    // é descartada no Stop de qualquer jeito.
+    bool editable = m_SceneState == SceneState::Edit;
+
     // A entidade marcada pra deletar (se houver) só é destruída depois que
     // o .each() abaixo termina de percorrer a view — destruir no meio da
     // iteração invalidaria o iterador do EnTT.
@@ -1240,35 +1257,37 @@ void EditorLayer::DrawSceneHierarchy() {
         [&](auto entityHandle, TagComponent&, RelationshipComponent& rel) {
             if (rel.Parent.IsValid()) return;
             Entity entity{ entityHandle, m_ActiveScene.get() };
-            DrawEntityNode(entity, entityToDelete);
+            DrawEntityNode(entity, entityToDelete, editable);
         });
 
-    if (entityToDelete) {
+    if (editable && entityToDelete) {
         if (m_SelectedEntity == entityToDelete) m_SelectedEntity = {};
         m_History.Push(CreateRef<DeleteEntityCommand>(entityToDelete));
         m_ActiveScene->DestroyEntity(entityToDelete);
     }
 
-    // Espaço vazio do painel também aceita drop — soltar uma entidade aqui
-    // fora de qualquer nó desanexa ela do pai (vira raiz de novo).
-    ImGui::Dummy(ImGui::GetContentRegionAvail());
-    if (ImGui::BeginDragDropTarget()) {
-        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("KZ_ENTITY_UUID")) {
-            uint64_t draggedId;
-            std::memcpy(&draggedId, payload->Data, sizeof(uint64_t));
-            Entity dragged = m_ActiveScene->GetEntityByUUID(UUID(draggedId));
-            if (dragged) Reparent(dragged, {});
+    if (editable) {
+        // Espaço vazio do painel também aceita drop — soltar uma entidade aqui
+        // fora de qualquer nó desanexa ela do pai (vira raiz de novo).
+        ImGui::Dummy(ImGui::GetContentRegionAvail());
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("KZ_ENTITY_UUID")) {
+                uint64_t draggedId;
+                std::memcpy(&draggedId, payload->Data, sizeof(uint64_t));
+                Entity dragged = m_ActiveScene->GetEntityByUUID(UUID(draggedId));
+                if (dragged) Reparent(dragged, {});
+            }
+            ImGui::EndDragDropTarget();
         }
-        ImGui::EndDragDropTarget();
-    }
 
-    if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems)) {
-        if (ImGui::MenuItem("Criar Entidade Vazia")) {
-            Entity created = m_ActiveScene->CreateEntity("Nova Entidade");
-            m_History.Push(CreateRef<CreateEntityCommand>(created));
-            m_SelectedEntity = created;
+        if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems)) {
+            if (ImGui::MenuItem("Criar Entidade Vazia")) {
+                Entity created = m_ActiveScene->CreateEntity("Nova Entidade");
+                m_History.Push(CreateRef<CreateEntityCommand>(created));
+                m_SelectedEntity = created;
+            }
+            ImGui::EndPopup();
         }
-        ImGui::EndPopup();
     }
     ImGui::End();
 }
@@ -1284,7 +1303,7 @@ void EditorLayer::Reparent(Entity child, Entity newParent) {
     m_History.Push(CreateRef<ReparentCommand>(child.GetUUID(), oldParentId, newParentId));
 }
 
-void EditorLayer::DrawEntityNode(Entity entity, Entity& outEntityToDelete) {
+void EditorLayer::DrawEntityNode(Entity entity, Entity& outEntityToDelete, bool editable) {
     auto& tag = entity.GetComponent<TagComponent>().Tag;
     auto children = entity.GetChildren();
 
@@ -1294,36 +1313,39 @@ void EditorLayer::DrawEntityNode(Entity entity, Entity& outEntityToDelete) {
     if (isLeaf) flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
     bool opened = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)entity, flags, "%s", tag.c_str());
-    if (ImGui::IsItemClicked()) m_SelectedEntity = entity;
+    // Só o modo edição seleciona por clique — no Play a árvore é leitura.
+    if (editable && ImGui::IsItemClicked()) m_SelectedEntity = entity;
 
-    // Arrastar esta entidade pra reparentar em outra.
-    if (ImGui::BeginDragDropSource()) {
-        uint64_t id = (uint64_t)entity.GetUUID();
-        ImGui::SetDragDropPayload("KZ_ENTITY_UUID", &id, sizeof(uint64_t));
-        ImGui::Text("%s", tag.c_str());
-        ImGui::EndDragDropSource();
-    }
-
-    // Soltar outra entidade em cima desta faz ela virar filha.
-    if (ImGui::BeginDragDropTarget()) {
-        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("KZ_ENTITY_UUID")) {
-            uint64_t draggedId;
-            std::memcpy(&draggedId, payload->Data, sizeof(uint64_t));
-            Entity dragged = m_ActiveScene->GetEntityByUUID(UUID(draggedId));
-            if (dragged && dragged != entity) Reparent(dragged, entity);
+    if (editable) {
+        // Arrastar esta entidade pra reparentar em outra.
+        if (ImGui::BeginDragDropSource()) {
+            uint64_t id = (uint64_t)entity.GetUUID();
+            ImGui::SetDragDropPayload("KZ_ENTITY_UUID", &id, sizeof(uint64_t));
+            ImGui::Text("%s", tag.c_str());
+            ImGui::EndDragDropSource();
         }
-        ImGui::EndDragDropTarget();
-    }
 
-    if (ImGui::BeginPopupContextItem()) {
-        if (ImGui::MenuItem("Deletar Entidade")) outEntityToDelete = entity;
-        if (entity.GetParent() && ImGui::MenuItem("Desanexar do Pai")) Reparent(entity, {});
-        ImGui::EndPopup();
+        // Soltar outra entidade em cima desta faz ela virar filha.
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("KZ_ENTITY_UUID")) {
+                uint64_t draggedId;
+                std::memcpy(&draggedId, payload->Data, sizeof(uint64_t));
+                Entity dragged = m_ActiveScene->GetEntityByUUID(UUID(draggedId));
+                if (dragged && dragged != entity) Reparent(dragged, entity);
+            }
+            ImGui::EndDragDropTarget();
+        }
+
+        if (ImGui::BeginPopupContextItem()) {
+            if (ImGui::MenuItem("Deletar Entidade")) outEntityToDelete = entity;
+            if (entity.GetParent() && ImGui::MenuItem("Desanexar do Pai")) Reparent(entity, {});
+            ImGui::EndPopup();
+        }
     }
 
     if (opened && !isLeaf) {
         for (Entity child : children)
-            DrawEntityNode(child, outEntityToDelete);
+            DrawEntityNode(child, outEntityToDelete, editable);
         ImGui::TreePop();
     }
 }
@@ -1618,9 +1640,12 @@ void EditorLayer::OnImGuiRender() {
     ImGuizmo::SetImGuiContext(ImGui::GetCurrentContext());
     ImGuizmo::BeginFrame();
 
-    // Atalhos de undo/redo. Ignora enquanto o ImGui quer captura de texto
-    // (WantTextInput) — senão Ctrl+Z dentro de um campo de nome brigaria
-    // com o undo nativo do próprio InputText.
+    // Atalhos de undo/redo. Só valem no modo de edição: durante o Play o
+    // undo/redo mexeria na CÓPIA em runtime (e a pilha de comandos foi
+    // gravada contra a cena mestra), o que só confundiria — desfazer/refazer
+    // é ferramenta de edição. Também ignora enquanto o ImGui quer captura de
+    // texto (WantTextInput) — senão Ctrl+Z dentro de um campo de nome
+    // brigaria com o undo nativo do próprio InputText.
     //
     // Usa kizuri::Input (leitura direta do GLFW) em vez de
     // ImGui::IsKeyPressed(ImGuiKey_Z/_Y, false): essa segunda forma foi
@@ -1644,7 +1669,7 @@ void EditorLayer::OnImGuiRender() {
     m_PrevYKeyDown = yDown;
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — estado de teclas (Input::) lido ok");
 
-    if (!io.WantTextInput) {
+    if (m_SceneState == SceneState::Edit && !io.WantTextInput) {
         if (ctrlDown && zJustPressed) {
             KZ_CORE_TRACE("EditorLayer::OnImGuiRender — atalho Ctrl+Z detectado");
             if (io.KeyShift) m_History.Redo(*m_ActiveScene);
@@ -1727,10 +1752,19 @@ void EditorLayer::OnImGuiRender() {
     // frame rodasse), então o clique passava batido pelo picking, não
     // acertava nada em 3D, e desselecionava a entidade — o "seleciona e
     // desseleciona rapidinho" que já foi reportado.
-    KZ_CORE_TRACE("EditorLayer::OnImGuiRender — chamando DrawGizmo");
-    DrawGizmo();
-    KZ_CORE_TRACE("EditorLayer::OnImGuiRender — DrawGizmo ok");
-    DrawCameraGizmo();
+    // Gizmo de transformação e gizmo de câmera são ferramentas de EDIÇÃO:
+    // não existem durante o Play (a seleção já é limpa em OnScenePlay, mas
+    // se algum fluxo futuro re-selecionasse durante o runtime, o gizmo
+    // ficaria flutuando sobre a cena rodando e permitiria arrastar entidades
+    // da cópia — comportamento de modo edição dentro do jogo).
+    if (m_SceneState == SceneState::Edit) {
+        KZ_CORE_TRACE("EditorLayer::OnImGuiRender — chamando DrawGizmo");
+        DrawGizmo();
+        KZ_CORE_TRACE("EditorLayer::OnImGuiRender — DrawGizmo ok");
+        DrawCameraGizmo();
+    } else {
+        KZ_CORE_TRACE("EditorLayer::OnImGuiRender — gizmo pulado (Play)");
+    }
 
     // Clique esquerdo no viewport seleciona a entidade sob o cursor (por
     // raycast contra o AABB dos meshes 3D). Só faz sentido no modo 3D —
@@ -1739,7 +1773,12 @@ void EditorLayer::OnImGuiRender() {
     // fica pra uma leva futura, por ora a Hierarquia resolve). Ignora
     // quando o clique é no próprio gizmo (senão começar a arrastar um
     // handle trocaria a seleção no meio do gesto).
-    if (m_ViewportMode == ViewportMode::Mode3D &&
+    // Picking por clique também é exclusivo do modo de edição: no Play o
+    // clique no viewport não pode selecionar nada (selecionar durante o
+    // runtime é comportamento de editor — e o gizmo/Inspetor nem existem
+    // nesse estado).
+    if (m_SceneState == SceneState::Edit &&
+        m_ViewportMode == ViewportMode::Mode3D &&
         ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
         !ImGuizmo::IsOver() && !ImGuizmo::IsUsing()) {
         glm::vec2 mouse{ ImGui::GetMousePos().x, ImGui::GetMousePos().y };

@@ -5,6 +5,7 @@
 #include "kizuri/scene/SceneSerializer.hpp"
 #include "kizuri/renderer/Renderer2D.hpp"
 #include "kizuri/renderer/Renderer3D.hpp"
+#include "kizuri/renderer/TextRenderer.hpp"
 #include "kizuri/core/Log.hpp"
 
 #include <box2d/box2d.h>
@@ -37,13 +38,8 @@ Ref<Scene> Scene::Copy(const Ref<Scene>& source) {
     SceneSerializer srcSerializer(source);
     SceneSerializer dstSerializer(copy);
     dstSerializer.DeserializeFromJson(srcSerializer.SerializeToJson());
-
-    // MeshRendererComponent não tem serialização ainda (Pipeline de Assets é trabalho futuro,
-    // ver ROADMAP) — copiado direto aqui, por UUID, fora do roundtrip JSON acima.
-    source->m_Registry.view<IDComponent, MeshRendererComponent>().each([&](auto e, IDComponent& id, MeshRendererComponent& mr) {
-        Entity dst = copy->GetEntityByUUID(id.ID);
-        if (dst) dst.AddComponent<MeshRendererComponent>(mr);
-    });
+    // MeshRenderer/Material agora são serializados (ComponentSerialization.hpp),
+    // então o roundtrip JSON acima já carrega mesh, material e texturas.
 
     return copy;
 }
@@ -158,6 +154,47 @@ static bool RayIntersectsAABB(const glm::vec3& origin, const glm::vec3& dir,
     }
     outT = tmin;
     return true;
+}
+
+Entity Scene::PickEntity2D(const glm::vec2& worldPoint) {
+    Entity closest;
+    float closestArea = std::numeric_limits<float>::max();
+
+    // Sprite: ponto dentro do quad (transform mundial).
+    auto sprites = m_Registry.view<TransformComponent, SpriteRendererComponent>();
+    for (auto e : sprites) {
+        Entity entity{ e, this };
+        glm::mat4 inv = glm::inverse(GetWorldTransform(entity));
+        glm::vec3 local = glm::vec3(inv * glm::vec4(worldPoint, 0.0f, 1.0f));
+        if (local.x < -0.5f || local.x > 0.5f || local.y < -0.5f || local.y > 0.5f) continue;
+        glm::mat4 world = GetWorldTransform(entity);
+        float area = std::abs(glm::length(glm::vec2(world[0])) * glm::length(glm::vec2(world[1])));
+        if (area < closestArea) { closestArea = area; closest = entity; }
+    }
+
+    // Círculo: ponto dentro do raio.
+    auto circles = m_Registry.view<TransformComponent, CircleRendererComponent>();
+    for (auto e : circles) {
+        Entity entity{ e, this };
+        glm::mat4 inv = glm::inverse(GetWorldTransform(entity));
+        glm::vec3 local = glm::vec3(inv * glm::vec4(worldPoint, 0.0f, 1.0f));
+        if (local.x * local.x + local.y * local.y > 0.25f) continue;
+        if (1.0f < closestArea) { closestArea = 1.0f; closest = entity; }
+    }
+
+    // Texto: bounding aproximado pela medida da fonte.
+    auto texts = m_Registry.view<TransformComponent, TextComponent>();
+    for (auto e : texts) {
+        Entity entity{ e, this };
+        auto& tc = texts.get<TextComponent>(e);
+        glm::vec3 pos = glm::vec3(GetWorldTransform(entity)[3]);
+        float w = TextRenderer::MeasureWidth(tc.Text, tc.FontSize);
+        float h = tc.FontSize;
+        if (worldPoint.x < pos.x || worldPoint.x > pos.x + w || worldPoint.y < pos.y - h || worldPoint.y > pos.y) continue;
+        if (w * h < closestArea) { closestArea = w * h; closest = entity; }
+    }
+
+    return closest;
 }
 
 Entity Scene::PickEntity(const glm::vec3& rayOrigin, const glm::vec3& rayDir) {
@@ -420,6 +457,7 @@ void Scene::OnUpdateRuntime(Timestep ts) {
 
     // 2b. Partículas — só simula em Play, mesma convenção da física (não roda em modo edição)
     UpdateParticleSystems(ts);
+    UpdateSpriteAnimations(ts); // animação roda em Play e em edição (preview)
     UpdateAudio(ts);
 
     // 3. Render — jogo rodando de verdade, cada passe usa a câmera
@@ -428,8 +466,9 @@ void Scene::OnUpdateRuntime(Timestep ts) {
     RenderScene3D(nullptr);
 }
 
-void Scene::OnUpdateEditor3D(Timestep, PerspectiveCamera& editorCamera) {
+void Scene::OnUpdateEditor3D(Timestep ts, PerspectiveCamera& editorCamera) {
     KZ_TRACE_SCOPE("Scene::OnUpdateEditor3D");
+    UpdateSpriteAnimations(ts); // preview de animação no viewport, mesmo em edição
     // Modo 3D do viewport: malhas + grid via câmera livre do editor. O
     // passe 2D continua rodando com a câmera primária da PRÓPRIA cena, se
     // houver uma — é o que permite um HUD/overlay 2D aparecer sobre uma
@@ -438,8 +477,9 @@ void Scene::OnUpdateEditor3D(Timestep, PerspectiveCamera& editorCamera) {
     RenderScene3D(&editorCamera);
 }
 
-void Scene::OnUpdateEditor2D(Timestep, OrthographicCamera& editorCamera) {
+void Scene::OnUpdateEditor2D(Timestep ts, OrthographicCamera& editorCamera) {
     KZ_TRACE_SCOPE("Scene::OnUpdateEditor2D");
+    UpdateSpriteAnimations(ts); // preview de animação no viewport, mesmo em edição
     // Modo 2D do viewport: navegação livre (pan/zoom) via a própria
     // câmera do editor, ignorando qualquer CameraComponent da cena — não
     // precisa de uma entidade de câmera só pra poder editar sprites. Sem
@@ -462,20 +502,15 @@ static void DecomposeTransform(const glm::mat4& m, glm::vec3& outPos, glm::vec3&
     outEuler = glm::eulerAngles(glm::quat_cast(rotScale));
 }
 
+// Desenha todos os renderizadores 2D da cena dentro de um BeginScene já
+// aberto: sprites, círculos, animações de sprite (recorte de UV na folha),
+// tilemap (grade de quads com recorte de UV) e texto (fonte embutida).
 void Scene::RenderScene2D(OrthographicCamera* overrideCamera) {
     KZ_TRACE_SCOPE("Scene::RenderScene2D");
     if (overrideCamera) {
         Renderer2D::BeginScene(*overrideCamera);
         Renderer2D::DrawGrid();
-        auto sprites = m_Registry.view<TransformComponent, SpriteRendererComponent>();
-        for (auto se : sprites) {
-            auto& sprite = sprites.get<SpriteRendererComponent>(se);
-            glm::mat4 worldTransform = GetWorldTransform(Entity{ se, this });
-            if (sprite.Texture)
-                Renderer2D::DrawTransformedQuad(worldTransform, sprite.Texture, sprite.TilingFactor, sprite.Color);
-            else
-                Renderer2D::DrawTransformedQuad(worldTransform, sprite.Color);
-        }
+        Render2DEntities();
         Renderer2D::EndScene();
         return;
     }
@@ -494,17 +529,98 @@ void Scene::RenderScene2D(OrthographicCamera* overrideCamera) {
         cam.SetRotation(glm::degrees(euler.z));
 
         Renderer2D::BeginScene(cam);
-        auto sprites = m_Registry.view<TransformComponent, SpriteRendererComponent>();
-        for (auto se : sprites) {
-            auto& sprite = sprites.get<SpriteRendererComponent>(se);
-            glm::mat4 worldTransform = GetWorldTransform(Entity{ se, this });
-            if (sprite.Texture)
-                Renderer2D::DrawTransformedQuad(worldTransform, sprite.Texture, sprite.TilingFactor, sprite.Color);
-            else
-                Renderer2D::DrawTransformedQuad(worldTransform, sprite.Color);
-        }
+        Render2DEntities();
         Renderer2D::EndScene();
         break;
+    }
+}
+
+void Scene::Render2DEntities() {
+    // Sprites (cor sólida ou textura) + círculos + texto + tilemap.
+    auto sprites = m_Registry.view<TransformComponent, SpriteRendererComponent>();
+    for (auto se : sprites) {
+        auto& sprite = sprites.get<SpriteRendererComponent>(se);
+        glm::mat4 worldTransform = GetWorldTransform(Entity{ se, this });
+        if (sprite.Texture)
+            Renderer2D::DrawTransformedQuad(worldTransform, sprite.Texture, sprite.TilingFactor, sprite.Color);
+        else
+            Renderer2D::DrawTransformedQuad(worldTransform, sprite.Color);
+    }
+
+    auto circles = m_Registry.view<TransformComponent, CircleRendererComponent>();
+    for (auto ce : circles) {
+        auto& circle = circles.get<CircleRendererComponent>(ce);
+        Renderer2D::DrawCircle(GetWorldTransform(Entity{ ce, this }), circle.Color, circle.Thickness, circle.Fade);
+    }
+
+    // Animações de sprite: desenham a folha com recorte de UV do frame atual.
+    auto anims = m_Registry.view<TransformComponent, SpriteAnimationComponent>();
+    for (auto ae : anims) {
+        auto& anim = anims.get<SpriteAnimationComponent>(ae);
+        if (!anim.SheetTexture && !anim.SheetPath.empty())
+            anim.SheetTexture = Texture2D::Create(anim.SheetPath); // carregada sob demanda
+        if (!anim.SheetTexture || anim.FramesPerRow == 0) continue;
+
+        uint32_t cols = anim.FramesPerRow;
+        uint32_t row = anim.CurrentFrame / cols;
+        uint32_t col = anim.CurrentFrame % cols;
+        uint32_t rows = (anim.TotalFrames + cols - 1) / cols;
+        glm::vec2 uvMin{ (float)col / cols, 1.0f - (float)(row + 1) / rows };
+        glm::vec2 uvMax{ (float)(col + 1) / cols, 1.0f - (float)row / rows };
+        Renderer2D::DrawTransformedQuadUV(GetWorldTransform(Entity{ ae, this }), anim.SheetTexture, uvMin, uvMax, { 1.0f, 1.0f, 1.0f, 1.0f });
+    }
+
+    // Tilemap: um quad por tile não-vazio, recortado do atlas.
+    auto tilemaps = m_Registry.view<TransformComponent, TilemapComponent>();
+    for (auto te : tilemaps) {
+        auto& tm = tilemaps.get<TilemapComponent>(te);
+        if (!tm.AtlasTexture && !tm.AtlasPath.empty())
+            tm.AtlasTexture = Texture2D::Create(tm.AtlasPath);
+        if (!tm.AtlasTexture || tm.AtlasColumns == 0 || tm.AtlasRows == 0 || tm.MapWidth == 0) continue;
+
+        glm::mat4 mapTransform = GetWorldTransform(Entity{ te, this });
+        for (uint32_t y = 0; y < tm.MapHeight; ++y) {
+            for (uint32_t x = 0; x < tm.MapWidth; ++x) {
+                uint32_t idx = y * tm.MapWidth + x;
+                if (idx >= tm.Tiles.size() || tm.Tiles[idx] == 0) continue;
+                uint32_t tile = tm.Tiles[idx] - 1;
+                uint32_t tcol = tile % tm.AtlasColumns;
+                uint32_t trow = tile / tm.AtlasColumns;
+                glm::vec2 uvMin{ (float)tcol / tm.AtlasColumns, 1.0f - (float)(trow + 1) / tm.AtlasRows };
+                glm::vec2 uvMax{ (float)(tcol + 1) / tm.AtlasColumns, 1.0f - (float)trow / tm.AtlasRows };
+                glm::mat4 tileTransform = mapTransform *
+                    glm::translate(glm::mat4(1.0f), { x * tm.TileSize.x, y * tm.TileSize.y, 0.0f }) *
+                    glm::scale(glm::mat4(1.0f), { tm.TileSize.x, tm.TileSize.y, 1.0f });
+                Renderer2D::DrawTransformedQuadUV(tileTransform, tm.AtlasTexture, uvMin, uvMax, { 1.0f, 1.0f, 1.0f, 1.0f });
+            }
+        }
+    }
+
+    // Texto de jogo (HUD etc) — posicionado pelo transform da entidade.
+    auto texts = m_Registry.view<TransformComponent, TextComponent>();
+    for (auto te : texts) {
+        auto& tc = texts.get<TextComponent>(te);
+        glm::mat4 world = GetWorldTransform(Entity{ te, this });
+        glm::vec3 pos = glm::vec3(world[3]);
+        TextRenderer::DrawString(tc.Text, pos, tc.FontSize, tc.Color);
+    }
+}
+
+void Scene::UpdateSpriteAnimations(Timestep ts) {
+    auto view = m_Registry.view<SpriteAnimationComponent>();
+    for (auto e : view) {
+        auto& anim = view.get<SpriteAnimationComponent>(e);
+        if (!anim.Playing || anim.TotalFrames <= 1) continue;
+        anim.FrameTimer += (float)ts;
+        float frameDuration = 1.0f / glm::max(anim.FPS, 0.001f);
+        while (anim.FrameTimer >= frameDuration) {
+            anim.FrameTimer -= frameDuration;
+            ++anim.CurrentFrame;
+            if (anim.CurrentFrame >= anim.TotalFrames) {
+                if (anim.Loop) anim.CurrentFrame = 0;
+                else { anim.CurrentFrame = anim.TotalFrames - 1; anim.Playing = false; }
+            }
+        }
     }
 }
 

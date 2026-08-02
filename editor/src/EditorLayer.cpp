@@ -13,6 +13,7 @@
 #include "UI/Icons.hpp"
 #include <fstream>
 #include <cfloat>
+#include <cctype>
 #include <algorithm>
 #include <filesystem>
 #include <vector>
@@ -468,6 +469,35 @@ void EditorLayer::SaveSceneAs() {
     strncpy(m_ScenePathBuffer, m_ScenePath.empty() ? "cena.kzscene" : m_ScenePath.c_str(), sizeof(m_ScenePathBuffer));
     m_ScenePathBuffer[sizeof(m_ScenePathBuffer) - 1] = '\0';
     m_RequestOpenSaveAsPopup = true;
+}
+
+Entity EditorLayer::CreateEntityFromAsset(const std::string& path, const glm::vec3& worldPos) {
+    KZ_TRACE_SCOPE("EditorLayer::CreateEntityFromAsset");
+    std::string lower = path;
+    std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+
+    Entity created;
+    if (lower.size() > 4 && lower.substr(lower.size() - 4) == ".obj") {
+        created = m_ActiveScene->CreateEntity(std::filesystem::path(path).stem().string());
+        auto& mr = created.AddComponent<MeshRendererComponent>();
+        mr.MeshSource = path;
+        mr.MeshAsset = Mesh::FromSource(path);
+    } else {
+        std::string ext = lower.size() >= 4 ? lower.substr(lower.size() - 4) : "";
+        bool isImage = (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".tga" || ext == ".gif");
+        if (!isImage) return {};
+        created = m_ActiveScene->CreateEntity(std::filesystem::path(path).stem().string());
+        auto& sc = created.AddComponent<SpriteRendererComponent>();
+        sc.TexturePath = path;
+        sc.Texture = Texture2D::Create(path);
+    }
+
+    if (created) {
+        auto& tc = created.GetComponent<TransformComponent>();
+        tc.Translation = worldPos;
+        m_History.Push(CreateRef<CreateEntityCommand>(created));
+    }
+    return created;
 }
 
 void EditorLayer::OpenScene(const std::string& path) {
@@ -1187,6 +1217,14 @@ void EditorLayer::DrawContentBrowser() {
         bool clicked = ImGui::IsItemClicked();
         bool doubleClicked = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered();
 
+        // Arquivo arrastável pro viewport: payload com o caminho absoluto.
+        if (!isDir && ImGui::BeginDragDropSource()) {
+            std::string filePath = entry.path().string();
+            ImGui::SetDragDropPayload("KZ_CONTENT_FILE", filePath.c_str(), filePath.size() + 1);
+            ImGui::Text("%s", name.c_str());
+            ImGui::EndDragDropSource();
+        }
+
         ImU32 iconColor = isDir ? IM_COL32(217, 180, 100, 255) : IM_COL32(150, 150, 156, 255);
         if (isDir)
             kizuri::editor::icons::Folder(dl, ImVec2(cursor.x + thumbSize * 0.15f, cursor.y + thumbSize * 0.15f), thumbSize * 0.7f, iconColor);
@@ -1398,6 +1436,13 @@ void EditorLayer::DrawInspector() {
         if (m_SelectedEntity.HasComponent<SpriteRendererComponent>()) {
             auto& sc = m_SelectedEntity.GetComponent<SpriteRendererComponent>();
             if (DrawComponentHeader("Sprite Renderer", &removeThis)) {
+                char texBuf[512];
+                strncpy(texBuf, sc.TexturePath.c_str(), sizeof(texBuf) - 1);
+                texBuf[sizeof(texBuf) - 1] = '\0';
+                if (ImGui::InputText("Textura", texBuf, sizeof(texBuf))) {
+                    sc.TexturePath = texBuf;
+                    sc.Texture = sc.TexturePath.empty() ? nullptr : kizuri::Texture2D::Create(sc.TexturePath);
+                }
                 ImGui::ColorEdit4("Cor", &sc.Color.x);
                 ImGui::DragFloat("Tiling", &sc.TilingFactor, 0.1f);
                 ImGui::TreePop();
@@ -1430,14 +1475,111 @@ void EditorLayer::DrawInspector() {
             auto& mr = m_SelectedEntity.GetComponent<MeshRendererComponent>();
             if (DrawComponentHeader("Mesh Renderer", &removeThis)) {
                 auto& mat = mr.MeshMaterial;
+                // Fonte da mesh: combobox com os builtins + campo livre pra .obj.
+                const char* builtins[] = { "builtin:cube", "builtin:plane", "builtin:sphere" };
+                int currentBuiltin = -1;
+                for (int i = 0; i < 3; ++i) if (mr.MeshSource == builtins[i]) currentBuiltin = i;
+                if (ImGui::Combo("Mesh pronta", &currentBuiltin, builtins, 3)) {
+                    if (currentBuiltin >= 0) {
+                        mr.MeshSource = builtins[currentBuiltin];
+                        mr.MeshAsset = kizuri::Mesh::FromSource(mr.MeshSource);
+                    }
+                }
+                char meshBuf[512];
+                strncpy(meshBuf, mr.MeshSource.c_str(), sizeof(meshBuf) - 1);
+                meshBuf[sizeof(meshBuf) - 1] = '\0';
+                if (ImGui::InputText("Mesh (.obj)", meshBuf, sizeof(meshBuf))) {
+                    mr.MeshSource = meshBuf;
+                    if (!mr.MeshSource.empty()) mr.MeshAsset = kizuri::Mesh::FromSource(mr.MeshSource);
+                }
                 ImGui::ColorEdit3("Albedo", &mat.Albedo.x);
                 ImGui::DragFloat("Metallic", &mat.Metallic, 0.01f, 0.0f, 1.0f);
                 ImGui::DragFloat("Roughness", &mat.Roughness, 0.01f, 0.02f, 1.0f);
                 ImGui::DragFloat("AO", &mat.AO, 0.01f, 0.0f, 1.0f);
-                ImGui::TextDisabled("Mapas (Albedo/Normal): só via código por enquanto.");
+                char albBuf[512], nrmBuf[512];
+                strncpy(albBuf, mat.AlbedoMapPath.c_str(), sizeof(albBuf) - 1); albBuf[sizeof(albBuf) - 1] = '\0';
+                strncpy(nrmBuf, mat.NormalMapPath.c_str(), sizeof(nrmBuf) - 1); nrmBuf[sizeof(nrmBuf) - 1] = '\0';
+                if (ImGui::InputText("Albedo Map", albBuf, sizeof(albBuf))) {
+                    mat.AlbedoMapPath = albBuf;
+                    mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.AlbedoMapPath);
+                }
+                if (ImGui::InputText("Normal Map", nrmBuf, sizeof(nrmBuf))) {
+                    mat.NormalMapPath = nrmBuf;
+                    mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.NormalMapPath);
+                }
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<MeshRendererComponent>();
+        }
+
+        if (m_SelectedEntity.HasComponent<TextComponent>()) {
+            auto& tc = m_SelectedEntity.GetComponent<TextComponent>();
+            if (DrawComponentHeader("Texto", &removeThis)) {
+                char textBuf[1024];
+                strncpy(textBuf, tc.Text.c_str(), sizeof(textBuf) - 1);
+                textBuf[sizeof(textBuf) - 1] = '\0';
+                if (ImGui::InputText("Conteúdo", textBuf, sizeof(textBuf))) tc.Text = textBuf;
+                ImGui::ColorEdit4("Cor", &tc.Color.x);
+                ImGui::DragFloat("Tamanho (px)", &tc.FontSize, 1.0f, 8.0f, 512.0f);
+                ImGui::TextDisabled("Fonte embutida JetBrains Mono.");
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<TextComponent>();
+        }
+
+        if (m_SelectedEntity.HasComponent<SpriteAnimationComponent>()) {
+            auto& sac = m_SelectedEntity.GetComponent<SpriteAnimationComponent>();
+            if (DrawComponentHeader("Animação de Sprite", &removeThis)) {
+                char sheetBuf[512];
+                strncpy(sheetBuf, sac.SheetPath.c_str(), sizeof(sheetBuf) - 1);
+                sheetBuf[sizeof(sheetBuf) - 1] = '\0';
+                if (ImGui::InputText("Folha (sprite sheet)", sheetBuf, sizeof(sheetBuf))) {
+                    sac.SheetPath = sheetBuf;
+                    sac.SheetTexture = sac.SheetPath.empty() ? nullptr : kizuri::Texture2D::Create(sac.SheetPath);
+                }
+                int cols = (int)sac.FramesPerRow, total = (int)sac.TotalFrames;
+                if (ImGui::DragInt("Frames por linha", &cols, 1, 1, 64)) sac.FramesPerRow = (uint32_t)cols;
+                if (ImGui::DragInt("Total de frames", &total, 1, 1, 4096)) sac.TotalFrames = (uint32_t)total;
+                ImGui::DragFloat("FPS", &sac.FPS, 0.5f, 1.0f, 120.0f);
+                ImGui::Checkbox("Loop", &sac.Loop);
+                ImGui::SameLine();
+                ImGui::Checkbox("Rodando", &sac.Playing);
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<SpriteAnimationComponent>();
+        }
+
+        if (m_SelectedEntity.HasComponent<TilemapComponent>()) {
+            auto& tmc = m_SelectedEntity.GetComponent<TilemapComponent>();
+            if (DrawComponentHeader("Tilemap", &removeThis)) {
+                char atlasBuf[512];
+                strncpy(atlasBuf, tmc.AtlasPath.c_str(), sizeof(atlasBuf) - 1);
+                atlasBuf[sizeof(atlasBuf) - 1] = '\0';
+                if (ImGui::InputText("Atlas de tiles", atlasBuf, sizeof(atlasBuf))) {
+                    tmc.AtlasPath = atlasBuf;
+                    tmc.AtlasTexture = tmc.AtlasPath.empty() ? nullptr : kizuri::Texture2D::Create(tmc.AtlasPath);
+                }
+                int atCols = (int)tmc.AtlasColumns, atRows = (int)tmc.AtlasRows;
+                if (ImGui::DragInt("Colunas no atlas", &atCols, 1, 1, 256)) tmc.AtlasColumns = (uint32_t)atCols;
+                if (ImGui::DragInt("Linhas no atlas", &atRows, 1, 1, 256)) tmc.AtlasRows = (uint32_t)atRows;
+                int mw = (int)tmc.MapWidth, mh = (int)tmc.MapHeight;
+                if (ImGui::DragInt("Largura do mapa", &mw, 1, 1, 4096)) tmc.MapWidth = (uint32_t)mw;
+                if (ImGui::DragInt("Altura do mapa", &mh, 1, 1, 4096)) tmc.MapHeight = (uint32_t)mh;
+                ImGui::DragFloat2("Tamanho do tile", &tmc.TileSize.x, 0.1f, 0.1f, 100.0f);
+                tmc.Tiles.resize((size_t)tmc.MapWidth * tmc.MapHeight);
+                if (tmc.Tiles.size() > 0 && ImGui::CollapsingHeader("Tiles (valores)")) {
+                    ImGui::TextDisabled("%zu tiles — 0=vazio, N=posição (N-1) no atlas.", tmc.Tiles.size());
+                    static int s_EditIdx = -1;
+                    ImGui::DragInt("Índice", &s_EditIdx, 1, -1, (int)tmc.Tiles.size() - 1);
+                    if (s_EditIdx >= 0 && s_EditIdx < (int)tmc.Tiles.size()) {
+                        int tv = (int)tmc.Tiles[s_EditIdx];
+                        if (ImGui::InputInt("Tile", &tv, 1, 16))
+                            tmc.Tiles[s_EditIdx] = (uint32_t)glm::max(tv, 0);
+                    }
+                }
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<TilemapComponent>();
         }
 
         if (m_SelectedEntity.HasComponent<LightComponent>()) {
@@ -1598,6 +1740,12 @@ void EditorLayer::DrawAddComponentButton() {
         }
         if (!m_SelectedEntity.HasComponent<LightComponent>() && ImGui::MenuItem("Light"))
             m_SelectedEntity.AddComponent<LightComponent>();
+        if (!m_SelectedEntity.HasComponent<TextComponent>() && ImGui::MenuItem("Texto (HUD)"))
+            m_SelectedEntity.AddComponent<TextComponent>();
+        if (!m_SelectedEntity.HasComponent<SpriteAnimationComponent>() && ImGui::MenuItem("Animação de Sprite"))
+            m_SelectedEntity.AddComponent<SpriteAnimationComponent>();
+        if (!m_SelectedEntity.HasComponent<TilemapComponent>() && ImGui::MenuItem("Tilemap"))
+            m_SelectedEntity.AddComponent<TilemapComponent>();
         if (!m_SelectedEntity.HasComponent<ParticleSystemComponent>() && ImGui::MenuItem("Particle System"))
             m_SelectedEntity.AddComponent<ParticleSystemComponent>();
         if (!m_SelectedEntity.HasComponent<AudioSourceComponent>() && ImGui::MenuItem("Audio Source"))
@@ -1766,19 +1914,43 @@ void EditorLayer::OnImGuiRender() {
         KZ_CORE_TRACE("EditorLayer::OnImGuiRender — gizmo pulado (Play)");
     }
 
-    // Clique esquerdo no viewport seleciona a entidade sob o cursor (por
-    // raycast contra o AABB dos meshes 3D). Só faz sentido no modo 3D —
-    // em modo 2D a seleção por clique ainda não existe (picking 2D é um
-    // problema diferente, ponto-dentro-de-quad em vez de raio-contra-AABB;
-    // fica pra uma leva futura, por ora a Hierarquia resolve). Ignora
-    // quando o clique é no próprio gizmo (senão começar a arrastar um
-    // handle trocaria a seleção no meio do gesto).
-    // Picking por clique também é exclusivo do modo de edição: no Play o
-    // clique no viewport não pode selecionar nada (selecionar durante o
-    // runtime é comportamento de editor — e o gizmo/Inspetor nem existem
-    // nesse estado).
+    // Arrastar um arquivo do Content Browser pro viewport cria a entidade
+    // na posição do mouse (só em modo edição).
+    if (m_SceneState == SceneState::Edit && ImGui::BeginDragDropTarget()) {
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("KZ_CONTENT_FILE")) {
+            std::string path((const char*)payload->Data);
+            glm::vec2 mouse{ ImGui::GetMousePos().x, ImGui::GetMousePos().y };
+            glm::vec2 local = mouse - m_ViewportBounds[0];
+            glm::vec2 size = m_ViewportBounds[1] - m_ViewportBounds[0];
+            glm::vec3 spawn = { 0.0f, 0.0f, 0.0f };
+            if (size.x > 0.0f && size.y > 0.0f &&
+                local.x >= 0.0f && local.y >= 0.0f && local.x <= size.x && local.y <= size.y) {
+                glm::vec2 ndc{ (local.x / size.x) * 2.0f - 1.0f, 1.0f - (local.y / size.y) * 2.0f };
+                if (m_ViewportMode == ViewportMode::Mode3D) {
+                    glm::mat4 inv = glm::inverse(m_EditorCamera.GetProjectionMatrix() * m_EditorCamera.GetViewMatrix());
+                    glm::vec4 nearP = inv * glm::vec4(ndc.x, ndc.y, -1.0f, 1.0f);
+                    glm::vec4 farP  = inv * glm::vec4(ndc.x, ndc.y, 1.0f, 1.0f);
+                    glm::vec3 o = glm::vec3(nearP) / nearP.w;
+                    glm::vec3 d = glm::normalize(glm::vec3(farP) / farP.w - o);
+                    float t = (0.0f - o.y) / glm::max(d.y, 0.0001f); // cai no chão (y=0)
+                    spawn = (t > 0.0f) ? o + d * t : o;
+                } else {
+                    glm::mat4 inv = glm::inverse(m_Editor2DCamera.GetProjectionMatrix() * m_Editor2DCamera.GetViewMatrix());
+                    glm::vec4 wp = inv * glm::vec4(ndc.x, ndc.y, 0.0f, 1.0f);
+                    spawn = { wp.x / wp.w, wp.y / wp.w, 0.0f };
+                }
+            }
+            Entity created = CreateEntityFromAsset(path, spawn);
+            if (created) m_SelectedEntity = created;
+        }
+        ImGui::EndDragDropTarget();
+    }
+
+    // Clique esquerdo no viewport seleciona a entidade sob o cursor. No
+    // modo 3D é raycast contra o AABB dos meshes; no 2D é ponto-dentro-de-
+    // quad/círculo/texto (PickEntity2D). Ignora clique no próprio gizmo e
+    // só vale em modo de edição (no Play nada se seleciona).
     if (m_SceneState == SceneState::Edit &&
-        m_ViewportMode == ViewportMode::Mode3D &&
         ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
         !ImGuizmo::IsOver() && !ImGuizmo::IsUsing()) {
         glm::vec2 mouse{ ImGui::GetMousePos().x, ImGui::GetMousePos().y };
@@ -1788,16 +1960,24 @@ void EditorLayer::OnImGuiRender() {
         if (local.x >= 0.0f && local.y >= 0.0f && local.x <= size.x && local.y <= size.y && size.x > 0.0f && size.y > 0.0f) {
             glm::vec2 ndc{ (local.x / size.x) * 2.0f - 1.0f, 1.0f - (local.y / size.y) * 2.0f };
 
-            glm::mat4 invViewProj = glm::inverse(m_EditorCamera.GetProjectionMatrix() * m_EditorCamera.GetViewMatrix());
-            glm::vec4 nearP = invViewProj * glm::vec4(ndc.x, ndc.y, -1.0f, 1.0f);
-            glm::vec4 farP  = invViewProj * glm::vec4(ndc.x, ndc.y, 1.0f, 1.0f);
-            nearP /= nearP.w;
-            farP /= farP.w;
+            if (m_ViewportMode == ViewportMode::Mode3D) {
+                glm::mat4 invViewProj = glm::inverse(m_EditorCamera.GetProjectionMatrix() * m_EditorCamera.GetViewMatrix());
+                glm::vec4 nearP = invViewProj * glm::vec4(ndc.x, ndc.y, -1.0f, 1.0f);
+                glm::vec4 farP  = invViewProj * glm::vec4(ndc.x, ndc.y, 1.0f, 1.0f);
+                nearP /= nearP.w;
+                farP /= farP.w;
 
-            glm::vec3 rayOrigin = glm::vec3(nearP);
-            glm::vec3 rayDir = glm::normalize(glm::vec3(farP - nearP));
-
-            m_SelectedEntity = m_ActiveScene->PickEntity(rayOrigin, rayDir);
+                glm::vec3 rayOrigin = glm::vec3(nearP);
+                glm::vec3 rayDir = glm::normalize(glm::vec3(farP - nearP));
+                m_SelectedEntity = m_ActiveScene->PickEntity(rayOrigin, rayDir);
+            } else {
+                // 2D: projeta o NDC de volta pro plano Z=0 do mundo (câmera
+                // ortográfica do editor) e testa ponto contra os renderers 2D.
+                glm::mat4 invViewProj = glm::inverse(m_Editor2DCamera.GetProjectionMatrix() * m_Editor2DCamera.GetViewMatrix());
+                glm::vec4 worldP = invViewProj * glm::vec4(ndc.x, ndc.y, 0.0f, 1.0f);
+                worldP /= worldP.w;
+                m_SelectedEntity = m_ActiveScene->PickEntity2D({ worldP.x, worldP.y });
+            }
             KZ_CORE_TRACE("EditorLayer::OnImGuiRender — picking por clique ok");
         }
     }

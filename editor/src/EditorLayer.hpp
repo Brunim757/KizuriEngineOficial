@@ -45,6 +45,10 @@ private:
     void SaveSceneAs();
     void OpenScene(const std::string& path);
 
+    // Cria uma entidade a partir de um arquivo de asset (soltado do Content
+    // Browser no viewport): .obj -> MeshRenderer, imagem -> SpriteRenderer.
+    kizuri::Entity CreateEntityFromAsset(const std::string& path, const glm::vec3& worldPos);
+
     void CreateDefaultSceneContent();
 
     // Play = m_ActiveScene aponta pra uma CÓPIA (ver Scene::Copy) que roda OnUpdateRuntime de

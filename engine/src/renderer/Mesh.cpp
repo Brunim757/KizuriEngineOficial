@@ -140,4 +140,12 @@ Ref<Mesh> Mesh::LoadFromOBJ(const std::string& path) {
     return CreateRef<Mesh>(vertices, indices);
 }
 
+Ref<Mesh> Mesh::FromSource(const std::string& source) {
+    if (source == "builtin:cube")    return CreateCube();
+    if (source == "builtin:plane")   return CreatePlane();
+    if (source == "builtin:sphere")  return CreateSphere();
+    if (!source.empty()) return LoadFromOBJ(source);
+    return CreateCube();
+}
+
 } // namespace kizuri

@@ -59,6 +59,13 @@ public:
     // barato e preciso o suficiente pra clicar em objetos na cena.
     Entity PickEntity(const glm::vec3& rayOrigin, const glm::vec3& rayDir);
 
+    // Picking 2D (editor, modo 2D do viewport): ponto do mundo -> entidade
+    // sob ele. Testa sprite (quad do transform), círculo e texto (bounding
+    // do texto medido pela fonte). Retorna a entidade mais próxima ou
+    // inválida. Animação de sprite e tilemap são amostrados pelo próprio
+    // quad/sprite se tiverem o componente base correspondente.
+    Entity PickEntity2D(const glm::vec2& worldPoint);
+
     void OnRuntimeStart();
     void OnRuntimeStop();
 
@@ -81,9 +88,11 @@ public:
 private:
     void RenderScene2D(class OrthographicCamera* overrideCamera = nullptr);
     void RenderScene3D(class PerspectiveCamera* overrideCamera = nullptr);
+    void Render2DEntities(); // desenha sprites/círculos/animações/tilemap/texto dentro de um BeginScene aberto
     void SubmitLights(); // junta LightComponent da cena; sem nenhuma, cai num sol default
     void UpdateParticleSystems(Timestep ts); // emissão + integração (só roda em Play, como a física)
     void SubmitParticleSystems(); // monta os lotes de ParticleInstance e chama Renderer3D::SubmitParticles
+    void UpdateSpriteAnimations(Timestep ts); // avança FrameTimer dos SpriteAnimationComponent
     void UpdateAudio(Timestep ts); // toca/posiciona AudioSourceComponent + atualiza o listener (câmera 3D ativa)
     void OnPhysics2DStart();
     void OnPhysics2DStop();

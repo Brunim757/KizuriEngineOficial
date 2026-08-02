@@ -48,6 +48,7 @@ struct SpriteRendererComponent {
     glm::vec4 Color = { 1.0f, 1.0f, 1.0f, 1.0f };
     Ref<Texture2D> Texture;
     float TilingFactor = 1.0f;
+    std::string TexturePath; // serializável — caminho do arquivo de imagem (vazio = cor sólida)
 };
 
 struct CircleRendererComponent {
@@ -56,9 +57,46 @@ struct CircleRendererComponent {
     float Fade = 0.005f;
 };
 
+// Texto 2D de jogo (HUD, pontuação, diálogo). Renderizado pelo
+// TextRenderer com a fonte embutida (JetBrains Mono).
+struct TextComponent {
+    std::string Text = "Texto";
+    glm::vec4 Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    float FontSize = 48.0f;  // altura em pixels de tela
+};
+
+// Animação de sprite 2D por frames numa folha de sprites (sprite sheet).
+// FrameAtual/Contador são estado runtime — a folha é amostrada com UVs
+// recortadas pela posição do frame atual.
+struct SpriteAnimationComponent {
+    std::string SheetPath;         // serializável
+    Ref<Texture2D> SheetTexture;   // runtime (carregada sob demanda)
+    uint32_t FramesPerRow = 1;     // quantos frames por linha na folha
+    uint32_t TotalFrames = 1;
+    float FPS = 12.0f;
+    bool Loop = true;
+
+    uint32_t CurrentFrame = 0;     // runtime
+    float FrameTimer = 0.0f;       // runtime
+    bool Playing = true;
+};
+
+// Tilemap 2D: grade de índices de tile apontando pra um atlas de textura
+// (AtlasPath). Tiles=0 é vazio; o resto é (tile-1) na grade do atlas.
+struct TilemapComponent {
+    std::string AtlasPath;         // serializável
+    Ref<Texture2D> AtlasTexture;   // runtime (carregada sob demanda)
+    uint32_t AtlasColumns = 1;     // tiles por linha no atlas
+    uint32_t AtlasRows = 1;        // tiles por coluna no atlas (total = Colunas*Linhas)
+    uint32_t MapWidth = 0, MapHeight = 0;
+    glm::vec2 TileSize = { 1.0f, 1.0f };
+    std::vector<uint32_t> Tiles;   // serializável — row-major, 0 = vazio
+};
+
 struct MeshRendererComponent {
     Ref<Mesh> MeshAsset;
     Material MeshMaterial;
+    std::string MeshSource; // serializável: "builtin:cube|plane|sphere" ou caminho .obj
 };
 
 // Espelha kizuri::Light (Renderer3D.hpp) — entidade de luz de verdade na cena,
@@ -112,6 +150,13 @@ struct AudioSourceComponent {
 
     SoundHandle Handle = kInvalidSound; // estado runtime — não serializado
     bool HasStarted = false;
+
+    // API de evento: toca/para agora, independente de PlayOnStart — chamável
+    // por script (NativeScript), colisão ou código de jogo. Implementadas em
+    // Components.cpp (precisam do AudioEngine).
+    void Play();
+    void Stop();
+    bool IsPlaying() const;
 };
 
 struct CameraComponent {

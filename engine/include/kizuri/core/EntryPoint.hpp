@@ -13,6 +13,19 @@
 // única vez no arquivo que contém main().
 extern kizuri::Application* kizuri::CreateApplication();
 
+namespace kizuri {
+
+// Argumentos da linha de comando, capturados pelo main() do EntryPoint e
+// disponíveis pro CreateApplication() (que não recebe parâmetros). Usado
+// pelo KizuriGame pra saber qual .kzscene abrir e qual GameModule carregar;
+// editor e sandbox simplesmente ignoram.
+inline std::vector<std::string>& GetCommandLineArgs() {
+    static std::vector<std::string> s_Args;
+    return s_Args;
+}
+
+} // namespace kizuri
+
 static void KzShowUnhandledExceptionPopup(const char* what) {
 #if defined(_WIN32)
     std::string msg = std::string("A Kizuri Engine encerrou por um erro inesperado:\n\n") + what +
@@ -34,7 +47,7 @@ static void KzShowUnhandledExceptionPopup(const char* what) {
 }
 
 int main(int argc, char** argv) {
-    (void)argc; (void)argv;
+    for (int i = 0; i < argc; ++i) kizuri::GetCommandLineArgs().emplace_back(argv[i]);
     kizuri::Log::Init();
     KZ_CORE_INFO("=================================================");
     KZ_CORE_INFO("            KIZURI ENGINE v0.1.0                 ");

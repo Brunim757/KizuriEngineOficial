@@ -42,7 +42,8 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
         auto& sc = entity.GetComponent<SpriteRendererComponent>();
         je["SpriteRenderer"] = {
             { "Color", Vec4ToJson(sc.Color) },
-            { "TilingFactor", sc.TilingFactor }
+            { "TilingFactor", sc.TilingFactor },
+            { "TexturePath", sc.TexturePath }
         };
     }
 
@@ -52,6 +53,53 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
             { "Color", Vec4ToJson(cr.Color) },
             { "Thickness", cr.Thickness },
             { "Fade", cr.Fade }
+        };
+    }
+
+    if (entity.HasComponent<TextComponent>()) {
+        auto& tc = entity.GetComponent<TextComponent>();
+        je["Text"] = {
+            { "Text", tc.Text },
+            { "Color", Vec4ToJson(tc.Color) },
+            { "FontSize", tc.FontSize }
+        };
+    }
+
+    if (entity.HasComponent<SpriteAnimationComponent>()) {
+        auto& ac = entity.GetComponent<SpriteAnimationComponent>();
+        je["SpriteAnimation"] = {
+            { "SheetPath", ac.SheetPath },
+            { "FramesPerRow", ac.FramesPerRow },
+            { "TotalFrames", ac.TotalFrames },
+            { "FPS", ac.FPS },
+            { "Loop", ac.Loop }
+        };
+    }
+
+    if (entity.HasComponent<TilemapComponent>()) {
+        auto& tmc = entity.GetComponent<TilemapComponent>();
+        je["Tilemap"] = {
+            { "AtlasPath", tmc.AtlasPath },
+            { "AtlasColumns", tmc.AtlasColumns },
+            { "AtlasRows", tmc.AtlasRows },
+            { "MapWidth", tmc.MapWidth },
+            { "MapHeight", tmc.MapHeight },
+            { "TileSize", Vec3ToJson({ tmc.TileSize.x, tmc.TileSize.y, 0.0f }) },
+            { "Tiles", tmc.Tiles }
+        };
+    }
+
+    if (entity.HasComponent<MeshRendererComponent>()) {
+        auto& mr = entity.GetComponent<MeshRendererComponent>();
+        auto& mat = mr.MeshMaterial;
+        je["MeshRenderer"] = {
+            { "MeshSource", mr.MeshSource },
+            { "Albedo", Vec3ToJson(mat.Albedo) },
+            { "Metallic", mat.Metallic },
+            { "Roughness", mat.Roughness },
+            { "AO", mat.AO },
+            { "AlbedoMapPath", mat.AlbedoMapPath },
+            { "NormalMapPath", mat.NormalMapPath }
         };
     }
 
@@ -160,6 +208,8 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         auto& sc = entity.AddComponent<SpriteRendererComponent>();
         sc.Color = JsonToVec4(js["Color"]);
         sc.TilingFactor = js.value("TilingFactor", 1.0f);
+        sc.TexturePath = js.value("TexturePath", "");
+        if (!sc.TexturePath.empty()) sc.Texture = Texture2D::Create(sc.TexturePath);
     }
 
     if (je.contains("CircleRenderer")) {
@@ -168,6 +218,55 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         cr.Color = JsonToVec4(jc["Color"]);
         cr.Thickness = jc.value("Thickness", 1.0f);
         cr.Fade = jc.value("Fade", 0.005f);
+    }
+
+    if (je.contains("Text")) {
+        auto& jt = je["Text"];
+        auto& tc = entity.AddComponent<TextComponent>();
+        tc.Text = jt.value("Text", "Texto");
+        tc.Color = JsonToVec4(jt["Color"]);
+        tc.FontSize = jt.value("FontSize", 48.0f);
+    }
+
+    if (je.contains("SpriteAnimation")) {
+        auto& ja = je["SpriteAnimation"];
+        auto& ac = entity.AddComponent<SpriteAnimationComponent>();
+        ac.SheetPath = ja.value("SheetPath", "");
+        ac.FramesPerRow = ja.value("FramesPerRow", 1u);
+        ac.TotalFrames = ja.value("TotalFrames", 1u);
+        ac.FPS = ja.value("FPS", 12.0f);
+        ac.Loop = ja.value("Loop", true);
+        if (!ac.SheetPath.empty()) ac.SheetTexture = Texture2D::Create(ac.SheetPath);
+    }
+
+    if (je.contains("Tilemap")) {
+        auto& jtm = je["Tilemap"];
+        auto& tmc = entity.AddComponent<TilemapComponent>();
+        tmc.AtlasPath = jtm.value("AtlasPath", "");
+        tmc.AtlasColumns = jtm.value("AtlasColumns", 1u);
+        tmc.AtlasRows = jtm.value("AtlasRows", 1u);
+        tmc.MapWidth = jtm.value("MapWidth", 0u);
+        tmc.MapHeight = jtm.value("MapHeight", 0u);
+        auto ts = JsonToVec3(jtm.value("TileSize", nlohmann::json::array({ 1.0f, 1.0f, 0.0f })));
+        tmc.TileSize = { ts.x, ts.y };
+        tmc.Tiles = jtm.value("Tiles", std::vector<uint32_t>{});
+        if (!tmc.AtlasPath.empty()) tmc.AtlasTexture = Texture2D::Create(tmc.AtlasPath);
+    }
+
+    if (je.contains("MeshRenderer")) {
+        auto& jm = je["MeshRenderer"];
+        auto& mr = entity.AddComponent<MeshRendererComponent>();
+        mr.MeshSource = jm.value("MeshSource", "builtin:cube");
+        mr.MeshAsset = Mesh::FromSource(mr.MeshSource);
+        auto& mat = mr.MeshMaterial;
+        mat.Albedo = JsonToVec3(jm["Albedo"]);
+        mat.Metallic = jm.value("Metallic", 0.0f);
+        mat.Roughness = jm.value("Roughness", 0.5f);
+        mat.AO = jm.value("AO", 1.0f);
+        mat.AlbedoMapPath = jm.value("AlbedoMapPath", "");
+        mat.NormalMapPath = jm.value("NormalMapPath", "");
+        if (!mat.AlbedoMapPath.empty()) mat.AlbedoMap = Texture2D::Create(mat.AlbedoMapPath);
+        if (!mat.NormalMapPath.empty()) mat.NormalMap = Texture2D::Create(mat.NormalMapPath);
     }
 
     if (je.contains("Camera")) {
@@ -293,8 +392,75 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
             : entity.AddComponent<SpriteRendererComponent>();
         sc.Color = JsonToVec4(js["Color"]);
         sc.TilingFactor = js.value("TilingFactor", 1.0f);
+        sc.TexturePath = js.value("TexturePath", "");
+        sc.Texture = sc.TexturePath.empty() ? nullptr : Texture2D::Create(sc.TexturePath);
     } else if (entity.HasComponent<SpriteRendererComponent>()) {
         entity.RemoveComponent<SpriteRendererComponent>();
+    }
+
+    if (je.contains("Text")) {
+        auto& jt = je["Text"];
+        auto& tc = entity.HasComponent<TextComponent>()
+            ? entity.GetComponent<TextComponent>()
+            : entity.AddComponent<TextComponent>();
+        tc.Text = jt.value("Text", "Texto");
+        tc.Color = JsonToVec4(jt["Color"]);
+        tc.FontSize = jt.value("FontSize", 48.0f);
+    } else if (entity.HasComponent<TextComponent>()) {
+        entity.RemoveComponent<TextComponent>();
+    }
+
+    if (je.contains("SpriteAnimation")) {
+        auto& ja = je["SpriteAnimation"];
+        auto& ac = entity.HasComponent<SpriteAnimationComponent>()
+            ? entity.GetComponent<SpriteAnimationComponent>()
+            : entity.AddComponent<SpriteAnimationComponent>();
+        ac.SheetPath = ja.value("SheetPath", "");
+        ac.FramesPerRow = ja.value("FramesPerRow", 1u);
+        ac.TotalFrames = ja.value("TotalFrames", 1u);
+        ac.FPS = ja.value("FPS", 12.0f);
+        ac.Loop = ja.value("Loop", true);
+        ac.SheetTexture = ac.SheetPath.empty() ? nullptr : Texture2D::Create(ac.SheetPath);
+    } else if (entity.HasComponent<SpriteAnimationComponent>()) {
+        entity.RemoveComponent<SpriteAnimationComponent>();
+    }
+
+    if (je.contains("Tilemap")) {
+        auto& jtm = je["Tilemap"];
+        auto& tmc = entity.HasComponent<TilemapComponent>()
+            ? entity.GetComponent<TilemapComponent>()
+            : entity.AddComponent<TilemapComponent>();
+        tmc.AtlasPath = jtm.value("AtlasPath", "");
+        tmc.AtlasColumns = jtm.value("AtlasColumns", 1u);
+        tmc.AtlasRows = jtm.value("AtlasRows", 1u);
+        tmc.MapWidth = jtm.value("MapWidth", 0u);
+        tmc.MapHeight = jtm.value("MapHeight", 0u);
+        auto ts = JsonToVec3(jtm.value("TileSize", nlohmann::json::array({ 1.0f, 1.0f, 0.0f })));
+        tmc.TileSize = { ts.x, ts.y };
+        tmc.Tiles = jtm.value("Tiles", std::vector<uint32_t>{});
+        tmc.AtlasTexture = tmc.AtlasPath.empty() ? nullptr : Texture2D::Create(tmc.AtlasPath);
+    } else if (entity.HasComponent<TilemapComponent>()) {
+        entity.RemoveComponent<TilemapComponent>();
+    }
+
+    if (je.contains("MeshRenderer")) {
+        auto& jm = je["MeshRenderer"];
+        auto& mr = entity.HasComponent<MeshRendererComponent>()
+            ? entity.GetComponent<MeshRendererComponent>()
+            : entity.AddComponent<MeshRendererComponent>();
+        mr.MeshSource = jm.value("MeshSource", "builtin:cube");
+        mr.MeshAsset = Mesh::FromSource(mr.MeshSource);
+        auto& mat = mr.MeshMaterial;
+        mat.Albedo = JsonToVec3(jm["Albedo"]);
+        mat.Metallic = jm.value("Metallic", 0.0f);
+        mat.Roughness = jm.value("Roughness", 0.5f);
+        mat.AO = jm.value("AO", 1.0f);
+        mat.AlbedoMapPath = jm.value("AlbedoMapPath", "");
+        mat.NormalMapPath = jm.value("NormalMapPath", "");
+        mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : Texture2D::Create(mat.AlbedoMapPath);
+        mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : Texture2D::Create(mat.NormalMapPath);
+    } else if (entity.HasComponent<MeshRendererComponent>()) {
+        entity.RemoveComponent<MeshRendererComponent>();
     }
 
     if (je.contains("CircleRenderer")) {

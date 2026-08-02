@@ -32,6 +32,10 @@ public:
     static Ref<Mesh> CreateSphere(uint32_t sectors = 32, uint32_t stacks = 16);
     static Ref<Mesh> LoadFromOBJ(const std::string& path);
 
+    // Reconstrói uma mesh a partir da string serializável do editor
+    // ("builtin:cube" | "builtin:plane" | "builtin:sphere" | caminho .obj).
+    static Ref<Mesh> FromSource(const std::string& source);
+
 private:
     Ref<VertexArray> m_VertexArray;
     uint32_t m_IndexCount = 0;
@@ -46,6 +50,10 @@ struct Material {
     float AO = 1.0f; // oclusão ambiente escalar, só afeta a parte IBL
     Ref<Texture2D> AlbedoMap;
     Ref<Texture2D> NormalMap; // tangent-space; TBN calculado por derivada de tela, sem atributo extra na mesh
+    // Caminhos serializáveis — é o que permite salvar/abrir cena com
+    // textura de material (ver ComponentSerialization.hpp). Vazios = sem mapa.
+    std::string AlbedoMapPath;
+    std::string NormalMapPath;
 };
 
 enum class LightType { Directional = 0, Point = 1, Spot = 2 };

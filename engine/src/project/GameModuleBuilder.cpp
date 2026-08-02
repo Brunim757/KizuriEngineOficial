@@ -134,7 +134,7 @@ GameModuleBuildResult GameModuleBuilder::BuildCompileScripts(
         result.Log = "Pasta Source/ do projeto não encontrada.";
         return result;
     }
-    if (sdkDir.empty() || !fs::exists(sdkDir / "include")) {
+    if (sdkDir.empty() || !fs::exists(fs::path(sdkDir) / "include")) {
         result.Log =
             "SDK embutido não encontrado (procurei em bin/sdk e KIZURI_SDK_DIR).\n"
             "Rode o build da engine uma vez (gera bin/sdk) ou baixe o release.";
@@ -185,7 +185,7 @@ GameModuleBuildResult GameModuleBuilder::BuildCompileScripts(
     // no Linux linkamos direto contra o libKizuriEngine.so, que vive no bin do
     // editor (que, no layout padrão, é justamente o pai de sdk/).
 #if defined(_WIN32)
-    cmd += " -L" + ShellQuote(fs::path(sdkDir) + "/lib") + " -l:libKizuriEngine.dll.a";
+    cmd += " -L" + ShellQuote(fs::path(sdkDir) / "lib") + " -l:libKizuriEngine.dll.a";
 #else
     // Linux: RPATH aponta pro diretório onde a libKizuriEngine.so vive (bin do
     // editor). O módulo fica em <Source>/build, longe da engine — $ORIGIN não

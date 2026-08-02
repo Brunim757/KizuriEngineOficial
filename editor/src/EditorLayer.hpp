@@ -74,6 +74,13 @@ private:
     void OnScenePlay();
     void OnSceneStop();
 
+    // Play: usar a câmera livre do editor como câmera do jogo? True enquanto
+    // a câmera principal da cena não foi "autorada" (cena nova recém-criada,
+    // ninguém mexeu na câmera). Editar a câmera principal (gizmo/inspetor) ou
+    // abrir uma cena salva desliga isso — aí o Play respeita a câmera da cena
+    // exatamente como o usuário deixou, sem sobrescrever a pose.
+    bool m_UseEditorCameraOnPlay = true;
+
     kizuri::Ref<kizuri::Scene> m_ActiveScene;
     kizuri::Ref<kizuri::Framebuffer> m_Framebuffer;
     kizuri::Entity m_SelectedEntity;

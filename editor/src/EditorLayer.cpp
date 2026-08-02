@@ -71,9 +71,12 @@ void EditorLayer::OnAttach() {
 void EditorLayer::SyncEditorCameraToRuntimeScene() {
     KZ_TRACE_SCOPE("EditorLayer::SyncEditorCameraToRuntimeScene");
     // RenderScene3D/RenderScene2D do Play usam a CameraComponent da cena, não
-    // a câmera livre do editor — então copia a pose da câmera de edição pra
-    // entidade de câmera primária da cópia runtime. Sem isso o Play sempre
-    // olhava pro ponto fixo onde a câmera da cena foi criada.
+    // a câmera livre do editor. Enquanto a câmera da cena não foi "autorada"
+    // (cena nova recém-criada), copia a pose da câmera de edição pra entidade
+    // primária da cópia runtime — o Play começa de onde a câmera do editor
+    // estava. Se o usuário editou a câmera da cena (gizmo/inspetor) ou abriu
+    // uma cena salva, respeita a pose dela como está e não sobrescreve nada.
+    if (!m_UseEditorCameraOnPlay) return;
     auto view = m_ActiveScene->GetRegistry().view<TransformComponent, CameraComponent>();
     for (auto e : view) {
         auto& cc = view.get<CameraComponent>(e);
@@ -459,6 +462,11 @@ void EditorLayer::DrawGizmo() {
             tc.Rotation = rotation;
             tc.Scale = scale;
         }
+        // Usuário "autorou" a câmera da cena com o gizmo: o Play passa a
+        // respeitar a pose dela em vez de espelhar a câmera livre do editor.
+        if (m_SelectedEntity.HasComponent<CameraComponent>() &&
+            m_SelectedEntity.GetComponent<CameraComponent>().Primary)
+            m_UseEditorCameraOnPlay = false;
     }
 
     // Fim do arrasto: fecha o comando com o estado final (só se algo de
@@ -503,6 +511,9 @@ void EditorLayer::NewScene() {
     m_SelectedEntity = {};
     m_ScenePath.clear();
     m_History.Clear();
+    // Cena nova: a câmera livre do editor volta a guiar o Play até a câmera
+    // da cena ser editada ou uma cena salva for aberta.
+    m_UseEditorCameraOnPlay = true;
 }
 
 void EditorLayer::SaveScene() {
@@ -574,6 +585,9 @@ void EditorLayer::OpenScene(const std::string& path) {
     m_SelectedEntity = {};
     m_ScenePath = path;
     m_History.Clear();
+    // Cena salva: a câmera da cena é a fonte da verdade — o Play nunca
+    // sobrescreve a pose dela com a câmera livre do editor.
+    m_UseEditorCameraOnPlay = false;
 }
 
 void EditorLayer::DrawTitlebar() {
@@ -1081,7 +1095,7 @@ void EditorLayer::DrawGameModuleModal() {
         ImGui::TextWrapped(
             "Carregue a biblioteca dinâmica (.dll/.so) com o código do jogo em C++, compilada a "
             "partir da pasta Source/ do projeto. A biblioteca deve exportar a função "
-            "RegisterScripts(ScriptRegistry&) com linkage C. Consulte docs/NOTAS_INTERNAS.md para mais detalhes.");
+            "RegisterScripts(ScriptRegistry&) com linkage C.");
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
@@ -1487,9 +1501,12 @@ void EditorLayer::DrawInspector() {
         if (m_SelectedEntity.HasComponent<TransformComponent>()) {
             auto& tc = m_SelectedEntity.GetComponent<TransformComponent>();
             if (ImGui::TreeNodeEx("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::DragFloat3("Posição", &tc.Translation.x, 0.1f);
-                ImGui::DragFloat3("Rotação", &tc.Rotation.x, 0.1f);
-                ImGui::DragFloat3("Escala", &tc.Scale.x, 0.1f);
+                bool transformEdited = ImGui::DragFloat3("Posição", &tc.Translation.x, 0.1f);
+                transformEdited |= ImGui::DragFloat3("Rotação", &tc.Rotation.x, 0.1f);
+                transformEdited |= ImGui::DragFloat3("Escala", &tc.Scale.x, 0.1f);
+                if (transformEdited && m_SelectedEntity.HasComponent<CameraComponent>() &&
+                    m_SelectedEntity.GetComponent<CameraComponent>().Primary)
+                    m_UseEditorCameraOnPlay = false;
                 ImGui::TreePop();
             }
         }

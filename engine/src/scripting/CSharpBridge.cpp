@@ -163,6 +163,18 @@ KZ_SCRIPT_API void kz_transform_set_position(uint32_t entity, float x, float y, 
     tc.Translation = glm::vec3(x, y, z);
 }
 
+KZ_SCRIPT_API void kz_entity_set_parent(uint32_t child, uint32_t parent) {
+    auto c = Resolve(child);
+    if (!c) return;
+    kizuri::Entity p;
+    if (parent != 0) {
+        p = Resolve(parent);
+        if (!p) return;
+    }
+    // p inválido (0) destaca o filho — ver Scene::SetParent.
+    c.SetParent(p);
+}
+
 // ---------------------------------------------------------------------------
 // Cena em runtime (instanciar prefab, trocar cena, câmera primária)
 // ---------------------------------------------------------------------------

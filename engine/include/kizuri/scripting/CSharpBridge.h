@@ -45,6 +45,7 @@ KZ_SCRIPT_API int kz_entity_get_transform(uint32_t entity,
                                           float* outRotation, // xyz (euler rad)
                                           float* outScale);   // xyz
 KZ_SCRIPT_API void kz_transform_set_position(uint32_t entity, float x, float y, float z);
+KZ_SCRIPT_API void kz_entity_set_parent(uint32_t child, uint32_t parent); // parent=0 destaca
 
 // --- Cena em runtime ---
 KZ_SCRIPT_API uint32_t kz_scene_instantiate_prefab(const char* path, float x, float y, float z);

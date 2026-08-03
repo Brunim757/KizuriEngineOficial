@@ -131,7 +131,8 @@ dor de cabeça em CI antes.
 - **TimeScale**: `kz_set_time_scale`/`GetTimeScale` no CSharpBridge; o
   `ManagedScript::OnUpdate` multiplica o dt pelo scale. Só afeta scripts
   managed (física/partículas têm dt próprio) — anotado como v2 escalar tudo.
-- **Random**: puramente managed.
+- **Rand**: puramente managed (nome curto de propósito — "Random" colidiria
+  com `System.Random` via implicit usings nos projetos de jogo).
 
 ### Export self-contained
 - `Exportar Jogo` com a checkbox ligada roda `dotnet publish -r <RID>

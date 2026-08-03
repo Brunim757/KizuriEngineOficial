@@ -49,7 +49,7 @@
   com `UIButtonWasClicked()`/`UIButtonIsHovered()` — menus, HUDs e botões de
   verdade (espaço de tela, hover/pressed/clique)
 - **Corrotinas** estilo Unity (`StartCoroutine` + `WaitForSeconds`), **`Time.TimeScale`**
-  (câmera lenta), **`Random`**, **`SaveSystem`** (JSON), input de mouse,
+  (câmera lenta), **`Rand`**, **`SaveSystem`** (JSON), input de mouse,
   `Scene.Raycast2D`, `Audio.PlayOneShot`
 - Exemplo completo em `managed/SampleGame/PlayerController.cs` e
   `managed/SampleGame/UISample.cs`

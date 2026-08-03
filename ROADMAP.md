@@ -41,7 +41,7 @@
   no Inspetor
 - [x] **Corrotinas** estilo Unity: `StartCoroutine` + `WaitForSeconds`/`WaitForFrames`
 - [x] **`Time.TimeScale`** (câmera lenta; escala o dt dos scripts)
-- [x] **`Random`** — Float/Int/Chance/Vector2/Vector3
+- [x] **`Rand`** — Float/Int/Chance/Vector2/Vector3
 
 ### Editor / produto
 - [x] Hierarquia, Inspetor, Console, Content Browser, gizmos, Play/Stop

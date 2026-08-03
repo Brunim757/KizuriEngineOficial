@@ -52,7 +52,7 @@ public sealed class UISample : Script
 		if (Input.IsKeyPressed(Key.F)) Time.TimeScale = 0.3f;
 		else if (Input.IsKeyPressed(Key.G)) Time.TimeScale = 1f;
 
-		// Exemplo de corrotina periódica + Random.
+		// Exemplo de corrotina periódica + Rand.
 		_announceTimer -= deltaSeconds;
 		if (_announceTimer <= 0f)
 		{
@@ -71,7 +71,7 @@ public sealed class UISample : Script
 	private IEnumerator Anuncia()
 	{
 		yield return new WaitForSeconds(1f);
-		Log.Info($"Random.Float(0,100) = {Random.Float(0f, 100f):0.00} | Chance(0.5) = {Random.Chance(0.5f)}");
+		Log.Info($"Rand.Float(0,100) = {Rand.Float(0f, 100f):0.00} | Chance(0.5) = {Rand.Chance(0.5f)}");
 	}
 
 	public override void OnCollisionBegin(Entity other) { }

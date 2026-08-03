@@ -1,7 +1,9 @@
-// Random — utilidade de números aleatórios pro jogo. Puramente managed.
+// Rand — utilidade de números aleatórios pro jogo. Puramente managed.
+// Nome curto de propósito: "Random" colidiria com System.Random (que vem
+// via implicit usings nos projetos de jogo), gerando CS0104 em todo lugar.
 namespace Kizuri;
 
-public static class Random
+public static class Rand
 {
 	private static readonly System.Random s_Rng = new System.Random();
 

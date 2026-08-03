@@ -55,6 +55,13 @@ public readonly struct Entity
 	public void SetPosition(Math.Vector3 position)
 		=> Interop.KizuriNative.kz_transform_set_position(Handle, position.X, position.Y, position.Z);
 
+	// Parenta 'this' a 'parent' (ou destaca, com SetParent() sem argumento).
+	public void SetParent(Entity parent)
+		=> Interop.KizuriNative.kz_entity_set_parent(Handle, parent.Handle);
+
+	public void SetParent()
+		=> Interop.KizuriNative.kz_entity_set_parent(Handle, 0);
+
 	public void Destroy() => Interop.KizuriNative.kz_scene_destroy_entity(Handle);
 
 	// ---- Adicionar componentes em runtime ----

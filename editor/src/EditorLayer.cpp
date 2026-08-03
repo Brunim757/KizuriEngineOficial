@@ -909,8 +909,14 @@ void EditorLayer::DrawDockspace() {
             m_EditorState = EditorState::Hub;
         }
         ImGui::Separator();
-        if (ImGui::MenuItem("Carregar GameModule...")) {
-            m_RequestOpenGameModulePopup = true;
+        // Fluxo normal é automático (abrir projeto carrega, Play compila). O
+        // "Carregar GameModule" só existe como fallback pra quem está sem
+        // projeto (cena solta / DLL de outro lugar) — fica no submenu Avançado.
+        if (ImGui::BeginMenu("Avançado")) {
+            if (ImGui::MenuItem("Carregar GameModule...", nullptr, false, m_SceneState == SceneState::Edit)) {
+                m_RequestOpenGameModulePopup = true;
+            }
+            ImGui::EndMenu();
         }
         if (ImGui::MenuItem("Exportar Jogo...", nullptr, false,
                             m_SceneState == SceneState::Edit && !m_ScenePath.empty())) {
@@ -1434,9 +1440,9 @@ void EditorLayer::DrawGameModuleModal() {
         kizuri::editor::icons::PanelHeader("CARREGAR GAMEMODULE", kizuri::editor::icons::Folder);
 
         ImGui::TextWrapped(
-            "Carregue o assembly do jogo (.dll) em C#, compilado com `dotnet build` a partir "
-            "da pasta Source/ do projeto. A engine embute o runtime .NET (CoreCLR) e registra "
-            "os scripts marcados com [GameEntryPoint].");
+            "Fluxo avançado (fallback): carregue manualmente um assembly (.dll) C# "
+            "compilado, fora do projeto. No fluxo normal isso é automático — abrir um "
+            "projeto carrega os scripts e o Play compila e recarrega sozinho.");
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
@@ -2393,7 +2399,7 @@ void EditorLayer::DrawInspector() {
             if (DrawComponentHeader("Script Nativo", &removeThis)) {
                 auto classNames = ScriptEngine::GetRegistry().GetClassNames();
                 if (classNames.empty()) {
-                    ImGui::TextDisabled("Nenhum módulo carregado. Use Arquivo > Carregar GameModule.");
+                    ImGui::TextDisabled("Nenhum script registrado. Abra um projeto (ou aperte Play — a engine compila e carrega sozinha).");
                     if (!nsc.ClassName.empty())
                         ImGui::TextDisabled("Classe vinculada na cena: %s (será religada ao carregar o módulo)", nsc.ClassName.c_str());
                 } else {

@@ -256,5 +256,4 @@ endif()
 
 if(KZ_BUILD_EDITOR)
     add_subdirectory(editor)
-    kz_bundle_dotnet(KizuriEditor)
 endif()

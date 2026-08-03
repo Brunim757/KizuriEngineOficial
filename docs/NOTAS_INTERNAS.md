@@ -144,6 +144,12 @@ dor de cabeça em CI antes.
   fallback antigo (cópia da pasta do assembly).
 - O publish é síncrono (UI congela ~10-60s). Próximo passo: rodar em thread e
   mostrar progresso no modal.
+- **Fallback também embute o runtime**: se o export copia a pasta do assembly
+  (sem projeto / checkbox off) e o `Game/` não é self-contained, o GameExporter
+  copia o runtime .NET instalado na máquina pra dentro (`EmbedDotnetRuntime`:
+  hostfxr/hostpolicy + `shared/Microsoft.NETCore.App/<versão>`, layout padrão de
+  dotnet_root). Todo jogo exportado roda sem o jogador instalar nada — o .NET
+  da máquina serve só pra gerar, nunca pro jogador.
 
 ### Fix do ALC do Host (0 scripts registrados)
 - `Host.InitializeGameModule` carregava o assembly do jogo com

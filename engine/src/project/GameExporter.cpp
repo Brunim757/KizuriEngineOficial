@@ -190,6 +190,96 @@ static std::string FindGameAssembly(const fs::path& gameDir, std::string& err) {
     return {};
 }
 
+#ifdef _WIN32
+    constexpr const char* kHostfxrName = "hostfxr.dll";
+    constexpr const char* kHostpolicyName = "hostpolicy.dll";
+#else
+    constexpr const char* kHostfxrName = "libhostfxr.so";
+    constexpr const char* kHostpolicyName = "libhostpolicy.so";
+#endif
+
+// Compara versões numéricas ("10.0.0" > "9.0.0" — comparação lexical de
+// string erraria).
+static bool VersionGreater(const std::string& a, const std::string& b) {
+    auto nums = [](const std::string& s, std::vector<int>& out) {
+        std::string cur;
+        for (char c : s) {
+            if (c == '.') { out.push_back(std::atoi(cur.c_str())); cur.clear(); }
+            else cur += c;
+        }
+        if (!cur.empty()) out.push_back(std::atoi(cur.c_str()));
+    };
+    std::vector<int> pa, pb;
+    nums(a, pa); nums(b, pb);
+    for (size_t i = 0; i < pa.size() || i < pb.size(); ++i) {
+        int x = i < pa.size() ? pa[i] : 0;
+        int y = i < pb.size() ? pb[i] : 0;
+        if (x != y) return x > y;
+    }
+    return false;
+}
+
+static fs::path FindDotnetRoot() {
+    std::error_code ec;
+    if (const char* root = std::getenv("DOTNET_ROOT"))
+        if (fs::is_directory(root, ec)) return root;
+#ifdef _WIN32
+    if (fs::is_directory("C:\\Program Files\\dotnet", ec)) return "C:\\Program Files\\dotnet";
+    if (fs::is_directory("C:\\Program Files (x86)\\dotnet", ec)) return "C:\\Program Files (x86)\\dotnet";
+#else
+    if (fs::is_directory("/usr/share/dotnet", ec)) return "/usr/share/dotnet";
+    if (fs::is_directory("/usr/local/share/dotnet", ec)) return "/usr/local/share/dotnet";
+    if (const char* home = std::getenv("HOME")) {
+        fs::path p = fs::path(home) / ".dotnet";
+        if (fs::is_directory(p, ec)) return p;
+    }
+#endif
+    return {};
+}
+
+// Copia o runtime .NET instalado na máquina pra dentro de gameDir, deixando
+// o jogo self-contained (o jogador final não instala nada). Layout esperado
+// pelo hostfxr com dotnet_root = gameDir:
+//   gameDir/hostfxr.dll, gameDir/hostpolicy.dll
+//   gameDir/shared/Microsoft.NETCore.App/<versão>/*
+static bool EmbedDotnetRuntime(const fs::path& gameDir, std::string& outError) {
+    fs::path dotnetRoot = FindDotnetRoot();
+    if (dotnetRoot.empty()) {
+        outError = "Runtime .NET não encontrado na máquina para embutir no jogo. "
+                   "Instale o .NET ou exporte com self-contained (checkbox).";
+        return false;
+    }
+
+    std::error_code ec;
+    fs::path fxrDir, sharedDir;
+    std::string fxrVer, fwVer;
+    for (auto& e : fs::directory_iterator(dotnetRoot / "host" / "fxr", ec)) {
+        if (!e.is_directory(ec)) continue;
+        std::string v = e.path().filename().string();
+        if (fxrDir.empty() || VersionGreater(v, fxrVer)) { fxrVer = v; fxrDir = e.path(); }
+    }
+    for (auto& e : fs::directory_iterator(dotnetRoot / "shared" / "Microsoft.NETCore.App", ec)) {
+        if (!e.is_directory(ec)) continue;
+        std::string v = e.path().filename().string();
+        if (sharedDir.empty() || VersionGreater(v, fwVer)) { fwVer = v; sharedDir = e.path(); }
+    }
+    if (fxrDir.empty() || sharedDir.empty()) {
+        outError = "Instalação .NET incompleta (sem host/fxr ou shared framework).";
+        return false;
+    }
+
+    if (!CopyFileTo(fxrDir / kHostfxrName, gameDir / kHostfxrName, outError)) return false;
+    if (fs::exists(fxrDir / kHostpolicyName, ec) &&
+        !CopyFileTo(fxrDir / kHostpolicyName, gameDir / kHostpolicyName, outError))
+        return false;
+
+    if (!CopyDirectoryRecursive(sharedDir, gameDir / "shared" / "Microsoft.NETCore.App" / fwVer, outError))
+        return false;
+
+    KZ_CORE_INFO("Runtime .NET embutido no jogo: v{0} (vem da máquina, sem download).", fwVer);
+    return true;
+}
+
 bool GameExporter::Export(const GameExportRequest& request, std::string& outError) {
     if (request.OutputDirectory.empty()) {
         outError = "Pasta de destino vazia.";
@@ -372,6 +462,15 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
             fs::path gameDir = outDir / "Game";
             if (!CopyDirectoryRecursive(modSrc.parent_path(), gameDir, outError)) return false;
             moduleOutPath = fs::path("Game") / modSrc.filename();
+
+            // Garante runtime embutido MESMO no fallback: se a pasta copiada
+            // não é self-contained (sem hostfxr), embute o runtime da máquina
+            // — todo jogo exportado roda sem o jogador instalar nada.
+            std::error_code rec;
+            if (!fs::exists(gameDir / kHostfxrName, rec)) {
+                KZ_CORE_INFO("Game/ sem runtime .NET — embutindo o runtime local...");
+                if (!EmbedDotnetRuntime(gameDir, outError)) return false;
+            }
         } else {
             if (!CopyFileTo(modSrc, outDir / modSrc.filename(), outError)) return false;
             moduleOutPath = modSrc.filename();

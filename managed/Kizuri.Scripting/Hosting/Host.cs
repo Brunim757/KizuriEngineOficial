@@ -68,7 +68,7 @@ public static class Host
 			var names = GameModule.ScriptNames;
 			if ((uint)index >= (uint)names.Length) return 0;
 			var bytes = Encoding.UTF8.GetBytes(names[index]);
-			int copy = Math.Min(bytes.Length, Math.Max(0, bufferSize - 1));
+			int copy = System.Math.Min(bytes.Length, System.Math.Max(0, bufferSize - 1));
 			if (buffer != IntPtr.Zero && copy > 0)
 			{
 				Marshal.Copy(bytes, 0, buffer, copy);

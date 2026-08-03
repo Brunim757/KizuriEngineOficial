@@ -22,6 +22,15 @@
 - [x] Áudio (Play/Stop)
 - [x] `SetLinearVelocity` / sync kinematic no Rigidbody2D
 
+### API C# de gameplay (Kizuri.Scripting)
+- [x] Entidades em runtime: `Scene.CreateEntity`, `Entity.Destroy`, `AddSprite/AddText/AddAudio/AddCamera`
+- [x] `Scene.InstantiatePrefab`, `Scene.Load`, `Scene.GetPrimaryCamera`
+- [x] Mutação runtime: sprite (textura/cor), texto (conteúdo/tamanho/cor), áudio (Play/Stop)
+- [x] Input de mouse (botões + posição)
+- [x] `Audio.PlayOneShot` / `Audio.StopAll`
+- [x] `Scene.Raycast2D` (Box2D)
+- [x] `Save` — persistência de jogo em JSON (puramente managed)
+
 ### Editor / produto
 - [x] Hierarquia, Inspetor, Console, Content Browser, gizmos, Play/Stop
 - [x] Salvar Prefab (menu de contexto) + arrastar `.kzprefab` pro viewport

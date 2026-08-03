@@ -9,6 +9,8 @@
 #include "kizuri/ecs/Scene.hpp"
 #include "kizuri/ecs/Entity.hpp"
 #include "kizuri/ecs/Components.hpp"
+#include "kizuri/audio/AudioEngine.hpp"
+#include "kizuri/project/Project.hpp"
 
 #include <unordered_map>
 
@@ -95,6 +97,16 @@ KZ_SCRIPT_API int kz_input_is_key_pressed(int key) {
     return kizuri::Input::IsKeyPressed(key) ? 1 : 0;
 }
 
+KZ_SCRIPT_API int kz_input_is_mouse_button_pressed(int button) {
+    return kizuri::Input::IsMouseButtonPressed(button) ? 1 : 0;
+}
+
+KZ_SCRIPT_API void kz_input_get_mouse_position(float* outX, float* outY) {
+    auto [x, y] = kizuri::Input::GetMousePosition();
+    if (outX) *outX = x;
+    if (outY) *outY = y;
+}
+
 // ---------------------------------------------------------------------------
 // Entities / scene
 // ---------------------------------------------------------------------------
@@ -120,6 +132,11 @@ KZ_SCRIPT_API int kz_entity_has_component(uint32_t entity, int componentType) {
     switch (componentType) {
         case 0: return e.HasComponent<kizuri::TransformComponent>() ? 1 : 0;
         case 1: return e.HasComponent<kizuri::Rigidbody2DComponent>() ? 1 : 0;
+        case 2: return e.HasComponent<kizuri::SpriteRendererComponent>() ? 1 : 0;
+        case 3: return e.HasComponent<kizuri::TextComponent>() ? 1 : 0;
+        case 4: return e.HasComponent<kizuri::AudioSourceComponent>() ? 1 : 0;
+        case 5: return e.HasComponent<kizuri::CameraComponent>() ? 1 : 0;
+        case 6: return e.HasComponent<kizuri::LightComponent>() ? 1 : 0;
         default: return 0;
     }
 }
@@ -129,6 +146,148 @@ KZ_SCRIPT_API void kz_transform_set_position(uint32_t entity, float x, float y, 
     if (!e || !e.HasComponent<kizuri::TransformComponent>()) return;
     auto& tc = e.GetComponent<kizuri::TransformComponent>();
     tc.Translation = glm::vec3(x, y, z);
+}
+
+// ---------------------------------------------------------------------------
+// Cena em runtime (instanciar prefab, trocar cena, câmera primária)
+// ---------------------------------------------------------------------------
+KZ_SCRIPT_API uint32_t kz_scene_instantiate_prefab(const char* path, float x, float y, float z) {
+    if (s_ActiveScene == nullptr || path == nullptr) return 0;
+    // Em runtime (Play) o Instantiate também cria corpos de física e dispara
+    // OnCreate dos scripts da prefab — o caminho certo pra spawn de gameplay.
+    kizuri::Entity entity = s_ActiveScene->Instantiate(kizuri::Project::ResolvePath(path), glm::vec3(x, y, z));
+    if (!entity) return 0;
+    return kizuri::scripting::RegisterEntityHandle(entity);
+}
+
+KZ_SCRIPT_API void kz_scene_request_load(const char* path) {
+    if (s_ActiveScene == nullptr || path == nullptr) return;
+    // Pedido diferido — o host troca a cena no fim do frame (PollPendingLoad).
+    s_ActiveScene->RequestLoad(kizuri::Project::ResolvePath(path));
+}
+
+KZ_SCRIPT_API uint32_t kz_scene_get_primary_camera() {
+    if (s_ActiveScene == nullptr) return 0;
+    auto view = s_ActiveScene->GetRegistry().view<kizuri::TransformComponent, kizuri::CameraComponent>();
+    for (auto e : view) {
+        if (view.get<kizuri::CameraComponent>(e).Primary) {
+            return kizuri::scripting::RegisterEntityHandle(kizuri::Entity{ e, s_ActiveScene });
+        }
+    }
+    return 0;
+}
+
+// ---------------------------------------------------------------------------
+// Adicionar componentes em runtime
+// ---------------------------------------------------------------------------
+KZ_SCRIPT_API int kz_entity_add_sprite(uint32_t entity, const char* texturePath) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& sc = e.AddOrReplaceComponent<kizuri::SpriteRendererComponent>();
+    if (texturePath != nullptr && *texturePath != '\0') {
+        sc.TexturePath = texturePath;
+        sc.Texture = kizuri::Texture2D::Create(kizuri::Project::ResolvePath(texturePath));
+    } else {
+        sc.TexturePath.clear();
+        sc.Texture = nullptr;
+    }
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_entity_add_text(uint32_t entity, const char* text, float fontSize) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& tc = e.AddOrReplaceComponent<kizuri::TextComponent>();
+    tc.Text = text != nullptr ? text : "";
+    tc.FontSize = fontSize;
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_entity_add_audio(uint32_t entity, const char* clipPath, int loop, int playOnStart) {
+    auto e = Resolve(entity);
+    if (!e || clipPath == nullptr) return 0;
+    auto& ac = e.AddOrReplaceComponent<kizuri::AudioSourceComponent>();
+    ac.ClipPath = clipPath;
+    ac.Loop = loop != 0;
+    ac.PlayOnStart = playOnStart != 0;
+    if (ac.PlayOnStart) ac.Play();
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_entity_add_camera(uint32_t entity, int projectionType) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& cc = e.AddOrReplaceComponent<kizuri::CameraComponent>();
+    cc.Type = (projectionType == 1) ? kizuri::CameraComponent::ProjectionType::Perspective3D
+                                    : kizuri::CameraComponent::ProjectionType::Orthographic2D;
+    cc.Primary = true;
+    return 1;
+}
+
+// ---------------------------------------------------------------------------
+// Mutação de componentes em runtime (sprites, texto)
+// ---------------------------------------------------------------------------
+KZ_SCRIPT_API int kz_sprite_set_texture(uint32_t entity, const char* path) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::SpriteRendererComponent>() || path == nullptr) return 0;
+    auto& sc = e.GetComponent<kizuri::SpriteRendererComponent>();
+    sc.TexturePath = path;
+    sc.Texture = kizuri::Texture2D::Create(kizuri::Project::ResolvePath(path));
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_sprite_set_color(uint32_t entity, float r, float g, float b, float a) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::SpriteRendererComponent>()) return 0;
+    e.GetComponent<kizuri::SpriteRendererComponent>().Color = { r, g, b, a };
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_text_set_content(uint32_t entity, const char* text) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TextComponent>() || text == nullptr) return 0;
+    e.GetComponent<kizuri::TextComponent>().Text = text;
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_text_set_size(uint32_t entity, float size) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TextComponent>()) return 0;
+    e.GetComponent<kizuri::TextComponent>().FontSize = size;
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_text_set_color(uint32_t entity, float r, float g, float b, float a) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TextComponent>()) return 0;
+    e.GetComponent<kizuri::TextComponent>().Color = { r, g, b, a };
+    return 1;
+}
+
+// ---------------------------------------------------------------------------
+// Áudio
+// ---------------------------------------------------------------------------
+KZ_SCRIPT_API int kz_audio_play(uint32_t entity) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::AudioSourceComponent>()) return 0;
+    e.GetComponent<kizuri::AudioSourceComponent>().Play();
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_audio_stop(uint32_t entity) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::AudioSourceComponent>()) return 0;
+    e.GetComponent<kizuri::AudioSourceComponent>().Stop();
+    return 1;
+}
+
+KZ_SCRIPT_API void kz_audio_play_one_shot(const char* path, float volume) {
+    if (path == nullptr) return;
+    kizuri::AudioEngine::PlayOneShot(kizuri::Project::ResolvePath(path), volume);
+}
+
+KZ_SCRIPT_API void kz_audio_stop_all() {
+    kizuri::AudioEngine::StopAll();
 }
 
 KZ_SCRIPT_API int kz_entity_get_transform(uint32_t entity, float* outPosition, float* outRotation, float* outScale) {
@@ -172,6 +331,19 @@ KZ_SCRIPT_API void kz_rigidbody2d_set_transform(uint32_t entity, float x, float 
     auto e = Resolve(entity);
     if (!e || !e.HasComponent<kizuri::Rigidbody2DComponent>()) return;
     e.GetComponent<kizuri::Rigidbody2DComponent>().SetTransform({ x, y }, angle);
+}
+
+KZ_SCRIPT_API int kz_physics2d_raycast(float x0, float y0, float x1, float y1,
+                                       float* outHitX, float* outHitY, uint32_t* outHitEntity) {
+    if (s_ActiveScene == nullptr) return 0;
+    kizuri::Entity hit;
+    glm::vec2 point;
+    float fraction = 1.0f;
+    if (!s_ActiveScene->Raycast2D({ x0, y0 }, { x1, y1 }, hit, point, fraction)) return 0;
+    if (outHitX) *outHitX = point.x;
+    if (outHitY) *outHitY = point.y;
+    if (outHitEntity) *outHitEntity = kizuri::scripting::RegisterEntityHandle(hit);
+    return 1;
 }
 
 } // extern "C"

@@ -44,6 +44,13 @@ public:
     void RequestLoad(const std::string& scenePath);
     bool PollPendingLoad(std::string& outPath);
 
+    // Raycast 2D contra o mundo Box2D (só tem efeito durante o Play, quando
+    // o mundo existe). Devolve a primeira entidade atingida (uma que tenha
+    // Rigidbody2D + Collider), o ponto do impacto e a fração [0,1] ao longo
+    // do segmento. Retorna false se não acertar nada.
+    bool Raycast2D(const glm::vec2& from, const glm::vec2& to,
+                   Entity& outEntity, glm::vec2& outPoint, float& outFraction);
+
     bool IsRuntime() const { return m_Running; }
 
     // Cópia profunda de toda a cena, preservando UUIDs — é o que o Play do editor usa.

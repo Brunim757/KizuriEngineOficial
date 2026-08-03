@@ -18,7 +18,21 @@ public enum Key
 	RightShift = 344, RightControl, RightAlt, RightSuper,
 }
 
+public enum MouseButton
+{
+	Left = 0, Right = 1, Middle = 2,
+}
+
 public static class Input
 {
 	public static bool IsKeyPressed(Key key) => Interop.KizuriNative.kz_input_is_key_pressed((int)key) != 0;
+
+	public static bool IsMouseButtonPressed(MouseButton button)
+		=> Interop.KizuriNative.kz_input_is_mouse_button_pressed((int)button) != 0;
+
+	public static Math.Vector2 GetMousePosition()
+	{
+		Interop.KizuriNative.kz_input_get_mouse_position(out var x, out var y);
+		return new Math.Vector2(x, y);
+	}
 }

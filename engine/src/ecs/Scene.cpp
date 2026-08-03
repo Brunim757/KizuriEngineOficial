@@ -165,6 +165,44 @@ bool Scene::PollPendingLoad(std::string& outPath) {
     return true;
 }
 
+namespace {
+
+// Callback do b2World::RayCast — guarda o hit mais próximo (fração menor).
+class KizuriRayCastCallback2D : public b2RayCastCallback {
+public:
+    float BestFraction = 1.0f;
+    b2Fixture* HitFixture = nullptr;
+    b2Vec2 HitPoint;
+
+    float ReportFixture(b2Fixture* fixture, const b2Vec2& point,
+                        const b2Vec2& /*normal*/, float fraction) override {
+        if (fraction < BestFraction) {
+            BestFraction = fraction;
+            HitFixture = fixture;
+            HitPoint = point;
+        }
+        return BestFraction; // segue varrendo, mas só aceita hits mais perto
+    }
+};
+
+} // namespace
+
+bool Scene::Raycast2D(const glm::vec2& from, const glm::vec2& to,
+                      Entity& outEntity, glm::vec2& outPoint, float& outFraction) {
+    if (m_PhysicsWorld2D == nullptr) return false;
+    KizuriRayCastCallback2D cb;
+    m_PhysicsWorld2D->RayCast(&cb, { from.x, from.y }, { to.x, to.y });
+    if (cb.HitFixture == nullptr) return false;
+
+    // O userData de cada b2Body guarda o handle entt::entity (ver
+    // RegisterPhysics2DEntity) — reconstrói a Entity sem sair do mundo.
+    uintptr_t ptr = cb.HitFixture->GetBody()->GetUserData().pointer;
+    outEntity = Entity{ static_cast<entt::entity>(ptr), this };
+    outPoint = { cb.HitPoint.x, cb.HitPoint.y };
+    outFraction = cb.BestFraction;
+    return true;
+}
+
 void Scene::StartScriptIfNeeded(Entity entity) {
     if (!m_Running || !entity.HasComponent<NativeScriptComponent>()) return;
     auto& nsc = entity.GetComponent<NativeScriptComponent>();

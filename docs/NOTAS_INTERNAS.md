@@ -5,7 +5,8 @@
 > na raiz é a versão pública/limpa — mantém as duas em sincronia quando algo mudar de status.
 
 Última revisão: sessão de implementação de PBR/IBL → CSM → Bloom → Partículas → Áudio →
-Play/Stop → diálogos nativos de arquivo → redesign do modal de GameModule.
+Play/Stop → diálogos nativos de arquivo → redesign do modal de GameModule →
+**API C# de gameplay (runtime)** + **export self-contained** + **fix do ALC do Host**.
 
 ---
 
@@ -95,6 +96,42 @@ dor de cabeça em CI antes.
   potencial). `AudioEngine::StopAll()` adicionado — necessário pro Stop do Play funcionar.
 - Sem trigger por evento ainda (colisão, script) — só `PlayOnStart`. Fica pra quando existir
   sistema de eventos/KZScript.
+
+### Scripting C# — API de gameplay (nova)
+- **`Scene.CreateEntity` / `Entity.Destroy`** funcionam dentro do Play e do
+  KizuriGame (`kz_set_active_scene` liga/desliga a cena ativa em
+  OnRuntimeStart/Stop). Entidades criadas assim não têm corpo de física
+  automático — pra corpo, usar `Scene.InstantiatePrefab` (que passa por
+  `Scene::Instantiate` e registra física/scripts).
+- **`Scene.Raycast2D`** usa `b2World::RayCast` (Scene::Raycast2D) — só existe
+  durante o Play, quando o mundo Box2D está vivo.
+- **Setters de sprite/texto/áudio** mutam o componente direto (sem recriar a
+  entidade). Texto é world-space, igual ao editor.
+- **`Save`** é 100% managed (System.Text.Json) — não passa pelo ABI.
+- Exemplo de tudo: `managed/SampleGame/PlayerController.cs` (projéteis, HUD,
+  save F5, raycast a cada 0.5s).
+
+### Export self-contained
+- `Exportar Jogo` com a checkbox ligada roda `dotnet publish -r <RID>
+  --self-contained true` no `<Projeto>/Source/*.csproj` e entrega o runtime
+  .NET embutido em `<out>/Game/`. O jogador final não precisa instalar nada.
+- Requer: dotnet SDK na máquina do dev, `Source/*.csproj` no projeto ativo, e
+  a raiz da engine achada subindo da pasta `bin/` (marcador
+  `managed/Kizuri.Scripting/Kizuri.Scripting.csproj`). Sem isso, cai no
+  fallback antigo (cópia da pasta do assembly).
+- O publish é síncrono (UI congela ~10-60s). Próximo passo: rodar em thread e
+  mostrar progresso no modal.
+
+### Fix do ALC do Host (0 scripts registrados)
+- `Host.InitializeGameModule` carregava o assembly do jogo com
+  `Assembly.LoadFrom` (ALC default), mas o hostpolicy resolve os delegates
+  num ALC coletável próprio. Resultado: `[GameEntryPoint]` registrava num
+  `GameModule` diferente do consultado por `GetScriptCount` → "módulo
+  carregado, 0 scripts, nenhum erro". Corrigido carregando no MESMO ALC do
+  Host (`AssemblyLoadContext.GetLoadContext(typeof(Host).Assembly)`).
+- Extra: `Host.s_LastInitError` + `GetLastInitError` (exceção nunca mais é
+  engolida) e `ScriptEngine::LoadModule` falha de forma visível se 0 scripts
+  forem registrados.
 
 ### Editor
 - Dockspace ImGui + ImGuizmo (mover/rotacionar/escalar).

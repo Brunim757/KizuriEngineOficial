@@ -1,0 +1,42 @@
+// Scene — acesso à cena ativa em runtime: criar entidades, instanciar
+// prefabs, trocar de cena, pegar a câmera primária e fazer raycast 2D.
+namespace Kizuri;
+
+public static class Scene
+{
+	// Cria uma entidade vazia (Transform + Tag) na cena ativa.
+	public static Entity CreateEntity(string name = "")
+		=> new(Interop.KizuriNative.kz_scene_create_entity(name));
+
+	// Instancia uma .kzprefab na posição dada. Em runtime (Play/KizuriGame)
+	// a prefab ganha corpos de física e dispara OnCreate dos scripts.
+	public static Entity InstantiatePrefab(string prefabPath, Math.Vector3 position = default)
+	{
+		var p = position;
+		return new(Interop.KizuriNative.kz_scene_instantiate_prefab(prefabPath, p.X, p.Y, p.Z));
+	}
+
+	// Pedido de troca de cena (o caminho é resolvido relativo ao projeto).
+	// A troca real acontece no fim do frame.
+	public static void Load(string scenePath)
+		=> Interop.KizuriNative.kz_scene_request_load(scenePath);
+
+	// Entidade com CameraComponent marcada como Primary (0 se não houver).
+	public static Entity GetPrimaryCamera()
+		=> new(Interop.KizuriNative.kz_scene_get_primary_camera());
+
+	// Raycast 2D contra o mundo Box2D (só funciona durante o Play). Devolve
+	// a primeira entidade atingida e o ponto do impacto. false = nada acertado.
+	public static bool Raycast2D(Math.Vector2 from, Math.Vector2 to, out Entity hit, out Math.Vector2 point)
+	{
+		hit = Entity.Invalid;
+		point = default;
+		uint handle = 0;
+		float hx = 0f, hy = 0f;
+		if (Interop.KizuriNative.kz_physics2d_raycast(from.X, from.Y, to.X, to.Y, out hx, out hy, out handle) == 0)
+			return false;
+		hit = new Entity(handle);
+		point = new Math.Vector2(hx, hy);
+		return true;
+	}
+}

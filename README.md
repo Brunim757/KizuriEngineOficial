@@ -38,6 +38,18 @@
 - **Scripting** — **C#** via `Kizuri.Scripting` (única API pública, estilo
   Unity/Godot .NET). A engine C++ fica 100% privada: o assembly .NET conversa
   com ela apenas por um ABI C (`kz_*`), sem expor headers/deps internos
+
+### API C# de gameplay
+- **Entidades**: `Scene.CreateEntity`, `Scene.InstantiatePrefab`, `Scene.Load`,
+  `Scene.GetPrimaryCamera`, `Entity.Destroy`; adicionar componentes em runtime
+  (`AddSprite`, `AddText`, `AddAudio`, `AddCamera`)
+- **Mutação em runtime**: sprite (textura/cor), texto (conteúdo/tamanho/cor),
+  áudio (`PlayAudio`/`StopAudio`)
+- **Input**: teclado + mouse (botões e posição)
+- **Áudio**: `Audio.PlayOneShot` / `Audio.StopAll`
+- **Física**: `Scene.Raycast2D` contra o mundo Box2D
+- **Save**: persistência do jogo em JSON (`Save.Set/Get/Save` — 100% managed)
+- Exemplo completo de tudo isso em `managed/SampleGame/PlayerController.cs`
 - **Serialização** — cenas em `.kzscene` (JSON legível), incluindo mesh, material e texturas
 
 ### Editor (KizuriEditor)

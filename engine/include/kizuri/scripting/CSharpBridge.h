@@ -31,6 +31,8 @@ KZ_SCRIPT_API double kz_time_delta_seconds();
 
 // --- Input ---
 KZ_SCRIPT_API int kz_input_is_key_pressed(int key);
+KZ_SCRIPT_API int kz_input_is_mouse_button_pressed(int button);
+KZ_SCRIPT_API void kz_input_get_mouse_position(float* outX, float* outY);
 
 // --- Entities / scene ---
 KZ_SCRIPT_API uint32_t kz_scene_create_entity(const char* name);
@@ -42,10 +44,36 @@ KZ_SCRIPT_API int kz_entity_get_transform(uint32_t entity,
                                           float* outScale);   // xyz
 KZ_SCRIPT_API void kz_transform_set_position(uint32_t entity, float x, float y, float z);
 
+// --- Cena em runtime ---
+KZ_SCRIPT_API uint32_t kz_scene_instantiate_prefab(const char* path, float x, float y, float z);
+KZ_SCRIPT_API void kz_scene_request_load(const char* path);
+KZ_SCRIPT_API uint32_t kz_scene_get_primary_camera();
+
+// --- Adicionar componentes em runtime (0 = sem efeito se a entidade não existe) ---
+KZ_SCRIPT_API int kz_entity_add_sprite(uint32_t entity, const char* texturePath); // vazio = cor sólida
+KZ_SCRIPT_API int kz_entity_add_text(uint32_t entity, const char* text, float fontSize);
+KZ_SCRIPT_API int kz_entity_add_audio(uint32_t entity, const char* clipPath, int loop, int playOnStart);
+KZ_SCRIPT_API int kz_entity_add_camera(uint32_t entity, int projectionType); // 0=ortográfica 2D, 1=perspectiva 3D
+
+// --- Mutação de componentes em runtime ---
+KZ_SCRIPT_API int kz_sprite_set_texture(uint32_t entity, const char* path);
+KZ_SCRIPT_API int kz_sprite_set_color(uint32_t entity, float r, float g, float b, float a);
+KZ_SCRIPT_API int kz_text_set_content(uint32_t entity, const char* text);
+KZ_SCRIPT_API int kz_text_set_size(uint32_t entity, float size);
+KZ_SCRIPT_API int kz_text_set_color(uint32_t entity, float r, float g, float b, float a);
+
+// --- Áudio ---
+KZ_SCRIPT_API int kz_audio_play(uint32_t entity);   // toca o AudioSource da entidade
+KZ_SCRIPT_API int kz_audio_stop(uint32_t entity);
+KZ_SCRIPT_API void kz_audio_play_one_shot(const char* path, float volume);
+KZ_SCRIPT_API void kz_audio_stop_all();
+
 // --- Physics 2D ---
 KZ_SCRIPT_API int kz_entity_get_rigidbody2d(uint32_t entity, int* bodyType, float* outVelXY);
 KZ_SCRIPT_API void kz_rigidbody2d_set_linear_velocity(uint32_t entity, float vx, float vy);
 KZ_SCRIPT_API void kz_rigidbody2d_apply_linear_impulse(uint32_t entity, float ix, float iy, int wake);
 KZ_SCRIPT_API void kz_rigidbody2d_set_transform(uint32_t entity, float x, float y, float angle);
+KZ_SCRIPT_API int kz_physics2d_raycast(float x0, float y0, float x1, float y1,
+                                       float* outHitX, float* outHitY, uint32_t* outHitEntity);
 
 } // extern "C"

@@ -10,11 +10,12 @@
 //   - bool vira int (1/0) (evita tunho de tamanho BOOL por plataforma).
 #include <cstdint>
 
-#if defined(_WIN32)
-    #define KZ_SCRIPT_API __declspec(dllexport)
-#else
-    #define KZ_SCRIPT_API __attribute__((visibility("default")))
-#endif
+// Sem dllexport/visibility aqui de propósito: no MinGW, quando QUALQUER
+// símbolo é exportado explicitamente o linker desliga o --export-all-symbols
+// (usado pelo WINDOWS_EXPORT_ALL_SYMBOLS do CMake), e aí só os kz_* sairiam
+// da DLL e o link dos exemplos quebrava. Os kz_* são símbolos globais, então
+// o export automático já cobre eles. (Antes: __declspec(dllexport)/visibility.)
+#define KZ_SCRIPT_API
 
 extern "C" {
 

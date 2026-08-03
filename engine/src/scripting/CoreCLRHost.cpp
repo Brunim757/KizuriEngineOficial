@@ -270,7 +270,7 @@ bool CoreCLRHost::Initialize(const std::string& runtimeConfigPath,
 
     // Raiz do .NET da qual o hostfxr veio (para o initialize resolver o
     // shared framework). Auto-contido = a própria pasta do jogo.
-    fs::path dotnetRoot = hostfxrPath.parent_path().parent_path().parent_path();
+    fs::path dotnetRoot = hostfxrPath.parent_path().parent_path().parent_path().parent_path();
     if (hostfxrPath.parent_path() == rcPath.parent_path())
         dotnetRoot = hostfxrPath.parent_path();
 

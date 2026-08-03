@@ -258,7 +258,7 @@ void Scene::UpdateUIPointer() {
 
 void Scene::RenderUI() {
     auto canvases = m_Registry.view<TransformComponent, UICanvasComponent>();
-    if (canvases.empty()) return;
+    if (canvases.begin() == canvases.end()) return;
     float aspect = m_ViewportHeight ? (float)m_ViewportWidth / (float)m_ViewportHeight : 16.0f / 9.0f;
 
     for (auto ce : canvases) {

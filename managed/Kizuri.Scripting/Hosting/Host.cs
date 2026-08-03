@@ -151,7 +151,10 @@ public static class Host
 		try
 		{
 			if (GCHandle.FromIntPtr(handle).Target is Script s)
+			{
 				s.OnUpdate(deltaSeconds);
+				s.UpdateCoroutines(deltaSeconds);
+			}
 		}
 		catch (Exception ex) { Log.Error("Falha no OnUpdate do script: " + ex); }
 	}

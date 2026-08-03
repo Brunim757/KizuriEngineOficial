@@ -21,6 +21,8 @@ internal static class KizuriNative
     // ---- Time ---------------------------------------------------------------
     [DllImport(Lib)] internal static extern void kz_set_time_delta(double seconds);
     [DllImport(Lib)] internal static extern double kz_time_delta_seconds();
+    [DllImport(Lib)] internal static extern void kz_set_time_scale(float scale);
+    [DllImport(Lib)] internal static extern float kz_get_time_scale();
 
     // ---- Input --------------------------------------------------------------
     [DllImport(Lib)] internal static extern int kz_input_is_key_pressed(int key);
@@ -51,6 +53,16 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_text_set_content(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string text);
     [DllImport(Lib)] internal static extern int kz_text_set_size(uint entity, float size);
     [DllImport(Lib)] internal static extern int kz_text_set_color(uint entity, float r, float g, float b, float a);
+
+    // ---- UI (Canvas / Rect / Botão / Texto em espaço de tela) ------------------
+    [DllImport(Lib)] internal static extern int kz_entity_add_ui_canvas(uint entity, float orthoSize);
+    [DllImport(Lib)] internal static extern int kz_entity_add_ui_rect(uint entity, float x, float y, float w, float h, float r, float g, float b, float a);
+    [DllImport(Lib)] internal static extern int kz_entity_add_ui_button(uint entity, float x, float y, float w, float h, float r, float g, float b, float a);
+    [DllImport(Lib)] internal static extern int kz_entity_add_ui_text(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string text, float fontSize, float r, float g, float b, float a);
+    [DllImport(Lib)] internal static extern int kz_ui_button_was_clicked(uint entity);
+    [DllImport(Lib)] internal static extern int kz_ui_button_is_hovered(uint entity);
+    [DllImport(Lib)] internal static extern void kz_ui_set_rect(uint entity, float x, float y, float w, float h);
+    [DllImport(Lib)] internal static extern void kz_ui_set_color(uint entity, float r, float g, float b, float a);
 
     // ---- Áudio ------------------------------------------------------------------
     [DllImport(Lib)] internal static extern int kz_audio_play(uint entity);

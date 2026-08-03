@@ -14,5 +14,10 @@ namespace scripting {
 // Retorna 0 para entidade inválida.
 uint32_t RegisterEntityHandle(Entity entity);
 
+// Time scale global (usado pra escalar o deltaSeconds dos scripts managed —
+// o "slow motion" de jogo). Definido no CSharpBridge e lido pelo ManagedScript.
+float GetTimeScale();
+void SetTimeScale(float scale);
+
 } // namespace scripting
 } // namespace kizuri

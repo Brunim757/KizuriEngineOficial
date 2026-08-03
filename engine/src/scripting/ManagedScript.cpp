@@ -28,7 +28,7 @@ void ManagedScript::OnDestroy() {
 
 void ManagedScript::OnUpdate(Timestep ts) {
     if (m_ManagedHandle)
-        scripting::CoreCLRHost::UpdateScript(m_ManagedHandle, ts.GetSeconds());
+        scripting::CoreCLRHost::UpdateScript(m_ManagedHandle, ts.GetSeconds() * scripting::GetTimeScale());
 }
 
 void ManagedScript::OnCollisionBegin(Entity other) {

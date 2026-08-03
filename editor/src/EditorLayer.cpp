@@ -174,6 +174,18 @@ void EditorLayer::OnUpdate(Timestep ts) {
     RenderCommand::Clear();
 
     if (m_SceneState == SceneState::Play) {
+        // Entrega o mouse (NDC relativo ao viewport) pro Scene fazer o
+        // hit-test dos UIButton. m_ViewportBounds é do frame anterior
+        // (setado no OnImGuiRender) — suficiente, só muda em resize.
+        glm::vec2 vpSize = m_ViewportBounds[1] - m_ViewportBounds[0];
+        auto [mx, my] = Input::GetMousePosition();
+        glm::vec2 ndc{ 0.0f, 0.0f };
+        if (vpSize.x > 1.0f && vpSize.y > 1.0f) {
+            glm::vec2 local{ mx - m_ViewportBounds[0].x, my - m_ViewportBounds[0].y };
+            ndc = { (local.x / vpSize.x) * 2.0f - 1.0f, 1.0f - (local.y / vpSize.y) * 2.0f };
+        }
+        m_ActiveScene->SetUIMouseNDC(ndc, Input::IsMouseButtonPressed(Mouse::Left));
+
         m_ActiveScene->OnUpdateRuntime(ts);
 
         std::string nextScene;
@@ -2081,6 +2093,41 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<CameraComponent>();
         }
 
+        if (m_SelectedEntity.HasComponent<UICanvasComponent>()) {
+            auto& uc = m_SelectedEntity.GetComponent<UICanvasComponent>();
+            if (DrawComponentHeader("UI Canvas", &removeThis)) {
+                ImGui::DragFloat("Meia-altura (Ortho)", &uc.OrthoSize, 0.1f, 1.0f, 100.0f);
+                ImGui::TextDisabled("Renderiza os descendentes com UIRect em espaço de tela (0,0 = centro).");
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<UICanvasComponent>();
+        }
+
+        if (m_SelectedEntity.HasComponent<UIRectComponent>()) {
+            auto& ur = m_SelectedEntity.GetComponent<UIRectComponent>();
+            if (DrawComponentHeader("UI Rect", &removeThis)) {
+                ImGui::DragFloat2("Posição (centro)", &ur.Position.x, 0.05f);
+                ImGui::DragFloat2("Tamanho", &ur.Size.x, 0.05f, 0.0f, 0.0f);
+                ImGui::ColorEdit4("Cor de fundo", &ur.Color.x);
+                ImGui::TextDisabled("Precisa ser descendente de uma entidade com UI Canvas.");
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<UIRectComponent>();
+        }
+
+        if (m_SelectedEntity.HasComponent<UIButtonComponent>()) {
+            auto& ub = m_SelectedEntity.GetComponent<UIButtonComponent>();
+            if (DrawComponentHeader("UI Botão", &removeThis)) {
+                ImGui::TextDisabled("Hovered: %s | Pressed: %s | Foi clicado: %s",
+                                    ub.Hovered ? "sim" : "não",
+                                    ub.Pressed ? "sim" : "não",
+                                    ub.WasClicked ? "sim" : "não");
+                ImGui::TextDisabled("Estado em tempo real (só muda no Play). Cheque via C#: UIButtonWasClicked().");
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<UIButtonComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<MeshRendererComponent>()) {
             auto& mr = m_SelectedEntity.GetComponent<MeshRendererComponent>();
             if (DrawComponentHeader("Mesh Renderer", &removeThis)) {
@@ -2418,6 +2465,16 @@ void EditorLayer::DrawAddComponentButton() {
             m_SelectedEntity.AddComponent<BoxCollider2DComponent>();
         if (!m_SelectedEntity.HasComponent<NativeScriptComponent>() && ImGui::MenuItem("Script Nativo"))
             m_SelectedEntity.AddComponent<NativeScriptComponent>();
+        ImGui::Separator();
+        if (!m_SelectedEntity.HasComponent<UICanvasComponent>() && ImGui::MenuItem("UI Canvas"))
+            m_SelectedEntity.AddComponent<UICanvasComponent>();
+        if (!m_SelectedEntity.HasComponent<UIRectComponent>() && ImGui::MenuItem("UI Rect"))
+            m_SelectedEntity.AddComponent<UIRectComponent>();
+        if (!m_SelectedEntity.HasComponent<UIButtonComponent>() && ImGui::MenuItem("UI Botão")) {
+            m_SelectedEntity.AddComponent<UIButtonComponent>();
+            if (!m_SelectedEntity.HasComponent<UIRectComponent>())
+                m_SelectedEntity.AddComponent<UIRectComponent>();
+        }
         ImGui::EndPopup();
     }
 }

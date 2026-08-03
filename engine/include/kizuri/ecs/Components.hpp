@@ -179,6 +179,33 @@ struct CameraComponent {
     bool FixedAspectRatio = false;
 };
 
+// ---------------------------------------------------------------------------
+// UI (sistema de interface em espaço de tela, estilo Canvas)
+// ---------------------------------------------------------------------------
+// Canvas: entidade raiz que renderiza os DESCENDENTES com UIRectComponent em
+// espaço de tela. A projeção é centrada em (0,0) com y pra cima; OrthoSize é
+// a meia-altura em unidades de UI (0,0 = centro da tela).
+struct UICanvasComponent {
+    float OrthoSize = 10.0f;
+};
+
+// Retângulo de UI: posiciona um elemento em espaço de tela (centro em
+// Position, tamanho em Size). Color é o fundo (a=0 desenha só o texto).
+struct UIRectComponent {
+    glm::vec2 Position = { 0.0f, 0.0f };
+    glm::vec2 Size = { 1.0f, 1.0f };
+    glm::vec4 Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+};
+
+// Botão interativo: faz um UIRect responder a hover/clique. O estado
+// (Hovered/Pressed/WasClicked) é runtime — preenchido pelo Scene::UpdateUIPointer
+// e consumido por scripts via o ABI kz_ui_button_*. Não é serializado.
+struct UIButtonComponent {
+    bool Hovered = false;
+    bool Pressed = false;
+    bool WasClicked = false; // clique com o mouse em cima (borda de subida)
+};
+
 struct Rigidbody2DComponent {
     enum class BodyType { Static = 0, Dynamic, Kinematic };
     BodyType Type = BodyType::Dynamic;

@@ -48,6 +48,16 @@ public:
         RenderCommand::SetViewport(0, 0, m_ViewportWidth, m_ViewportHeight);
         RenderCommand::SetClearColor({ 0.08f, 0.09f, 0.11f, 1.0f });
         RenderCommand::Clear();
+
+        // Mouse em NDC de tela cheia (pro hit-test dos UIButton).
+        auto [mx, my] = Input::GetMousePosition();
+        glm::vec2 ndc{ 0.0f, 0.0f };
+        if (m_ViewportWidth > 0 && m_ViewportHeight > 0) {
+            ndc = { (mx / (float)m_ViewportWidth) * 2.0f - 1.0f,
+                    1.0f - (my / (float)m_ViewportHeight) * 2.0f };
+        }
+        m_Scene->SetUIMouseNDC(ndc, Input::IsMouseButtonPressed(Mouse::Left));
+
         m_Scene->OnUpdateRuntime(ts);
 
         std::string nextScene;

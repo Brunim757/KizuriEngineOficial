@@ -28,6 +28,8 @@ KZ_SCRIPT_API void kz_log(int channel, int level, const char* message);
 
 // --- Time ---
 KZ_SCRIPT_API double kz_time_delta_seconds();
+KZ_SCRIPT_API void kz_set_time_scale(float scale);
+KZ_SCRIPT_API float kz_get_time_scale();
 
 // --- Input ---
 KZ_SCRIPT_API int kz_input_is_key_pressed(int key);
@@ -61,6 +63,19 @@ KZ_SCRIPT_API int kz_sprite_set_color(uint32_t entity, float r, float g, float b
 KZ_SCRIPT_API int kz_text_set_content(uint32_t entity, const char* text);
 KZ_SCRIPT_API int kz_text_set_size(uint32_t entity, float size);
 KZ_SCRIPT_API int kz_text_set_color(uint32_t entity, float r, float g, float b, float a);
+
+// --- UI (Canvas / Rect / Botão / Texto em espaço de tela) ---
+KZ_SCRIPT_API int kz_entity_add_ui_canvas(uint32_t entity, float orthoSize);
+KZ_SCRIPT_API int kz_entity_add_ui_rect(uint32_t entity, float x, float y, float w, float h,
+                                        float r, float g, float b, float a);
+KZ_SCRIPT_API int kz_entity_add_ui_button(uint32_t entity, float x, float y, float w, float h,
+                                          float r, float g, float b, float a);
+KZ_SCRIPT_API int kz_entity_add_ui_text(uint32_t entity, const char* text, float fontSize,
+                                        float r, float g, float b, float a);
+KZ_SCRIPT_API int kz_ui_button_was_clicked(uint32_t entity);
+KZ_SCRIPT_API int kz_ui_button_is_hovered(uint32_t entity);
+KZ_SCRIPT_API void kz_ui_set_rect(uint32_t entity, float x, float y, float w, float h);
+KZ_SCRIPT_API void kz_ui_set_color(uint32_t entity, float r, float g, float b, float a);
 
 // --- Áudio ---
 KZ_SCRIPT_API int kz_audio_play(uint32_t entity);   // toca o AudioSource da entidade

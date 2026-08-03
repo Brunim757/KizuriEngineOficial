@@ -97,8 +97,7 @@ dor de cabeça em CI antes.
 - Sem trigger por evento ainda (colisão, script) — só `PlayOnStart`. Fica pra quando existir
   sistema de eventos/KZScript.
 
-### Scripting C# — API de gameplay (nova)
-- **`Scene.CreateEntity` / `Entity.Destroy`** funcionam dentro do Play e do
+### Scripting C# — API de gameplay (nova)- **`Scene.CreateEntity` / `Entity.Destroy`** funcionam dentro do Play e do
   KizuriGame (`kz_set_active_scene` liga/desliga a cena ativa em
   OnRuntimeStart/Stop). Entidades criadas assim não têm corpo de física
   automático — pra corpo, usar `Scene.InstantiatePrefab` (que passa por
@@ -110,6 +109,29 @@ dor de cabeça em CI antes.
 - **`SaveSystem`** é 100% managed (System.Text.Json) — não passa pelo ABI.
 - Exemplo de tudo: `managed/SampleGame/PlayerController.cs` (projéteis, HUD,
   save F5, raycast a cada 0.5s).
+
+### Sistema de UI (interativo) + utilidades
+- **Canvas/Rect/Botão/Texto**: `UICanvasComponent` (raiz; OrthoSize = meia-altura
+  em unidades de UI, 0,0 = centro da tela), `UIRectComponent` (centro/tamanho/
+  cor de fundo), `UIButtonComponent` (hover/pressed/clique), texto via o
+  `TextComponent` já existente desenhado centrado no rect. Só descendentes do
+  canvas são renderizados (DFS via RelationshipComponent).
+- **Render**: `Scene::RenderUI()` roda DEPOIS dos passes 2D/3D em todos os
+  updates (edição e Play) com uma ortho de tela cheia. **Hit-test** só no
+  Play (`UpdateUIPointer` no início do OnUpdateRuntime, antes dos scripts —
+  eles leem `WasClicked` do frame). O host entrega o mouse em NDC relativo ao
+  viewport via `SetUIMouseNDC` (editor: relativo ao retângulo do viewport;
+  KizuriGame: tela cheia).
+- **Limitação conhecida**: um frame de latência no clique (o mouse do frame
+  anterior é o que vale quando o script lê) — aceitável pra v1. Botões aninham
+  em DFS por hierarquia; se dois retângulos se sobrepõem, o desenho é por
+  ordem de hierarquia mas o hover não faz z-sorting.
+- **Corrotinas**: `Script.StartCoroutine(IEnumerator)` com `WaitForSeconds`/
+  `WaitForFrames`; o host chama `UpdateCoroutines` após cada `OnUpdate`.
+- **TimeScale**: `kz_set_time_scale`/`GetTimeScale` no CSharpBridge; o
+  `ManagedScript::OnUpdate` multiplica o dt pelo scale. Só afeta scripts
+  managed (física/partículas têm dt próprio) — anotado como v2 escalar tudo.
+- **Random**: puramente managed.
 
 ### Export self-contained
 - `Exportar Jogo` com a checkbox ligada roda `dotnet publish -r <RID>

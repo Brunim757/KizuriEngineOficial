@@ -51,6 +51,12 @@ public:
     bool Raycast2D(const glm::vec2& from, const glm::vec2& to,
                    Entity& outEntity, glm::vec2& outPoint, float& outFraction);
 
+    // UI: o host entrega a posição do mouse em NDC relativo ao viewport
+    // (x/y em [-1,1], y pra cima) + estado do botão esquerdo. O Scene usa
+    // pra hit-test dos UIButtonComponent (hover/clique) e o RenderUI desenha
+    // os UIRect/TextComponent descendentes de cada UICanvas em espaço de tela.
+    void SetUIMouseNDC(const glm::vec2& ndc, bool leftMouseDown);
+
     bool IsRuntime() const { return m_Running; }
 
     // Cópia profunda de toda a cena, preservando UUIDs — é o que o Play do editor usa.
@@ -88,6 +94,9 @@ private:
     void SubmitParticleSystems();
     void UpdateSpriteAnimations(Timestep ts);
     void UpdateAudio(Timestep ts);
+    void RenderUI();
+    void UpdateUIPointer();
+    void CollectUIChildren(entt::entity parent, std::vector<entt::entity>& outStack) const;
     void OnPhysics2DStart();
     void OnPhysics2DStop();
     void UpdatePhysics2D(Timestep ts);
@@ -114,6 +123,12 @@ private:
 
     b2World* m_PhysicsWorld2D = nullptr;
     void* m_ContactListener2D = nullptr; // ContactListener2D* (Box2D)
+
+    // Estado do mouse pra UI (preenchido pelo host via SetUIMouseNDC).
+    glm::vec2 m_UIMouseNDC{ 0.0f };
+    bool m_UIMouseValid = false;
+    bool m_UIMouseDown = false;
+    bool m_UIMouseDownPrev = false;
 
     btDiscreteDynamicsWorld* m_PhysicsWorld3D = nullptr;
     btDefaultCollisionConfiguration* m_CollisionConfig = nullptr;

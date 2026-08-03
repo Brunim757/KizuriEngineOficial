@@ -130,5 +130,6 @@ public static class SampleGameModule
 	public static void RegisterAll()
 	{
 		Kizuri.GameModule.Register<PlayerController>("PlayerController");
+		Kizuri.GameModule.Register<UISample>("UISample");
 	}
 }

@@ -31,6 +31,18 @@
 - [x] `Scene.Raycast2D` (Box2D)
 - [x] `SaveSystem` — persistência de jogo em JSON (puramente managed)
 
+### Sistema de UI + utilidades de gameplay
+- [x] **UI interativo**: `UICanvasComponent` (espaço de tela, 0,0 = centro) +
+  `UIRectComponent` (posição/tamanho/cor) + `UIButtonComponent` (hover/pressed/
+  clique) + texto sobre o rect — renderizado após a cena e com hit-test no Play
+- [x] API C# de UI: `AddUICanvas/AddUIRect/AddUIButton/AddUIText`,
+  `UIButtonWasClicked()/UIButtonIsHovered()`, `SetUIRect/SetUIColor`
+- [x] Serialização das UI components (`.kzscene`/`.kzprefab`/Play) + painéis
+  no Inspetor
+- [x] **Corrotinas** estilo Unity: `StartCoroutine` + `WaitForSeconds`/`WaitForFrames`
+- [x] **`Time.TimeScale`** (câmera lenta; escala o dt dos scripts)
+- [x] **`Random`** — Float/Int/Chance/Vector2/Vector3
+
 ### Editor / produto
 - [x] Hierarquia, Inspetor, Console, Content Browser, gizmos, Play/Stop
 - [x] Salvar Prefab (menu de contexto) + arrastar `.kzprefab` pro viewport

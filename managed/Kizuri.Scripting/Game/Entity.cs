@@ -87,6 +87,31 @@ public readonly struct Entity
 
 	public bool PlayAudio() => Interop.KizuriNative.kz_audio_play(Handle) != 0;
 	public bool StopAudio() => Interop.KizuriNative.kz_audio_stop(Handle) != 0;
+
+	// ---- UI (espaço de tela; precisa de um pai com UICanvas pra renderizar) ----
+
+	// Torna a entidade uma raiz de Canvas. Filhos com UIRect são desenhados em
+	// espaço de tela (0,0 = centro, y pra cima); orthoSize = meia-altura.
+	public bool AddUICanvas(float orthoSize = 10f)
+		=> Interop.KizuriNative.kz_entity_add_ui_canvas(Handle, orthoSize) != 0;
+
+	public bool AddUIRect(float x, float y, float w, float h, float r = 1f, float g = 1f, float b = 1f, float a = 1f)
+		=> Interop.KizuriNative.kz_entity_add_ui_rect(Handle, x, y, w, h, r, g, b, a) != 0;
+
+	public bool AddUIButton(float x, float y, float w, float h, float r, float g, float b, float a = 1f)
+		=> Interop.KizuriNative.kz_entity_add_ui_button(Handle, x, y, w, h, r, g, b, a) != 0;
+
+	public bool AddUIText(string text, float fontSize = 0.6f, float r = 1f, float g = 1f, float b = 1f, float a = 1f)
+		=> Interop.KizuriNative.kz_entity_add_ui_text(Handle, text, fontSize, r, g, b, a) != 0;
+
+	public bool UIButtonWasClicked() => Interop.KizuriNative.kz_ui_button_was_clicked(Handle) != 0;
+	public bool UIButtonIsHovered() => Interop.KizuriNative.kz_ui_button_is_hovered(Handle) != 0;
+
+	public void SetUIRect(float x, float y, float w, float h)
+		=> Interop.KizuriNative.kz_ui_set_rect(Handle, x, y, w, h);
+
+	public void SetUIColor(float r, float g, float b, float a = 1f)
+		=> Interop.KizuriNative.kz_ui_set_color(Handle, r, g, b, a);
 }
 
 public enum ComponentType
@@ -98,4 +123,7 @@ public enum ComponentType
 	Audio = 4,
 	Camera = 5,
 	Light = 6,
+	UIRect = 7,
+	UIButton = 8,
+	UICanvas = 9,
 }

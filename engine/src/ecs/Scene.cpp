@@ -203,6 +203,102 @@ bool Scene::Raycast2D(const glm::vec2& from, const glm::vec2& to,
     return true;
 }
 
+void Scene::SetUIMouseNDC(const glm::vec2& ndc, bool leftMouseDown) {
+    m_UIMouseNDC = ndc;
+    m_UIMouseDown = leftMouseDown;
+    m_UIMouseValid = true;
+}
+
+void Scene::CollectUIChildren(entt::entity parent, std::vector<entt::entity>& outStack) const {
+    if (!m_Registry.valid(parent)) return;
+    const auto* rel = m_Registry.try_get<RelationshipComponent>(parent);
+    if (!rel) return;
+    for (UUID id : rel->Children) {
+        auto it = m_EntityMap.find(id);
+        if (it != m_EntityMap.end()) outStack.push_back(it->second);
+    }
+}
+
+void Scene::UpdateUIPointer() {
+    // Reinicia hover/clique de todos os botões a cada frame (estado runtime).
+    m_Registry.view<UIButtonComponent>().each([](auto& b) {
+        b.Hovered = false; b.Pressed = false; b.WasClicked = false;
+    });
+    m_UIMouseDownPrev = m_UIMouseDown;
+    if (!m_UIMouseValid) return;
+
+    float aspect = m_ViewportHeight ? (float)m_ViewportWidth / (float)m_ViewportHeight : 16.0f / 9.0f;
+    bool downEdge = m_UIMouseDown && !m_UIMouseDownPrev;
+
+    auto canvases = m_Registry.view<TransformComponent, UICanvasComponent>();
+    for (auto ce : canvases) {
+        auto& cv = canvases.get<UICanvasComponent>(ce);
+        glm::vec2 uiPoint{ m_UIMouseNDC.x * cv.OrthoSize * aspect, m_UIMouseNDC.y * cv.OrthoSize };
+
+        std::vector<entt::entity> stack;
+        CollectUIChildren(ce, stack);
+        while (!stack.empty()) {
+            entt::entity e = stack.back();
+            stack.pop_back();
+            CollectUIChildren(e, stack);
+
+            auto* btn = m_Registry.try_get<UIButtonComponent>(e);
+            if (!btn) continue;
+            auto* rect = m_Registry.try_get<UIRectComponent>(e);
+            if (!rect) continue;
+            glm::vec2 half = rect->Size * 0.5f;
+            bool inside = uiPoint.x >= rect->Position.x - half.x && uiPoint.x <= rect->Position.x + half.x &&
+                          uiPoint.y >= rect->Position.y - half.y && uiPoint.y <= rect->Position.y + half.y;
+            btn->Hovered = inside;
+            btn->Pressed = inside && m_UIMouseDown;
+            if (inside && downEdge) btn->WasClicked = true;
+        }
+    }
+}
+
+void Scene::RenderUI() {
+    auto canvases = m_Registry.view<TransformComponent, UICanvasComponent>();
+    if (canvases.empty()) return;
+    float aspect = m_ViewportHeight ? (float)m_ViewportWidth / (float)m_ViewportHeight : 16.0f / 9.0f;
+
+    for (auto ce : canvases) {
+        auto& cv = canvases.get<UICanvasComponent>(ce);
+        OrthographicCamera uiCam(-cv.OrthoSize * aspect, cv.OrthoSize * aspect, -cv.OrthoSize, cv.OrthoSize);
+        Renderer2D::BeginScene(uiCam);
+
+        std::vector<entt::entity> stack;
+        CollectUIChildren(ce, stack);
+        while (!stack.empty()) {
+            entt::entity e = stack.back();
+            stack.pop_back();
+            CollectUIChildren(e, stack);
+
+            auto* rect = m_Registry.try_get<UIRectComponent>(e);
+            auto* btn = m_Registry.try_get<UIButtonComponent>(e);
+            auto* text = m_Registry.try_get<TextComponent>(e);
+
+            if (rect && (rect->Size.x != 0.0f || rect->Size.y != 0.0f)) {
+                glm::vec4 color = rect->Color;
+                if (btn) {
+                    if (btn->Pressed) {
+                        color = glm::vec4(glm::max(color.r * 0.55f, 0.0f), glm::max(color.g * 0.55f, 0.0f),
+                                          glm::max(color.b * 0.55f, 0.0f), color.a);
+                    } else if (btn->Hovered) {
+                        color = glm::vec4(glm::min(color.r * 1.18f, 1.0f), glm::min(color.g * 1.18f, 1.0f),
+                                          glm::min(color.b * 1.18f, 1.0f), color.a);
+                    }
+                }
+                Renderer2D::DrawQuad(rect->Position, rect->Size, color);
+            }
+            if (text && rect) {
+                TextRenderer::DrawString(text->Text, glm::vec3(rect->Position.x, rect->Position.y, 0.0f),
+                                         text->FontSize, text->Color, TextAlignment::Center);
+            }
+        }
+        Renderer2D::EndScene();
+    }
+}
+
 void Scene::StartScriptIfNeeded(Entity entity) {
     if (!m_Running || !entity.HasComponent<NativeScriptComponent>()) return;
     auto& nsc = entity.GetComponent<NativeScriptComponent>();
@@ -775,6 +871,8 @@ void Scene::OnRuntimeStop() {
 
 void Scene::OnUpdateRuntime(Timestep ts) {
     KZ_TRACE_SCOPE("Scene::OnUpdateRuntime");
+    UpdateUIPointer(); // hit-test dos UIButton antes dos scripts (que leem WasClicked)
+
     m_Registry.view<NativeScriptComponent>().each([=](auto entityHandle, auto& nsc) {
         (void)entityHandle;
         if (nsc.Instance) nsc.Instance->OnUpdate(ts);
@@ -790,6 +888,7 @@ void Scene::OnUpdateRuntime(Timestep ts) {
 
     RenderScene2D(nullptr);
     RenderScene3D(nullptr);
+    RenderUI();
 }
 
 void Scene::OnUpdateEditor3D(Timestep ts, PerspectiveCamera& editorCamera) {
@@ -801,6 +900,7 @@ void Scene::OnUpdateEditor3D(Timestep ts, PerspectiveCamera& editorCamera) {
     // cena 3D sem precisar de nenhum tratamento especial.
     RenderScene2D(nullptr);
     RenderScene3D(&editorCamera);
+    RenderUI();
 }
 
 void Scene::OnUpdateEditor2D(Timestep ts, OrthographicCamera& editorCamera) {
@@ -812,6 +912,7 @@ void Scene::OnUpdateEditor2D(Timestep ts, OrthographicCamera& editorCamera) {
     // passe 3D aqui de propósito: grid e malhas 3D só teriam papel de
     // ruído visual enquanto o foco é edição 2D.
     RenderScene2D(&editorCamera);
+    RenderUI();
 }
 
 void Scene::OnViewportResize(uint32_t width, uint32_t height) {

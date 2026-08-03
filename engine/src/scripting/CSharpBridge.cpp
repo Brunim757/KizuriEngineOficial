@@ -18,6 +18,7 @@ namespace {
 
 kizuri::Scene* s_ActiveScene = nullptr;
 double s_DeltaSeconds = 0.0;
+float s_TimeScale = 1.0f;
 
 // handle opaco (uint32) -> UUID estável da entidade. Evita expor entt::entity
 // ao C#; o UUID também sobrevive se a entidade for recriada.
@@ -47,6 +48,9 @@ uint32_t RegisterEntityHandle(Entity entity) {
     s_HandlesByUUID[id] = handle;
     return handle;
 }
+
+float GetTimeScale() { return s_TimeScale; }
+void SetTimeScale(float scale) { s_TimeScale = scale > 0.0f ? scale : 0.0f; }
 
 } // namespace scripting
 } // namespace kizuri
@@ -88,6 +92,14 @@ KZ_SCRIPT_API void kz_log(int channel, int level, const char* message) {
 // ---------------------------------------------------------------------------
 KZ_SCRIPT_API double kz_time_delta_seconds() {
     return s_DeltaSeconds;
+}
+
+KZ_SCRIPT_API void kz_set_time_scale(float scale) {
+    kizuri::scripting::SetTimeScale(scale);
+}
+
+KZ_SCRIPT_API float kz_get_time_scale() {
+    return kizuri::scripting::GetTimeScale();
 }
 
 // ---------------------------------------------------------------------------
@@ -137,6 +149,9 @@ KZ_SCRIPT_API int kz_entity_has_component(uint32_t entity, int componentType) {
         case 4: return e.HasComponent<kizuri::AudioSourceComponent>() ? 1 : 0;
         case 5: return e.HasComponent<kizuri::CameraComponent>() ? 1 : 0;
         case 6: return e.HasComponent<kizuri::LightComponent>() ? 1 : 0;
+        case 7: return e.HasComponent<kizuri::UIRectComponent>() ? 1 : 0;
+        case 8: return e.HasComponent<kizuri::UIButtonComponent>() ? 1 : 0;
+        case 9: return e.HasComponent<kizuri::UICanvasComponent>() ? 1 : 0;
         default: return 0;
     }
 }
@@ -262,6 +277,88 @@ KZ_SCRIPT_API int kz_text_set_color(uint32_t entity, float r, float g, float b, 
     if (!e || !e.HasComponent<kizuri::TextComponent>()) return 0;
     e.GetComponent<kizuri::TextComponent>().Color = { r, g, b, a };
     return 1;
+}
+
+// ---------------------------------------------------------------------------
+// UI — Canvas/Rect/Botão/Texto em espaço de tela (o Scene renderiza e faz o
+// hit-test dos botões; os setters aqui só mutam os componentes).
+// ---------------------------------------------------------------------------
+KZ_SCRIPT_API int kz_entity_add_ui_canvas(uint32_t entity, float orthoSize) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& uc = e.AddOrReplaceComponent<kizuri::UICanvasComponent>();
+    uc.OrthoSize = orthoSize > 0.0f ? orthoSize : 10.0f;
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_entity_add_ui_rect(uint32_t entity, float x, float y, float w, float h,
+                                        float r, float g, float b, float a) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& ur = e.AddOrReplaceComponent<kizuri::UIRectComponent>();
+    ur.Position = { x, y };
+    ur.Size = { w, h };
+    ur.Color = { r, g, b, a };
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_entity_add_ui_button(uint32_t entity, float x, float y, float w, float h,
+                                          float r, float g, float b, float a) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& ur = e.AddOrReplaceComponent<kizuri::UIRectComponent>();
+    ur.Position = { x, y };
+    ur.Size = { w, h };
+    ur.Color = { r, g, b, a };
+    e.AddOrReplaceComponent<kizuri::UIButtonComponent>();
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_entity_add_ui_text(uint32_t entity, const char* text, float fontSize,
+                                        float r, float g, float b, float a) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    // Só garante um UIRect se não houver (entidade só de texto). Se a
+    // entidade já é um botão/rect (texto sobre o fundo), NÃO mexe no rect
+    // — o texto desenha centrado na posição dele.
+    if (!e.HasComponent<kizuri::UIRectComponent>()) {
+        auto& ur = e.AddComponent<kizuri::UIRectComponent>();
+        ur.Size = { 0.0f, 0.0f };          // sem quad de fundo
+        ur.Color = { 0.0f, 0.0f, 0.0f, 0.0f };
+    }
+    auto& tc = e.AddOrReplaceComponent<kizuri::TextComponent>();
+    tc.Text = text != nullptr ? text : "";
+    tc.FontSize = fontSize;
+    tc.Color = { r, g, b, a };
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_ui_button_was_clicked(uint32_t entity) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto* btn = s_ActiveScene->GetRegistry().try_get<kizuri::UIButtonComponent>(e.GetHandle());
+    return (btn && btn->WasClicked) ? 1 : 0;
+}
+
+KZ_SCRIPT_API int kz_ui_button_is_hovered(uint32_t entity) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto* btn = s_ActiveScene->GetRegistry().try_get<kizuri::UIButtonComponent>(e.GetHandle());
+    return (btn && btn->Hovered) ? 1 : 0;
+}
+
+KZ_SCRIPT_API void kz_ui_set_rect(uint32_t entity, float x, float y, float w, float h) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::UIRectComponent>()) return;
+    auto& ur = e.GetComponent<kizuri::UIRectComponent>();
+    ur.Position = { x, y };
+    ur.Size = { w, h };
+}
+
+KZ_SCRIPT_API void kz_ui_set_color(uint32_t entity, float r, float g, float b, float a) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::UIRectComponent>()) return;
+    e.GetComponent<kizuri::UIRectComponent>().Color = { r, g, b, a };
 }
 
 // ---------------------------------------------------------------------------

@@ -45,11 +45,14 @@
   (`AddSprite`, `AddText`, `AddAudio`, `AddCamera`)
 - **Mutação em runtime**: sprite (textura/cor), texto (conteúdo/tamanho/cor),
   áudio (`PlayAudio`/`StopAudio`)
-- **Input**: teclado + mouse (botões e posição)
-- **Áudio**: `Audio.PlayOneShot` / `Audio.StopAll`
-- **Física**: `Scene.Raycast2D` contra o mundo Box2D
-- **Save**: persistência do jogo em JSON (`SaveSystem.Set/Get/Save` — 100% managed)
-- Exemplo completo de tudo isso em `managed/SampleGame/PlayerController.cs`
+- **UI interativo**: `AddUICanvas` + `AddUIRect`/`AddUIButton`/`AddUIText`,
+  com `UIButtonWasClicked()`/`UIButtonIsHovered()` — menus, HUDs e botões de
+  verdade (espaço de tela, hover/pressed/clique)
+- **Corrotinas** estilo Unity (`StartCoroutine` + `WaitForSeconds`), **`Time.TimeScale`**
+  (câmera lenta), **`Random`**, **`SaveSystem`** (JSON), input de mouse,
+  `Scene.Raycast2D`, `Audio.PlayOneShot`
+- Exemplo completo em `managed/SampleGame/PlayerController.cs` e
+  `managed/SampleGame/UISample.cs`
 - **Serialização** — cenas em `.kzscene` (JSON legível), incluindo mesh, material e texturas
 
 ### Editor (KizuriEditor)

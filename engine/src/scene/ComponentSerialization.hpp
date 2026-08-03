@@ -122,6 +122,24 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
         };
     }
 
+    if (entity.HasComponent<UICanvasComponent>()) {
+        auto& uc = entity.GetComponent<UICanvasComponent>();
+        je["UICanvas"] = { { "OrthoSize", uc.OrthoSize } };
+    }
+
+    if (entity.HasComponent<UIRectComponent>()) {
+        auto& ur = entity.GetComponent<UIRectComponent>();
+        je["UIRect"] = {
+            { "Position", Vec3ToJson({ ur.Position.x, ur.Position.y, 0.0f }) },
+            { "Size", Vec3ToJson({ ur.Size.x, ur.Size.y, 0.0f }) },
+            { "Color", Vec4ToJson(ur.Color) }
+        };
+    }
+
+    if (entity.HasComponent<UIButtonComponent>()) {
+        je["UIButton"] = {}; // estado é runtime, não serializado
+    }
+
     if (entity.HasComponent<Rigidbody2DComponent>()) {
         auto& rb = entity.GetComponent<Rigidbody2DComponent>();
         je["Rigidbody2D"] = { { "Type", (int)rb.Type }, { "FixedRotation", rb.FixedRotation } };
@@ -287,6 +305,24 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         cc.NearClip = jc.value("NearClip", 0.01f);
         cc.FarClip = jc.value("FarClip", 1000.0f);
         cc.Primary = jc.value("Primary", true);
+    }
+
+    if (je.contains("UICanvas")) {
+        auto& ju = je["UICanvas"];
+        auto& uc = entity.AddComponent<UICanvasComponent>();
+        uc.OrthoSize = ju.value("OrthoSize", 10.0f);
+    }
+
+    if (je.contains("UIRect")) {
+        auto& jr = je["UIRect"];
+        auto& ur = entity.AddComponent<UIRectComponent>();
+        auto pos = JsonToVec3(jr["Position"]); ur.Position = { pos.x, pos.y };
+        auto size = JsonToVec3(jr["Size"]); ur.Size = { size.x, size.y };
+        ur.Color = JsonToVec4(jr["Color"]);
+    }
+
+    if (je.contains("UIButton")) {
+        entity.AddComponent<UIButtonComponent>(); // estado é runtime
     }
 
     if (je.contains("Rigidbody2D")) {

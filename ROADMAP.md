@@ -43,7 +43,7 @@
 ### Produção
 - [ ] Pipeline de import (normais, reimport, previews)
 - [ ] Animações 3D (skinning)
-- [ ] Runtime C# na engine (host CoreCLR carrega `Kizuri.Scripting`).
+- [x] Runtime C# na engine (host CoreCLR via hostfxr carrega `Kizuri.Scripting`)
 - [ ] Testes automatizados (`KZ_BUILD_TESTS`)
 
 ---

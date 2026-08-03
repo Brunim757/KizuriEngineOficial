@@ -2,6 +2,7 @@
 #include "kizuri/ecs/Entity.hpp"
 #include "kizuri/ecs/Components.hpp"
 #include "kizuri/scripting/NativeScript.hpp"
+#include "kizuri/scripting/CSharpBridge.h"
 #include "kizuri/scene/SceneSerializer.hpp"
 #include "kizuri/scene/Prefab.hpp"
 #include "kizuri/project/Project.hpp"
@@ -704,6 +705,11 @@ void Scene::OnRuntimeStart() {
     OnPhysics2DStart();
     OnPhysics3DStart();
 
+    // Diz ao ABI C# qual cena é a ativa (Play do editor / KizuriGame). Sem
+    // isso, os handles de entidade resolvidos no CSharpBridge apontam pra
+    // lugar nenhum e os scripts C# ficam cegos.
+    kz_set_active_scene(this);
+
     m_Registry.view<NativeScriptComponent>().each([this](auto entityHandle, auto& nsc) {
         (void)nsc;
         StartScriptIfNeeded(Entity{ entityHandle, this });
@@ -717,6 +723,8 @@ void Scene::OnRuntimeStop() {
 
     OnPhysics2DStop();
     OnPhysics3DStop();
+
+    kz_set_active_scene(nullptr);
 
     m_Registry.view<NativeScriptComponent>().each([](auto entityHandle, auto& nsc) {
         (void)entityHandle;

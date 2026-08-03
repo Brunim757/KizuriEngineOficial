@@ -3,6 +3,7 @@
 // Aqui dentro TODOS os includes glm/entt/box2d são permitidos — mas não em
 // CSharpBridge.h, que só tem PODs.
 #include "kizuri/scripting/CSharpBridge.h"
+#include "kizuri/scripting/CSharpBridgeInternal.h"
 #include "kizuri/core/Log.hpp"
 #include "kizuri/core/Input.hpp"
 #include "kizuri/ecs/Scene.hpp"
@@ -20,6 +21,7 @@ double s_DeltaSeconds = 0.0;
 // ao C#; o UUID também sobrevive se a entidade for recriada.
 uint32_t s_NextHandle = 1;
 std::unordered_map<uint32_t, kizuri::UUID> s_Handles;
+std::unordered_map<kizuri::UUID, uint32_t> s_HandlesByUUID;
 
 kizuri::Entity Resolve(uint32_t handle) {
     if (s_ActiveScene == nullptr) return {};
@@ -30,6 +32,23 @@ kizuri::Entity Resolve(uint32_t handle) {
 
 } // namespace
 
+namespace kizuri {
+namespace scripting {
+
+uint32_t RegisterEntityHandle(Entity entity) {
+    if (!entity) return 0;
+    kizuri::UUID id = entity.GetUUID();
+    auto it = s_HandlesByUUID.find(id);
+    if (it != s_HandlesByUUID.end()) return it->second;
+    uint32_t handle = s_NextHandle++;
+    s_Handles[handle] = id;
+    s_HandlesByUUID[id] = handle;
+    return handle;
+}
+
+} // namespace scripting
+} // namespace kizuri
+
 extern "C" {
 
 // ---------------------------------------------------------------------------
@@ -38,6 +57,7 @@ extern "C" {
 KZ_SCRIPT_API void kz_set_active_scene(void* scene) {
     s_ActiveScene = static_cast<kizuri::Scene*>(scene);
     s_Handles.clear();
+    s_HandlesByUUID.clear();
     s_NextHandle = 1;
 }
 
@@ -82,14 +102,14 @@ KZ_SCRIPT_API uint32_t kz_scene_create_entity(const char* name) {
     if (s_ActiveScene == nullptr) return 0;
     auto entity = s_ActiveScene->CreateEntity(name != nullptr ? name : "");
     if (!entity) return 0;
-    uint32_t handle = s_NextHandle++;
-    s_Handles[handle] = entity.GetUUID();
-    return handle;
+    return kizuri::scripting::RegisterEntityHandle(entity);
 }
 
 KZ_SCRIPT_API void kz_scene_destroy_entity(uint32_t entity) {
     auto e = Resolve(entity);
     if (!e) return;
+    auto it = s_Handles.find(entity);
+    if (it != s_Handles.end()) s_HandlesByUUID.erase(it->second);
     s_Handles.erase(entity);
     s_ActiveScene->DestroyEntity(e);
 }

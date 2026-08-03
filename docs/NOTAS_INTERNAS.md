@@ -149,8 +149,14 @@ dor de cabeça em CI antes.
 2. **CSM sem blend/texel snapping** — cosmético.
 3. **Bloom sem UI de ajuste** — limiar/intensidade fixos no shader.
 4. **Sem animação de esqueleto** (bones/skinning) — não iniciado.
-5. **Sem KZScript** — scripting é C++ nativo via `NativeScript` + GameModule.
-   Já tem colisão, Instantiate, LoadScene e Exportar Jogo.
+5. **Scripting C# em produção**: o jogo já é um assembly .NET carregado por
+   um host CoreCLR embutido (CoreCLRHost/hostfxr), com a API Unity-like
+   `Kizuri.Scripting`. O projeto do jogo precisa ser `OutputType Exe` (com um
+   `Main` vazio) — só aplicações geram o `.runtimeconfig.json`/`.deps.json`
+   que o host usa pra inicializar. O que falta de produto: `dotnet publish`
+   auto-contido no fluxo de exportação (hoje o export copia a pasta do
+   assembly; se não publicar self-contained, o jogador precisa do .NET
+   Runtime 8 instalado).
 6. **Diálogo nativo de arquivo só no Windows** — Linux/macOS sem backend.
 7. **`cmake/glad_stub/`** é lixo morto — pode apagar.
 
@@ -158,11 +164,11 @@ dor de cabeça em CI antes.
 
 ## 3b. Fluxo v1 pra criar e empacotar um jogo
 
-1. Hub → Novo/Abrir projeto (cria `Assets/` + `Source/` com GameModule template).
-2. Monte a cena (sprites, física, scripts do GameModule).
+1. Hub → Novo/Abrir projeto (cria `Assets/` + `Source/` com template C#).
+2. Monte a cena (sprites, física, scripts C# no Inspetor).
 3. Play no editor pra testar (colisões / spawn / troca de cena).
 4. *Definir cena como inicial* + *Exportar Jogo...* → pasta jogável.
-5. Ou rode `KizuriGame Start.kzscene GameModule.dll` na pasta exportada.
+5. Ou rode `KizuriGame Start.kzscene Game/SampleGame.dll` na pasta exportada.
 
 ---
 

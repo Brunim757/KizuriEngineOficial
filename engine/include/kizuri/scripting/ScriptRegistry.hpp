@@ -8,11 +8,11 @@
 namespace kizuri {
 
 // Registro de classes de script disponíveis nesta sessão — populado pelo
-// GameModule (biblioteca dinâmica com o código do jogo, ver ScriptEngine)
-// através de uma função extern "C" chamada RegisterScripts que o
-// programador escreve. É o que permite o editor listar "PlayerController",
-// "EnemyAI" etc no dropdown de Adicionar Componente > Script Nativo sem
-// nunca ter visto o .cpp desses scripts — ver docs/NOTAS_INTERNAS.md.
+// ScriptEngine quando ele carrega o assembly .NET do jogo (cada classe C#
+// que herda de Script vira uma factory que cria um ManagedScript). É o que
+// permite o editor listar "PlayerController", "EnemyAI" etc no dropdown de
+// Adicionar Componente > Script Nativo sem nunca ter visto o .cs desses
+// scripts — ver docs/NOTAS_INTERNAS.md.
 class ScriptRegistry {
 public:
     using FactoryFn = std::function<NativeScript*()>;

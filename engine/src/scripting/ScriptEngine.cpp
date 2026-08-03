@@ -1,88 +1,68 @@
 #include "kizuri/scripting/ScriptEngine.hpp"
+#include "kizuri/scripting/CoreCLRHost.hpp"
+#include "kizuri/scripting/ManagedScript.hpp"
 #include "kizuri/core/Log.hpp"
 
-#if defined(_WIN32)
-    #include <windows.h>
-#else
-    #include <dlfcn.h>
-#endif
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 namespace kizuri {
 
-void* ScriptEngine::s_ModuleHandle = nullptr;
 ScriptRegistry ScriptEngine::s_Registry;
 std::string ScriptEngine::s_LastError;
 std::string ScriptEngine::s_LoadedPath;
 
-using RegisterScriptsFn = void(*)(ScriptRegistry&);
-
 bool ScriptEngine::LoadModule(const std::string& path) {
     UnloadModule();
 
-#if defined(_WIN32)
-    HMODULE handle = LoadLibraryA(path.c_str());
-    if (!handle) {
-        s_LastError = "Não foi possível carregar a biblioteca (arquivo não existe, não é um .dll válido, ou depende de outra DLL faltando).";
-        KZ_CORE_ERROR("Não foi possível carregar o GameModule: {0}", path);
+    fs::path assemblyPath(path);
+    if (!fs::is_regular_file(assemblyPath)) {
+        s_LastError = "Arquivo não encontrado: " + path;
+        KZ_CORE_ERROR("Módulo do jogo não encontrado: {0}", path);
         return false;
     }
-    // GetProcAddress devolve FARPROC (ponteiro de função sem tipo definido);
-    // o cast direto pra RegisterScriptsFn dispara -Wcast-function-type no
-    // MinGW/Clang. Passar por void* primeiro evita o aviso sem mudar o
-    // comportamento (mesma reinterpretação de bits).
-    void* symbol = reinterpret_cast<void*>(GetProcAddress(handle, "RegisterScripts"));
-    auto registerFn = reinterpret_cast<RegisterScriptsFn>(symbol);
-    if (!registerFn) {
-        s_LastError = "A biblioteca carregou, mas não exporta RegisterScripts (esqueceu extern \"C\"?).";
-        KZ_CORE_ERROR("GameModule '{0}' não exporta RegisterScripts (esqueceu extern \"C\"?)", path);
-        FreeLibrary(handle);
-        return false;
-    }
-#else
-    void* handle = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
-    if (!handle) {
-        s_LastError = std::string("Não foi possível carregar a biblioteca: ") + dlerror();
-        KZ_CORE_ERROR("Não foi possível carregar o GameModule: {0} ({1})", path, dlerror());
-        return false;
-    }
-    auto registerFn = reinterpret_cast<RegisterScriptsFn>(dlsym(handle, "RegisterScripts"));
-    if (!registerFn) {
-        s_LastError = "A biblioteca carregou, mas não exporta RegisterScripts (esqueceu extern \"C\"?).";
-        KZ_CORE_ERROR("GameModule '{0}' não exporta RegisterScripts (esqueceu extern \"C\"?)", path);
-        dlclose(handle);
-        return false;
-    }
-#endif
 
-    s_ModuleHandle = handle;
+    // O .runtimeconfig.json do jogo fica do lado do assembly (saída do
+    // `dotnet build`/`publish`). É ele que diz qual shared framework usar.
+    fs::path runtimeConfig = assemblyPath.parent_path() /
+                             (assemblyPath.stem().string() + ".runtimeconfig.json");
+
+    std::string hostError;
+    if (!scripting::CoreCLRHost::Initialize(runtimeConfig.string(), assemblyPath.string(), hostError)) {
+        s_LastError = hostError;
+        KZ_CORE_ERROR("Falha ao iniciar o runtime C#: {0}", hostError);
+        return false;
+    }
+
     s_Registry.Clear();
-    registerFn(s_Registry);
+    int count = scripting::CoreCLRHost::GetScriptCount();
+    for (int i = 0; i < count; ++i) {
+        std::string className = scripting::CoreCLRHost::GetScriptName(i);
+        // Factory por nome, igual ao módulo C++ antigo — o editor lista e a
+        // Scene instancia sem nunca conhecer o tipo managed.
+        s_Registry.Register(className, [className]() -> NativeScript* {
+            return new ManagedScript(className);
+        });
+    }
 
-    s_LastError.clear();
     s_LoadedPath = path;
-    KZ_CORE_INFO("Módulo de jogo carregado: {0} ({1} scripts registrados).", path, s_Registry.GetClassNames().size());
+    s_LastError.clear();
+    KZ_CORE_INFO("Assembly do jogo carregado: {0} ({1} scripts registrados).", path, count);
     return true;
 }
 
 void ScriptEngine::UnloadModule() {
-    s_LoadedPath.clear();
-    if (!s_ModuleHandle) return;
-
-    // Limpa o registro ANTES de descarregar a biblioteca — os factories
-    // guardados em ScriptRegistry são ponteiros de função que vivem dentro
-    // do módulo; chamá-los depois do dlclose/FreeLibrary seria acessar
-    // memória já desmapeada.
+    if (!scripting::CoreCLRHost::IsInitialized()) return;
+    // Limpa o registro antes de derrubar o runtime — os factories guardam
+    // lambdas que criam ManagedScript (código nativo, seguro), mas os
+    // GCHandles dos scripts vivos morreriam junto com o runtime.
     s_Registry.Clear();
-
-#if defined(_WIN32)
-    FreeLibrary((HMODULE)s_ModuleHandle);
-#else
-    dlclose(s_ModuleHandle);
-#endif
-    s_ModuleHandle = nullptr;
+    scripting::CoreCLRHost::Shutdown();
+    s_LoadedPath.clear();
 }
 
-bool ScriptEngine::IsModuleLoaded() { return s_ModuleHandle != nullptr; }
+bool ScriptEngine::IsModuleLoaded() { return scripting::CoreCLRHost::IsInitialized(); }
 
 const std::string& ScriptEngine::GetLastError() { return s_LastError; }
 const std::string& ScriptEngine::GetLoadedPath() { return s_LoadedPath; }

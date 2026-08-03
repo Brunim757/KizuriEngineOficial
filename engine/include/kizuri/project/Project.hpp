@@ -24,10 +24,10 @@ struct ProjectConfig {
 };
 
 // Um projeto Kizuri é uma pasta com um arquivo .kzproj na raiz, uma pasta
-// Assets/ com o conteúdo, e (quando o sistema de scripting via GameModule
-// entrar — ver docs/NOTAS_INTERNAS.md) uma pasta Source/ com o código
-// C++ do jogo. Esta classe só cuida do arquivo .kzproj e da resolução de
-// caminho; não sabe nada sobre cena ou asset em si.
+// Assets/ com o conteúdo, e uma pasta Source/ com o código C# do jogo
+// (um Game.csproj que referencia a Kizuri.Scripting — ver
+// docs/NOTAS_INTERNAS.md). Esta classe só cuida do arquivo .kzproj e da
+// resolução de caminho; não sabe nada sobre cena ou asset em si.
 class Project {
 public:
     // Cria a estrutura de pastas (Assets/, Source/) e o .kzproj num

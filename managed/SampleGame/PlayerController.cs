@@ -46,6 +46,7 @@ public override void OnCreate()
 // Registro global dos scripts (equivalente 'RegisterScripts(name)').
 public static class SampleGameModule
 {
+	[Kizuri.GameEntryPoint]
 	public static void RegisterAll()
 	{
 		Kizuri.GameModule.Register<PlayerController>("PlayerController");

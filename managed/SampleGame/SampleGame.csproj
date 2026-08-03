@@ -1,9 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Exemplo: jogo em C# usando a API managed. O dev só vê Kizuri.Scripting;
-       o motor (e glm/entt/box2d) fica 100% fechado. -->
+       o motor (e glm/entt/box2d) fica 100% fechado. OutputType Exe de
+       propósito: só aplicações geram o .runtimeconfig.json/.deps.json que o
+       host CoreCLR da engine usa pra inicializar o runtime. -->
   <PropertyGroup>
-    <OutputType>Library</OutputType>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

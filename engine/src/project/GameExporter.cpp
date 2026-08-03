@@ -75,6 +75,30 @@ static bool CopyFileTo(const fs::path& src, const fs::path& dst, std::string& er
     return true;
 }
 
+// Copia a pasta inteira (usada pro jogo C#: assembly + deps + runtimeconfig
+// + runtime .NET self-contained, se o usuário publicou assim).
+static bool CopyDirectoryRecursive(const fs::path& srcDir, const fs::path& dstDir, std::string& err) {
+    std::error_code ec;
+    fs::create_directories(dstDir, ec);
+    if (ec) {
+        err = "Falha ao criar a pasta de destino: " + dstDir.string();
+        return false;
+    }
+    for (auto& entry : fs::recursive_directory_iterator(srcDir, ec)) {
+        if (ec) { err = "Falha ao iterar '" + srcDir.string() + "': " + ec.message(); return false; }
+        fs::path rel = fs::relative(entry.path(), srcDir, ec);
+        if (ec) continue;
+        fs::path dst = dstDir / rel;
+        if (entry.is_directory(ec)) {
+            fs::create_directories(dst, ec);
+            continue;
+        }
+        if (!entry.is_regular_file(ec)) continue;
+        if (!CopyFileTo(entry.path(), dst, err)) return false;
+    }
+    return true;
+}
+
 bool GameExporter::Export(const GameExportRequest& request, std::string& outError) {
     if (request.OutputDirectory.empty()) {
         outError = "Pasta de destino vazia.";
@@ -186,35 +210,45 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
     }
     sceneFile << root.dump(4);
 
-    std::string moduleOutName;
+    // Módulo do jogo: C# (assembly .NET — copia a pasta toda pra Game/) ou
+    // módulo C++ legado (dll/so única na raiz).
+    fs::path moduleOutPath;
     if (!request.GameModulePath.empty()) {
         fs::path modSrc = request.GameModulePath;
         if (!fs::exists(modSrc)) {
             outError = "GameModule não encontrado: " + modSrc.string();
             return false;
         }
-        moduleOutName = modSrc.filename().string();
-        if (!CopyFileTo(modSrc, outDir / moduleOutName, outError)) return false;
+
+        fs::path runtimeConfig = modSrc.parent_path() / (modSrc.stem().string() + ".runtimeconfig.json");
+        if (fs::exists(runtimeConfig)) {
+            fs::path gameDir = outDir / "Game";
+            if (!CopyDirectoryRecursive(modSrc.parent_path(), gameDir, outError)) return false;
+            moduleOutPath = fs::path("Game") / modSrc.filename();
+        } else {
+            if (!CopyFileTo(modSrc, outDir / modSrc.filename(), outError)) return false;
+            moduleOutPath = modSrc.filename();
+        }
     }
 
 #ifdef _WIN32
     std::ofstream bat(outDir / "Jogar.bat");
     if (bat.is_open()) {
         bat << "@echo off\n";
-        if (moduleOutName.empty())
+        if (moduleOutPath.empty())
             bat << "KizuriGame.exe Start.kzscene\n";
         else
-            bat << "KizuriGame.exe Start.kzscene " << moduleOutName << "\n";
+            bat << "KizuriGame.exe Start.kzscene " << moduleOutPath.string() << "\n";
         bat << "pause\n";
     }
 #else
     std::ofstream sh(outDir / "jogar.sh");
     if (sh.is_open()) {
         sh << "#!/bin/sh\ncd \"$(dirname \"$0\")\"\n";
-        if (moduleOutName.empty())
+        if (moduleOutPath.empty())
             sh << "./KizuriGame Start.kzscene\n";
         else
-            sh << "./KizuriGame Start.kzscene ./" << moduleOutName << "\n";
+            sh << "./KizuriGame Start.kzscene " << moduleOutPath.generic_string() << "\n";
     }
 #endif
 
@@ -223,7 +257,7 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
         readme << "Jogo exportado pela Kizuri Engine\n"
                << "---------------------------------\n"
                << "Rode KizuriGame com Start.kzscene"
-               << (moduleOutName.empty() ? ".\n" : (" e " + moduleOutName + ".\n"))
+               << (moduleOutPath.empty() ? ".\n" : (" e " + moduleOutPath.generic_string() + ".\n"))
                << "No Windows: dê dois cliques em Jogar.bat\n";
     }
 

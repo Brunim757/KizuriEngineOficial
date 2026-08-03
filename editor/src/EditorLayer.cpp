@@ -1363,9 +1363,9 @@ void EditorLayer::DrawGameModuleModal() {
         kizuri::editor::icons::PanelHeader("CARREGAR GAMEMODULE", kizuri::editor::icons::Folder);
 
         ImGui::TextWrapped(
-            "Carregue a biblioteca dinâmica (.dll/.so) com o código do jogo em C++, compilada a "
-            "partir da pasta Source/ do projeto. A biblioteca deve exportar a função "
-            "RegisterScripts(ScriptRegistry&) com linkage C.");
+            "Carregue o assembly do jogo (.dll) em C#, compilado com `dotnet build` a partir "
+            "da pasta Source/ do projeto. A engine embute o runtime .NET (CoreCLR) e registra "
+            "os scripts marcados com [GameEntryPoint].");
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
@@ -1374,7 +1374,7 @@ void EditorLayer::DrawGameModuleModal() {
         bool enterPressed = ImGui::InputText("##game_module_path", m_GameModulePathBuffer, sizeof(m_GameModulePathBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
         ImGui::SameLine();
         if (ImGui::Button("Procurar...##game_module_browse")) {
-            std::string path = FileDialog::OpenFile("Biblioteca Dinâmica", "*.dll;*.so");
+            std::string path = FileDialog::OpenFile("Assembly do Jogo", "*.dll;*.so");
             if (!path.empty()) {
                 strncpy(m_GameModulePathBuffer, path.c_str(), sizeof(m_GameModulePathBuffer) - 1);
                 m_GameModulePathBuffer[sizeof(m_GameModulePathBuffer) - 1] = '\0';
@@ -1415,11 +1415,11 @@ void EditorLayer::DrawGameModuleModal() {
         ImGui::Spacing();
 
         // --- Compilar Scripts ---
-        // Com a migração para scripts em C#, a compilação de scripts C++ via
-        // SDK embutido foi removida. O assembly do jogo (Kizuri.Scripting.dll)
-        // é construído com `dotnet build` (gerenciado pela Phase 3) e carregado
-        // no runtime do jogo; aqui ainda é possível carregar um módulo já
-        // compilado pelo caminho nativo abaixo.
+        // O jogo agora é um assembly C# construído com `dotnet build`
+        // (Kizuri.Scripting + o projeto do jogo na pasta Source/). Aqui
+        // ainda é possível carregar um assembly já compilado pelo caminho
+        // acima; a compilação em si fica fora do editor (ex: dotnet publish
+        // para exportar auto-contido).
 
         const ImVec4 accent(0.82f, 0.24f, 0.27f, 1.0f);
         const ImVec4 accentHover(0.90f, 0.32f, 0.35f, 1.0f);

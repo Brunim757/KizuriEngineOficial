@@ -135,6 +135,10 @@ dor de cabeça em CI antes.
 
 ### Editor
 - Dockspace ImGui + ImGuizmo (mover/rotacionar/escalar).
+- **Toolbar do viewport completo**: Mover/Rotacionar/Escalar (atalhos W/E/R,
+  estado ligado ao `m_GizmoOperation`) + alternância 2D/3D + Play/Stop no
+  canto direito. Atalho **F5 = Play / Shift+F5 = Stop** (edge-detect, não
+  conflita com digitação).
 - Hierarquia, Inspetor (com painéis pra todo componente relevante — Mesh Renderer, Light,
   Particle System, Audio Source, Camera, Sprite Renderer), Console com filtro por
   categoria, Content Browser (existe, mas sem projeto aberto não mostra nada de útil ainda).

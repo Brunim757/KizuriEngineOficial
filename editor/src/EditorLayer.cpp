@@ -353,41 +353,66 @@ void EditorLayer::UpdateEditor2DCamera(Timestep ts) {
 
 void EditorLayer::DrawViewportToolbar() {
     KZ_TRACE_SCOPE("EditorLayer::DrawViewportToolbar");
-    ImVec4 accent(0.82f, 0.24f, 0.27f, 1.0f);
-    ImVec4 inactive(0.18f, 0.18f, 0.20f, 1.0f);
+    const ImVec4 accent(0.82f, 0.24f, 0.27f, 1.0f);
+    const ImVec4 inactive(0.18f, 0.18f, 0.20f, 1.0f);
+    const ImVec4 activeText(1.0f, 1.0f, 1.0f, 1.0f);
+    const ImVec4 idleText(0.75f, 0.75f, 0.78f, 1.0f);
 
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+
+    // --- Ferramentas de gizmo: Mover / Rotacionar / Escalar (atalhos W/E/R). ---
+    const char* gizmoLabels[3] = { "Mover", "Rotacionar", "Escalar" };
+    const ImGuizmo::OPERATION gizmoOps[3] = { ImGuizmo::TRANSLATE, ImGuizmo::ROTATE, ImGuizmo::SCALE };
+    const char* gizmoHints[3] = { "Mover entidade (W)", "Rotacionar entidade (E)", "Escalar entidade (R)" };
+    for (int i = 0; i < 3; ++i) {
+        bool active = m_GizmoOperation == gizmoOps[i];
+        ImGui::PushStyleColor(ImGuiCol_Button, active ? accent : inactive);
+        ImGui::PushStyleColor(ImGuiCol_Text, active ? activeText : idleText);
+        if (ImGui::Button(gizmoLabels[i], ImVec2(86.0f, 0.0f)))
+            m_GizmoOperation = gizmoOps[i];
+        ImGui::PopStyleColor(2);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", gizmoHints[i]);
+        if (i < 2) ImGui::SameLine(0.0f, 4.0f);
+    }
+
+    ImGui::SameLine(0.0f, 16.0f);
+
+    // --- Modo de navegação 2D/3D do editor (só muda a câmera de edição,
+    // nunca trava a cena — uma entidade 2D e uma 3D convivem). ---
     bool is2D = m_ViewportMode == ViewportMode::Mode2D;
     bool is3D = m_ViewportMode == ViewportMode::Mode3D;
 
-    // Alternância 2D/3D: só troca qual câmera/grid o EDITOR usa pra
-    // navegar (ver comentário no header, junto de ViewportMode) — nunca
-    // trava a cena. Uma entidade 2D e uma 3D convivem na mesma cena
-    // independente de qual botão está ativo aqui.
     ImGui::PushStyleColor(ImGuiCol_Button, is2D ? accent : inactive);
+    ImGui::PushStyleColor(ImGuiCol_Text, is2D ? activeText : idleText);
     if (ImGui::Button("2D", ImVec2(36.0f, 0.0f))) m_ViewportMode = ViewportMode::Mode2D;
-    ImGui::PopStyleColor();
-
+    ImGui::PopStyleColor(2);
     ImGui::SameLine(0.0f, 4.0f);
-
     ImGui::PushStyleColor(ImGuiCol_Button, is3D ? accent : inactive);
+    ImGui::PushStyleColor(ImGuiCol_Text, is3D ? activeText : idleText);
     if (ImGui::Button("3D", ImVec2(36.0f, 0.0f))) m_ViewportMode = ViewportMode::Mode3D;
-    ImGui::PopStyleColor();
+    ImGui::PopStyleColor(2);
 
-    ImGui::SameLine(0.0f, 16.0f);
-    if (is2D)
-        ImGui::TextDisabled("Arraste com o botão direito para navegar; role para aplicar zoom");
-    else
-        ImGui::TextDisabled("Navegue com botão direito + WASD; Q/E para subir e descer");
-
-    // Play/Stop: física, scripts, partículas e áudio só rodam de verdade numa cópia da cena
-    // (ver Scene::Copy) — a cena que você edita nunca é tocada, então Stop nunca "perde" nada.
+    // --- Play/Stop no canto direito: física, scripts, partículas e áudio só
+    // rodam de verdade numa cópia isolada da cena (Scene::Copy) — editar
+    // durante o Play é seguro e o Stop nunca "perde" nada. ---
     bool isPlaying = m_SceneState == SceneState::Play;
     ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 72.0f);
     ImGui::PushStyleColor(ImGuiCol_Button, isPlaying ? accent : inactive);
+    ImGui::PushStyleColor(ImGuiCol_Text, activeText);
     if (ImGui::Button(isPlaying ? "Stop" : "Play", ImVec2(60.0f, 0.0f))) {
         if (isPlaying) OnSceneStop(); else OnScenePlay();
     }
-    ImGui::PopStyleColor();
+    ImGui::PopStyleColor(2);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip(isPlaying ? "Parar o Play e voltar pra cena de edição (Shift+F5)"
+                                    : "Testar a cena — física, scripts, partículas e áudio (F5)");
+
+    ImGui::PopStyleVar();
+
+    // Linha de dica de navegação — dá cara de toolbar e lembra os atalhos.
+    ImGui::TextDisabled("%s", is2D
+        ? "Botão direito arrasta para navegar; scroll aplica zoom"
+        : "Navegue com botão direito + WASD; Q/E sobe e desce; W/E/R troca a ferramenta do gizmo");
 }
 
 // Projeta um ponto do mundo pra coordenada de tela dentro do retângulo do viewport, usando a
@@ -2429,7 +2454,21 @@ void EditorLayer::OnImGuiRender() {
             KZ_CORE_TRACE("EditorLayer::OnImGuiRender — redo (Y) ok");
         }
     }
-    KZ_CORE_TRACE("EditorLayer::OnImGuiRender — atalhos undo/redo ok");
+
+    // F5 = Play, Shift+F5 = Stop — o mesmo botão do toolbar do viewport.
+    // Fora do Play o F5 começa (e não conflita com digitação), durante o
+    // Play o F5 também para (mata a cópia em execução). Igual aos atalhos
+    // acima, usa "acabou de ser pressionado" pra não reiniciar a cada frame.
+    {
+        bool f5Down = kizuri::Input::IsKeyPressed(kizuri::Key::F5);
+        bool f5JustPressed = f5Down && !m_PrevF5KeyDown;
+        m_PrevF5KeyDown = f5Down;
+        if (f5JustPressed && !io.WantTextInput) {
+            if (m_SceneState == SceneState::Play) OnSceneStop();
+            else OnScenePlay();
+        }
+    }
+    KZ_CORE_TRACE("EditorLayer::OnImGuiRender — atalhos undo/redo + F5 ok");
 
     // Um undo/redo pode ter destruído a entidade selecionada (ex: desfazer
     // a criação dela) — sem essa checagem, o Inspetor ficaria segurando um

@@ -100,21 +100,34 @@ KizuriGame <cena.kzscene> [GameModule.dll/.so]
 Sem argumentos, procura por `Start.kzscene` na pasta atual. Os caminhos de
 assets na cena são relativos ao diretório de trabalho.
 
-**Scripting (C#)** — o jogo é um **assembly .NET** (`net8.0`). O dev
-referencia `Kizuri.Scripting.dll` (gerada em `managed/Kizuri.Scripting`),
-herda de `Kizuri.Script` e registra as classes com
-`GameModule.Register<T>(...)`.
+**Download** — uma artifact por OS no Actions (combina engine + assembly
+C#): `Kizuri-windows-latest.zip` ou `Kizuri-ubuntu-latest.zip`.
+Extraia o zip — a estrutura é:
 
-```bash
-dotnet build managed/SampleGame/SampleGame.csproj -c Release
+```
+Kizuri/
+├── bin/
+│   ├── KizuriEditor.exe      (ou KizuriEditor no Linux)
+│   ├── KizuriGame.exe        (ou KizuriGame no Linux)
+│   ├── Sandbox.exe           (ou Sandbox no Linux)
+│   ├── KizuriEngine.dll      (ou libKizuriEngine.so no Linux)
+│   └── *.dll                 (runtime MinGW no Windows)
+└── managed/
+    ├── Kizuri.Scripting.dll
+    ├── Kizuri.Scripting.deps.json
+    └── Kizuri.Scripting.pdb
 ```
 
-API de gameplay: `OnCreate/OnUpdate`, `OnCollisionBegin/End`,
-`Input.IsKeyPressed`, `Entity.TryGetTransform`, `Entity.TryGetRigidbody2D`.
+**Pré-requisito:** .NET 8 SDK (para compilar seu jogo) e .NET 8 runtime
+(para o CoreCLR embutido na engine carregar o assembly).
 
-**Exportar** — salve a cena, carregue o GameModule, use *Arquivo > Exportar Jogo...*
-para gerar uma pasta com `KizuriGame`, `Start.kzscene`, assets e o módulo.
-Opcional: *Definir cena como inicial* grava `StartScenePath` no `.kzproj`.
+**Seu jogo** é um projeto C# `Exe` que referencia `Kizuri.Scripting.dll`
+(da pasta `managed/` do zip), herda `Kizuri.Script` e registra classes
+com `GameModule.Register<T>(...)`. Compile com `dotnet build`.
+
+```bash
+dotnet build SeuJogo.csproj -c Release
+```
 
 ---
 

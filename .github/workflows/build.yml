@@ -101,3 +101,49 @@ jobs:
           name: Kizuri.Scripting-${{ matrix.os }}
           path: managed/Kizuri.Scripting/bin/Release/net8.0/
           if-no-files-found: warn
+
+  # ------- Empacotamento combinado -------
+  # Baixa os artefatos de build e managed de cada OS e gera um único zip
+  # organizado: bin/ com os executáveis + DLL da engine + runtime MinGW,
+  # e managed/ com o assembly Kizuri.Scripting.dll e seus deps.
+  package:
+    needs: [build, managed]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+          - os: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Download do artefato da engine
+        uses: actions/download-artifact@v4
+        with:
+          name: KizuriEngine-${{ matrix.os }}
+          path: staging/engine
+
+      - name: Download do artefato do scripting
+        uses: actions/download-artifact@v4
+        with:
+          name: Kizuri.Scripting-${{ matrix.os }}
+          path: staging/managed
+
+      - name: Organizar estrutura
+        shell: bash
+        run: |
+          mkdir -p dist/bin dist/managed
+          mv staging/engine/* dist/bin/
+          mv staging/managed/* dist/managed/
+
+      - name: Publicar artefato combinado
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kizuri-${{ matrix.os }}
+          path: dist/
+          if-no-files-found: warn

@@ -5,6 +5,7 @@
 using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Runtime.Loader;
 using System.Text;
 
 namespace Kizuri.Hosting;
@@ -17,6 +18,9 @@ public delegate int GetScriptCountFn();
 
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 public delegate int GetScriptNameFn(int index, IntPtr buffer, int bufferSize);
+
+[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+public delegate int GetLastInitErrorFn(IntPtr buffer, int bufferSize);
 
 [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 public delegate IntPtr CreateScriptFn([MarshalAs(UnmanagedType.LPUTF8Str)] string className, uint entityHandle);
@@ -32,14 +36,27 @@ public delegate void CollisionScriptFn(IntPtr handle, uint otherHandle, int begi
 
 public static class Host
 {
+	// Último erro da inicialização, legível do lado nativo via GetLastInitError.
+	// Sem isso, uma falha no [GameEntryPoint] era engolida pelo catch e o
+	// editor via "módulo carregado" com 0 scripts registrados e nenhum erro.
+	internal static string s_LastInitError = string.Empty;
+
 	// Invocado pelo host assim que o runtime sobe: carrega o assembly do
 	// jogo (mesmo contexto do host — já foi resolvido) e chama os métodos
 	// marcados com [GameEntryPoint] para registrar os scripts.
 	public static void InitializeGameModule([MarshalAs(UnmanagedType.LPUTF8Str)] string gameAssemblyPath)
 	{
+		s_LastInitError = string.Empty;
 		try
 		{
-			var asm = Assembly.LoadFrom(gameAssemblyPath);
+			// IMPORTANTE: carrega no MESMO ALC do Host (o ALC coletável que o
+			// hostpolicy criou pro load_assembly_and_get_function_pointer), não
+			// no default. Com Assembly.LoadFrom o SampleGame.dll caía num segundo
+			// ALC e o [GameEntryPoint] registrava os scripts num GameModule
+			// diferente do que o lado nativo consulta em GetScriptCount — o
+			// editor via "0 scripts registrados" sem NENHUM erro.
+			var alc = AssemblyLoadContext.GetLoadContext(typeof(Host).Assembly);
+			var asm = alc.LoadFromAssemblyPath(gameAssemblyPath);
 			foreach (var type in asm.GetTypes())
 			{
 				foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Static))
@@ -51,8 +68,28 @@ public static class Host
 		}
 		catch (Exception ex)
 		{
-			Log.Error("Falha ao inicializar o módulo do jogo: " + ex);
+			// Guarda o erro completo (incluindo ReflectionTypeLoadException,
+			// cujos detalhes reais ficam em LoaderExceptions). O log fica num
+			// try/catch próprio pra uma falha de logging nunca mascarar o erro.
+			s_LastInitError = ex is ReflectionTypeLoadException rtl
+				? rtl.ToString() + "\n  -> " + string.Join("\n  -> ", rtl.LoaderExceptions.Select(e => e?.ToString()))
+				: ex.ToString();
+			try { Log.Error("Falha ao inicializar o módulo do jogo: " + s_LastInitError); }
+			catch { }
 		}
+	}
+
+	public static int GetLastInitError(IntPtr buffer, int bufferSize)
+	{
+		var text = s_LastInitError ?? string.Empty;
+		var bytes = Encoding.UTF8.GetBytes(text);
+		int copy = System.Math.Min(bytes.Length, System.Math.Max(0, bufferSize - 1));
+		if (buffer != IntPtr.Zero && copy > 0)
+		{
+			Marshal.Copy(bytes, 0, buffer, copy);
+			Marshal.WriteByte(buffer, copy, 0);
+		}
+		return bytes.Length;
 	}
 
 	public static int GetScriptCount()

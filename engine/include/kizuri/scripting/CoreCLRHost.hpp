@@ -29,6 +29,10 @@ public:
     static int GetScriptCount();
     static std::string GetScriptName(int index);
 
+    // Texto do último erro de inicialização do módulo (o lado managed guarda
+    // a exceção real em vez de engoli-la — ver Host.InitializeGameModule).
+    static std::string GetLastInitError();
+
     // Ciclo de vida de um script C#. 'handle' é opaco (GCHandle).
     static void* CreateScript(const std::string& className, uint32_t entityHandle);
     static void DestroyScript(void* handle);

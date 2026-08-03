@@ -100,6 +100,7 @@ using HostfxrSetErrorWriterFn =
 using InitializeGameModuleFn = void (*)(const char* gameAssemblyPath);
 using GetScriptCountFn = int (*)();
 using GetScriptNameFn = int (*)(int index, char* buffer, int bufferSize);
+using GetLastInitErrorFn = int (*)(char* buffer, int bufferSize);
 using CreateScriptFn = void* (*)(const char* className, uint32_t entityHandle);
 using DestroyScriptFn = void (*)(void* handle);
 using UpdateScriptFn = void (*)(void* handle, float deltaSeconds);
@@ -213,6 +214,7 @@ struct CoreCLRHost::Impl {
     InitializeGameModuleFn InitializeGameModule = nullptr;
     GetScriptCountFn GetScriptCount = nullptr;
     GetScriptNameFn GetScriptName = nullptr;
+    GetLastInitErrorFn GetLastInitError = nullptr;
     CreateScriptFn CreateScript = nullptr;
     DestroyScriptFn DestroyScript = nullptr;
     UpdateScriptFn UpdateScript = nullptr;
@@ -318,6 +320,8 @@ bool CoreCLRHost::Initialize(const std::string& runtimeConfigPath,
                     reinterpret_cast<void**>(&impl->GetScriptCount));
     ok = ok && bind("GetScriptName", "Kizuri.Hosting.GetScriptNameFn, Kizuri.Scripting",
                     reinterpret_cast<void**>(&impl->GetScriptName));
+    ok = ok && bind("GetLastInitError", "Kizuri.Hosting.GetLastInitErrorFn, Kizuri.Scripting",
+                    reinterpret_cast<void**>(&impl->GetLastInitError));
     ok = ok && bind("CreateScript", "Kizuri.Hosting.CreateScriptFn, Kizuri.Scripting",
                     reinterpret_cast<void**>(&impl->CreateScript));
     ok = ok && bind("DestroyScript", "Kizuri.Hosting.DestroyScriptFn, Kizuri.Scripting",
@@ -367,6 +371,16 @@ std::string CoreCLRHost::GetScriptName(int index) {
     if (length <= 0) return {};
     std::string buffer(static_cast<size_t>(length) + 1, '\0');
     s_Impl->GetScriptName(index, &buffer[0], static_cast<int>(buffer.size()));
+    buffer.resize(static_cast<size_t>(length));
+    return buffer;
+}
+
+std::string CoreCLRHost::GetLastInitError() {
+    if (s_Impl == nullptr || s_Impl->GetLastInitError == nullptr) return {};
+    int length = s_Impl->GetLastInitError(nullptr, 0);
+    if (length <= 0) return {};
+    std::string buffer(static_cast<size_t>(length) + 1, '\0');
+    s_Impl->GetLastInitError(&buffer[0], static_cast<int>(buffer.size()));
     buffer.resize(static_cast<size_t>(length));
     return buffer;
 }

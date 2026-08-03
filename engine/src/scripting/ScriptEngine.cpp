@@ -37,6 +37,18 @@ bool ScriptEngine::LoadModule(const std::string& path) {
 
     s_Registry.Clear();
     int count = scripting::CoreCLRHost::GetScriptCount();
+    if (count <= 0) {
+        // O assembly subiu mas o [GameEntryPoint] não registrou nada — antes
+        // isso fechava o modal "com sucesso" e o dropdown ficava vazio sem
+        // nenhum erro. Agora reporta o erro real do lado managed.
+        std::string initError = scripting::CoreCLRHost::GetLastInitError();
+        s_LastError = "Assembly carregado mas nenhum script foi registrado.";
+        if (!initError.empty()) s_LastError += " Erro do host: " + initError;
+        scripting::CoreCLRHost::Shutdown();
+        s_LoadedPath.clear();
+        KZ_CORE_ERROR("Falha ao carregar o módulo do jogo: {0}", s_LastError);
+        return false;
+    }
     for (int i = 0; i < count; ++i) {
         std::string className = scripting::CoreCLRHost::GetScriptName(i);
         // Factory por nome, igual ao módulo C++ antigo — o editor lista e a

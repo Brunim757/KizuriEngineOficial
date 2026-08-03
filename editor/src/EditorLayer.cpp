@@ -432,10 +432,26 @@ void EditorLayer::DrawCameraGizmo() {
     auto& cc = m_SelectedEntity.GetComponent<CameraComponent>();
     glm::mat4 world = m_ActiveScene->GetWorldTransform(m_SelectedEntity);
     glm::vec3 pos = glm::vec3(world[3]);
-    glm::mat3 rot = glm::mat3(world);
-    glm::vec3 forward = glm::normalize(rot * glm::vec3(0.0f, 0.0f, -1.0f));
-    glm::vec3 up = glm::normalize(rot * glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::vec3 right = glm::normalize(rot * glm::vec3(1.0f, 0.0f, 0.0f));
+
+    // A direção do render vem da fórmula fps de PerspectiveCamera (Camera.cpp:
+    // yaw = degrees(euler.y), pitch = degrees(euler.x)) — o gizmo tem que
+    // reproduzir EXATAMENTE essa convenção, não o eixo -Z da matrix de rotação
+    // (que pra euler não-trivial aponta pra outro lado). Era esse o bug: o
+    // desenho apontava ~90°~180° longe do que a câmera realmente vê.
+    glm::vec3 euler;
+    {
+        glm::vec3 translation, scale;
+        DecomposeTransform(world, translation, euler, scale);
+    }
+    float yawRad = euler.y;
+    float pitchRad = euler.x;
+    glm::vec3 forward = glm::normalize(glm::vec3(
+        glm::cos(yawRad) * glm::cos(pitchRad),
+        glm::sin(pitchRad),
+        glm::sin(yawRad) * glm::cos(pitchRad)));
+    // Base ortonormal do lookAt(forward, up=+Y): right = forward x up, up = right x forward.
+    glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
+    glm::vec3 up = glm::cross(right, forward);
 
     float gizmoDist = 1.5f;
     float fovRad = glm::radians(cc.Type == CameraComponent::ProjectionType::Perspective3D ? cc.PerspectiveFOV : 40.0f);
@@ -1217,6 +1233,20 @@ void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
     else if (mode == ProjectMode::ThreeD) m_ViewportMode = ViewportMode::Mode3D;
 
     RememberProject(project);
+
+    // Unity-style: sem carregar DLL manualmente. Se o projeto já tem um
+    // assembly compilado (Source/bin), carrega na hora — os scripts aparecem
+    // no dropdown "Script Nativo" já no modo edição. Projeto novo (ainda sem
+    // build) fica vazio até o primeiro Play, que compila e carrega sozinho.
+    std::string csproj, engineRoot;
+    GetGameBuildInfo(csproj, engineRoot);
+    if (!csproj.empty()) {
+        std::string dllPath, err;
+        if (GameExporter::BuildGameModule(csproj, engineRoot, dllPath, err))
+            ScriptEngine::LoadModule(dllPath);
+        else
+            KZ_CORE_INFO("Projeto ainda sem assembly compilado (o Play vai compilar): {0}", err);
+    }
 
     // Entra com a telinha de carregamento (transição Hub -> Editor).
     m_LoadingProjectName = project->GetConfig().Name;

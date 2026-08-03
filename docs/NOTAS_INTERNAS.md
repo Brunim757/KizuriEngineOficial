@@ -149,6 +149,16 @@ dor de cabeça em CI antes.
   o assembly antes de entrar no runtime. Se a compilação falhar, o Play é
   ABORTADO com o erro (não roda com código velho em silêncio). A .dll usada é
   a mais recente em `<Projeto>/bin` com `.runtimeconfig.json` do lado.
+- **Auto-load ao abrir projeto**: `OnProjectOpened` compila e carrega o
+  assembly do projeto na hora (mesmo `BuildGameModule`) — o usuário NUNCA
+  precisa carregar DLL manualmente: cria script em `Source/`, aperta Play, e
+  a engine compila/recarrega sozinha (estilo Unity). Projeto sem build ainda
+  fica vazio até o primeiro Play.
+- **Gizmo de câmera corrigido**: antes usava `rot * (0,0,-1)` (eixo -Z da
+  matrix de rotação), mas o RENDER constrói a view com a fórmula fps de
+  PerspectiveCamera (yaw=degrees(euler.y), pitch=degrees(euler.x)) — duas
+  convenções diferentes, o desenho apontava pra um lado e a câmera olhava
+  pro outro. Agora o gizmo reproduz exatamente a convenção do render.
 - Hierarquia, Inspetor (com painéis pra todo componente relevante — Mesh Renderer, Light,
   Particle System, Audio Source, Camera, Sprite Renderer), Console com filtro por
   categoria, Content Browser (existe, mas sem projeto aberto não mostra nada de útil ainda).

@@ -6,7 +6,7 @@
     Unity/Godot .NET usam exatamente esse padrão. O dev NUNCA vê C++ nem deps.
   -->
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>

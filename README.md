@@ -118,7 +118,7 @@ Kizuri/
     └── Kizuri.Scripting.pdb
 ```
 
-**Pré-requisito:** .NET 8 SDK (para compilar seu jogo) e .NET 8 runtime
+**Pré-requisito:** .NET 10 SDK (para compilar seu jogo) e .NET 10 runtime
 (para o CoreCLR embutido na engine carregar o assembly).
 
 **Seu jogo** é um projeto C# `Exe` que referencia `Kizuri.Scripting.dll`

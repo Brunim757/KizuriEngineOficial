@@ -63,8 +63,8 @@ jobs:
 
   # ------- Scripting C# (Kizuri.Scripting) -------
   # O motor é C++ privado; o jogo é um assembly .NET. Este job valida que o
-  # assembly compila em ambos OS, e gera o artefato Kizuri.Scripting.dll que
-  # o editor/export exemplo usa pra vincular um jogo.
+  # assembly compila em ambos OS, e gera o artefato combinado (Kizuri.Scripting.dll
+  # + SampleGame.dll) que o editor/export exemplo usa pra vincular um jogo.
   managed:
     strategy:
       fail-fast: false
@@ -84,7 +84,7 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Configurar .NET SDK 8
+      - name: Configurar .NET SDK 10
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
@@ -95,11 +95,20 @@ jobs:
       - name: Compilar jogo de exemplo (SampleGame)
         run: dotnet build SampleGame/SampleGame.csproj -c Release --nologo
 
-      - name: Publicar artefato Kizuri.Scripting
+      - name: Montar artifact combinado (scripting + SampleGame)
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          cp Kizuri.Scripting/bin/Release/net10.0/* artifacts/
+          cp SampleGame/bin/Release/net10.0/SampleGame.dll artifacts/
+          cp SampleGame/bin/Release/net10.0/SampleGame.runtimeconfig.json artifacts/ 2>/dev/null || true
+          cp SampleGame/bin/Release/net10.0/SampleGame.deps.json artifacts/ 2>/dev/null || true
+
+      - name: Publicar artefato combinado managed
         uses: actions/upload-artifact@v4
         with:
-          name: Kizuri.Scripting-${{ matrix.os }}
-          path: managed/Kizuri.Scripting/bin/Release/net10.0/
+          name: Kizuri.Managed-${{ matrix.os }}
+          path: managed/artifacts/
           if-no-files-found: warn
 
   # ------- Empacotamento combinado -------
@@ -128,10 +137,10 @@ jobs:
           name: KizuriEngine-${{ matrix.os }}
           path: staging/engine
 
-      - name: Download do artefato do scripting
+      - name: Download do artefato managed
         uses: actions/download-artifact@v4
         with:
-          name: Kizuri.Scripting-${{ matrix.os }}
+          name: Kizuri.Managed-${{ matrix.os }}
           path: staging/managed
 
       - name: Organizar estrutura

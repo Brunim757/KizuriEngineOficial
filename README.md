@@ -115,7 +115,10 @@ Kizuri/
 └── managed/
     ├── Kizuri.Scripting.dll
     ├── Kizuri.Scripting.deps.json
-    └── Kizuri.Scripting.pdb
+    ├── Kizuri.Scripting.pdb
+    ├── SampleGame.dll
+    ├── SampleGame.runtimeconfig.json
+    └── SampleGame.deps.json
 ```
 
 **Pré-requisito:** .NET 10 SDK (para compilar seu jogo) e .NET 10 runtime
@@ -123,7 +126,8 @@ Kizuri/
 
 **Seu jogo** é um projeto C# `Exe` que referencia `Kizuri.Scripting.dll`
 (da pasta `managed/` do zip), herda `Kizuri.Script` e registra classes
-com `GameModule.Register<T>(...)`. Compile com `dotnet build`.
+com `GameModule.Register<T>(...)`. O `SampleGame.dll` já incluso no
+zip serve de referência — ou compile seu próprio jogo:
 
 ```bash
 dotnet build SeuJogo.csproj -c Release

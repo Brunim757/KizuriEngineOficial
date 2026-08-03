@@ -29,7 +29,7 @@
 - [x] Input de mouse (botões + posição)
 - [x] `Audio.PlayOneShot` / `Audio.StopAll`
 - [x] `Scene.Raycast2D` (Box2D)
-- [x] `Save` — persistência de jogo em JSON (puramente managed)
+- [x] `SaveSystem` — persistência de jogo em JSON (puramente managed)
 
 ### Editor / produto
 - [x] Hierarquia, Inspetor, Console, Content Browser, gizmos, Play/Stop

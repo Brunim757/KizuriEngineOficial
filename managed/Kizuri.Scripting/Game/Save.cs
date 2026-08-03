@@ -1,4 +1,4 @@
-// Save — persistência simples de jogo num arquivo JSON ("save.json" no
+// SaveSystem — persistência simples de jogo num arquivo JSON ("save.json" no
 // diretório de trabalho por padrão). Puramente managed (System.Text.Json),
 // nada de ABI. Use Save() pra gravar em disco e os Get* pra ler (a leitura
 // é automática na primeira consulta).
@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace Kizuri;
 
-public static class Save
+public static class SaveSystem
 {
 	private static readonly Dictionary<string, object> s_Data = new();
 	private static string s_Path = "save.json";

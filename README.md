@@ -48,7 +48,7 @@
 - **Input**: teclado + mouse (botões e posição)
 - **Áudio**: `Audio.PlayOneShot` / `Audio.StopAll`
 - **Física**: `Scene.Raycast2D` contra o mundo Box2D
-- **Save**: persistência do jogo em JSON (`Save.Set/Get/Save` — 100% managed)
+- **Save**: persistência do jogo em JSON (`SaveSystem.Set/Get/Save` — 100% managed)
 - Exemplo completo de tudo isso em `managed/SampleGame/PlayerController.cs`
 - **Serialização** — cenas em `.kzscene` (JSON legível), incluindo mesh, material e texturas
 

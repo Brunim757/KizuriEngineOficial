@@ -107,7 +107,7 @@ dor de cabeça em CI antes.
   durante o Play, quando o mundo Box2D está vivo.
 - **Setters de sprite/texto/áudio** mutam o componente direto (sem recriar a
   entidade). Texto é world-space, igual ao editor.
-- **`Save`** é 100% managed (System.Text.Json) — não passa pelo ABI.
+- **`SaveSystem`** é 100% managed (System.Text.Json) — não passa pelo ABI.
 - Exemplo de tudo: `managed/SampleGame/PlayerController.cs` (projéteis, HUD,
   save F5, raycast a cada 0.5s).
 

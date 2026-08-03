@@ -30,7 +30,7 @@ public sealed class PlayerController : Script
 		_hud.SetPosition(new Vector3(-8f, 5f, 0f));
 
 		// Save: o Get* carrega do disco automaticamente na primeira consulta.
-		_score = Save.GetFloat("score", 0f);
+		_score = SaveSystem.GetFloat("score", 0f);
 	}
 
 	public override void OnUpdate(float deltaSeconds)
@@ -98,8 +98,8 @@ public sealed class PlayerController : Script
 		_hud.SetText($"Pontos: {(int)_score} | Projéteis: {_bullets.Count}");
 		if (Input.IsKeyPressed(Key.F5))
 		{
-			Save.Set("score", _score);
-			Save.Save();
+			SaveSystem.Set("score", _score);
+			SaveSystem.Save();
 			Log.Info("Jogo salvo.");
 		}
 

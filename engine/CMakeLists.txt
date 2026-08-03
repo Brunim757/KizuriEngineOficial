@@ -122,15 +122,21 @@ add_dependencies(KizuriEngine KizuriEmbeddedFonts)
 target_include_directories(KizuriEngine
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${miniaudio_SOURCE_DIR}
-        ${stb_SOURCE_DIR}
-        ${tinyobjloader_SOURCE_DIR}
-        ${imgui_SOURCE_DIR}
-        ${imgui_SOURCE_DIR}/backends
-        ${bullet3_SOURCE_DIR}/src
-        ${box2d_SOURCE_DIR}/include
     PRIVATE
         ${KZ_EMBEDDED_FONTS_DIR}
+)
+# Includes de terceiros marcados como SYSTEM (vira -isystem no GCC/Clang):
+# os warnings dentro de stb/bullet/miniaudio/box2d etc são das libs, não
+# nossos — não devem poluir o build da engine (e nem esconder um warning
+# real no código da Kizuri, que fica em include/ acima, fora do SYSTEM).
+target_include_directories(KizuriEngine SYSTEM PUBLIC
+    ${miniaudio_SOURCE_DIR}
+    ${stb_SOURCE_DIR}
+    ${tinyobjloader_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+    ${bullet3_SOURCE_DIR}/src
+    ${box2d_SOURCE_DIR}/include
 )
 
 # ---- ImGui (compilado direto como parte da engine, com backend GLFW+GL3) --

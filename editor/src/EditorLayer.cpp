@@ -1463,6 +1463,36 @@ void EditorLayer::ExportGame(const std::string& outputDir) {
             req.EngineBinDirectory = std::filesystem::absolute(exePath.parent_path()).string();
     }
 
+    // Export self-contained: usa o csproj do jogo (Source/ do projeto ativo)
+    // e publica com o runtime .NET embutido. A raiz da engine é achada
+    // subindo da pasta bin/ até o checkout (marcado por managed/Kizuri.Scripting).
+    if (m_ExportSelfContained) {
+        namespace fs = std::filesystem;
+        auto& project = Project::GetActive();
+        if (project) {
+            fs::path sourceDir = fs::path(project->GetProjectDirectory()) / "Source";
+            std::error_code ec;
+            if (fs::is_directory(sourceDir, ec)) {
+                for (auto& entry : fs::directory_iterator(sourceDir, ec)) {
+                    if (entry.path().extension() == ".csproj") {
+                        req.GameProjectPath = entry.path().string();
+                        break;
+                    }
+                }
+            }
+        }
+        fs::path dir = req.EngineBinDirectory;
+        for (int i = 0; i < 8 && !dir.empty(); ++i) {
+            fs::path marker = dir / "managed" / "Kizuri.Scripting" / "Kizuri.Scripting.csproj";
+            std::error_code ec;
+            if (fs::is_regular_file(marker, ec)) { req.EngineRoot = dir.string(); break; }
+            dir = dir.parent_path();
+        }
+        if (req.GameProjectPath.empty())
+            KZ_CORE_WARN("Export self-contained: nenhum .csproj em <Projeto>/Source/. "
+                         "Caindo pra cópia do assembly compilado (o jogador vai precisar do .NET).");
+    }
+
     std::string err;
     if (GameExporter::Export(req, err))
         KZ_CORE_INFO("Exportação concluída em: {0}", outputDir);
@@ -1509,6 +1539,31 @@ void EditorLayer::DrawExportModal() {
             ImGui::TextDisabled("GameModule: %s", ScriptEngine::GetLoadedPath().c_str());
         else
             ImGui::TextDisabled("GameModule: (nenhum carregado)");
+
+        ImGui::Spacing();
+        ImGui::Checkbox("Embutir runtime .NET (self-contained)", &m_ExportSelfContained);
+        if (m_ExportSelfContained) {
+            std::string publishTarget;
+            auto& project = Project::GetActive();
+            if (project) {
+                std::filesystem::path sourceDir =
+                    std::filesystem::path(project->GetProjectDirectory()) / "Source";
+                std::error_code ec;
+                for (auto& entry : std::filesystem::directory_iterator(sourceDir, ec)) {
+                    if (entry.path().extension() == ".csproj") {
+                        publishTarget = entry.path().filename().string();
+                        break;
+                    }
+                }
+            }
+            ImGui::Indent();
+            if (!publishTarget.empty())
+                ImGui::TextDisabled("Publica de: <Projeto>/Source/%s (o jogador não precisa instalar .NET)",
+                                    publishTarget.c_str());
+            else
+                ImGui::TextDisabled("Sem .csproj em <Projeto>/Source/ — vai copiar o assembly compilado.");
+            ImGui::Unindent();
+        }
 
         ImGui::Spacing();
         ImGui::Separator();

@@ -4,10 +4,22 @@
 #include <nlohmann/json.hpp>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <unordered_map>
 #include <unordered_set>
 #include <algorithm>
 #include <cstring>
+#include <cstdio>
+#include <cstdlib>
+
+#if defined(_WIN32)
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #include <windows.h>
+#else
+    #include <sys/wait.h>
+#endif
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -97,6 +109,85 @@ static bool CopyDirectoryRecursive(const fs::path& srcDir, const fs::path& dstDi
         if (!CopyFileTo(entry.path(), dst, err)) return false;
     }
     return true;
+}
+
+// UTF-8 -> UTF-16 (só Windows; pro CreateProcessW do publish).
+#if defined(_WIN32)
+static std::wstring ToWide(const std::string& s) {
+    if (s.empty()) return L"";
+    int len = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0);
+    std::wstring out(static_cast<size_t>(len), L'\0');
+    if (len > 0)
+        MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), &out[0], len);
+    return out;
+}
+#endif
+
+// Roda 'command' redirecionando stdout+stderr pra 'logFile' e espera o fim.
+// Devolve o código de saída (0 = sucesso). Sem janela de console no Windows
+// (CREATE_NO_WINDOW) — exportar não pode piscar um cmd pro usuário.
+static int RunAndCapture(const std::string& command, const fs::path& logFile, std::string& outError) {
+#if defined(_WIN32)
+    std::string full = "cmd.exe /c \"" + command + " > \"" + logFile.string() + "\" 2>&1\"";
+    std::wstring wfull = ToWide(full);
+    STARTUPINFOW si = {};
+    si.cb = sizeof(si);
+    PROCESS_INFORMATION pi = {};
+    if (!CreateProcessW(nullptr, &wfull[0], nullptr, nullptr, FALSE,
+                        CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
+        outError = "Falha ao iniciar o processo (CreateProcess): " + command;
+        return -1;
+    }
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    DWORD code = 0;
+    GetExitCodeProcess(pi.hProcess, &code);
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    return (int)code;
+#else
+    std::string full = command + " > \"" + logFile.string() + "\" 2>&1";
+    int status = std::system(full.c_str());
+    if (status == -1) { outError = "Falha ao iniciar o processo: " + command; return -1; }
+    return WIFEXITED(status) ? WEXITSTATUS(status) : status;
+#endif
+}
+
+// RID padrão = plataforma do desenvolvedor (o KizuriGame copiado é o build
+// local, então o runtime publicado precisa casar com ele).
+static std::string DetectRid() {
+#if defined(_WIN32)
+    return "win-x64";
+#elif defined(__APPLE__)
+    return "osx-x64";
+#else
+    return "linux-x64";
+#endif
+}
+
+// Últimas linhas da saída do publish (pra o erro no modal não virar um
+// arquivo de 2MB de uma vez).
+static std::string Tail(const std::string& text, size_t maxChars) {
+    if (text.size() <= maxChars) return text;
+    size_t start = text.size() - maxChars;
+    size_t nl = text.find('\n', start);
+    return (nl == std::string::npos) ? text.substr(start) : text.substr(nl + 1);
+}
+
+// No publish self-contained, o assembly do jogo é o .dll que tem um
+// .runtimeconfig.json do lado (a Kizuri.Scripting.dll não tem). Devolve o
+// nome do arquivo (ex: "Game.dll") ou vazio com 'err' preenchido.
+static std::string FindGameAssembly(const fs::path& gameDir, std::string& err) {
+    std::error_code ec;
+    for (auto& entry : fs::directory_iterator(gameDir, ec)) {
+        if (!entry.is_regular_file(ec)) continue;
+        if (entry.path().extension().string() != ".dll") continue;
+        fs::path rc = entry.path();
+        rc.replace_extension(".runtimeconfig.json");
+        if (fs::is_regular_file(rc, ec)) return entry.path().filename().string();
+    }
+    err = "Nenhum assembly de jogo (com .runtimeconfig.json do lado) encontrado em "
+          + gameDir.string();
+    return {};
 }
 
 bool GameExporter::Export(const GameExportRequest& request, std::string& outError) {
@@ -210,10 +301,66 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
     }
     sceneFile << root.dump(4);
 
-    // Módulo do jogo: C# (assembly .NET — copia a pasta toda pra Game/) ou
-    // módulo C++ legado (dll/so única na raiz).
+    // Módulo do jogo. Dois caminhos:
+    //  1. GameProjectPath definido → `dotnet publish --self-contained` do
+    //     csproj do jogo pra <out>/Game/ (runtime .NET embutido — o jogador
+    //     não instala nada). É o fluxo normal de projeto.
+    //  2. Só GameModulePath → cópia da pasta do assembly (fallback; só serve
+    //     se já estiver publicado self-contained ou o jogador tiver o runtime).
     fs::path moduleOutPath;
-    if (!request.GameModulePath.empty()) {
+    if (!request.GameProjectPath.empty()) {
+        fs::path gameDir = outDir / "Game";
+        fs::path logPath = outDir / "publish.log";
+        std::error_code pec;
+        fs::create_directories(gameDir, pec);
+
+        std::string cmd = "dotnet publish \"" + request.GameProjectPath
+            + "\" -c Release -r " + DetectRid()
+            + " --self-contained true";
+        if (!request.EngineRoot.empty())
+            cmd += " -p:EngineDir=\"" + request.EngineRoot + "\"";
+        cmd += " -o \"" + gameDir.string() + "\"";
+
+        KZ_CORE_INFO("Publicando jogo self-contained: {0}", cmd);
+        std::string processError;
+        int rc = RunAndCapture(cmd, logPath, processError);
+        bool ok = (rc == 0) && fs::is_regular_file(gameDir / "Kizuri.Scripting.dll", pec);
+        if (!ok) {
+            std::string logText = processError;
+            std::ifstream logIn(logPath);
+            if (logIn.is_open()) {
+                std::stringstream ss;
+                ss << logIn.rdbuf();
+                logText = ss.str();
+            }
+            outError = "Falha no 'dotnet publish' self-contained (código " + std::to_string(rc)
+                + "). Detalhes:\n" + Tail(logText, 1500);
+            return false;
+        }
+
+        std::string gameAsm;
+        std::string asmName = FindGameAssembly(gameDir, gameAsm);
+        if (asmName.empty()) { outError = gameAsm; return false; }
+
+        // Remove o apphost do .NET (<AssemblyName>.exe ou <AssemblyName> sem
+        // extensão) — quem roda o jogo é o KizuriGame, não o exe do publish.
+        fs::path stem = fs::path(asmName).replace_extension().filename();
+        fs::remove(gameDir / stem, pec);
+        fs::remove(gameDir / (stem.string() + ".exe"), pec);
+
+        // Copia a engine pro lado do assembly: a resolução do P/Invoke
+        // 'KizuriEngine' nunca deve depender de PATH/CWD do jogador.
+#ifdef _WIN32
+        fs::path engineDll = binDir / "KizuriEngine.dll";
+#else
+        fs::path engineDll = binDir / "libKizuriEngine.so";
+#endif
+        if (fs::exists(engineDll, pec) && !CopyFileTo(engineDll, gameDir / engineDll.filename(), outError))
+            return false;
+
+        moduleOutPath = fs::path("Game") / asmName;
+        KZ_CORE_INFO("Jogo publicado self-contained (runtime .NET embutido): {0}", gameDir.string());
+    } else if (!request.GameModulePath.empty()) {
         fs::path modSrc = request.GameModulePath;
         if (!fs::exists(modSrc)) {
             outError = "GameModule não encontrado: " + modSrc.string();

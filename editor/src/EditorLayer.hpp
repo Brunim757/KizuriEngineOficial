@@ -135,6 +135,7 @@ private:
 
     bool m_RequestOpenExportPopup = false;
     char m_ExportDirBuffer[512] = "export";
+    bool m_ExportSelfContained = true; // embute o runtime .NET via dotnet publish
 
     bool m_RequestOpenSavePrefabPopup = false;
     char m_PrefabPathBuffer[512] = "Assets/entidade.kzprefab";

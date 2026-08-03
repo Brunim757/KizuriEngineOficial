@@ -162,6 +162,19 @@ dor de cabeça em CI antes.
   engolida) e `ScriptEngine::LoadModule` falha de forma visível se 0 scripts
   forem registrados.
 
+### .NET embutido (engine self-contained)
+- A engine é distribuída com o **SDK .NET inteiro em `bin/dotnet/`** — o
+  usuário roda o editor e compila/publica jogos C# **sem instalar o .NET**.
+- `CoreCLRHost::FindHostfxr` procura primeiro o hostfxr embutido junto ao
+  executável (`<exe_dir>/dotnet/host/fxr/<versão>`), antes do DOTNET_ROOT/sistema.
+- `GameExporter::ResolveDotnetCli` usa o `dotnet` embutido
+  (`<exe_dir>/dotnet/dotnet(.exe)`) pra `dotnet build` (Play) e `dotnet publish`
+  (export), caindo pro PATH se não houver.
+- Local (dev): opção CMake `KZ_BUNDLE_DOTNET` (default ON) copia o SDK pro
+  `bin/dotnet` via `kz_bundle_dotnet(KizuriEditor)`.
+- CI: o job `package` roda `setup-dotnet` e copia `$DOTNET_ROOT` pra
+  `dist/bin/dotnet` — o artifact do zip vem com o .NET embutido (~250MB a mais).
+
 ### Editor
 - Dockspace ImGui + ImGuizmo (mover/rotacionar/escalar).
 - **Toolbar do viewport com ícones** (Move/Rotate/Scale/Play/Stop desenhados

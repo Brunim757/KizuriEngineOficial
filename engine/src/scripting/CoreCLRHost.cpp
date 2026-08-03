@@ -18,6 +18,8 @@
     #include <windows.h>
 #else
     #include <dlfcn.h>
+    #include <unistd.h>
+    #include <limits.h>
 #endif
 
 namespace fs = std::filesystem;
@@ -166,6 +168,23 @@ static fs::path FindHostfxrInFxrRoot(const fs::path& fxrRoot) {
     return best;
 }
 
+// Diretório do executável atual (editor/KizuriGame). É onde o .NET embutido
+// vive (bin/dotnet/) quando a engine é distribuída self-contained.
+static fs::path GetExecutableDir() {
+#if defined(_WIN32)
+    wchar_t buf[MAX_PATH];
+    DWORD len = GetModuleFileNameW(nullptr, buf, MAX_PATH);
+    if (len == 0) return {};
+    return fs::path(buf).parent_path();
+#else
+    char buf[PATH_MAX];
+    ssize_t len = ::readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+    if (len <= 0) return {};
+    buf[len] = '\0';
+    return fs::path(buf).parent_path();
+#endif
+}
+
 static fs::path FindHostfxr(const fs::path& appBase) {
     // 1. Auto-contido: hostfxr do lado do assembly do jogo.
 #if defined(_WIN32)
@@ -175,13 +194,20 @@ static fs::path FindHostfxr(const fs::path& appBase) {
 #endif
     if (FileExists(local)) return local;
 
-    // 2. DOTNET_ROOT/host/fxr/<versão>.
+    // 2. Runtime .NET EMBUTIDO na engine: <exe_dir>/dotnet/host/fxr/<versão>.
+    // É isso que deixa a engine rodar jogos C# sem o usuário instalar o .NET.
+    {
+        fs::path bundled = FindHostfxrInFxrRoot(GetExecutableDir() / "dotnet" / "host" / "fxr");
+        if (!bundled.empty()) return bundled;
+    }
+
+    // 3. DOTNET_ROOT/host/fxr/<versão>.
     if (const char* root = std::getenv("DOTNET_ROOT")) {
         fs::path p = FindHostfxrInFxrRoot(fs::path(root) / "host" / "fxr");
         if (!p.empty()) return p;
     }
 
-    // 3. Caminhos padrão de instalação.
+    // 4. Caminhos padrão de instalação.
     std::vector<fs::path> installRoots;
 #if defined(_WIN32)
     installRoots.emplace_back("C:\\Program Files\\dotnet");

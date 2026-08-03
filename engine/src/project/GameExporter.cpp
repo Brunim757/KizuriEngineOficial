@@ -19,6 +19,8 @@
     #include <windows.h>
 #else
     #include <sys/wait.h>
+    #include <unistd.h>
+    #include <limits.h>
 #endif
 
 using json = nlohmann::json;
@@ -404,7 +406,7 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
         std::error_code pec;
         fs::create_directories(gameDir, pec);
 
-        std::string cmd = "dotnet publish \"" + request.GameProjectPath
+        std::string cmd = "\"" + ResolveDotnetCli() + "\" publish \"" + request.GameProjectPath
             + "\" -c Release -r " + DetectRid()
             + " --self-contained true";
         if (!request.EngineRoot.empty())
@@ -511,6 +513,38 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
     return true;
 }
 
+// Diretório do executável atual (editor/KizuriGame) — onde o .NET embutido
+// vive (bin/dotnet/) quando a engine é distribuída self-contained.
+static fs::path ExeDir() {
+#if defined(_WIN32)
+    wchar_t buf[MAX_PATH];
+    DWORD len = GetModuleFileNameW(nullptr, buf, MAX_PATH);
+    if (len == 0) return {};
+    return fs::path(buf).parent_path();
+#else
+    char buf[PATH_MAX];
+    ssize_t len = ::readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+    if (len <= 0) return {};
+    buf[len] = '\0';
+    return fs::path(buf).parent_path();
+#endif
+}
+
+// CLI do dotnet: prefere o embutido junto ao executável (bin/dotnet/dotnet),
+// senão o do PATH. É o que deixa a engine compilar/publicar o jogo C# sem o
+// usuário instalar o .NET.
+static std::string ResolveDotnetCli() {
+    fs::path exeDir = ExeDir();
+#if defined(_WIN32)
+    fs::path cli = exeDir / "dotnet" / "dotnet.exe";
+#else
+    fs::path cli = exeDir / "dotnet" / "dotnet";
+#endif
+    std::error_code ec;
+    if (!exeDir.empty() && fs::is_regular_file(cli, ec)) return cli.string();
+    return "dotnet";
+}
+
 bool GameExporter::BuildGameModule(const std::string& csprojPath,
                                    const std::string& engineRoot,
                                    std::string& outDllPath,
@@ -522,7 +556,7 @@ bool GameExporter::BuildGameModule(const std::string& csprojPath,
     }
 
     fs::path logPath = csproj.parent_path() / "build.log";
-    std::string cmd = "dotnet build \"" + csproj.string() + "\" -c Debug --nologo -v:m";
+    std::string cmd = "\"" + ResolveDotnetCli() + "\" build \"" + csproj.string() + "\" -c Debug --nologo -v:m";
     if (!engineRoot.empty())
         cmd += " -p:EngineDir=\"" + engineRoot + "\"";
 

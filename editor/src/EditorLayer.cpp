@@ -75,35 +75,6 @@ void EditorLayer::OnAttach() {
     LoadRecentProjects();
 }
 
-void EditorLayer::SyncEditorCameraToRuntimeScene() {
-    KZ_TRACE_SCOPE("EditorLayer::SyncEditorCameraToRuntimeScene");
-    // RenderScene3D/RenderScene2D do Play usam a CameraComponent da cena, não
-    // a câmera livre do editor. Enquanto a câmera da cena não foi "autorada"
-    // (cena nova recém-criada), copia a pose da câmera de edição pra entidade
-    // primária da cópia runtime — o Play começa de onde a câmera do editor
-    // estava. Se o usuário editou a câmera da cena (gizmo/inspetor) ou abriu
-    // uma cena salva, respeita a pose dela como está e não sobrescreve nada.
-    if (!m_UseEditorCameraOnPlay) return;
-    auto view = m_ActiveScene->GetRegistry().view<TransformComponent, CameraComponent>();
-    for (auto e : view) {
-        auto& cc = view.get<CameraComponent>(e);
-        if (!cc.Primary) continue;
-        auto& tc = view.get<TransformComponent>(e);
-
-        if (m_ViewportMode == ViewportMode::Mode3D && cc.Type == CameraComponent::ProjectionType::Perspective3D) {
-            tc.Translation = m_EditorCamPos;
-            tc.Rotation = { glm::radians(m_EditorCamPitch), glm::radians(m_EditorCamYaw), 0.0f };
-            break;
-        } else if (m_ViewportMode == ViewportMode::Mode2D && cc.Type == CameraComponent::ProjectionType::Orthographic2D) {
-            tc.Translation = { m_Editor2DCamPos.x, m_Editor2DCamPos.y, 0.0f };
-            cc.OrthoSize = m_Editor2DZoom;
-            break;
-        }
-        // Câmera primária com tipo diferente do modo do viewport: ignora e
-        // procura a próxima (ex: câmera 2D primária enquanto o viewport está em 3D).
-    }
-}
-
 void EditorLayer::AutoSwitchViewportMode() {
     // Seleção mudou (essa função é chamada em toda troca de seleção) — aborta
     // o gesto de pintura em andamento, senão o snapshot "antes" ficaria
@@ -351,26 +322,46 @@ void EditorLayer::UpdateEditor2DCamera(Timestep ts) {
     m_Editor2DCamera.SetPosition({ m_Editor2DCamPos.x, m_Editor2DCamPos.y, 0.0f });
 }
 
+namespace {
+// Botão de toolbar que desenha um ícone vetorial por cima do próprio botão —
+// o padrão das engines: ferramenta identificada por ícone, não por texto.
+bool ToolbarIconButton(kizuri::editor::icons::IconFn icon, const char* id,
+                       const ImVec2& size, ImU32 color) {
+    ImGui::PushID(id);
+    bool pressed = ImGui::Button("", size);
+    ImVec2 min = ImGui::GetItemRectMin();
+    ImVec2 max = ImGui::GetItemRectMax();
+    float s = size.y - 6.0f;
+    ImVec2 tl((min.x + max.x) * 0.5f - s * 0.5f, (min.y + max.y) * 0.5f - s * 0.5f);
+    icon(ImGui::GetWindowDrawList(), tl, s, color);
+    ImGui::PopID();
+    return pressed;
+}
+} // namespace
+
 void EditorLayer::DrawViewportToolbar() {
     KZ_TRACE_SCOPE("EditorLayer::DrawViewportToolbar");
     const ImVec4 accent(0.82f, 0.24f, 0.27f, 1.0f);
     const ImVec4 inactive(0.18f, 0.18f, 0.20f, 1.0f);
     const ImVec4 activeText(1.0f, 1.0f, 1.0f, 1.0f);
-    const ImVec4 idleText(0.75f, 0.75f, 0.78f, 1.0f);
+    const ImVec4 idleText(0.74f, 0.74f, 0.78f, 1.0f);
 
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
 
-    // --- Ferramentas de gizmo: Mover / Rotacionar / Escalar (atalhos W/E/R). ---
-    const char* gizmoLabels[3] = { "Mover", "Rotacionar", "Escalar" };
-    const ImGuizmo::OPERATION gizmoOps[3] = { ImGuizmo::TRANSLATE, ImGuizmo::ROTATE, ImGuizmo::SCALE };
+    // --- Ferramentas de gizmo por ÍCONE: Mover / Rotacionar / Escalar (W/E/R). ---
+    const kizuri::editor::icons::IconFn gizmoIcons[3] =
+        { kizuri::editor::icons::Move, kizuri::editor::icons::Rotate, kizuri::editor::icons::Scale };
+    const ImGuizmo::OPERATION gizmoOps[3] =
+        { ImGuizmo::TRANSLATE, ImGuizmo::ROTATE, ImGuizmo::SCALE };
     const char* gizmoHints[3] = { "Mover entidade (W)", "Rotacionar entidade (E)", "Escalar entidade (R)" };
+    const char* gizmoIds[3] = { "##gizmo_move", "##gizmo_rotate", "##gizmo_scale" };
     for (int i = 0; i < 3; ++i) {
         bool active = m_GizmoOperation == gizmoOps[i];
         ImGui::PushStyleColor(ImGuiCol_Button, active ? accent : inactive);
-        ImGui::PushStyleColor(ImGuiCol_Text, active ? activeText : idleText);
-        if (ImGui::Button(gizmoLabels[i], ImVec2(86.0f, 0.0f)))
+        if (ToolbarIconButton(gizmoIcons[i], gizmoIds[i], ImVec2(34.0f, 30.0f),
+                              ImGui::GetColorU32(active ? activeText : idleText)))
             m_GizmoOperation = gizmoOps[i];
-        ImGui::PopStyleColor(2);
+        ImGui::PopStyleColor();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", gizmoHints[i]);
         if (i < 2) ImGui::SameLine(0.0f, 4.0f);
     }
@@ -384,25 +375,26 @@ void EditorLayer::DrawViewportToolbar() {
 
     ImGui::PushStyleColor(ImGuiCol_Button, is2D ? accent : inactive);
     ImGui::PushStyleColor(ImGuiCol_Text, is2D ? activeText : idleText);
-    if (ImGui::Button("2D", ImVec2(36.0f, 0.0f))) m_ViewportMode = ViewportMode::Mode2D;
+    if (ImGui::Button("2D", ImVec2(36.0f, 30.0f))) m_ViewportMode = ViewportMode::Mode2D;
     ImGui::PopStyleColor(2);
     ImGui::SameLine(0.0f, 4.0f);
     ImGui::PushStyleColor(ImGuiCol_Button, is3D ? accent : inactive);
     ImGui::PushStyleColor(ImGuiCol_Text, is3D ? activeText : idleText);
-    if (ImGui::Button("3D", ImVec2(36.0f, 0.0f))) m_ViewportMode = ViewportMode::Mode3D;
+    if (ImGui::Button("3D", ImVec2(36.0f, 30.0f))) m_ViewportMode = ViewportMode::Mode3D;
     ImGui::PopStyleColor(2);
 
-    // --- Play/Stop no canto direito: física, scripts, partículas e áudio só
-    // rodam de verdade numa cópia isolada da cena (Scene::Copy) — editar
-    // durante o Play é seguro e o Stop nunca "perde" nada. ---
+    // --- Play/Stop por ícone no canto direito: física, scripts, partículas e
+    // áudio só rodam de verdade numa cópia isolada da cena (Scene::Copy) —
+    // editar durante o Play é seguro e o Stop nunca "perde" nada. ---
     bool isPlaying = m_SceneState == SceneState::Play;
-    ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 72.0f);
+    ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 40.0f);
     ImGui::PushStyleColor(ImGuiCol_Button, isPlaying ? accent : inactive);
-    ImGui::PushStyleColor(ImGuiCol_Text, activeText);
-    if (ImGui::Button(isPlaying ? "Stop" : "Play", ImVec2(60.0f, 0.0f))) {
+    if (ToolbarIconButton(isPlaying ? kizuri::editor::icons::Stop : kizuri::editor::icons::Play,
+                          "##play_stop", ImVec2(32.0f, 30.0f),
+                          ImGui::GetColorU32(activeText))) {
         if (isPlaying) OnSceneStop(); else OnScenePlay();
     }
-    ImGui::PopStyleColor(2);
+    ImGui::PopStyleColor();
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip(isPlaying ? "Parar o Play e voltar pra cena de edição (Shift+F5)"
                                     : "Testar a cena — física, scripts, partículas e áudio (F5)");
@@ -529,11 +521,6 @@ void EditorLayer::DrawGizmo() {
             tc.Rotation = rotation;
             tc.Scale = scale;
         }
-        // Usuário "autorou" a câmera da cena com o gizmo: o Play passa a
-        // respeitar a pose dela em vez de espelhar a câmera livre do editor.
-        if (m_SelectedEntity.HasComponent<CameraComponent>() &&
-            m_SelectedEntity.GetComponent<CameraComponent>().Primary)
-            m_UseEditorCameraOnPlay = false;
     }
 
     // Fim do arrasto: fecha o comando com o estado final (só se algo de
@@ -549,10 +536,32 @@ void EditorLayer::DrawGizmo() {
 
 void EditorLayer::OnScenePlay() {
     KZ_TRACE_SCOPE("EditorLayer::OnScenePlay");
+
+    // Compilar no Play, estilo Unity: se houver um projeto de jogo
+    // (Source/*.csproj), compila o assembly C# de novo e recarrega ANTES de
+    // entrar no Play. Se a compilação falhar, não entra no Play com o código
+    // velho em silêncio — mostra o erro e aborta.
+    if (m_AutoCompileOnPlay) {
+        std::string csproj, engineRoot;
+        GetGameBuildInfo(csproj, engineRoot);
+        if (!csproj.empty()) {
+            std::string dllPath, buildError;
+            if (GameExporter::BuildGameModule(csproj, engineRoot, dllPath, buildError)) {
+                if (!ScriptEngine::LoadModule(dllPath))
+                    KZ_CORE_ERROR("Play: não foi possível recarregar o assembly compilado: {0}",
+                                  ScriptEngine::GetLastError());
+            } else {
+                KZ_CORE_ERROR("Play cancelado — falha ao compilar o jogo:\n{0}", buildError);
+                return;
+            }
+        }
+    }
+
     m_EditorScene = m_ActiveScene;
     m_ActiveScene = Scene::Copy(m_EditorScene);
     m_ActiveScene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
-    SyncEditorCameraToRuntimeScene(); // Play começa de onde a câmera do editor estava
+    // Play usa a câmera da PRÓPRIA cena, exatamente como autorada (a câmera
+    // livre do editor é só navegação) — igual Unity/Godot.
     m_SelectedEntity = {}; // handle da cena antiga não é válido na cópia
     m_SceneState = SceneState::Play;
     m_ActiveScene->OnRuntimeStart();
@@ -578,9 +587,7 @@ void EditorLayer::NewScene() {
     m_SelectedEntity = {};
     m_ScenePath.clear();
     m_History.Clear();
-    // Cena nova: a câmera livre do editor volta a guiar o Play até a câmera
-    // da cena ser editada ou uma cena salva for aberta.
-    m_UseEditorCameraOnPlay = true;
+    CreateDefaultSceneContent();
 }
 
 void EditorLayer::SaveScene() {
@@ -657,9 +664,6 @@ void EditorLayer::OpenScene(const std::string& path) {
     m_SelectedEntity = {};
     m_ScenePath = path;
     m_History.Clear();
-    // Cena salva: a câmera da cena é a fonte da verdade — o Play nunca
-    // sobrescreve a pose dela com a câmera livre do editor.
-    m_UseEditorCameraOnPlay = false;
 }
 
 void EditorLayer::DrawTitlebar() {
@@ -1440,11 +1444,12 @@ void EditorLayer::DrawGameModuleModal() {
         ImGui::Spacing();
 
         // --- Compilar Scripts ---
-        // O jogo agora é um assembly C# construído com `dotnet build`
-        // (Kizuri.Scripting + o projeto do jogo na pasta Source/). Aqui
-        // ainda é possível carregar um assembly já compilado pelo caminho
-        // acima; a compilação em si fica fora do editor (ex: dotnet publish
-        // para exportar auto-contido).
+        // O jogo é um assembly C# (Kizuri.Scripting + o projeto do jogo na
+        // pasta Source/). Com a checkbox abaixo, o Play compila o assembly
+        // automaticamente antes de rodar (estilo Unity) e recarrega; sem ela,
+        // o Play usa o que estiver carregado acima.
+        ImGui::Checkbox("Compilar C# automaticamente no Play", &m_AutoCompileOnPlay);
+        ImGui::Spacing();
 
         const ImVec4 accent(0.82f, 0.24f, 0.27f, 1.0f);
         const ImVec4 accentHover(0.90f, 0.32f, 0.35f, 1.0f);
@@ -1473,6 +1478,43 @@ void EditorLayer::DrawGameModuleModal() {
     }
 }
 
+void EditorLayer::GetGameBuildInfo(std::string& outCsproj, std::string& outEngineRoot) {
+    namespace fs = std::filesystem;
+    outCsproj.clear();
+    outEngineRoot.clear();
+
+    auto& project = Project::GetActive();
+    if (project) {
+        fs::path sourceDir = fs::path(project->GetProjectDirectory()) / "Source";
+        std::error_code ec;
+        if (fs::is_directory(sourceDir, ec)) {
+            for (auto& entry : fs::directory_iterator(sourceDir, ec)) {
+                if (entry.path().extension() == ".csproj") {
+                    outCsproj = entry.path().string();
+                    break;
+                }
+            }
+        }
+    }
+
+    // Raiz da engine: sobe da pasta bin/ do editor até achar o checkout
+    // (marcado por managed/Kizuri.Scripting/Kizuri.Scripting.csproj).
+    std::string binDir = std::filesystem::current_path().string();
+    const auto& args = GetCommandLineArgs();
+    if (!args.empty()) {
+        std::filesystem::path exePath = args[0];
+        if (exePath.has_parent_path())
+            binDir = std::filesystem::absolute(exePath.parent_path()).string();
+    }
+    fs::path dir = binDir;
+    for (int i = 0; i < 8 && !dir.empty(); ++i) {
+        fs::path marker = dir / "managed" / "Kizuri.Scripting" / "Kizuri.Scripting.csproj";
+        std::error_code ec;
+        if (fs::is_regular_file(marker, ec)) { outEngineRoot = dir.string(); break; }
+        dir = dir.parent_path();
+    }
+}
+
 void EditorLayer::ExportGame(const std::string& outputDir) {
     GameExportRequest req;
     req.OutputDirectory = outputDir;
@@ -1489,30 +1531,9 @@ void EditorLayer::ExportGame(const std::string& outputDir) {
     }
 
     // Export self-contained: usa o csproj do jogo (Source/ do projeto ativo)
-    // e publica com o runtime .NET embutido. A raiz da engine é achada
-    // subindo da pasta bin/ até o checkout (marcado por managed/Kizuri.Scripting).
+    // e publica com o runtime .NET embutido.
     if (m_ExportSelfContained) {
-        namespace fs = std::filesystem;
-        auto& project = Project::GetActive();
-        if (project) {
-            fs::path sourceDir = fs::path(project->GetProjectDirectory()) / "Source";
-            std::error_code ec;
-            if (fs::is_directory(sourceDir, ec)) {
-                for (auto& entry : fs::directory_iterator(sourceDir, ec)) {
-                    if (entry.path().extension() == ".csproj") {
-                        req.GameProjectPath = entry.path().string();
-                        break;
-                    }
-                }
-            }
-        }
-        fs::path dir = req.EngineBinDirectory;
-        for (int i = 0; i < 8 && !dir.empty(); ++i) {
-            fs::path marker = dir / "managed" / "Kizuri.Scripting" / "Kizuri.Scripting.csproj";
-            std::error_code ec;
-            if (fs::is_regular_file(marker, ec)) { req.EngineRoot = dir.string(); break; }
-            dir = dir.parent_path();
-        }
+        GetGameBuildInfo(req.GameProjectPath, req.EngineRoot);
         if (req.GameProjectPath.empty())
             KZ_CORE_WARN("Export self-contained: nenhum .csproj em <Projeto>/Source/. "
                          "Caindo pra cópia do assembly compilado (o jogador vai precisar do .NET).");
@@ -1977,12 +1998,9 @@ void EditorLayer::DrawInspector() {
         if (m_SelectedEntity.HasComponent<TransformComponent>()) {
             auto& tc = m_SelectedEntity.GetComponent<TransformComponent>();
             if (ImGui::TreeNodeEx("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
-                bool transformEdited = ImGui::DragFloat3("Posição", &tc.Translation.x, 0.1f);
-                transformEdited |= ImGui::DragFloat3("Rotação", &tc.Rotation.x, 0.1f);
-                transformEdited |= ImGui::DragFloat3("Escala", &tc.Scale.x, 0.1f);
-                if (transformEdited && m_SelectedEntity.HasComponent<CameraComponent>() &&
-                    m_SelectedEntity.GetComponent<CameraComponent>().Primary)
-                    m_UseEditorCameraOnPlay = false;
+                ImGui::DragFloat3("Posição", &tc.Translation.x, 0.1f);
+                ImGui::DragFloat3("Rotação", &tc.Rotation.x, 0.1f);
+                ImGui::DragFloat3("Escala", &tc.Scale.x, 0.1f);
                 ImGui::TreePop();
             }
         }

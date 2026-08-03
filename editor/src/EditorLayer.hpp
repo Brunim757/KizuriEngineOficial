@@ -57,14 +57,6 @@ private:
     // Browser no viewport): .obj -> MeshRenderer, imagem -> SpriteRenderer.
     kizuri::Entity CreateEntityFromAsset(const std::string& path, const glm::vec3& worldPos);
 
-    // Play usa a CameraComponent da PRÓPRIA cena pra renderizar (não a câmera
-    // livre do editor) — essa função copia a pose atual da câmera de edição
-    // (3D: pos+yaw/pitch; 2D: pos+zoom) pra entidade de câmera primária da
-    // cena copiada. Sem isso, o Play sempre renderizava do ponto fixo onde a
-    // câmera da cena foi criada (o cubo inicial), ignorando pra onde o
-    // usuário navegou no viewport antes de apertar Play.
-    void SyncEditorCameraToRuntimeScene();
-
     // Ao selecionar uma entidade, troca o modo do viewport pro que faz
     // sentido pra ela: 3D (MeshRenderer/Light/Câmera 3D) ou 2D
     // (Sprite/Círculo/Texto/Tilemap/Animação). Híbrido sem esses componentes
@@ -81,13 +73,6 @@ private:
     kizuri::Ref<kizuri::Scene> m_EditorScene;
     void OnScenePlay();
     void OnSceneStop();
-
-    // Play: usar a câmera livre do editor como câmera do jogo? True enquanto
-    // a câmera principal da cena não foi "autorada" (cena nova recém-criada,
-    // ninguém mexeu na câmera). Editar a câmera principal (gizmo/inspetor) ou
-    // abrir uma cena salva desliga isso — aí o Play respeita a câmera da cena
-    // exatamente como o usuário deixou, sem sobrescrever a pose.
-    bool m_UseEditorCameraOnPlay = true;
 
     kizuri::Ref<kizuri::Scene> m_ActiveScene;
     kizuri::Ref<kizuri::Framebuffer> m_Framebuffer;
@@ -136,6 +121,12 @@ private:
     bool m_RequestOpenExportPopup = false;
     char m_ExportDirBuffer[512] = "export";
     bool m_ExportSelfContained = true; // embute o runtime .NET via dotnet publish
+    bool m_AutoCompileOnPlay = true;   // compila o assembly C# antes do Play (estilo Unity)
+
+    // Acha <Projeto>/Source/*.csproj (jogo) e a raiz do checkout da engine
+    // (subindo da pasta bin/ até o marcador managed/Kizuri.Scripting). Usado
+    // pelo Play (compilar) e pelo export (publish). Preenche vazio se não achar.
+    void GetGameBuildInfo(std::string& outCsproj, std::string& outEngineRoot);
 
     bool m_RequestOpenSavePrefabPopup = false;
     char m_PrefabPathBuffer[512] = "Assets/entidade.kzprefab";

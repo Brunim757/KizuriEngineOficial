@@ -412,4 +412,61 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
     return true;
 }
 
+bool GameExporter::BuildGameModule(const std::string& csprojPath,
+                                   const std::string& engineRoot,
+                                   std::string& outDllPath,
+                                   std::string& outError) {
+    fs::path csproj(csprojPath);
+    if (!fs::is_regular_file(csproj)) {
+        outError = "Projeto C# do jogo não encontrado: " + csprojPath;
+        return false;
+    }
+
+    fs::path logPath = csproj.parent_path() / "build.log";
+    std::string cmd = "dotnet build \"" + csproj.string() + "\" -c Debug --nologo -v:m";
+    if (!engineRoot.empty())
+        cmd += " -p:EngineDir=\"" + engineRoot + "\"";
+
+    KZ_CORE_INFO("Compilando assembly do jogo: {0}", cmd);
+    std::string processError;
+    int rc = RunAndCapture(cmd, logPath, processError);
+    if (rc != 0) {
+        std::string logText = processError;
+        std::ifstream logIn(logPath);
+        if (logIn.is_open()) {
+            std::stringstream ss;
+            ss << logIn.rdbuf();
+            logText = ss.str();
+        }
+        outError = "Falha ao compilar o jogo (dotnet build, código " + std::to_string(rc) + ").\n"
+            + Tail(logText, 1500);
+        return false;
+    }
+
+    // A .dll do jogo é a que tem um .runtimeconfig.json do lado (a
+    // Kizuri.Scripting.dll não tem). Pega a mais recente em <projeto>/bin.
+    fs::path binDir = csproj.parent_path() / "bin";
+    fs::path best;
+    auto bestTime = fs::file_time_type::min();
+    std::error_code rec;
+    for (auto& entry : fs::recursive_directory_iterator(binDir, rec)) {
+        if (!entry.is_regular_file(rec)) continue;
+        if (entry.path().extension().string() != ".dll") continue;
+        fs::path rcPath = entry.path();
+        rcPath.replace_extension(".runtimeconfig.json");
+        if (!fs::is_regular_file(rcPath, rec)) continue;
+        std::error_code tec;
+        auto t = fs::last_write_time(entry.path(), tec);
+        if (!tec && t > bestTime) { bestTime = t; best = entry.path(); }
+    }
+    if (best.empty()) {
+        outError = "O build terminou mas não achou a .dll do jogo em " + binDir.string();
+        return false;
+    }
+
+    outDllPath = best.string();
+    KZ_CORE_INFO("Assembly do jogo compilado: {0}", outDllPath);
+    return true;
+}
+
 } // namespace kizuri

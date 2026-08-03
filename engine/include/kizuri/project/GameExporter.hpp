@@ -24,6 +24,16 @@ class GameExporter {
 public:
     // Devolve true se a pasta ficou pronta pra rodar (KizuriGame Start.kzscene [GameModule]).
     static bool Export(const GameExportRequest& request, std::string& outError);
+
+    // Compila o assembly C# do jogo com `dotnet build -c Debug` e devolve o
+    // caminho da .dll resultante (a que tem .runtimeconfig.json do lado, a
+    // mais recente em <projeto>/bin). É o que o editor usa pra "compilar no
+    // Play", estilo Unity. 'engineRoot' alimenta o -p:EngineDir (raiz do
+    // checkout da engine, opcional se o csproj já resolve por outra via).
+    static bool BuildGameModule(const std::string& csprojPath,
+                                const std::string& engineRoot,
+                                std::string& outDllPath,
+                                std::string& outError);
 };
 
 } // namespace kizuri

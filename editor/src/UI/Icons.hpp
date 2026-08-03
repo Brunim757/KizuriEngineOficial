@@ -29,6 +29,13 @@ void Console(ImDrawList* dl, ImVec2 topLeft, float size, ImU32 color);
 // Ícone do painel Content Browser: uma pasta.
 void Folder(ImDrawList* dl, ImVec2 topLeft, float size, ImU32 color);
 
+// Ícones do toolbar do viewport (ferramentas, não texto):
+void Play(ImDrawList* dl, ImVec2 topLeft, float size, ImU32 color);   // triângulo de play
+void Stop(ImDrawList* dl, ImVec2 topLeft, float size, ImU32 color);   // quadrado de stop
+void Move(ImDrawList* dl, ImVec2 topLeft, float size, ImU32 color);   // setas nas 4 direções
+void Rotate(ImDrawList* dl, ImVec2 topLeft, float size, ImU32 color); // círculo com ponta
+void Scale(ImDrawList* dl, ImVec2 topLeft, float size, ImU32 color);  // quadrado com diagonal
+
 using IconFn = void(*)(ImDrawList*, ImVec2, float, ImU32);
 
 // Desenha um cabeçalho de seção padronizado (ícone + título em destaque +

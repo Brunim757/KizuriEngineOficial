@@ -56,8 +56,13 @@
 - Dockspace ImGui + gizmos (mover/rotacionar/escalar)
 - Hierarquia, Inspetor (painéis para todos os componentes), Console com filtro
 - Content Browser com **drag & drop** de `.obj`/`.png` direto para o viewport
-- **Play/Stop** com cópia isolada da cena (edição nunca toca a original)
+- **Play/Stop** com cópia isolada da cena (edição nunca toca a original) e
+  **compilação automática do C# no Play** (estilo Unity: recompila e recarrega
+  o assembly; se falhar, o Play é abortado com o erro)
 - **Undo/Redo**, picking por clique no viewport (3D por raycast, 2D por ponto)
+- Toolbar do viewport com ícones: Mover/Rotacionar/Escalar, 2D/3D e Play/Stop
+  (atalhos W/E/R, F5=Play, Shift+F5=Stop); o Play usa a câmera da **própria
+  cena**, não a câmera livre de navegação do editor
 - Modos de viewport 2D / 3D, gizmo de câmera, diálogos nativos de arquivo (Windows;
   Linux/macOS usam campo de texto manual)
 - Content Browser lista arquivos da pasta atual — abrir um projeto (`.kzproj`)

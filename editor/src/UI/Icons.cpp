@@ -1,6 +1,7 @@
 #include "Icons.hpp"
 #include <Kizuri.hpp>
 #include <kizuri/core/ImGuiLayer.hpp>
+#include <cmath>
 
 namespace kizuri::editor::icons {
 
@@ -90,6 +91,73 @@ void Folder(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
     dl->AddLine(ImVec2(p.x + s * 0.06f + tabW, bodyTop - tabH), ImVec2(p.x + s * 0.06f + tabW + s * 0.1f, bodyTop), color, s * 0.07f);
 
     dl->AddRect(bodyMin, bodyMax, color, s * 0.05f, 0, s * 0.07f);
+}
+
+void Play(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
+    // Triângulo apontando pra direita — linguagem universal de "reproduzir".
+    dl->AddTriangleFilled(ImVec2(p.x + s * 0.32f, p.y + s * 0.14f),
+                          ImVec2(p.x + s * 0.32f, p.y + s * 0.86f),
+                          ImVec2(p.x + s * 0.90f, p.y + s * 0.50f), color);
+}
+
+void Stop(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
+    // Quadrado cheio — linguagem universal de "parar".
+    dl->AddRectFilled(ImVec2(p.x + s * 0.26f, p.y + s * 0.26f),
+                      ImVec2(p.x + s * 0.74f, p.y + s * 0.74f), color, s * 0.06f);
+}
+
+void Move(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
+    // Cruz com seta nas 4 pontas — "mover/arrastar" em qualquer eixo.
+    float cx = p.x + s * 0.5f;
+    float cy = p.y + s * 0.5f;
+    float lw = s * 0.10f;
+    dl->AddLine(ImVec2(p.x + s * 0.18f, cy), ImVec2(p.x + s * 0.82f, cy), color, lw);
+    dl->AddLine(ImVec2(cx, p.y + s * 0.18f), ImVec2(cx, p.y + s * 0.82f), color, lw);
+
+    float ah = s * 0.09f; // meia-base da seta
+    float al = s * 0.15f; // comprimento da seta
+    dl->AddTriangleFilled(ImVec2(p.x + s * 0.92f, cy),
+                          ImVec2(p.x + s * 0.92f - al, cy - ah),
+                          ImVec2(p.x + s * 0.92f - al, cy + ah), color);
+    dl->AddTriangleFilled(ImVec2(p.x + s * 0.08f, cy),
+                          ImVec2(p.x + s * 0.08f + al, cy - ah),
+                          ImVec2(p.x + s * 0.08f + al, cy + ah), color);
+    dl->AddTriangleFilled(ImVec2(cx, p.y + s * 0.08f),
+                          ImVec2(cx - ah, p.y + s * 0.08f + al),
+                          ImVec2(cx + ah, p.y + s * 0.08f + al), color);
+    dl->AddTriangleFilled(ImVec2(cx, p.y + s * 0.92f),
+                          ImVec2(cx - ah, p.y + s * 0.92f - al),
+                          ImVec2(cx + ah, p.y + s * 0.92f - al), color);
+}
+
+void Rotate(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
+    // Círculo (trajetória) com uma ponta indicando o sentido da rotação.
+    float cx = p.x + s * 0.5f;
+    float cy = p.y + s * 0.52f;
+    float r = s * 0.28f;
+    dl->AddCircle(ImVec2(cx, cy), r, color, 24, s * 0.10f);
+
+    float ang = -0.85f; // ~315°: canto superior direito
+    float ax = cx + r * std::cos(ang);
+    float ay = cy + r * std::sin(ang);
+    ImVec2 dir(std::cos(ang), std::sin(ang));  // radial (pra fora)
+    ImVec2 tan(-std::sin(ang), std::cos(ang)); // tangente
+    ImVec2 apex(ax + dir.x * s * 0.16f, ay + dir.y * s * 0.16f);
+    ImVec2 b1(ax + dir.x * s * 0.04f - tan.x * s * 0.12f, ay + dir.y * s * 0.04f - tan.y * s * 0.12f);
+    ImVec2 b2(ax + dir.x * s * 0.04f + tan.x * s * 0.12f, ay + dir.y * s * 0.04f + tan.y * s * 0.12f);
+    dl->AddTriangleFilled(apex, b1, b2, color);
+}
+
+void Scale(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
+    // Quadrado com uma diagonal de "redimensionar" e seta no canto.
+    float lw = s * 0.10f;
+    dl->AddRect(ImVec2(p.x + s * 0.18f, p.y + s * 0.18f),
+                ImVec2(p.x + s * 0.82f, p.y + s * 0.82f), color, s * 0.05f, 0, lw);
+    dl->AddLine(ImVec2(p.x + s * 0.32f, p.y + s * 0.68f),
+                ImVec2(p.x + s * 0.68f, p.y + s * 0.32f), color, lw);
+    dl->AddTriangleFilled(ImVec2(p.x + s * 0.82f, p.y + s * 0.18f),
+                          ImVec2(p.x + s * 0.82f - s * 0.16f, p.y + s * 0.18f),
+                          ImVec2(p.x + s * 0.82f, p.y + s * 0.18f + s * 0.16f), color);
 }
 
 void PanelHeader(const char* label, IconFn icon) {

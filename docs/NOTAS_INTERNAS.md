@@ -135,10 +135,20 @@ dor de cabeça em CI antes.
 
 ### Editor
 - Dockspace ImGui + ImGuizmo (mover/rotacionar/escalar).
-- **Toolbar do viewport completo**: Mover/Rotacionar/Escalar (atalhos W/E/R,
-  estado ligado ao `m_GizmoOperation`) + alternância 2D/3D + Play/Stop no
-  canto direito. Atalho **F5 = Play / Shift+F5 = Stop** (edge-detect, não
-  conflita com digitação).
+- **Toolbar do viewport com ícones** (Move/Rotate/Scale/Play/Stop desenhados
+  via ImDrawList em UI/Icons.cpp — o padrão de engine, não texto) + alternância
+  2D/3D + Play/Stop. Atalhos: **F5 = Play / Shift+F5 = Stop**, W/E/R = gizmo.
+- **Play usa a câmera da PRÓPRIA cena**, exatamente como autorada — removido o
+  antigo `SyncEditorCameraToRuntimeScene`/`m_UseEditorCameraOnPlay` que copiava
+  a pose da câmera livre do editor pra cena no Play (confundia: jogador via
+  "outra câmera" que ele não tinha colocado). A câmera livre do editor é só
+  navegação, como em Unity/Godot.
+- **Compilar no Play (estilo Unity)**: com a checkbox "Compilar C# no Play"
+  (modal de GameModule, default ON), o Play roda `dotnet build` no
+  `<Projeto>/Source/*.csproj` via `GameExporter::BuildGameModule` e recarrega
+  o assembly antes de entrar no runtime. Se a compilação falhar, o Play é
+  ABORTADO com o erro (não roda com código velho em silêncio). A .dll usada é
+  a mais recente em `<Projeto>/bin` com `.runtimeconfig.json` do lado.
 - Hierarquia, Inspetor (com painéis pra todo componente relevante — Mesh Renderer, Light,
   Particle System, Audio Source, Camera, Sprite Renderer), Console com filtro por
   categoria, Content Browser (existe, mas sem projeto aberto não mostra nada de útil ainda).

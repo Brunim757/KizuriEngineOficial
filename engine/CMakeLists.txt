@@ -85,6 +85,15 @@ endif()
 # é visível de fora sem anotação nenhuma).
 set_target_properties(KizuriEngine PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
+# No Windows o MinGW prefixa a DLL com "lib" (vira libKizuriEngine.dll), mas
+# o P/Invoke (DllImport("KizuriEngine")) e o GameExporter já esperam
+# "KizuriEngine.dll" — sem isso o P/Invoke falharia em runtime e o export
+# nem copiaria a DLL da engine. PREFIX "" só no Windows; no Linux o "lib"
+# é necessário pro loader achar libKizuriEngine.so.
+if(WIN32)
+    set_target_properties(KizuriEngine PROPERTIES PREFIX "")
+endif()
+
 # WINDOWS_EXPORT_ALL_SYMBOLS é indiscriminado — exporta TODO símbolo global
 # visível na hora de linkar a DLL, inclusive os que vieram de biblioteca
 # estática embutida (libgcc_eh, de onde vem `_Unwind_Resume`; e também

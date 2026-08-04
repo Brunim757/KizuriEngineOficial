@@ -208,11 +208,8 @@ Ref<Mesh> Mesh::LoadFromGLTF(const std::string& path) {
             }
 
             if (prim.indices) {
-                for (cgltf_size i = 0; i < prim.indices->count; ++i) {
-                    uint32_t idx = 0;
-                    cgltf_accessor_read_index(prim.indices, i, &idx);
-                    indices.push_back(base + idx);
-                }
+                for (cgltf_size i = 0; i < prim.indices->count; ++i)
+                    indices.push_back(base + (uint32_t)cgltf_accessor_read_index(prim.indices, i));
             } else {
                 for (cgltf_size i = 0; i < count; ++i) indices.push_back(base + (uint32_t)i);
             }

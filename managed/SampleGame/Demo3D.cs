@@ -48,4 +48,8 @@ public sealed class Demo3D : Script
 			_cube.SetScale(new Vector3(1f + (float)System.Math.Sin(_t) * 0.2f, 1f, 1f));
 		}
 	}
+
+	public override void OnCollisionBegin(Entity other) { }
+	public override void OnCollisionEnd(Entity other) { }
+	public override void OnDestroy() { }
 }

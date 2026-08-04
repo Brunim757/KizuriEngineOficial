@@ -7,6 +7,9 @@
 #include "kizuri/scene/Prefab.hpp"
 #include "kizuri/project/Project.hpp"
 #include "kizuri/renderer/Renderer2D.hpp"
+// Detalhe de serialização por entidade (DuplicateEntity) — fica em src/, não
+// na API pública; o Prefab.cpp já o usa do mesmo jeito.
+#include "../scene/ComponentSerialization.hpp"
 #include "kizuri/renderer/Renderer3D.hpp"
 #include "kizuri/renderer/TextRenderer.hpp"
 #include "kizuri/core/Log.hpp"
@@ -201,6 +204,86 @@ bool Scene::Raycast2D(const glm::vec2& from, const glm::vec2& to,
     outPoint = { cb.HitPoint.x, cb.HitPoint.y };
     outFraction = cb.BestFraction;
     return true;
+}
+
+bool Scene::OverlapCircle2D(const glm::vec2& center, float radius, Entity& outEntity) {
+    if (m_PhysicsWorld2D == nullptr) return false;
+
+    b2CircleShape queryCircle;
+    queryCircle.m_p = { center.x, center.y };
+    queryCircle.m_radius = radius;
+
+    // Varre só os fixtures dentro do AABB do círculo (candidatos) e usa
+    // b2Distance pra achar o fixture mais próximo (gap entre superfícies;
+    // <= 0 = o círculo toca o collider).
+    b2AABB aabb;
+    aabb.lowerBound = { center.x - radius, center.y - radius };
+    aabb.upperBound = { center.x + radius, center.y + radius };
+
+    b2Fixture* best = nullptr;
+    float bestGap = std::numeric_limits<float>::max();
+    m_PhysicsWorld2D->QueryAABB([&](b2Fixture* fixture) -> bool {
+        b2DistanceInput input;
+        input.proxyA.Set(&queryCircle, 0);
+        input.proxyB.Set(fixture->GetShape(), 0);
+        input.transformA = b2Transform_identity;
+        input.transformB = fixture->GetBody()->GetTransform();
+        input.useRadii = true;
+        b2DistanceOutput output;
+        b2Distance(&output, &input);
+        if (output.distance < bestGap) { bestGap = output.distance; best = fixture; }
+        return true; // continua procurando
+    }, aabb);
+
+    if (best == nullptr || bestGap > 0.0f) return false;
+    uintptr_t ptr = best->GetBody()->GetUserData().pointer;
+    outEntity = Entity{ static_cast<entt::entity>(ptr), this };
+    return true;
+}
+
+Entity Scene::DuplicateEntity(Entity source) {
+    if (!source) return {};
+
+    // Coleta source + descendentes em pré-ordem (raiz primeiro).
+    std::vector<Entity> tree;
+    std::vector<Entity> stack{ source };
+    while (!stack.empty()) {
+        Entity e = stack.back();
+        stack.pop_back();
+        tree.push_back(e);
+        auto kids = e.GetChildren();
+        for (auto it = kids.rbegin(); it != kids.rend(); ++it) stack.push_back(*it);
+    }
+
+    // Serializa cada uma e recria com UUID novo (uuid=0 força novo — o mesmo
+    // truque do Prefab::Instantiate).
+    std::unordered_map<UUID, UUID> remap;
+    Entity newRoot;
+    for (Entity e : tree) {
+        UUID oldId = e.GetUUID();
+        auto je = detail::SerializeEntityJson(e);
+        je["ID"] = static_cast<uint64_t>(0);
+        Entity ne = detail::DeserializeEntityJson(je, *this, 0);
+        remap[oldId] = ne.GetUUID();
+        if (e == source) newRoot = ne;
+    }
+
+    // Reparenta com os UUIDs novos (DeserializeEntityJson não aplica Parent).
+    for (Entity e : tree) {
+        Entity parent = e.GetParent();
+        if (!parent) continue;
+        auto itP = remap.find(parent.GetUUID());
+        auto itE = remap.find(e.GetUUID());
+        if (itP == remap.end() || itE == remap.end()) continue;
+        Entity newChild = GetEntityByUUID(itE->second);
+        Entity newParent = GetEntityByUUID(itP->second);
+        if (newChild && newParent) newChild.SetParent(newParent);
+    }
+
+    // Leve deslocamento pra não nascer exatamente em cima do original.
+    if (newRoot && newRoot.HasComponent<TransformComponent>())
+        newRoot.GetComponent<TransformComponent>().Translation += glm::vec3(0.5f, 0.5f, 0.0f);
+    return newRoot;
 }
 
 void Scene::SetUIMouseNDC(const glm::vec2& ndc, bool leftMouseDown) {
@@ -506,6 +589,18 @@ void Scene::RegisterPhysics2DEntity(Entity entity) {
         fixtureDef.friction = bc2d.Friction;
         fixtureDef.restitution = bc2d.Restitution;
         fixtureDef.restitutionThreshold = bc2d.RestitutionThreshold;
+        body->CreateFixture(&fixtureDef);
+    } else if (entity.HasComponent<CircleCollider2DComponent>()) {
+        auto& cc2d = entity.GetComponent<CircleCollider2DComponent>();
+        b2CircleShape shape;
+        shape.m_p = { cc2d.Offset.x, cc2d.Offset.y };
+        shape.m_radius = cc2d.Radius * std::max(transform.Scale.x, transform.Scale.y);
+
+        b2FixtureDef fixtureDef;
+        fixtureDef.shape = &shape;
+        fixtureDef.density = cc2d.Density;
+        fixtureDef.friction = cc2d.Friction;
+        fixtureDef.restitution = cc2d.Restitution;
         body->CreateFixture(&fixtureDef);
     }
 }
@@ -963,74 +1058,99 @@ void Scene::RenderScene2D(OrthographicCamera* overrideCamera) {
 }
 
 void Scene::Render2DEntities() {
-    // Sprites (cor sólida ou textura) + círculos + texto + tilemap.
+    // Ordenação por SortingLayer: menor desenha primeiro (atrás). Dentro da
+    // mesma camada, a ordem é pelo tipo (sprite → círculo → animação →
+    // tilemap → texto), estável (stable_sort) pra manter a ordem das views.
+    struct Item { int layer; int priority; entt::entity entity; };
+    std::vector<Item> items;
+
     auto sprites = m_Registry.view<TransformComponent, SpriteRendererComponent>();
-    for (auto se : sprites) {
-        auto& sprite = sprites.get<SpriteRendererComponent>(se);
-        glm::mat4 worldTransform = GetWorldTransform(Entity{ se, this });
-        if (sprite.Texture)
-            Renderer2D::DrawTransformedQuad(worldTransform, sprite.Texture, sprite.TilingFactor, sprite.Color);
-        else
-            Renderer2D::DrawTransformedQuad(worldTransform, sprite.Color);
-    }
+    for (auto se : sprites)
+        items.push_back({ sprites.get<SpriteRendererComponent>(se).SortingLayer, 0, se });
 
     auto circles = m_Registry.view<TransformComponent, CircleRendererComponent>();
-    for (auto ce : circles) {
-        auto& circle = circles.get<CircleRendererComponent>(ce);
-        Renderer2D::DrawCircle(GetWorldTransform(Entity{ ce, this }), circle.Color, circle.Thickness, circle.Fade);
-    }
+    for (auto ce : circles)
+        items.push_back({ circles.get<CircleRendererComponent>(ce).SortingLayer, 1, ce });
 
-    // Animações de sprite: desenham a folha com recorte de UV do frame atual.
     auto anims = m_Registry.view<TransformComponent, SpriteAnimationComponent>();
-    for (auto ae : anims) {
-        auto& anim = anims.get<SpriteAnimationComponent>(ae);
-        if (!anim.SheetTexture && !anim.SheetPath.empty())
-            anim.SheetTexture = Texture2D::Create(anim.SheetPath); // carregada sob demanda
-        if (!anim.SheetTexture || anim.FramesPerRow == 0) continue;
+    for (auto ae : anims)
+        items.push_back({ anims.get<SpriteAnimationComponent>(ae).SortingLayer, 2, ae });
 
-        uint32_t cols = anim.FramesPerRow;
-        uint32_t row = anim.CurrentFrame / cols;
-        uint32_t col = anim.CurrentFrame % cols;
-        uint32_t rows = (anim.TotalFrames + cols - 1) / cols;
-        glm::vec2 uvMin{ (float)col / cols, 1.0f - (float)(row + 1) / rows };
-        glm::vec2 uvMax{ (float)(col + 1) / cols, 1.0f - (float)row / rows };
-        Renderer2D::DrawTransformedQuadUV(GetWorldTransform(Entity{ ae, this }), anim.SheetTexture, uvMin, uvMax, { 1.0f, 1.0f, 1.0f, 1.0f });
-    }
-
-    // Tilemap: um quad por tile não-vazio, recortado do atlas.
     auto tilemaps = m_Registry.view<TransformComponent, TilemapComponent>();
-    for (auto te : tilemaps) {
-        auto& tm = tilemaps.get<TilemapComponent>(te);
-        if (!tm.AtlasTexture && !tm.AtlasPath.empty())
-            tm.AtlasTexture = Texture2D::Create(tm.AtlasPath);
-        if (!tm.AtlasTexture || tm.AtlasColumns == 0 || tm.AtlasRows == 0 || tm.MapWidth == 0) continue;
+    for (auto te : tilemaps)
+        items.push_back({ tilemaps.get<TilemapComponent>(te).SortingLayer, 3, te });
 
-        glm::mat4 mapTransform = GetWorldTransform(Entity{ te, this });
-        for (uint32_t y = 0; y < tm.MapHeight; ++y) {
-            for (uint32_t x = 0; x < tm.MapWidth; ++x) {
-                uint32_t idx = y * tm.MapWidth + x;
-                if (idx >= tm.Tiles.size() || tm.Tiles[idx] == 0) continue;
-                uint32_t tile = tm.Tiles[idx] - 1;
-                uint32_t tcol = tile % tm.AtlasColumns;
-                uint32_t trow = tile / tm.AtlasColumns;
-                glm::vec2 uvMin{ (float)tcol / tm.AtlasColumns, 1.0f - (float)(trow + 1) / tm.AtlasRows };
-                glm::vec2 uvMax{ (float)(tcol + 1) / tm.AtlasColumns, 1.0f - (float)trow / tm.AtlasRows };
-                glm::mat4 tileTransform = mapTransform *
-                    glm::translate(glm::mat4(1.0f), { x * tm.TileSize.x, y * tm.TileSize.y, 0.0f }) *
-                    glm::scale(glm::mat4(1.0f), { tm.TileSize.x, tm.TileSize.y, 1.0f });
-                Renderer2D::DrawTransformedQuadUV(tileTransform, tm.AtlasTexture, uvMin, uvMax, { 1.0f, 1.0f, 1.0f, 1.0f });
-            }
-        }
-    }
-
-    // Texto de jogo (HUD etc) — posicionado pelo transform da entidade,
-    // com alinhamento configurável (esquerda/centro/direita).
     auto texts = m_Registry.view<TransformComponent, TextComponent>();
-    for (auto te : texts) {
-        auto& tc = texts.get<TextComponent>(te);
-        glm::mat4 world = GetWorldTransform(Entity{ te, this });
-        glm::vec3 pos = glm::vec3(world[3]);
-        TextRenderer::DrawString(tc.Text, pos, tc.FontSize, tc.Color, tc.Alignment);
+    for (auto te : texts)
+        items.push_back({ texts.get<TextComponent>(te).SortingLayer, 4, te });
+
+    std::stable_sort(items.begin(), items.end(), [](const Item& a, const Item& b) {
+        if (a.layer != b.layer) return a.layer < b.layer;
+        return a.priority < b.priority;
+    });
+
+    for (const Item& it : items) {
+        Entity e{ it.entity, this };
+        switch (it.priority) {
+        case 0: {
+            auto& sprite = m_Registry.get<SpriteRendererComponent>(it.entity);
+            glm::mat4 worldTransform = GetWorldTransform(e);
+            if (sprite.Texture)
+                Renderer2D::DrawTransformedQuad(worldTransform, sprite.Texture, sprite.TilingFactor, sprite.Color);
+            else
+                Renderer2D::DrawTransformedQuad(worldTransform, sprite.Color);
+            break;
+        }
+        case 1: {
+            auto& circle = m_Registry.get<CircleRendererComponent>(it.entity);
+            Renderer2D::DrawCircle(GetWorldTransform(e), circle.Color, circle.Thickness, circle.Fade);
+            break;
+        }
+        case 2: {
+            auto& anim = m_Registry.get<SpriteAnimationComponent>(it.entity);
+            if (!anim.SheetTexture && !anim.SheetPath.empty())
+                anim.SheetTexture = Texture2D::Create(anim.SheetPath); // carregada sob demanda
+            if (!anim.SheetTexture || anim.FramesPerRow == 0) break;
+            uint32_t cols = anim.FramesPerRow;
+            uint32_t row = anim.CurrentFrame / cols;
+            uint32_t col = anim.CurrentFrame % cols;
+            uint32_t rows = (anim.TotalFrames + cols - 1) / cols;
+            glm::vec2 uvMin{ (float)col / cols, 1.0f - (float)(row + 1) / rows };
+            glm::vec2 uvMax{ (float)(col + 1) / cols, 1.0f - (float)row / rows };
+            Renderer2D::DrawTransformedQuadUV(GetWorldTransform(e), anim.SheetTexture, uvMin, uvMax, { 1.0f, 1.0f, 1.0f, 1.0f });
+            break;
+        }
+        case 3: {
+            auto& tm = m_Registry.get<TilemapComponent>(it.entity);
+            if (!tm.AtlasTexture && !tm.AtlasPath.empty())
+                tm.AtlasTexture = Texture2D::Create(tm.AtlasPath);
+            if (!tm.AtlasTexture || tm.AtlasColumns == 0 || tm.AtlasRows == 0 || tm.MapWidth == 0) break;
+            glm::mat4 mapTransform = GetWorldTransform(e);
+            for (uint32_t ty = 0; ty < tm.MapHeight; ++ty) {
+                for (uint32_t tx = 0; tx < tm.MapWidth; ++tx) {
+                    uint32_t idx = ty * tm.MapWidth + tx;
+                    if (idx >= tm.Tiles.size() || tm.Tiles[idx] == 0) continue;
+                    uint32_t tile = tm.Tiles[idx] - 1;
+                    uint32_t tcol = tile % tm.AtlasColumns;
+                    uint32_t trow = tile / tm.AtlasColumns;
+                    glm::vec2 uvMin{ (float)tcol / tm.AtlasColumns, 1.0f - (float)(trow + 1) / tm.AtlasRows };
+                    glm::vec2 uvMax{ (float)(tcol + 1) / tm.AtlasColumns, 1.0f - (float)trow / tm.AtlasRows };
+                    glm::mat4 tileTransform = mapTransform *
+                        glm::translate(glm::mat4(1.0f), { tx * tm.TileSize.x, ty * tm.TileSize.y, 0.0f }) *
+                        glm::scale(glm::mat4(1.0f), { tm.TileSize.x, tm.TileSize.y, 1.0f });
+                    Renderer2D::DrawTransformedQuadUV(tileTransform, tm.AtlasTexture, uvMin, uvMax, { 1.0f, 1.0f, 1.0f, 1.0f });
+                }
+            }
+            break;
+        }
+        case 4: {
+            auto& tc = m_Registry.get<TextComponent>(it.entity);
+            glm::vec3 pos = glm::vec3(GetWorldTransform(e)[3]);
+            TextRenderer::DrawString(tc.Text, pos, tc.FontSize, tc.Color, tc.Alignment);
+            break;
+        }
+        default: break;
+        }
     }
 }
 

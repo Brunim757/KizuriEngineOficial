@@ -79,6 +79,14 @@ public readonly struct Entity
 	public bool AddCamera(bool perspective3D = false)
 		=> Interop.KizuriNative.kz_entity_add_camera(Handle, perspective3D ? 1 : 0) != 0;
 
+	public bool AddCircleCollider2D(float radius = 0.5f, float density = 1f, float friction = 0.5f, float restitution = 0f)
+		=> Interop.KizuriNative.kz_entity_add_circle_collider2d(Handle, radius, density, friction, restitution) != 0;
+
+	// Camada de ordenação 2D (menor desenha atrás). Aplica a qualquer
+	// componente 2D da entidade (sprite/círculo/texto/animação/tilemap).
+	public void SetSortingLayer(int layer)
+		=> Interop.KizuriNative.kz_entity_set_sorting_layer(Handle, layer);
+
 	// ---- Mutação em runtime ----
 
 	public bool SetSpriteTexture(string path)
@@ -133,4 +141,5 @@ public enum ComponentType
 	UIRect = 7,
 	UIButton = 8,
 	UICanvas = 9,
+	CircleCollider2D = 10,
 }

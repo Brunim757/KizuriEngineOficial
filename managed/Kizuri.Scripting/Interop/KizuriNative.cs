@@ -41,12 +41,15 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern uint kz_scene_instantiate_prefab([MarshalAs(UnmanagedType.LPUTF8Str)] string path, float x, float y, float z);
     [DllImport(Lib)] internal static extern void kz_scene_request_load([MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern uint kz_scene_get_primary_camera();
+    [DllImport(Lib)] internal static extern uint kz_scene_duplicate_entity(uint entity);
 
     // ---- Adicionar componentes em runtime -------------------------------------
     [DllImport(Lib)] internal static extern int kz_entity_add_sprite(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string? texturePath);
     [DllImport(Lib)] internal static extern int kz_entity_add_text(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string text, float fontSize);
     [DllImport(Lib)] internal static extern int kz_entity_add_audio(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string clipPath, int loop, int playOnStart);
     [DllImport(Lib)] internal static extern int kz_entity_add_camera(uint entity, int projectionType);
+    [DllImport(Lib)] internal static extern int kz_entity_add_circle_collider2d(uint entity, float radius, float density, float friction, float restitution);
+    [DllImport(Lib)] internal static extern void kz_entity_set_sorting_layer(uint entity, int layer);
 
     // ---- Mutação de componentes em runtime ------------------------------------
     [DllImport(Lib)] internal static extern int kz_sprite_set_texture(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
@@ -77,4 +80,5 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_rigidbody2d_apply_linear_impulse(uint entity, float ix, float iy, int wake);
     [DllImport(Lib)] internal static extern void kz_rigidbody2d_set_transform(uint entity, float x, float y, float angle);
     [DllImport(Lib)] internal static extern int kz_physics2d_raycast(float x0, float y0, float x1, float y1, out float hitX, out float hitY, out uint hitEntity);
+    [DllImport(Lib)] internal static extern int kz_physics2d_overlap_circle(float x, float y, float radius, out uint hitEntity);
 }

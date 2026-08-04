@@ -152,6 +152,7 @@ KZ_SCRIPT_API int kz_entity_has_component(uint32_t entity, int componentType) {
         case 7: return e.HasComponent<kizuri::UIRectComponent>() ? 1 : 0;
         case 8: return e.HasComponent<kizuri::UIButtonComponent>() ? 1 : 0;
         case 9: return e.HasComponent<kizuri::UICanvasComponent>() ? 1 : 0;
+        case 10: return e.HasComponent<kizuri::CircleCollider2DComponent>() ? 1 : 0;
         default: return 0;
     }
 }
@@ -204,6 +205,14 @@ KZ_SCRIPT_API uint32_t kz_scene_get_primary_camera() {
     return 0;
 }
 
+KZ_SCRIPT_API uint32_t kz_scene_duplicate_entity(uint32_t entity) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    kizuri::Entity dup = s_ActiveScene->DuplicateEntity(e);
+    if (!dup) return 0;
+    return kizuri::scripting::RegisterEntityHandle(dup);
+}
+
 // ---------------------------------------------------------------------------
 // Adicionar componentes em runtime
 // ---------------------------------------------------------------------------
@@ -249,6 +258,35 @@ KZ_SCRIPT_API int kz_entity_add_camera(uint32_t entity, int projectionType) {
                                     : kizuri::CameraComponent::ProjectionType::Orthographic2D;
     cc.Primary = true;
     return 1;
+}
+
+KZ_SCRIPT_API int kz_entity_add_circle_collider2d(uint32_t entity, float radius,
+                                                  float density, float friction, float restitution) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& cc = e.AddOrReplaceComponent<kizuri::CircleCollider2DComponent>();
+    cc.Radius = radius;
+    cc.Density = density;
+    cc.Friction = friction;
+    cc.Restitution = restitution;
+    return 1;
+}
+
+KZ_SCRIPT_API void kz_entity_set_sorting_layer(uint32_t entity, int layer) {
+    auto e = Resolve(entity);
+    if (!e) return;
+    // Aplica a camada de ordenação 2D a qualquer componente 2D que a
+    // entidade tenha (sprite/círculo/texto/animacão/tilemap).
+    auto* sprite = s_ActiveScene->GetRegistry().try_get<kizuri::SpriteRendererComponent>(e.GetHandle());
+    if (sprite) { sprite->SortingLayer = layer; return; }
+    auto* circle = s_ActiveScene->GetRegistry().try_get<kizuri::CircleRendererComponent>(e.GetHandle());
+    if (circle) { circle->SortingLayer = layer; return; }
+    auto* text = s_ActiveScene->GetRegistry().try_get<kizuri::TextComponent>(e.GetHandle());
+    if (text) { text->SortingLayer = layer; return; }
+    auto* anim = s_ActiveScene->GetRegistry().try_get<kizuri::SpriteAnimationComponent>(e.GetHandle());
+    if (anim) { anim->SortingLayer = layer; return; }
+    auto* tilemap = s_ActiveScene->GetRegistry().try_get<kizuri::TilemapComponent>(e.GetHandle());
+    if (tilemap) { tilemap->SortingLayer = layer; return; }
 }
 
 // ---------------------------------------------------------------------------
@@ -451,6 +489,15 @@ KZ_SCRIPT_API int kz_physics2d_raycast(float x0, float y0, float x1, float y1,
     if (!s_ActiveScene->Raycast2D({ x0, y0 }, { x1, y1 }, hit, point, fraction)) return 0;
     if (outHitX) *outHitX = point.x;
     if (outHitY) *outHitY = point.y;
+    if (outHitEntity) *outHitEntity = kizuri::scripting::RegisterEntityHandle(hit);
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_physics2d_overlap_circle(float x, float y, float radius,
+                                              uint32_t* outHitEntity) {
+    if (s_ActiveScene == nullptr) return 0;
+    kizuri::Entity hit;
+    if (!s_ActiveScene->OverlapCircle2D({ x, y }, radius, hit)) return 0;
     if (outHitEntity) *outHitEntity = kizuri::scripting::RegisterEntityHandle(hit);
     return 1;
 }

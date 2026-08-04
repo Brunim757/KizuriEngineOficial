@@ -25,6 +25,11 @@ public static class Scene
 	public static Entity GetPrimaryCamera()
 		=> new(Interop.KizuriNative.kz_scene_get_primary_camera());
 
+	// Duplica a entidade (com toda a subárvore) e devolve a cópia, com um
+	// leve deslocamento pra não nascer em cima do original.
+	public static Entity Duplicate(Entity entity)
+		=> new(Interop.KizuriNative.kz_scene_duplicate_entity(entity.Handle));
+
 	// Raycast 2D contra o mundo Box2D (só funciona durante o Play). Devolve
 	// a primeira entidade atingida e o ponto do impacto. false = nada acertado.
 	public static bool Raycast2D(Math.Vector2 from, Math.Vector2 to, out Entity hit, out Math.Vector2 point)
@@ -37,6 +42,18 @@ public static class Scene
 			return false;
 		hit = new Entity(handle);
 		point = new Math.Vector2(hx, hy);
+		return true;
+	}
+
+	// OverlapCircle 2D: true se algum collider tocar o círculo (só no Play).
+	// Devolve a entidade mais próxima.
+	public static bool OverlapCircle2D(Math.Vector2 center, float radius, out Entity hit)
+	{
+		hit = Entity.Invalid;
+		uint handle = 0;
+		if (Interop.KizuriNative.kz_physics2d_overlap_circle(center.X, center.Y, radius, out handle) == 0)
+			return false;
+		hit = new Entity(handle);
 		return true;
 	}
 }

@@ -43,6 +43,14 @@
 - [x] **`Time.TimeScale`** (câmera lenta; escala o dt dos scripts)
 - [x] **`Rand`** — Float/Int/Chance/Vector2/Vector3
 
+### 2D Game Framework + Editor Power
+- [x] **Sorting layers**: `SortingLayer` nos componentes 2D (sprite/círculo/
+  texto/animação/tilemap) + passe de desenho 2D ordenado
+- [x] **`CircleCollider2D`** (novo collider Box2D: raio/offset/densidade/fricção)
+- [x] **`Scene.OverlapCircle2D`** + **`Scene.Duplicate`** (duplica entidade+subárvore)
+- [x] **`Mathf`** — Clamp/Lerp/MoveTowards/SmoothDamp/Repeat/Distance
+- [x] Editor: **Del** apaga entidade (com undo), **Ctrl+D** duplica, Ctrl = snap no gizmo
+
 ### Editor / produto
 - [x] Hierarquia, Inspetor, Console, Content Browser, gizmos, Play/Stop
 - [x] Salvar Prefab (menu de contexto) + arrastar `.kzprefab` pro viewport

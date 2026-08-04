@@ -48,7 +48,8 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
         je["SpriteRenderer"] = {
             { "Color", Vec4ToJson(sc.Color) },
             { "TilingFactor", sc.TilingFactor },
-            { "TexturePath", sc.TexturePath }
+            { "TexturePath", sc.TexturePath },
+            { "SortingLayer", sc.SortingLayer }
         };
     }
 
@@ -57,7 +58,8 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
         je["CircleRenderer"] = {
             { "Color", Vec4ToJson(cr.Color) },
             { "Thickness", cr.Thickness },
-            { "Fade", cr.Fade }
+            { "Fade", cr.Fade },
+            { "SortingLayer", cr.SortingLayer }
         };
     }
 
@@ -67,7 +69,8 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
             { "Text", tc.Text },
             { "Color", Vec4ToJson(tc.Color) },
             { "FontSize", tc.FontSize },
-            { "Alignment", (int)tc.Alignment }
+            { "Alignment", (int)tc.Alignment },
+            { "SortingLayer", tc.SortingLayer }
         };
     }
 
@@ -78,7 +81,8 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
             { "FramesPerRow", ac.FramesPerRow },
             { "TotalFrames", ac.TotalFrames },
             { "FPS", ac.FPS },
-            { "Loop", ac.Loop }
+            { "Loop", ac.Loop },
+            { "SortingLayer", ac.SortingLayer }
         };
     }
 
@@ -92,7 +96,8 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
             { "MapHeight", tmc.MapHeight },
             { "TileSize", Vec3ToJson({ tmc.TileSize.x, tmc.TileSize.y, 0.0f }) },
             { "Tiles", tmc.Tiles },
-            { "SolidTileValues", tmc.SolidTileValues }
+            { "SolidTileValues", tmc.SolidTileValues },
+            { "SortingLayer", tmc.SortingLayer }
         };
     }
 
@@ -151,6 +156,15 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
             { "Offset", Vec3ToJson({ bc.Offset.x, bc.Offset.y, 0.0f }) },
             { "Size", Vec3ToJson({ bc.Size.x, bc.Size.y, 0.0f }) },
             { "Density", bc.Density }, { "Friction", bc.Friction }, { "Restitution", bc.Restitution }
+        };
+    }
+
+    if (entity.HasComponent<CircleCollider2DComponent>()) {
+        auto& cc = entity.GetComponent<CircleCollider2DComponent>();
+        je["CircleCollider2D"] = {
+            { "Offset", Vec3ToJson({ cc.Offset.x, cc.Offset.y, 0.0f }) },
+            { "Radius", cc.Radius },
+            { "Density", cc.Density }, { "Friction", cc.Friction }, { "Restitution", cc.Restitution }
         };
     }
 
@@ -234,6 +248,7 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         sc.Color = JsonToVec4(js["Color"]);
         sc.TilingFactor = js.value("TilingFactor", 1.0f);
         sc.TexturePath = js.value("TexturePath", "");
+        sc.SortingLayer = js.value("SortingLayer", 0);
         if (!sc.TexturePath.empty()) sc.Texture = Texture2D::Create(ResolveSerializedPath(sc.TexturePath));
     }
 
@@ -243,6 +258,7 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         cr.Color = JsonToVec4(jc["Color"]);
         cr.Thickness = jc.value("Thickness", 1.0f);
         cr.Fade = jc.value("Fade", 0.005f);
+        cr.SortingLayer = jc.value("SortingLayer", 0);
     }
 
     if (je.contains("Text")) {
@@ -252,6 +268,7 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         tc.Color = JsonToVec4(jt["Color"]);
         tc.FontSize = jt.value("FontSize", 48.0f);
         tc.Alignment = (TextAlignment)jt.value("Alignment", 0);
+        tc.SortingLayer = jt.value("SortingLayer", 0);
     }
 
     if (je.contains("SpriteAnimation")) {
@@ -262,6 +279,7 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         ac.TotalFrames = ja.value("TotalFrames", 1u);
         ac.FPS = ja.value("FPS", 12.0f);
         ac.Loop = ja.value("Loop", true);
+        ac.SortingLayer = ja.value("SortingLayer", 0);
         if (!ac.SheetPath.empty()) ac.SheetTexture = Texture2D::Create(ResolveSerializedPath(ac.SheetPath));
     }
 
@@ -277,6 +295,7 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         tmc.TileSize = { ts.x, ts.y };
         tmc.Tiles = jtm.value("Tiles", std::vector<uint32_t>{});
         tmc.SolidTileValues = jtm.value("SolidTileValues", std::vector<uint32_t>{});
+        tmc.SortingLayer = jtm.value("SortingLayer", 0);
         if (!tmc.AtlasPath.empty()) tmc.AtlasTexture = Texture2D::Create(ResolveSerializedPath(tmc.AtlasPath));
     }
 
@@ -340,6 +359,16 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         bc.Density = jb.value("Density", 1.0f);
         bc.Friction = jb.value("Friction", 0.5f);
         bc.Restitution = jb.value("Restitution", 0.0f);
+    }
+
+    if (je.contains("CircleCollider2D")) {
+        auto& jc = je["CircleCollider2D"];
+        auto& cc = entity.AddComponent<CircleCollider2DComponent>();
+        auto off = JsonToVec3(jc["Offset"]); cc.Offset = { off.x, off.y };
+        cc.Radius = jc.value("Radius", 0.5f);
+        cc.Density = jc.value("Density", 1.0f);
+        cc.Friction = jc.value("Friction", 0.5f);
+        cc.Restitution = jc.value("Restitution", 0.0f);
     }
 
     if (je.contains("Rigidbody3D")) {

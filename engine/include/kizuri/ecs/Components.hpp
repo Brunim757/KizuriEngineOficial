@@ -50,12 +50,14 @@ struct SpriteRendererComponent {
     Ref<Texture2D> Texture;
     float TilingFactor = 1.0f;
     std::string TexturePath; // serializável — caminho do arquivo de imagem (vazio = cor sólida)
+    int SortingLayer = 0;    // ordem de desenho 2D: menor desenha antes (atrás)
 };
 
 struct CircleRendererComponent {
     glm::vec4 Color = { 1.0f, 1.0f, 1.0f, 1.0f };
     float Thickness = 1.0f;
     float Fade = 0.005f;
+    int SortingLayer = 0;
 };
 
 // Texto 2D de jogo (HUD, pontuação, diálogo). Renderizado pelo
@@ -66,6 +68,7 @@ struct TextComponent {
     glm::vec4 Color = { 1.0f, 1.0f, 1.0f, 1.0f };
     float FontSize = 48.0f;  // altura em pixels de tela
     TextAlignment Alignment = TextAlignment::Left;
+    int SortingLayer = 0;
 };
 
 // Animação de sprite 2D por frames numa folha de sprites (sprite sheet).
@@ -78,6 +81,7 @@ struct SpriteAnimationComponent {
     uint32_t TotalFrames = 1;
     float FPS = 12.0f;
     bool Loop = true;
+    int SortingLayer = 0;
 
     uint32_t CurrentFrame = 0;     // runtime
     float FrameTimer = 0.0f;       // runtime
@@ -94,6 +98,7 @@ struct TilemapComponent {
     uint32_t MapWidth = 0, MapHeight = 0;
     glm::vec2 TileSize = { 1.0f, 1.0f };
     std::vector<uint32_t> Tiles;   // serializável — row-major, 0 = vazio
+    int SortingLayer = 0;
 
     // Valores de tile (1-based, os mesmos usados em Tiles) que geram
     // collider estático Box2D no Play — a base pra níveis de platformer.
@@ -230,6 +235,14 @@ struct BoxCollider2DComponent {
     float Friction = 0.5f;
     float Restitution = 0.0f;
     float RestitutionThreshold = 0.5f;
+};
+
+struct CircleCollider2DComponent {
+    glm::vec2 Offset = { 0.0f, 0.0f };
+    float Radius = 0.5f;
+    float Density = 1.0f;
+    float Friction = 0.5f;
+    float Restitution = 0.0f;
 };
 
 struct Rigidbody3DComponent {

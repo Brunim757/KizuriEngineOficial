@@ -167,6 +167,7 @@ private:
     bool m_PrevZKeyDown = false;
     bool m_PrevYKeyDown = false;
     bool m_PrevF5KeyDown = false;
+    bool m_PrevDKeyDown = false;
 
     // Alternância 2D/3D do viewport (botão na toolbar — ver
     // DrawViewportToolbar). Troca só o COMPORTAMENTO DO EDITOR (qual

@@ -2073,6 +2073,7 @@ void EditorLayer::DrawInspector() {
                 }
                 ImGui::ColorEdit4("Cor", &sc.Color.x);
                 ImGui::DragFloat("Tiling", &sc.TilingFactor, 0.1f);
+                ImGui::DragInt("Camada de ordenação", &sc.SortingLayer, 1);
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<SpriteRendererComponent>();
@@ -2084,6 +2085,7 @@ void EditorLayer::DrawInspector() {
                 ImGui::ColorEdit4("Cor", &cr.Color.x);
                 ImGui::DragFloat("Espessura", &cr.Thickness, 0.025f, 0.0f, 1.0f);
                 ImGui::DragFloat("Suavização", &cr.Fade, 0.001f, 0.0f, 1.0f);
+                ImGui::DragInt("Camada de ordenação", &cr.SortingLayer, 1);
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<CircleRendererComponent>();
@@ -2196,6 +2198,7 @@ void EditorLayer::DrawInspector() {
                 int alignIdx = (int)tc.Alignment;
                 if (ImGui::Combo("Alinhamento", &alignIdx, alignItems, 3))
                     tc.Alignment = (kizuri::TextAlignment)alignIdx;
+                ImGui::DragInt("Camada de ordenação", &tc.SortingLayer, 1);
                 ImGui::TextDisabled("Fonte integrada JetBrains Mono. Use \\n para quebrar linha.");
                 ImGui::TreePop();
             }
@@ -2225,6 +2228,7 @@ void EditorLayer::DrawInspector() {
                 ImGui::Checkbox("Em loop", &sac.Loop);
                 ImGui::SameLine();
                 ImGui::Checkbox("Em execução", &sac.Playing);
+                ImGui::DragInt("Camada de ordenação", &sac.SortingLayer, 1);
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<SpriteAnimationComponent>();
@@ -2253,6 +2257,7 @@ void EditorLayer::DrawInspector() {
                 if (ImGui::DragInt("Largura do mapa", &mw, 1, 1, 4096)) tmc.MapWidth = (uint32_t)mw;
                 if (ImGui::DragInt("Altura do mapa", &mh, 1, 1, 4096)) tmc.MapHeight = (uint32_t)mh;
                 ImGui::DragFloat2("Tamanho do tile", &tmc.TileSize.x, 0.1f, 0.1f, 100.0f);
+                ImGui::DragInt("Camada de ordenação", &tmc.SortingLayer, 1);
                 tmc.Tiles.resize((size_t)tmc.MapWidth * tmc.MapHeight);
 
                 // Pincel do pintor de tilemap (funciona no viewport 2D).
@@ -2394,6 +2399,19 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<BoxCollider2DComponent>();
         }
 
+        if (m_SelectedEntity.HasComponent<CircleCollider2DComponent>()) {
+            auto& cc = m_SelectedEntity.GetComponent<CircleCollider2DComponent>();
+            if (DrawComponentHeader("Circle Collider 2D", &removeThis)) {
+                ImGui::DragFloat2("Offset", &cc.Offset.x, 0.05f);
+                ImGui::DragFloat("Raio", &cc.Radius, 0.05f, 0.01f, FLT_MAX);
+                ImGui::DragFloat("Densidade", &cc.Density, 0.05f, 0.0f, FLT_MAX);
+                ImGui::DragFloat("Fricção", &cc.Friction, 0.02f, 0.0f, 1.0f);
+                ImGui::DragFloat("Restituição", &cc.Restitution, 0.02f, 0.0f, 1.0f);
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<CircleCollider2DComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<NativeScriptComponent>()) {
             auto& nsc = m_SelectedEntity.GetComponent<NativeScriptComponent>();
             if (DrawComponentHeader("Script Nativo", &removeThis)) {
@@ -2469,6 +2487,8 @@ void EditorLayer::DrawAddComponentButton() {
             m_SelectedEntity.AddComponent<Rigidbody2DComponent>();
         if (!m_SelectedEntity.HasComponent<BoxCollider2DComponent>() && ImGui::MenuItem("Box Collider 2D"))
             m_SelectedEntity.AddComponent<BoxCollider2DComponent>();
+        if (!m_SelectedEntity.HasComponent<CircleCollider2DComponent>() && ImGui::MenuItem("Circle Collider 2D"))
+            m_SelectedEntity.AddComponent<CircleCollider2DComponent>();
         if (!m_SelectedEntity.HasComponent<NativeScriptComponent>() && ImGui::MenuItem("Script Nativo"))
             m_SelectedEntity.AddComponent<NativeScriptComponent>();
         ImGui::Separator();
@@ -2577,6 +2597,30 @@ void EditorLayer::OnImGuiRender() {
         if (f5JustPressed && !io.WantTextInput) {
             if (m_SceneState == SceneState::Play) OnSceneStop();
             else OnScenePlay();
+        }
+    }
+
+    // Ferramentas de edição: Del = apagar a entidade selecionada (com undo,
+    // mesmo comando do menu de contexto da Hierarquia); Ctrl+D = duplicar
+    // (com a subárvore) e já selecionar a cópia. Edge-detect no D pra não
+    // duplicar a cada frame enquanto o Ctrl+D estiver segurado.
+    if (m_SceneState == SceneState::Edit && m_SelectedEntity && !io.WantTextInput) {
+        bool delDown = kizuri::Input::IsKeyPressed(kizuri::Key::Delete);
+        if (delDown) {
+            Entity toDelete = m_SelectedEntity;
+            m_SelectedEntity = {};
+            m_History.Push(CreateRef<DeleteEntityCommand>(toDelete));
+            m_ActiveScene->DestroyEntity(toDelete);
+        }
+        bool dDown = kizuri::Input::IsKeyPressed(kizuri::Key::D);
+        bool dJustPressed = dDown && !m_PrevDKeyDown;
+        m_PrevDKeyDown = dDown;
+        if (io.KeyCtrl && dJustPressed) {
+            Entity copy = m_ActiveScene->DuplicateEntity(m_SelectedEntity);
+            if (copy) {
+                m_SelectedEntity = copy;
+                AutoSwitchViewportMode();
+            }
         }
     }
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — atalhos undo/redo + F5 ok");

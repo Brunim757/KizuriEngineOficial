@@ -71,7 +71,7 @@ public sealed class UISample : Script
 	private IEnumerator Anuncia()
 	{
 		yield return new WaitForSeconds(1f);
-		Log.Info($"Rand.Float(0,100) = {Rand.Float(0f, 100f):0.00} | Chance(0.5) = {Rand.Chance(0.5f)}");
+		Log.Info($"Rand.Float(0,100) = {Rand.Float(0f, 100f):0.00} | Chance(0.5) = {Rand.Chance(0.5f)} | Mathf.Clamp(7,0,5) = {Mathf.Clamp(7, 0, 5)}");
 	}
 
 	public override void OnCollisionBegin(Entity other) { }

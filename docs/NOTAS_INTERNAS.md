@@ -162,6 +162,23 @@ dor de cabeça em CI antes.
   engolida) e `ScriptEngine::LoadModule` falha de forma visível se 0 scripts
   forem registrados.
 
+### 2D Game Framework + Editor Power
+- **Sorting layers**: `SortingLayer` (int) em Sprite/Circle/Text/Animacão/
+  Tilemap; `Render2DEntities` virou um passe único que junta todos os
+  desenháveis, ordena por (SortingLayer, tipo) com stable_sort e desenha.
+  Menor desenha primeiro (atrás).
+- **`CircleCollider2DComponent`**: novo collider Box2D (b2CircleShape no
+  `RegisterPhysics2DEntity`). Serialização + Inspetor + menu + bridge C#.
+- **`Scene::OverlapCircle2D`**: b2World::QueryAABB + `b2Distance` (gap entre
+  superfícies; <= 0 = tocou) pra achar o collider mais próximo.
+- **`Scene::DuplicateEntity`**: serializa a subárvore e recria com UUIDs novos
+  (mesmo truque do Prefab); usa o `ComponentSerialization.hpp` interno via
+  include relativo no Scene.cpp. Exposto no C# como `Scene.Duplicate`.
+- **`Mathf`** (C#): Clamp/Lerp/MoveTowards/SmoothDamp/Repeat/Distance/Sin/Cos...
+- **Editor**: Del apaga a seleção (mesmo `DeleteEntityCommand` do menu de
+  contexto, com undo); Ctrl+D duplica e seleciona a cópia (edge-detect no D);
+  Ctrl já fazia snap do gizmo.
+
 ### .NET embutido (engine self-contained)
 - A engine é distribuída com o **SDK .NET inteiro em `bin/dotnet/`** — o
   usuário roda o editor e compila/publica jogos C# **sem instalar o .NET**.

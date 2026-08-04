@@ -51,12 +51,16 @@ KZ_SCRIPT_API void kz_entity_set_parent(uint32_t child, uint32_t parent); // par
 KZ_SCRIPT_API uint32_t kz_scene_instantiate_prefab(const char* path, float x, float y, float z);
 KZ_SCRIPT_API void kz_scene_request_load(const char* path);
 KZ_SCRIPT_API uint32_t kz_scene_get_primary_camera();
+KZ_SCRIPT_API uint32_t kz_scene_duplicate_entity(uint32_t entity); // duplica + subárvore
 
 // --- Adicionar componentes em runtime (0 = sem efeito se a entidade não existe) ---
 KZ_SCRIPT_API int kz_entity_add_sprite(uint32_t entity, const char* texturePath); // vazio = cor sólida
 KZ_SCRIPT_API int kz_entity_add_text(uint32_t entity, const char* text, float fontSize);
 KZ_SCRIPT_API int kz_entity_add_audio(uint32_t entity, const char* clipPath, int loop, int playOnStart);
 KZ_SCRIPT_API int kz_entity_add_camera(uint32_t entity, int projectionType); // 0=ortográfica 2D, 1=perspectiva 3D
+KZ_SCRIPT_API int kz_entity_add_circle_collider2d(uint32_t entity, float radius,
+                                                  float density, float friction, float restitution);
+KZ_SCRIPT_API void kz_entity_set_sorting_layer(uint32_t entity, int layer); // ordem 2D de desenho
 
 // --- Mutação de componentes em runtime ---
 KZ_SCRIPT_API int kz_sprite_set_texture(uint32_t entity, const char* path);
@@ -91,5 +95,7 @@ KZ_SCRIPT_API void kz_rigidbody2d_apply_linear_impulse(uint32_t entity, float ix
 KZ_SCRIPT_API void kz_rigidbody2d_set_transform(uint32_t entity, float x, float y, float angle);
 KZ_SCRIPT_API int kz_physics2d_raycast(float x0, float y0, float x1, float y1,
                                        float* outHitX, float* outHitY, uint32_t* outHitEntity);
+KZ_SCRIPT_API int kz_physics2d_overlap_circle(float x, float y, float radius,
+                                              uint32_t* outHitEntity);
 
 } // extern "C"

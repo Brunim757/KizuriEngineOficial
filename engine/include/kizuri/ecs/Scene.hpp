@@ -51,6 +51,14 @@ public:
     bool Raycast2D(const glm::vec2& from, const glm::vec2& to,
                    Entity& outEntity, glm::vec2& outPoint, float& outFraction);
 
+    // OverlapCircle 2D: true se alguma entidade com collider tocar o círculo
+    // (só durante o Play). Devolve a entidade mais próxima.
+    bool OverlapCircle2D(const glm::vec2& center, float radius, Entity& outEntity);
+
+    // Duplica 'source' e toda a subárvore dela, com UUIDs novos (e um leve
+    // deslocamento pra não nascer em cima do original). Devolve a raiz nova.
+    Entity DuplicateEntity(Entity source);
+
     // UI: o host entrega a posição do mouse em NDC relativo ao viewport
     // (x/y em [-1,1], y pra cima) + estado do botão esquerdo. O Scene usa
     // pra hit-test dos UIButtonComponent (hover/clique) e o RenderUI desenha

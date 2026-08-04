@@ -16,7 +16,6 @@
 #include "kizuri/audio/AudioEngine.hpp"
 
 #include <box2d/box2d.h>
-#include <box2d/b2_distance.h> // b2Distance/b2DistanceInput (não vem no box2d.h)
 #include <btBulletDynamicsCommon.h>
 #include <glm/gtc/random.hpp>
 #include <algorithm>
@@ -189,24 +188,50 @@ public:
     }
 };
 
-// Callback do b2World::QueryAABB pro OverlapCircle2D — acha o fixture cujo
-// gap (b2Distance) pro círculo é o menor; <= 0 = o círculo toca o collider.
+// Callback do b2World::QueryAABB pro OverlapCircle2D. Calcula o gap do
+// círculo (Center+Radius) até cada fixture candidato sem depender do
+// b2Distance de shapes (que não vem no umbrella do box2d) — manual e exato
+// pra círculo e box, o que cobre os colliders da engine.
 class OverlapCircleCallback : public b2QueryCallback {
 public:
-    b2CircleShape* Query = nullptr;
+    b2Vec2 Center;
+    float Radius = 0.0f;
     b2Fixture* Best = nullptr;
     float BestGap = std::numeric_limits<float>::max();
 
+    static float PointToSegmentDist(const b2Vec2& p, const b2Vec2& a, const b2Vec2& b) {
+        b2Vec2 ab = b - a;
+        float lenSq = b2Dot(ab, ab);
+        float t = lenSq > 0.0f ? b2Clamp(b2Dot(p - a, ab) / lenSq, 0.0f, 1.0f) : 0.0f;
+        return b2Distance(p, a + t * ab);
+    }
+
+    // Distância da superfície do fixture ao ponto p (0 se p está dentro).
+    static float GapToFixture(const b2Fixture* fixture, const b2Vec2& p) {
+        const b2Shape* shape = fixture->GetShape();
+        const b2Transform& xf = fixture->GetBody()->GetTransform();
+        if (shape->GetType() == b2Shape::e_circle) {
+            const auto* c = static_cast<const b2CircleShape*>(shape);
+            return b2Distance(p, b2Mul(xf, c->m_p)) - c->m_radius;
+        }
+        if (shape->GetType() == b2Shape::e_polygon) {
+            const auto* poly = static_cast<const b2PolygonShape*>(shape);
+            if (poly->TestPoint(xf, p)) return 0.0f; // ponto dentro do box
+            float best = std::numeric_limits<float>::max();
+            for (int32 i = 0; i < poly->m_count; ++i) {
+                b2Vec2 a = b2Mul(xf, poly->m_vertices[i]);
+                b2Vec2 b = b2Mul(xf, poly->m_vertices[(i + 1) % poly->m_count]);
+                float d = PointToSegmentDist(p, a, b);
+                if (d < best) best = d;
+            }
+            return best;
+        }
+        return std::numeric_limits<float>::max();
+    }
+
     bool ReportFixture(b2Fixture* fixture) override {
-        b2DistanceInput input;
-        input.proxyA.Set(Query, 0);
-        input.proxyB.Set(fixture->GetShape(), 0);
-        input.transformA = b2Transform_identity;
-        input.transformB = fixture->GetBody()->GetTransform();
-        input.useRadii = true;
-        b2DistanceOutput output;
-        b2Distance(&output, &input);
-        if (output.distance < BestGap) { BestGap = output.distance; Best = fixture; }
+        float gap = GapToFixture(fixture, Center) - Radius;
+        if (gap < BestGap) { BestGap = gap; Best = fixture; }
         return true;
     }
 };
@@ -232,19 +257,15 @@ bool Scene::Raycast2D(const glm::vec2& from, const glm::vec2& to,
 bool Scene::OverlapCircle2D(const glm::vec2& center, float radius, Entity& outEntity) {
     if (m_PhysicsWorld2D == nullptr) return false;
 
-    b2CircleShape queryCircle;
-    queryCircle.m_p = { center.x, center.y };
-    queryCircle.m_radius = radius;
-
-    // Varre só os fixtures dentro do AABB do círculo (candidatos) e usa
-    // b2Distance pra achar o fixture mais próximo (gap entre superfícies;
-    // <= 0 = o círculo toca o collider).
+    // Varre só os fixtures dentro do AABB do círculo (candidatos) e acha o
+    // mais próximo pelo gap até a superfície (<= 0 = o círculo toca o collider).
     b2AABB aabb;
     aabb.lowerBound = { center.x - radius, center.y - radius };
     aabb.upperBound = { center.x + radius, center.y + radius };
 
     OverlapCircleCallback cb;
-    cb.Query = &queryCircle;
+    cb.Center = { center.x, center.y };
+    cb.Radius = radius;
     m_PhysicsWorld2D->QueryAABB(&cb, aabb);
 
     if (cb.Best == nullptr || cb.BestGap > 0.0f) return false;

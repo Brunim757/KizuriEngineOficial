@@ -23,6 +23,7 @@
 #include "kizuri/renderer/Renderer.hpp"
 #include "kizuri/renderer/Renderer2D.hpp"
 #include "kizuri/renderer/Renderer3D.hpp"
+#include "kizuri/renderer/GraphicsSettings.hpp"
 #include "kizuri/renderer/TextRenderer.hpp"
 #include "kizuri/renderer/RenderCommand.hpp"
 #include "kizuri/renderer/Camera.hpp"

@@ -6,6 +6,7 @@
 #include <string>
 #include <filesystem>
 #include <vector>
+#include <unordered_map>
 
 // EditorLayer implementa o esqueleto do Kizuri Editor: dockspace ImGui,
 // painel de hierarquia de entidades e inspetor de componentes básico.
@@ -46,7 +47,17 @@ private:
     void DrawViewportToolbar();
     void DrawGizmo();
     void DrawCameraGizmo(); // pirâmide de frustum + seta de direção, só quando uma Camera tá selecionada
+    void DrawLightGizmo();  // marcador de luz (ponto/spot/direcional) no viewport
     void Reparent(kizuri::Entity child, kizuri::Entity newParent);
+
+    // Configurações gráficas (qualidade, MSAA, SSAO, bloom, HDRI do céu).
+    void DrawGraphicsSettings();
+    void LoadGraphicsSettingsFromDisk();
+    void SaveGraphicsSettingsToDisk();
+
+    // Miniatura real de arquivo de imagem pro Content Browser (cache por
+    // caminho absoluto — recarrega só na primeira vez).
+    kizuri::Ref<kizuri::Texture2D> GetThumbnail(const std::string& path);
 
     void NewScene();
     void SaveScene();
@@ -150,6 +161,12 @@ private:
     // mostra uma mensagem nesse caso em vez de tentar listar algo.
     std::filesystem::path m_ContentBrowserRoot;
     std::filesystem::path m_ContentBrowserCurrentDir;
+    std::unordered_map<std::string, kizuri::Ref<kizuri::Texture2D>> m_ThumbCache;
+
+    // Janela de configurações gráficas (Arquivo > Configurações Gráficas).
+    bool m_ShowGraphicsSettings = false;
+    kizuri::GraphicsSettings m_GraphicsSettings;
+    char m_EnvironmentHDRIPathBuffer[512] = "";
 
     glm::vec2 m_ViewportSize = { 0.0f, 0.0f };
     bool m_ViewportFocused = false;

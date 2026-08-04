@@ -73,6 +73,10 @@ void EditorLayer::OnAttach() {
 
     // Projetos recentes pro hub (KizuriRecents.json no diretório de trabalho).
     LoadRecentProjects();
+
+    // Configurações gráficas (settings.json no diretório de trabalho) —
+    // carrega antes de qualquer render e aplica VSync pra janela.
+    LoadGraphicsSettingsFromDisk();
 }
 
 void EditorLayer::AutoSwitchViewportMode() {
@@ -432,6 +436,24 @@ static bool ProjectToViewport(const glm::mat4& viewProj, const glm::vec3& worldP
     return true;
 }
 
+// Aceita drop de arquivo do Content Browser no widget que acabou de desenhar
+// (ex.: campo de textura/material no Inspetor). Devolve o caminho absoluto
+// do arquivo solto, ou false se nada foi solto aqui. É o mesmo payload dos
+// dois drag sources do Content Browser (KZ_CONTENT_FILE / KZ_CONTENT_BROWSER_FILE).
+static bool AcceptAssetDrop(std::string& outPath) {
+    if (!ImGui::BeginDragDropTarget()) return false;
+    bool accepted = false;
+    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("KZ_CONTENT_FILE")) {
+        outPath.assign((const char*)payload->Data);
+        accepted = true;
+    } else if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("KZ_CONTENT_BROWSER_FILE")) {
+        outPath.assign((const char*)payload->Data);
+        accepted = true;
+    }
+    ImGui::EndDragDropTarget();
+    return accepted;
+}
+
 // Sem isso, uma Camera na cena era um ponto totalmente invisível — nenhuma pista de onde ela
 // tá nem pra onde aponta. Desenha uma pirâmide de frustum (tamanho fixo, só visualização —
 // não é o far clip real) + uma seta curta de "frente", projetadas manualmente pra tela via
@@ -492,6 +514,167 @@ void EditorLayer::DrawCameraGizmo() {
     for (int i = 0; i < 4; ++i) dl->AddLine(screenApex, screenCorners[i], color, 1.5f);
     for (int i = 0; i < 4; ++i) dl->AddLine(screenCorners[i], screenCorners[(i + 1) % 4], color, 1.5f);
     dl->AddLine(screenApex, screenForwardTip, IM_COL32(255, 255, 255, 220), 2.5f);
+}
+
+// Marcador visual de luz no viewport 3D: círculo com raios (ponto), seta
+// (direcional) ou círculo + seta (spot). Mesmo estilo do gizmo de câmera —
+// ImDrawList em espaço de tela, sempre por cima da cena.
+void EditorLayer::DrawLightGizmo() {
+    if (!m_SelectedEntity || !m_SelectedEntity.HasComponent<LightComponent>()) return;
+    if (m_ViewportMode != ViewportMode::Mode3D) return;
+
+    auto& lc = m_SelectedEntity.GetComponent<LightComponent>();
+    glm::mat4 world = m_ActiveScene->GetWorldTransform(m_SelectedEntity);
+    glm::vec3 pos = glm::vec3(world[3]);
+
+    glm::mat4 viewProj = m_EditorCamera.GetViewProjectionMatrix();
+    glm::vec2 vpPos = m_ViewportBounds[0], vpSize = m_ViewportBounds[1] - m_ViewportBounds[0];
+    ImVec2 screen;
+    if (!ProjectToViewport(viewProj, pos, vpPos, vpSize, screen)) return;
+
+    // Direção da luz derivada do Transform (mesma convenção fps do render).
+    glm::vec3 euler, t, s;
+    DecomposeTransform(world, t, euler, s);
+    glm::vec3 forward = glm::normalize(glm::vec3(
+        glm::cos(euler.y) * glm::cos(euler.x), glm::sin(euler.x), glm::sin(euler.y) * glm::cos(euler.x)));
+
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    const ImU32 color = IM_COL32(255, 200, 80, 255);
+    const float r = 10.0f;
+    dl->AddCircle(screen, r, color, 24, 2.0f);
+
+    ImVec2 tip;
+    bool hasTip = ProjectToViewport(viewProj, pos + forward * 1.2f, vpPos, vpSize, tip);
+
+    if (lc.Type == LightType::Point) {
+        // raios nas diagonais
+        for (int i = 0; i < 4; ++i) {
+            float a = glm::radians(45.0f + i * 90.0f);
+            ImVec2 d(cosf(a), sinf(a));
+            dl->AddLine(ImVec2(screen.x + d.x * r, screen.y + d.y * r),
+                        ImVec2(screen.x + d.x * (r + 8.0f), screen.y + d.y * (r + 8.0f)), color, 2.0f);
+        }
+    } else {
+        // direcional/spot: linha grossa pra frente + barra na ponta
+        if (hasTip) {
+            dl->AddLine(screen, tip, color, 3.0f);
+            glm::vec2 d(tip.x - screen.x, tip.y - screen.y);
+            float len = sqrtf(d.x * d.x + d.y * d.y);
+            if (len > 0.001f) {
+                d /= len;
+                glm::vec2 perp(-d.y, d.x);
+                dl->AddLine(ImVec2(tip.x + perp.x * 5.0f, tip.y + perp.y * 5.0f),
+                            ImVec2(tip.x - perp.x * 5.0f, tip.y - perp.y * 5.0f), color, 2.5f);
+            }
+        }
+    }
+}
+
+kizuri::Ref<kizuri::Texture2D> EditorLayer::GetThumbnail(const std::string& path) {
+    auto it = m_ThumbCache.find(path);
+    if (it != m_ThumbCache.end()) return it->second;
+    auto tex = kizuri::Texture2D::Create(path);
+    m_ThumbCache[path] = tex;
+    return tex;
+}
+
+void EditorLayer::LoadGraphicsSettingsFromDisk() {
+    m_GraphicsSettings = kizuri::Renderer3D::GetGraphicsSettings();
+    if (kizuri::LoadGraphicsSettings("settings.json", m_GraphicsSettings)) {
+        kizuri::Renderer3D::SetGraphicsSettings(m_GraphicsSettings);
+        KZ_CORE_INFO("Configurações gráficas carregadas de settings.json (preset {0}).", (int)m_GraphicsSettings.Preset);
+    }
+    strncpy(m_EnvironmentHDRIPathBuffer, kizuri::Renderer3D::GetEnvironmentHDRIPath().c_str(),
+            sizeof(m_EnvironmentHDRIPathBuffer) - 1);
+    m_EnvironmentHDRIPathBuffer[sizeof(m_EnvironmentHDRIPathBuffer) - 1] = '\0';
+    Application& app = Application::Get();
+    if (app.GetWindow().IsVSync() != m_GraphicsSettings.VSync)
+        app.GetWindow().SetVSync(m_GraphicsSettings.VSync);
+}
+
+void EditorLayer::SaveGraphicsSettingsToDisk() {
+    if (kizuri::SaveGraphicsSettings("settings.json", m_GraphicsSettings))
+        KZ_CORE_INFO("Configurações gráficas salvas em settings.json.");
+    else
+        KZ_CORE_ERROR("Falha ao salvar settings.json.");
+}
+
+void EditorLayer::DrawGraphicsSettings() {
+    if (!m_ShowGraphicsSettings) return;
+    if (ImGui::Begin("Configurações Gráficas", &m_ShowGraphicsSettings, ImGuiWindowFlags_NoResize)) {
+        const char* presets[] = { "Ultra", "High", "Medium", "Low" };
+        int presetIdx = (int)m_GraphicsSettings.Preset;
+        bool presetApplied = false;
+        if (presetIdx <= 3) {
+            if (ImGui::Combo("Qualidade", &presetIdx, presets, 4)) {
+                m_GraphicsSettings.ApplyPreset((kizuri::QualityPreset)presetIdx);
+                presetApplied = true;
+            }
+        } else {
+            ImGui::TextDisabled("Qualidade: Custom (ajustada manualmente)");
+        }
+
+        bool customTweak = false;
+        customTweak |= ImGui::DragFloat("Resolução interna", &m_GraphicsSettings.RenderScale, 0.01f, 0.25f, 2.0f);
+        const char* msaaNames[] = { "Desligado", "1x", "2x", "4x", "8x" };
+        int msaaValues[] = { 0, 1, 2, 4, 8 };
+        int msaaIdx = 0;
+        for (int i = 0; i < 5; ++i) if (m_GraphicsSettings.MSAA == msaaValues[i]) msaaIdx = i;
+        if (ImGui::Combo("MSAA", &msaaIdx, msaaNames, 5)) m_GraphicsSettings.MSAA = msaaValues[msaaIdx];
+        customTweak |= (ImGui::IsItemActive() || ImGui::IsItemActivated());
+
+        const char* shadowNames[] = { "512", "1024", "2048", "4096" };
+        int shadowValues[] = { 512, 1024, 2048, 4096 };
+        int shadowIdx = 0;
+        for (int i = 0; i < 4; ++i) if (m_GraphicsSettings.ShadowMapSize == shadowValues[i]) shadowIdx = i;
+        if (ImGui::Combo("Shadow map (CSM)", &shadowIdx, shadowNames, 4)) m_GraphicsSettings.ShadowMapSize = shadowValues[shadowIdx];
+        customTweak |= (ImGui::IsItemActive() || ImGui::IsItemActivated());
+        customTweak |= ImGui::SliderInt("Suavização de sombra (PCF)", &m_GraphicsSettings.ShadowPCFRadius, 0, 3);
+        ImGui::Separator();
+        customTweak |= ImGui::Checkbox("Bloom", &m_GraphicsSettings.BloomEnabled);
+        if (m_GraphicsSettings.BloomEnabled) {
+            customTweak |= ImGui::DragFloat("Limiar do bloom", &m_GraphicsSettings.BloomThreshold, 0.01f, 0.1f, 10.0f);
+            customTweak |= ImGui::DragFloat("Intensidade do bloom", &m_GraphicsSettings.BloomIntensity, 0.01f, 0.0f, 3.0f);
+        }
+        ImGui::Separator();
+        customTweak |= ImGui::Checkbox("SSAO", &m_GraphicsSettings.SSAOEnabled);
+        if (m_GraphicsSettings.SSAOEnabled) {
+            customTweak |= ImGui::SliderInt("Amostras SSAO", &m_GraphicsSettings.SSAOSamples, 8, 64);
+            customTweak |= ImGui::DragFloat("Raio SSAO", &m_GraphicsSettings.SSAORadius, 0.01f, 0.05f, 2.0f);
+        }
+        ImGui::Separator();
+        customTweak |= ImGui::DragFloat("Exposição", &m_GraphicsSettings.Exposure, 0.01f, 0.1f, 8.0f);
+        customTweak |= ImGui::Checkbox("VSync", &m_GraphicsSettings.VSync);
+
+        ImGui::Separator();
+        ImGui::TextDisabled("Ambiente (céu) — vazio = procedural, ou um .hdr equirectangular:");
+        ImGui::InputText("HDRI do céu", m_EnvironmentHDRIPathBuffer, sizeof(m_EnvironmentHDRIPathBuffer));
+        ImGui::SameLine();
+        bool applyHDRI = ImGui::Button("Aplicar");
+        if (ImGui::Button("Voltar ao céu procedural")) {
+            m_EnvironmentHDRIPathBuffer[0] = '\0';
+            applyHDRI = true;
+        }
+
+        ImGui::Separator();
+        if (ImGui::Button("Salvar")) SaveGraphicsSettingsToDisk();
+        ImGui::SameLine();
+        if (ImGui::Button("Restaurar padrão (Ultra)")) m_GraphicsSettings.ApplyPreset(kizuri::QualityPreset::Ultra);
+
+        // Qualquer ajuste manual derruba o preset pra "Custom" (que é
+        // automático no struct — aqui só garantimos que o combo reflita).
+        if (customTweak && !presetApplied) m_GraphicsSettings.Preset = kizuri::QualityPreset::Custom;
+        m_GraphicsSettings.Clamp();
+
+        // Aplica em runtime (os recursos que dependem de tamanho/MSAA são
+        // recriados lazy no próximo frame pelo Renderer3D).
+        kizuri::Renderer3D::SetGraphicsSettings(m_GraphicsSettings);
+        Application& app = Application::Get();
+        if (app.GetWindow().IsVSync() != m_GraphicsSettings.VSync)
+            app.GetWindow().SetVSync(m_GraphicsSettings.VSync);
+        if (applyHDRI) kizuri::Renderer3D::SetEnvironmentHDRIPath(m_EnvironmentHDRIPathBuffer);
+    }
+    ImGui::End();
 }
 
 void EditorLayer::DrawGizmo() {
@@ -921,6 +1104,9 @@ void EditorLayer::DrawDockspace() {
         if (ImGui::MenuItem("Exportar Jogo...", nullptr, false,
                             m_SceneState == SceneState::Edit && !m_ScenePath.empty())) {
             m_RequestOpenExportPopup = true;
+        }
+        if (ImGui::MenuItem("Configurações Gráficas...")) {
+            m_ShowGraphicsSettings = true;
         }
         if (ImGui::MenuItem("Definir cena como inicial", nullptr, false,
                             m_SceneState == SceneState::Edit && !m_ScenePath.empty() && (bool)Project::GetActive())) {
@@ -1830,11 +2016,24 @@ void EditorLayer::DrawContentBrowser() {
         }
 
         ImU32 iconColor = isDir ? IM_COL32(217, 180, 100, 255) : IM_COL32(150, 150, 156, 255);
-        if (isDir)
+        if (isDir) {
             kizuri::editor::icons::Folder(dl, ImVec2(cursor.x + thumbSize * 0.15f, cursor.y + thumbSize * 0.15f), thumbSize * 0.7f, iconColor);
-        else
-            dl->AddRect(ImVec2(cursor.x + thumbSize * 0.2f, cursor.y + thumbSize * 0.1f),
-                        ImVec2(cursor.x + thumbSize * 0.8f, cursor.y + thumbSize * 0.9f), iconColor, 2.0f, 0, 2.0f);
+        } else {
+            std::string ext = entry.path().extension().string();
+            for (auto& c : ext) c = (char)tolower((unsigned char)c);
+            bool isImage = ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
+                           ext == ".bmp" || ext == ".tga" || ext == ".hdr";
+            if (isImage) {
+                // Preview real da imagem (cache por caminho — só carrega na 1ª vez).
+                auto thumb = GetThumbnail(entry.path().string());
+                ImGui::SetCursorScreenPos(cursor);
+                ImGui::Image((ImTextureID)(uint64_t)thumb->GetRendererID(),
+                             ImVec2(thumbSize, thumbSize), ImVec2(0, 1), ImVec2(1, 0));
+            } else {
+                dl->AddRect(ImVec2(cursor.x + thumbSize * 0.2f, cursor.y + thumbSize * 0.1f),
+                            ImVec2(cursor.x + thumbSize * 0.8f, cursor.y + thumbSize * 0.9f), iconColor, 2.0f, 0, 2.0f);
+            }
+        }
 
         ImGui::TextWrapped("%s", name.c_str());
         ImGui::EndGroup();
@@ -2153,9 +2352,14 @@ void EditorLayer::DrawInspector() {
                 char meshBuf[512];
                 strncpy(meshBuf, mr.MeshSource.c_str(), sizeof(meshBuf) - 1);
                 meshBuf[sizeof(meshBuf) - 1] = '\0';
-                if (ImGui::InputText("Malha (.obj)", meshBuf, sizeof(meshBuf))) {
+                if (ImGui::InputText("Malha (.obj/.glb/.gltf)", meshBuf, sizeof(meshBuf))) {
                     mr.MeshSource = meshBuf;
                     if (!mr.MeshSource.empty()) mr.MeshAsset = kizuri::Mesh::FromSource(mr.MeshSource);
+                }
+                std::string droppedMesh;
+                if (AcceptAssetDrop(droppedMesh)) {
+                    mr.MeshSource = kizuri::Project::MakeRelativePath(droppedMesh);
+                    mr.MeshAsset = kizuri::Mesh::FromSource(mr.MeshSource);
                 }
                 ImGui::ColorEdit3("Albedo", &mat.Albedo.x);
                 ImGui::DragFloat("Metallic", &mat.Metallic, 0.01f, 0.0f, 1.0f);
@@ -2168,12 +2372,22 @@ void EditorLayer::DrawInspector() {
                     mat.AlbedoMapPath = albBuf;
                     mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.AlbedoMapPath);
                 }
+                std::string droppedAlbedo;
+                if (AcceptAssetDrop(droppedAlbedo)) {
+                    mat.AlbedoMapPath = kizuri::Project::MakeRelativePath(droppedAlbedo);
+                    mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.AlbedoMapPath);
+                }
                 if (mat.AlbedoMap) {
                     uint32_t texID = mat.AlbedoMap->GetRendererID();
                     ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(64.0f, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
                 }
                 if (ImGui::InputText("Mapa de Normais", nrmBuf, sizeof(nrmBuf))) {
                     mat.NormalMapPath = nrmBuf;
+                    mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.NormalMapPath);
+                }
+                std::string droppedNormal;
+                if (AcceptAssetDrop(droppedNormal)) {
+                    mat.NormalMapPath = kizuri::Project::MakeRelativePath(droppedNormal);
                     mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.NormalMapPath);
                 }
                 if (mat.NormalMap) {
@@ -2705,6 +2919,7 @@ void EditorLayer::OnImGuiRender() {
         DrawGizmo();
         KZ_CORE_TRACE("EditorLayer::OnImGuiRender — DrawGizmo ok");
         DrawCameraGizmo();
+        DrawLightGizmo();
     } else {
         KZ_CORE_TRACE("EditorLayer::OnImGuiRender — gizmo pulado (Play)");
     }
@@ -2823,6 +3038,9 @@ void EditorLayer::OnImGuiRender() {
                 m_History.Push(CreateRef<EntityEditCommand>(m_SelectedEntity.GetUUID(), m_TilePaintBefore, after));
         }
     }
+
+    // Janela de configurações gráficas (Arquivo > Configurações Gráficas).
+    DrawGraphicsSettings();
 
     ImGui::End();
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — fim");

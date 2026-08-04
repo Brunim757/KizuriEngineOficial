@@ -396,7 +396,6 @@ Material Mesh::ExtractMaterialFromGLTF(const std::string& path) {
         mat.Metallic = pbr.metallic_factor;
         mat.Roughness = pbr.roughness_factor;
         mat.Emissive = { gm.emissive_factor[0], gm.emissive_factor[1], gm.emissive_factor[2] };
-        if (gm.has_emissive_strength) mat.EmissiveStrength = gm.emissive_strength;
         mat.AlbedoMap = LoadGLTFTexture(pbr.base_color_texture);
         mat.MetallicRoughnessMap = LoadGLTFTexture(pbr.metallic_roughness_texture);
         mat.NormalMap = LoadGLTFTexture(gm.normal_texture);

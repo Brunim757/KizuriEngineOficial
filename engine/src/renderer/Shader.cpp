@@ -73,6 +73,7 @@ void Shader::SetIntArray(const std::string& name, int* values, uint32_t count) {
     for (uint32_t i = 0; i < count; ++i) glUniform1i(loc + (int)i, values[i]);
 }
 void Shader::SetFloat(const std::string& name, float value)          { glUniform1f(GetUniformLocation(name), value); }
+void Shader::SetFloat2(const std::string& name, const glm::vec2& v)  { glUniform2f(GetUniformLocation(name), v.x, v.y); }
 void Shader::SetFloat3(const std::string& name, const glm::vec3& v)  { glUniform3f(GetUniformLocation(name), v.x, v.y, v.z); }
 void Shader::SetFloat4(const std::string& name, const glm::vec4& v)  { glUniform4f(GetUniformLocation(name), v.x, v.y, v.z, v.w); }
 void Shader::SetMat3(const std::string& name, const glm::mat3& m)    { glUniformMatrix3fv(GetUniformLocation(name), 1, GL_FALSE, glm::value_ptr(m)); }

@@ -4,7 +4,9 @@
 #include "kizuri/renderer/Buffer.hpp"
 #include "kizuri/renderer/Texture.hpp"
 #include "kizuri/renderer/Shader.hpp"
+#include "kizuri/renderer/GraphicsSettings.hpp"
 #include <glm/glm.hpp>
+#include <string>
 #include <vector>
 
 namespace kizuri {
@@ -94,6 +96,19 @@ public:
     static void BeginScene(const PerspectiveCamera& camera);
     static void EndScene();
 
+    // Configurações gráficas globais (qualidade preset / MSAA / SSAO /
+    // bloom / exposição / resolução interna). Aplicar em runtime não exige
+    // reiniciar nada: os recursos que dependem de tamanho (HDR, shadow map,
+    // SSAO) são recriados no próximo EndScene de forma preguiçosa.
+    static const GraphicsSettings& GetGraphicsSettings();
+    static void SetGraphicsSettings(const GraphicsSettings& settings);
+
+    // Ambiente IBL: caminho vazio = céu procedural (padrão); caminho de um
+    // .hdr/.exr equirectangular = carrega, converte pra cubemap e rebakeia
+    // irradiância + pré-filtro a partir da imagem HDR real.
+    static void SetEnvironmentHDRIPath(const std::string& path);
+    static const std::string& GetEnvironmentHDRIPath();
+
     // Empilha uma luz pro frame atual; a 1ª Directional submetida vira a que projeta sombra/céu.
     static void SubmitLight(const Light& light);
 
@@ -135,6 +150,12 @@ private:
     static glm::mat4 s_LightSpaceMatrix[kCascadeCount];
     static float s_CascadeSplits[kCascadeCount]; // distância (view-space) onde cada cascata termina
 
+    // HDRI: textura equirectangular 2D carregada do arquivo (0 = procedural);
+    // o shader converte pra cubemap durante o bake.
+    static uint32_t s_EquirectTexture;
+    static Ref<Shader> s_EquirectShader;
+    static std::string s_EnvironmentHDRIPath;
+
     // IBL: céu procedural (s_EnvironmentCubemap, também usado como skybox), convoluído em
     // irradiância difusa (s_IrradianceCubemap) e pré-filtrado GGX por rugosidade (s_PrefilterCubemap).
     // Bake único em Init() — ver GenerateEnvironment() e a limitação de ambiente estático no ROADMAP.
@@ -149,18 +170,35 @@ private:
 
     static void GenerateEnvironment();
     static void ComputeCascades(const glm::vec3& lightDir); // preenche s_LightSpaceMatrix[]/s_CascadeSplits[]
+    static bool LoadHDRI(const std::string& path);
 
     // Pós-processamento: a cena inteira (mesh + skybox) é desenhada num framebuffer HDR interno
-    // (RGBA16F, sem clamp em [0,1]) em vez de ir direto pro destino final. Dali, um bright-pass +
-    // blur separável (ping-pong, meia resolução) gera o glow do bloom, e um passe de composição
-    // final soma bloom + cena, aplica tonemap ACES e grava no framebuffer que o chamador pediu.
-    static void EnsurePostBuffers(uint32_t width, uint32_t height); // (re)cria se o tamanho mudou
-    static uint32_t s_HDRFBO, s_HDRColorBuffer, s_HDRDepthRBO;
+    // (RGBA16F, sem clamp em [0,1]) em vez de ir direto pro destino final. Com MSAA ligado esse
+    // framebuffer é multisample; depois do passe da cena um blit resolve cor+profundidade pro
+    // framebuffer simples s_HDRFBO (que é o que os passes seguintes amostram). Dali, um bright-pass +
+    // blur separável (ping-pong, meia resolução) gera o glow do bloom, SSAO é calculado do depth
+    // resolvido, e um passe de composição final soma bloom + aplica oclusão + tonemap ACES e grava
+    // no framebuffer que o chamador pediu.
+    static void EnsurePostBuffers(uint32_t width, uint32_t height, int msaa); // (re)cria se o tamanho/msaa mudou
+    static void EnsureShadowMaps(uint32_t size); // (re)cria os shadow maps se a resolução mudou
+    static void EnsureSSAOBuffers(uint32_t width, uint32_t height); // (re)cria se o tamanho mudou
+    static GraphicsSettings s_Settings;
+    static uint32_t s_HDRFBO, s_HDRColorBuffer, s_HDRDepthTexture;      // destino simples (resolvido)
+    static uint32_t s_MSAAHDRFBO, s_MSAAHDRColor, s_MSAAHDRDepthRBO;    // destino multisample (MSAA>1)
+    static int s_CurrentMSAA;
     static uint32_t s_BloomFBO[2], s_BloomColorBuffer[2];
     static uint32_t s_PostWidth, s_PostHeight;
     static Ref<VertexArray> s_FullscreenQuad;
     static Ref<Shader> s_BrightPassShader, s_BlurShader, s_CompositeShader;
     static bool s_DrawGridFlag; // DrawGrid() só marca a intenção; o desenho de verdade é dentro do passe HDR (EndScene)
+
+    // SSAO: depth resolvido -> oclusão meia-resolução -> blur -> aplicado no composite.
+    static uint32_t s_SSAOFBO, s_SSAOColorBuffer;
+    static uint32_t s_SSAOBlurFBO, s_SSAOBlurBuffer;
+    static uint32_t s_NoiseTexture; // 4x4 vetores aleatórios pra quebrar a banda do hemisfério
+    static Ref<Shader> s_SSAOShader;
+    static std::vector<glm::vec3> s_SSAOKernel; // amostras do hemisfério (geradas em Init)
+    static uint32_t s_SSAOWidth, s_SSAOHeight;
 
     // Partículas: 1 VAO reaproveitado por todos os lotes do frame — buffer de quad estático
     // (attribs 0/1) + buffer de instância dinâmico, reescrito via glBufferSubData a cada lote.

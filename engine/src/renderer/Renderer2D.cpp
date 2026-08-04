@@ -31,7 +31,6 @@ struct Renderer2DData {
     static const uint32_t MaxQuads = 20000;
     static const uint32_t MaxVertices = MaxQuads * 4;
     static const uint32_t MaxIndices = MaxQuads * 6;
-    static const uint32_t MaxTextureSlots = 32;
 
     static const uint32_t MaxCircles = 4000;
     static const uint32_t MaxCircleVertices = MaxCircles * 4;
@@ -42,12 +41,14 @@ struct Renderer2DData {
     Ref<Shader> QuadShader;
     Ref<Texture2D> WhiteTexture;
 
+    // Textura ativa do batch atual — quads são agrupados por textura e o
+    // batch é despejado (Flush) quando ela muda. É o que mantém o shader em
+    // GLSL 330 (sem indexação dinâmica de sampler array).
+    Ref<Texture2D> CurrentTexture;
+
     uint32_t QuadIndexCount = 0;
     std::vector<QuadVertex> QuadVertexBufferBase;
     uint32_t QuadVertexBufferPtr = 0;
-
-    std::array<Ref<Texture2D>, MaxTextureSlots> TextureSlots;
-    uint32_t TextureSlotIndex = 1; // 0 = white texture
 
     glm::vec4 QuadVertexPositions[4];
 
@@ -70,23 +71,15 @@ struct Renderer2DData {
 
 static Renderer2DData s_Data;
 
-// Únicos shaders da engine que realmente PRECISAM de GLSL 450 (todos os
-// outros — Renderer2D_Line, Renderer3D_Mesh/Line/Shadow — rodam em 330
-// core, o mínimo que a Window garante, ver Window::Init). O motivo é
-// s_QuadFragmentSrc logo abaixo: `u_Textures[index]` indexa o array de
-// sampler2D com um índice que só é conhecido em tempo de execução (vem de
-// v_TexIndex, por-vértice). GLSL 1.30–3.30 exige que índice de array de
-// sampler seja uma expressão CONSTANTE em tempo de compilação — só a
-// partir do GLSL 4.00 (dynamically uniform expressions) isso é permitido.
-// É o preço do batching multi-textura num draw call só; a alternativa
-// portável (cadeia de if/else com índice constante por textura) sacrifica
-// a elegância do código pra rodar em 3.3 — não vale a troca ainda porque
-// nenhuma GPU/driver testado até agora rejeitou isso (inclusive o Zink/
-// Vortek do log que motivou essa revisão: compilou os cinco shaders sem
-// erro mesmo com o contexto tendo caído pra 3.3). Se isso virar dor real
-// num driver mais rígido, a solução é reescrever só este par de shaders.
+// O batching de quads roda 100% em GLSL 330 core (o mínimo que a engine
+// garante, ver Window::Init) — inclusive o shader de quads. O preço da
+// portabilidade: GLSL 1.30–3.30 não permite indexar array de sampler com
+// índice dinâmico (`u_Textures[index]` com índice por-vértice só existe a
+// partir do 4.00), então em vez de um draw call multi-textura a engine
+// agrupa os quads POR textura e faz um draw call por textura do lote —
+// o mesmo resultado visual com zero dependência de driver novo.
 static const char* s_QuadVertexSrc = R"(
-#version 450 core
+#version 330 core
 layout(location = 0) in vec3 a_Position;
 layout(location = 1) in vec4 a_Color;
 layout(location = 2) in vec2 a_TexCoord;
@@ -97,33 +90,29 @@ uniform mat4 u_ViewProjection;
 
 out vec4 v_Color;
 out vec2 v_TexCoord;
-out float v_TexIndex;
 out float v_TilingFactor;
 
 void main() {
     v_Color = a_Color;
     v_TexCoord = a_TexCoord;
-    v_TexIndex = a_TexIndex;
     v_TilingFactor = a_TilingFactor;
     gl_Position = u_ViewProjection * vec4(a_Position, 1.0);
 }
 )";
 
 static const char* s_QuadFragmentSrc = R"(
-#version 450 core
+#version 330 core
 layout(location = 0) out vec4 o_Color;
 
 in vec4 v_Color;
 in vec2 v_TexCoord;
-in float v_TexIndex;
 in float v_TilingFactor;
 
-uniform sampler2D u_Textures[32];
+uniform sampler2D u_Texture;
 
 void main() {
     vec4 texColor = v_Color;
-    int index = int(v_TexIndex);
-    texColor *= texture(u_Textures[index], v_TexCoord * v_TilingFactor);
+    texColor *= texture(u_Texture, v_TexCoord * v_TilingFactor);
     if (texColor.a < 0.01) discard;
     o_Color = texColor;
 }
@@ -233,14 +222,9 @@ void Renderer2D::Init() {
     uint32_t whitePixel = 0xffffffff;
     s_Data.WhiteTexture->SetData(&whitePixel, sizeof(uint32_t));
 
-    int samplers[Renderer2DData::MaxTextureSlots];
-    for (uint32_t i = 0; i < Renderer2DData::MaxTextureSlots; ++i) samplers[i] = (int)i;
-
     s_Data.QuadShader = CreateRef<Shader>("Renderer2D_Quad", s_QuadVertexSrc, s_QuadFragmentSrc);
-    s_Data.QuadShader->Bind();
-    s_Data.QuadShader->SetIntArray("u_Textures", samplers, Renderer2DData::MaxTextureSlots);
 
-    s_Data.TextureSlots[0] = s_Data.WhiteTexture;
+    s_Data.CurrentTexture = s_Data.WhiteTexture;
 
     s_Data.QuadVertexPositions[0] = { -0.5f, -0.5f, 0.0f, 1.0f };
     s_Data.QuadVertexPositions[1] = {  0.5f, -0.5f, 0.0f, 1.0f };
@@ -338,7 +322,7 @@ void Renderer2D::DrawGrid() {
 void Renderer2D::StartBatch() {
     s_Data.QuadIndexCount = 0;
     s_Data.QuadVertexBufferPtr = 0;
-    s_Data.TextureSlotIndex = 1;
+    s_Data.CurrentTexture = s_Data.WhiteTexture;
     s_Data.CircleIndexCount = 0;
     s_Data.CircleVertexBufferPtr = 0;
 }
@@ -366,8 +350,12 @@ void Renderer2D::Flush() {
     uint32_t dataSize = s_Data.QuadVertexBufferPtr * sizeof(QuadVertex);
     s_Data.QuadVertexBuffer->SetData(s_Data.QuadVertexBufferBase.data(), dataSize);
 
-    for (uint32_t i = 0; i < s_Data.TextureSlotIndex; ++i)
-        s_Data.TextureSlots[i]->Bind(i);
+    // Textura única do batch — GLSL 330 não permite sampler array dinâmico,
+    // então cada batch carrega só a textura atual na unidade 0.
+    if (s_Data.CurrentTexture) {
+        s_Data.CurrentTexture->Bind(0);
+        s_Data.QuadShader->SetInt("u_Texture", 0);
+    }
 
     RenderCommand::DrawIndexed(s_Data.QuadVertexArray, s_Data.QuadIndexCount);
     ++s_Data.Stats.DrawCalls;
@@ -406,17 +394,14 @@ void Renderer2D::DrawTransformedQuadUV(const glm::mat4& transform, const Ref<Tex
         { uvMin.x, uvMin.y }, { uvMax.x, uvMin.y }, { uvMax.x, uvMax.y }, { uvMin.x, uvMax.y },
     };
 
-    float textureIndex = 0.0f;
-    for (uint32_t i = 1; i < s_Data.TextureSlotIndex; ++i) {
-        if (*s_Data.TextureSlots[i] == *texture) { textureIndex = (float)i; break; }
+    // Troca de textura = fim do batch atual; o próximo quad começa um lote
+    // novo com a nova textura (flush no meio do frame é OK — o buffer de
+    // vértice continua acumulando, só despeja o que já estava lá).
+    if (*s_Data.CurrentTexture != *texture) {
+        Renderer2D::Flush();
+        s_Data.CurrentTexture = texture;
     }
-    if (textureIndex == 0.0f) {
-        if (s_Data.TextureSlotIndex >= Renderer2DData::MaxTextureSlots) NextBatch();
-        textureIndex = (float)s_Data.TextureSlotIndex;
-        s_Data.TextureSlots[s_Data.TextureSlotIndex] = texture;
-        ++s_Data.TextureSlotIndex;
-    }
-    PushQuadVertices(transform, tint, texCoords, textureIndex, tilingFactor);
+    PushQuadVertices(transform, tint, texCoords, 0.0f, tilingFactor);
 }
 
 void Renderer2D::DrawCircle(const glm::mat4& transform, const glm::vec4& color, float thickness, float fade, int) {

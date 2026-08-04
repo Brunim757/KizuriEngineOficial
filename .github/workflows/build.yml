@@ -191,8 +191,11 @@ jobs:
           sky="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k"
           dl "$sky/qwantani_puresky_1k.hdr"                     dist/content/skies/qwantani_puresky_1k.hdr     qwantani_puresky_1k.hdr
           dl "$sky/kloofendal_48d_partly_cloudy_puresky_1k.hdr" dist/content/skies/kloofendal_1k.hdr          kloofendal_partly_cloudy_1k.hdr
+          dl "$sky/kloppenheim_06_puresky_1k.hdr"               dist/content/skies/kloppenheim_06_1k.hdr      kloppenheim_06_1k.hdr
           dl "$sky/spruit_sunrise_1k.hdr"                       dist/content/skies/spruit_sunrise_1k.hdr       spruit_sunrise_1k.hdr
           dl "$sky/venice_sunset_1k.hdr"                        dist/content/skies/venice_sunset_1k.hdr        venice_sunset_1k.hdr
+          dl "$sky/the_sky_is_on_fire_1k.hdr"                   dist/content/skies/the_sky_is_on_fire_1k.hdr   the_sky_is_on_fire_1k.hdr
+          dl "$sky/studio_small_03_1k.hdr"                      dist/content/skies/studio_small_03_1k.hdr      studio_small_03_1k.hdr
           sky4="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k"
           dl "$sky4/qwantani_puresky_4k.hdr"                    dist/content/skies/qwantani_puresky_4k.hdr     qwantani_puresky_4k.hdr
           dl "$sky4/kloofendal_48d_partly_cloudy_puresky_4k.hdr" dist/content/skies/kloofendal_4k.hdr         kloofendal_partly_cloudy_4k.hdr
@@ -201,6 +204,29 @@ jobs:
           echo "---- Content Pack: $(grep -c . "$manifest") arquivos, ~$((total/1024)) KB ----" >> "$manifest"
           echo "Manifest:"
           cat "$manifest"
+
+      # ---- Texturas PBR (ambientCG, CC0) — só no Ubuntu (precisa de unzip) ---
+      - name: Baixar texturas PBR (ambientCG)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          set +e
+          for id in Wood049 Metal032 Bricks072 Concrete034 Planks016 Ground037; do
+            for res in 2K; do
+              zip="dist/content/textures/${id}_${res}-JPG.zip"
+              mkdir -p dist/content/textures
+              curl -fsSL --max-time 120 -o "$zip" "https://ambientcg.com/get?file=${id}_${res}-JPG.zip" 2>/dev/null
+              if [ -s "$zip" ] && unzip -o -q "$zip" -d "dist/content/textures/${id}" 2>/dev/null; then
+                rm -f "$zip"
+                rm -f dist/content/textures/${id}/*_Preview* dist/content/textures/${id}/*_PreviewMat* 2>/dev/null
+                size=$(du -sk "dist/content/textures/${id}" | cut -f1)
+                echo "Textura PBR ${id}_${res}: ${size} KB" >> dist/content/MANIFEST.txt
+              else
+                rm -f "$zip"
+              fi
+            done
+          done
+          echo "--- Texturas PBR: $(ls dist/content/textures 2>/dev/null | wc -l) conjuntos ---" >> dist/content/MANIFEST.txt
 
       - name: Publicar artefato combinado
         uses: actions/upload-artifact@v4

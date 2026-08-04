@@ -146,10 +146,132 @@ Ref<Mesh> Mesh::LoadFromOBJ(const std::string& path) {
     return CreateRef<Mesh>(vertices, indices);
 }
 
+Ref<Mesh> Mesh::CreateCylinder(uint32_t sectors) {
+    std::vector<Vertex3D> vertices;
+    std::vector<uint32_t> indices;
+    const float PI = glm::pi<float>();
+    const float radius = 0.5f, halfH = 0.5f;
+
+    for (uint32_t i = 0; i <= sectors; ++i) {
+        float a = (float)i * 2.0f * PI / (float)sectors;
+        glm::vec2 ring(glm::cos(a), glm::sin(a));
+        // corpo (2 anéis: topo e base)
+        vertices.push_back({ { ring.x * radius, halfH, ring.y * radius }, { ring.x, 0.0f, ring.y }, { a / (2.0f * PI), 1.0f } });
+        vertices.push_back({ { ring.x * radius, -halfH, ring.y * radius }, { ring.x, 0.0f, ring.y }, { a / (2.0f * PI), 0.0f } });
+        // tampas (centro + borda) — topo com normal +Y, base -Y
+        vertices.push_back({ { 0.0f, halfH, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.5f, 0.5f } });
+        vertices.push_back({ { ring.x * radius, halfH, ring.y * radius }, { 0.0f, 1.0f, 0.0f }, { (ring.x * 0.5f + 0.5f), (ring.y * 0.5f + 0.5f) } });
+        vertices.push_back({ { 0.0f, -halfH, 0.0f }, { 0.0f, -1.0f, 0.0f }, { 0.5f, 0.5f } });
+        vertices.push_back({ { ring.x * radius, -halfH, ring.y * radius }, { 0.0f, -1.0f, 0.0f }, { (ring.x * 0.5f + 0.5f), (ring.y * 0.5f + 0.5f) } });
+    }
+
+    for (uint32_t i = 0; i < sectors; ++i) {
+        uint32_t top0 = i * 6, top1 = (i + 1) * 6;
+        uint32_t b0 = top0 + 1, b1 = top1 + 1;
+        // parede
+        indices.insert(indices.end(), { top0, b0, top1, top1, b0, b1 });
+        // tampas
+        uint32_t tc0 = top0 + 2, te0 = top0 + 3, tc1 = top1 + 2, te1 = top1 + 3;
+        uint32_t bc0 = top0 + 4, be0 = top0 + 5, bc1 = top1 + 4, be1 = top1 + 5;
+        indices.insert(indices.end(), { tc0, te0, tc1, tc1, te0, te1 });
+        indices.insert(indices.end(), { bc0, bc1, be0, be0, bc1, be1 });
+    }
+    return CreateRef<Mesh>(vertices, indices);
+}
+
+Ref<Mesh> Mesh::CreateCone(uint32_t sectors) {
+    std::vector<Vertex3D> vertices;
+    std::vector<uint32_t> indices;
+    const float PI = glm::pi<float>();
+    const float radius = 0.5f, halfH = 0.5f;
+
+    for (uint32_t i = 0; i <= sectors; ++i) {
+        float a = (float)i * 2.0f * PI / (float)sectors;
+        glm::vec2 ring(glm::cos(a), glm::sin(a));
+        glm::vec3 edge(ring.x * radius, -halfH, ring.y * radius);
+        glm::vec3 normal = glm::normalize(glm::vec3(ring.x, radius / glm::max(halfH * 2.0f, 0.001f), ring.y));
+        vertices.push_back({ { 0.0f, halfH, 0.0f }, normal, { 0.5f, 0.5f } });            // ápice
+        vertices.push_back({ edge, normal, { a / (2.0f * PI), 0.0f } });                    // borda
+        vertices.push_back({ { 0.0f, -halfH, 0.0f }, { 0.0f, -1.0f, 0.0f }, { 0.5f, 0.5f } }); // centro da base
+        vertices.push_back({ edge, { 0.0f, -1.0f, 0.0f }, { (ring.x * 0.5f + 0.5f), (ring.y * 0.5f + 0.5f) } }); // borda da base
+    }
+    for (uint32_t i = 0; i < sectors; ++i) {
+        uint32_t o0 = i * 4, o1 = (i + 1) * 4;
+        indices.insert(indices.end(), { o0, o1 + 1, o0 + 1 });       // lateral
+        indices.insert(indices.end(), { o0 + 2, o0 + 3, o1 + 3, o1 + 3, o1 + 2, o0 + 2 }); // base
+    }
+    return CreateRef<Mesh>(vertices, indices);
+}
+
+Ref<Mesh> Mesh::CreateCapsule(uint32_t sectors, uint32_t stacks) {
+    std::vector<Vertex3D> vertices;
+    std::vector<uint32_t> indices;
+    const float PI = glm::pi<float>();
+    const float radius = 0.25f, halfBody = 0.35f;
+
+    // hemisférios: amostra ângulo de elevação de 0..90 no topo e 90..180 embaixo.
+    auto PushRing = [&](float phi, float y) {
+        for (uint32_t i = 0; i <= sectors; ++i) {
+            float a = (float)i * 2.0f * PI / (float)sectors;
+            glm::vec3 dir(glm::cos(a) * glm::sin(phi), glm::cos(phi), glm::sin(a) * glm::sin(phi));
+            vertices.push_back({ glm::vec3(dir.x * radius, y + dir.y * radius, dir.z * radius), dir,
+                                 { (float)i / (float)sectors, (y + radius + halfBody) / (2.0f * radius + 2.0f * halfBody) } });
+        }
+    };
+
+    for (uint32_t s = 0; s <= stacks; ++s) {
+        float phi = PI * (0.5f - 0.5f * (float)s / (float)stacks); // topo: phi de 90°→0°
+        PushRing(phi, halfBody);
+    }
+    for (uint32_t s = 0; s <= stacks; ++s) {
+        float phi = PI * (0.5f + 0.5f * (float)s / (float)stacks); // base: phi de 0°→-90°
+        PushRing(phi, -halfBody);
+    }
+    uint32_t rings = (uint32_t)vertices.size() / (sectors + 1);
+    for (uint32_t r = 0; r + 1 < rings; ++r) {
+        for (uint32_t i = 0; i < sectors; ++i) {
+            uint32_t a0 = r * (sectors + 1) + i, a1 = a0 + 1;
+            uint32_t b0 = a0 + (sectors + 1), b1 = b0 + 1;
+            indices.insert(indices.end(), { a0, b0, a1, a1, b0, b1 });
+        }
+    }
+    return CreateRef<Mesh>(vertices, indices);
+}
+
+Ref<Mesh> Mesh::CreateTorus(uint32_t majorSeg, uint32_t minorSeg) {
+    std::vector<Vertex3D> vertices;
+    std::vector<uint32_t> indices;
+    const float PI = glm::pi<float>();
+    const float major = 0.4f, minor = 0.12f;
+
+    for (uint32_t i = 0; i <= majorSeg; ++i) {
+        float ma = (float)i * 2.0f * PI / (float)majorSeg;
+        glm::vec2 mc(glm::cos(ma), glm::sin(ma));
+        for (uint32_t j = 0; j <= minorSeg; ++j) {
+            float mi = (float)j * 2.0f * PI / (float)minorSeg;
+            glm::vec3 dir(glm::cos(mi) * mc.x, glm::sin(mi), glm::cos(mi) * mc.y);
+            vertices.push_back({ glm::vec3((major + minor * glm::cos(mi)) * mc.x, minor * glm::sin(mi), (major + minor * glm::cos(mi)) * mc.y),
+                                 dir, { (float)i / (float)majorSeg, (float)j / (float)minorSeg } });
+        }
+    }
+    for (uint32_t i = 0; i < majorSeg; ++i) {
+        for (uint32_t j = 0; j < minorSeg; ++j) {
+            uint32_t a0 = i * (minorSeg + 1) + j, a1 = a0 + 1;
+            uint32_t b0 = a0 + (minorSeg + 1), b1 = b0 + 1;
+            indices.insert(indices.end(), { a0, b0, a1, a1, b0, b1 });
+        }
+    }
+    return CreateRef<Mesh>(vertices, indices);
+}
+
 Ref<Mesh> Mesh::FromSource(const std::string& source) {
-    if (source == "builtin:cube")    return CreateCube();
-    if (source == "builtin:plane")   return CreatePlane();
-    if (source == "builtin:sphere")  return CreateSphere();
+    if (source == "builtin:cube")     return CreateCube();
+    if (source == "builtin:plane")    return CreatePlane();
+    if (source == "builtin:sphere")   return CreateSphere();
+    if (source == "builtin:cylinder") return CreateCylinder();
+    if (source == "builtin:cone")     return CreateCone();
+    if (source == "builtin:capsule")  return CreateCapsule();
+    if (source == "builtin:torus")    return CreateTorus();
     if (!source.empty()) {
         size_t dot = source.find_last_of('.');
         if (dot != std::string::npos) {

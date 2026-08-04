@@ -65,6 +65,15 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_animator_set_loop(uint entity, int loop);
     [DllImport(Lib)] internal static extern void kz_animator_set_playing(uint entity, int playing);
 
+    // ---- Física 3D (Bullet3) ---------------------------------------------------
+    [DllImport(Lib)] internal static extern int kz_entity_add_rigidbody3d(uint entity, int bodyType, float mass);
+    [DllImport(Lib)] internal static extern int kz_entity_add_box_collider3d(uint entity, float hx, float hy, float hz);
+    [DllImport(Lib)] internal static extern int kz_entity_add_sphere_collider3d(uint entity, float radius);
+    [DllImport(Lib)] internal static extern int kz_rigidbody3d_apply_force(uint entity, float fx, float fy, float fz);
+    [DllImport(Lib)] internal static extern int kz_rigidbody3d_apply_impulse(uint entity, float ix, float iy, float iz);
+    [DllImport(Lib)] internal static extern int kz_rigidbody3d_get_linear_velocity(uint entity, out float vx, out float vy, out float vz);
+    [DllImport(Lib)] internal static extern void kz_rigidbody3d_set_linear_velocity(uint entity, float vx, float vy, float vz);
+
     // ---- Mutação de componentes em runtime ------------------------------------
     [DllImport(Lib)] internal static extern int kz_sprite_set_texture(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern int kz_sprite_set_color(uint entity, float r, float g, float b, float a);

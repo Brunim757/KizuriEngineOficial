@@ -2339,11 +2339,12 @@ void EditorLayer::DrawInspector() {
             auto& mr = m_SelectedEntity.GetComponent<MeshRendererComponent>();
             if (DrawComponentHeader("Mesh Renderer", &removeThis)) {
                 auto& mat = mr.MeshMaterial;
-                // Fonte da mesh: combobox com os builtins + campo livre pra .obj.
-                const char* builtins[] = { "builtin:cube", "builtin:plane", "builtin:sphere" };
+                // Fonte da mesh: combobox com os builtins + campo livre pra arquivo.
+                const char* builtins[] = { "builtin:cube", "builtin:plane", "builtin:sphere",
+                                           "builtin:cylinder", "builtin:cone", "builtin:capsule", "builtin:torus" };
                 int currentBuiltin = -1;
-                for (int i = 0; i < 3; ++i) if (mr.MeshSource == builtins[i]) currentBuiltin = i;
-                if (ImGui::Combo("Mesh pronta", &currentBuiltin, builtins, 3)) {
+                for (int i = 0; i < 7; ++i) if (mr.MeshSource == builtins[i]) currentBuiltin = i;
+                if (ImGui::Combo("Mesh pronta", &currentBuiltin, builtins, 7)) {
                     if (currentBuiltin >= 0) {
                         mr.MeshSource = builtins[currentBuiltin];
                         mr.MeshAsset = kizuri::Mesh::FromSource(mr.MeshSource);

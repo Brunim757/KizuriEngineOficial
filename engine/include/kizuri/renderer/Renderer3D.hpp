@@ -18,8 +18,8 @@ struct Vertex3D {
     glm::vec3 Position;
     glm::vec3 Normal;
     glm::vec2 TexCoord;
-    glm::vec4 Joints = { 0.0f };   // índices das até 4 juntas que pesam no vértice
-    glm::vec4 Weights = { 0.0f };  // pesos (normalizados; 0 = estática)
+    glm::vec4 Joints = glm::vec4(0.0f);   // índices das até 4 juntas que pesam no vértice
+    glm::vec4 Weights = glm::vec4(0.0f);  // pesos (normalizados; 0 = estática)
 };
 
 // Mesh estática 3D (geometria + buffers de GPU já prontos).
@@ -37,11 +37,15 @@ public:
     static Ref<Mesh> CreateCube();
     static Ref<Mesh> CreatePlane();
     static Ref<Mesh> CreateSphere(uint32_t sectors = 32, uint32_t stacks = 16);
+    static Ref<Mesh> CreateCylinder(uint32_t sectors = 32);
+    static Ref<Mesh> CreateCone(uint32_t sectors = 32);
+    static Ref<Mesh> CreateCapsule(uint32_t sectors = 24, uint32_t stacks = 12);
+    static Ref<Mesh> CreateTorus(uint32_t majorSeg = 48, uint32_t minorSeg = 24);
     static Ref<Mesh> LoadFromOBJ(const std::string& path);
     static Ref<Mesh> LoadFromGLTF(const std::string& path); // .glb/.gltf via cgltf
 
     // Reconstrói uma mesh a partir da string serializável do editor
-    // ("builtin:cube" | "builtin:plane" | "builtin:sphere" | caminho .obj/.glb/.gltf).
+    // ("builtin:cube|plane|sphere|cylinder|cone|capsule|torus" | caminho .obj/.glb/.gltf).
     static Ref<Mesh> FromSource(const std::string& source);
 
 private:

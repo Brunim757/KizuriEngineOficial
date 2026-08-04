@@ -738,7 +738,13 @@ void Scene::UpdatePhysics2D(Timestep ts) {
         auto& transform = entity.GetComponent<TransformComponent>();
         auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
         auto* body = static_cast<b2Body*>(rb2d.RuntimeBody);
-        if (!body) continue;
+        if (!body) {
+            // Corpo criado em runtime (AddRigidbody2D/collider por script) —
+            // registra agora, no primeiro frame depois da criação.
+            RegisterPhysics2DEntity(entity);
+            body = static_cast<b2Body*>(rb2d.RuntimeBody);
+            if (!body) continue;
+        }
 
         // Dynamic: corpo manda. Kinematic/Static: Transform manda (scripts
         // podem mover com SetLinearVelocity ou SetTransform).
@@ -878,7 +884,12 @@ void Scene::UpdatePhysics3D(Timestep ts) {
         auto& transform = entity.GetComponent<TransformComponent>();
         auto& rb3d = entity.GetComponent<Rigidbody3DComponent>();
         auto* body = static_cast<btRigidBody*>(rb3d.RuntimeBody);
-        if (!body || rb3d.Type == Rigidbody3DComponent::BodyType::Static) continue;
+        if (!body) {
+            RegisterPhysics3DEntity(entity); // corpo criado em runtime por script
+            body = static_cast<btRigidBody*>(rb3d.RuntimeBody);
+            if (!body) continue;
+        }
+        if (rb3d.Type == Rigidbody3DComponent::BodyType::Static) continue;
 
         btTransform bt;
         body->getMotionState()->getWorldTransform(bt);

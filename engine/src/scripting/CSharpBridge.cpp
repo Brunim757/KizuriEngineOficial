@@ -11,6 +11,7 @@
 #include "kizuri/ecs/Components.hpp"
 #include "kizuri/audio/AudioEngine.hpp"
 #include "kizuri/project/Project.hpp"
+#include <btBulletDynamicsCommon.h>
 
 #include <unordered_map>
 
@@ -156,6 +157,9 @@ KZ_SCRIPT_API int kz_entity_has_component(uint32_t entity, int componentType) {
         case 11: return e.HasComponent<kizuri::MeshRendererComponent>() ? 1 : 0;
         case 12: return e.HasComponent<kizuri::ParticleSystemComponent>() ? 1 : 0;
         case 13: return e.HasComponent<kizuri::AnimatorComponent>() ? 1 : 0;
+        case 14: return e.HasComponent<kizuri::Rigidbody3DComponent>() ? 1 : 0;
+        case 15: return e.HasComponent<kizuri::BoxCollider3DComponent>() ? 1 : 0;
+        case 16: return e.HasComponent<kizuri::SphereCollider3DComponent>() ? 1 : 0;
         default: return 0;
     }
 }
@@ -663,6 +667,76 @@ KZ_SCRIPT_API void kz_animator_set_playing(uint32_t entity, int playing) {
     auto e = Resolve(entity);
     if (!e || !e.HasComponent<kizuri::AnimatorComponent>()) return;
     e.GetComponent<kizuri::AnimatorComponent>().Playing = playing != 0;
+}
+
+// ---------------------------------------------------------------------------
+// Física 3D (Bullet3) — os corpos existem só durante o Play; adicionar o
+// componente em runtime é seguro (o UpdatePhysics3D registra sob demanda).
+// ---------------------------------------------------------------------------
+KZ_SCRIPT_API int kz_entity_add_rigidbody3d(uint32_t entity, int bodyType, float mass) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& rb = e.AddOrReplaceComponent<kizuri::Rigidbody3DComponent>();
+    rb.Type = (kizuri::Rigidbody3DComponent::BodyType)bodyType;
+    rb.Mass = mass;
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_entity_add_box_collider3d(uint32_t entity, float hx, float hy, float hz) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& bc = e.AddOrReplaceComponent<kizuri::BoxCollider3DComponent>();
+    bc.HalfExtents = { hx, hy, hz };
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_entity_add_sphere_collider3d(uint32_t entity, float radius) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& sc = e.AddOrReplaceComponent<kizuri::SphereCollider3DComponent>();
+    sc.Radius = radius;
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_rigidbody3d_apply_force(uint32_t entity, float fx, float fy, float fz) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::Rigidbody3DComponent>()) return 0;
+    auto* body = static_cast<btRigidBody*>(e.GetComponent<kizuri::Rigidbody3DComponent>().RuntimeBody);
+    if (!body) return 0;
+    body->applyCentralForce(btVector3(fx, fy, fz));
+    body->activate();
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_rigidbody3d_apply_impulse(uint32_t entity, float ix, float iy, float iz) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::Rigidbody3DComponent>()) return 0;
+    auto* body = static_cast<btRigidBody*>(e.GetComponent<kizuri::Rigidbody3DComponent>().RuntimeBody);
+    if (!body) return 0;
+    body->applyCentralImpulse(btVector3(ix, iy, iz));
+    body->activate();
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_rigidbody3d_get_linear_velocity(uint32_t entity, float* outVX, float* outVY, float* outVZ) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::Rigidbody3DComponent>()) return 0;
+    auto* body = static_cast<btRigidBody*>(e.GetComponent<kizuri::Rigidbody3DComponent>().RuntimeBody);
+    if (!body) return 0;
+    const btVector3& v = body->getLinearVelocity();
+    if (outVX) *outVX = v.x();
+    if (outVY) *outVY = v.y();
+    if (outVZ) *outVZ = v.z();
+    return 1;
+}
+
+KZ_SCRIPT_API void kz_rigidbody3d_set_linear_velocity(uint32_t entity, float vx, float vy, float vz) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::Rigidbody3DComponent>()) return;
+    auto* body = static_cast<btRigidBody*>(e.GetComponent<kizuri::Rigidbody3DComponent>().RuntimeBody);
+    if (!body) return;
+    body->setLinearVelocity(btVector3(vx, vy, vz));
+    body->activate();
 }
 
 } // extern "C"

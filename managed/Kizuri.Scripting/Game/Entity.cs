@@ -135,6 +135,33 @@ public readonly struct Entity
 	public void SetAnimationLoop(bool loop) => Interop.KizuriNative.kz_animator_set_loop(Handle, loop ? 1 : 0);
 	public void SetAnimationPlaying(bool playing) => Interop.KizuriNative.kz_animator_set_playing(Handle, playing ? 1 : 0);
 
+	// ---- Física 3D (Bullet3) ----
+
+	// bodyType: 0=Estático, 1=Dinâmico, 2=Cinemático. Só simula durante o Play.
+	public bool AddRigidbody3D(BodyType3D bodyType = BodyType3D.Dynamic, float mass = 1f)
+		=> Interop.KizuriNative.kz_entity_add_rigidbody3d(Handle, (int)bodyType, mass) != 0;
+
+	public bool AddBoxCollider3D(float hx = 0.5f, float hy = 0.5f, float hz = 0.5f)
+		=> Interop.KizuriNative.kz_entity_add_box_collider3d(Handle, hx, hy, hz) != 0;
+
+	public bool AddSphereCollider3D(float radius = 0.5f)
+		=> Interop.KizuriNative.kz_entity_add_sphere_collider3d(Handle, radius) != 0;
+
+	public bool ApplyForce(Vector3 force)
+		=> Interop.KizuriNative.kz_rigidbody3d_apply_force(Handle, force.X, force.Y, force.Z) != 0;
+
+	public bool ApplyImpulse(Vector3 impulse)
+		=> Interop.KizuriNative.kz_rigidbody3d_apply_impulse(Handle, impulse.X, impulse.Y, impulse.Z) != 0;
+
+	public bool TryGetVelocity(out Vector3 velocity)
+	{
+		velocity = Vector3.Zero;
+		return Interop.KizuriNative.kz_rigidbody3d_get_linear_velocity(Handle, out velocity.X, out velocity.Y, out velocity.Z) != 0;
+	}
+
+	public void SetVelocity(Vector3 velocity)
+		=> Interop.KizuriNative.kz_rigidbody3d_set_linear_velocity(Handle, velocity.X, velocity.Y, velocity.Z);
+
 	public bool AddCircleCollider2D(float radius = 0.5f, float density = 1f, float friction = 0.5f, float restitution = 0f)
 		=> Interop.KizuriNative.kz_entity_add_circle_collider2d(Handle, radius, density, friction, restitution) != 0;
 
@@ -201,6 +228,17 @@ public enum ComponentType
 	MeshRenderer = 11,
 	ParticleSystem = 12,
 	Animator = 13,
+	Rigidbody3D = 14,
+	BoxCollider3D = 15,
+	SphereCollider3D = 16,
+}
+
+// Tipos de corpo rígido 3D (mesmos do C++ Bullet3).
+public enum BodyType3D
+{
+	Static = 0,
+	Dynamic = 1,
+	Kinematic = 2,
 }
 
 // Tipos de luz expostos ao C# (mesmos do C++ Renderer3D.hpp).

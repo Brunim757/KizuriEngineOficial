@@ -21,6 +21,8 @@ Mesh::Mesh(const std::vector<Vertex3D>& vertices, const std::vector<uint32_t>& i
         { ShaderDataType::Float3, "a_Position" },
         { ShaderDataType::Float3, "a_Normal" },
         { ShaderDataType::Float2, "a_TexCoord" },
+        { ShaderDataType::Float4, "a_JointIndices" },
+        { ShaderDataType::Float4, "a_JointWeights" },
     });
     m_VertexArray->AddVertexBuffer(vb);
 
@@ -198,6 +200,8 @@ Ref<Mesh> Mesh::LoadFromGLTF(const std::string& path) {
             if (!pos) continue;
             const cgltf_accessor* nrm = FindAttr(prim, cgltf_attribute_type_normal, 0);
             const cgltf_accessor* uv  = FindAttr(prim, cgltf_attribute_type_texcoord, 0);
+            const cgltf_accessor* jnt = FindAttr(prim, cgltf_attribute_type_joints, 0);
+            const cgltf_accessor* wgt = FindAttr(prim, cgltf_attribute_type_weights, 0);
 
             cgltf_size count = pos->count;
             for (cgltf_size i = 0; i < count; ++i) {
@@ -206,6 +210,12 @@ Ref<Mesh> Mesh::LoadFromGLTF(const std::string& path) {
                 if (nrm) cgltf_accessor_read_float(nrm, i, &v.Normal.x, 3);
                 else v.Normal = glm::vec3(0.0f, 1.0f, 0.0f);
                 if (uv) cgltf_accessor_read_float(uv, i, &v.TexCoord.x, 2);
+                if (jnt) {
+                    glm::vec4 ji(0.0f);
+                    cgltf_accessor_read_float(jnt, i, &ji.x, 4); // convertido de ubyte/uint pra float
+                    v.Joints = ji;
+                }
+                if (wgt) cgltf_accessor_read_float(wgt, i, &v.Weights.x, 4);
                 vertices.push_back(v);
             }
 

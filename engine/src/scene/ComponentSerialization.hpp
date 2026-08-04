@@ -223,6 +223,15 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
             je["NativeScript"] = { { "ClassName", nsc.ClassName } };
     }
 
+    if (entity.HasComponent<AnimatorComponent>()) {
+        auto& ac = entity.GetComponent<AnimatorComponent>();
+        je["Animator"] = {
+            { "MeshPath", ac.MeshPath }, { "ClipName", ac.ClipName },
+            { "Playing", ac.Playing }, { "Loop", ac.Loop },
+            { "Speed", ac.Speed }, { "Time", ac.Time }
+        };
+    }
+
     return je;
 }
 
@@ -435,6 +444,18 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         auto& jn = je["NativeScript"];
         auto& nsc = entity.AddComponent<NativeScriptComponent>();
         nsc.BindByName(jn.value("ClassName", ""));
+    }
+
+    if (je.contains("Animator")) {
+        auto& ja = je["Animator"];
+        auto& ac = entity.AddComponent<AnimatorComponent>();
+        ac.MeshPath = ja.value("MeshPath", "");
+        ac.ClipName = ja.value("ClipName", "");
+        ac.Playing = ja.value("Playing", true);
+        ac.Loop = ja.value("Loop", true);
+        ac.Speed = ja.value("Speed", 1.0f);
+        ac.Time = ja.value("Time", 0.0f);
+        // Skin é carregada sob demanda no primeiro UpdateAnimators (Scene.cpp).
     }
 
     return entity;
@@ -682,6 +703,22 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         entity.GetComponent<NativeScriptComponent>().BindByName(className);
     } else if (entity.HasComponent<NativeScriptComponent>()) {
         entity.RemoveComponent<NativeScriptComponent>();
+    }
+
+    if (je.contains("Animator")) {
+        auto& ja = je["Animator"];
+        auto& ac = entity.HasComponent<AnimatorComponent>()
+            ? entity.GetComponent<AnimatorComponent>()
+            : entity.AddComponent<AnimatorComponent>();
+        ac.MeshPath = ja.value("MeshPath", "");
+        ac.ClipName = ja.value("ClipName", "");
+        ac.Playing = ja.value("Playing", true);
+        ac.Loop = ja.value("Loop", true);
+        ac.Speed = ja.value("Speed", 1.0f);
+        ac.Time = ja.value("Time", 0.0f);
+        ac.Skin = nullptr; // recarrega sob demanda
+    } else if (entity.HasComponent<AnimatorComponent>()) {
+        entity.RemoveComponent<AnimatorComponent>();
     }
 }
 

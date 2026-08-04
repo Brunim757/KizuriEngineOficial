@@ -119,6 +119,22 @@ public readonly struct Entity
 	public bool SetMaterialNormalMap(string path)
 		=> Interop.KizuriNative.kz_material_set_normal_map(Handle, path) != 0;
 
+	// ---- Animação esquelética (skinning via glTF) ----
+
+	// meshPath = caminho relativo do .glb/.gltf com a skin (mesmo do AddMeshRenderer).
+	public bool AddAnimator(string meshPath)
+		=> Interop.KizuriNative.kz_entity_add_animator(Handle, meshPath) != 0;
+
+	// Toca um clip da skin (nome da animation no arquivo). Volta true se achou.
+	public bool PlayAnimation(string clipName)
+		=> Interop.KizuriNative.kz_animator_play(Handle, clipName) != 0;
+
+	public float AnimationTime => Interop.KizuriNative.kz_animator_get_time(Handle);
+	public void SetAnimationTime(float time) => Interop.KizuriNative.kz_animator_set_time(Handle, time);
+	public void SetAnimationSpeed(float speed) => Interop.KizuriNative.kz_animator_set_speed(Handle, speed);
+	public void SetAnimationLoop(bool loop) => Interop.KizuriNative.kz_animator_set_loop(Handle, loop ? 1 : 0);
+	public void SetAnimationPlaying(bool playing) => Interop.KizuriNative.kz_animator_set_playing(Handle, playing ? 1 : 0);
+
 	public bool AddCircleCollider2D(float radius = 0.5f, float density = 1f, float friction = 0.5f, float restitution = 0f)
 		=> Interop.KizuriNative.kz_entity_add_circle_collider2d(Handle, radius, density, friction, restitution) != 0;
 
@@ -184,6 +200,7 @@ public enum ComponentType
 	CircleCollider2D = 10,
 	MeshRenderer = 11,
 	ParticleSystem = 12,
+	Animator = 13,
 }
 
 // Tipos de luz expostos ao C# (mesmos do C++ Renderer3D.hpp).

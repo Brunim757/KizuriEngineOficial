@@ -11,10 +11,15 @@
 
 namespace kizuri {
 
+// Vértice 3D. Joints/Weights (índices como float, convertido com int() no
+// shader — evita glVertexAttribIPointer) ficam 0 pra malha estática, então
+// o skinning é identidade e o mesmo shader atende os dois casos.
 struct Vertex3D {
     glm::vec3 Position;
     glm::vec3 Normal;
     glm::vec2 TexCoord;
+    glm::vec4 Joints = { 0.0f };   // índices das até 4 juntas que pesam no vértice
+    glm::vec4 Weights = { 0.0f };  // pesos (normalizados; 0 = estática)
 };
 
 // Mesh estática 3D (geometria + buffers de GPU já prontos).
@@ -116,6 +121,11 @@ public:
     // Empilha um comando de desenho; EndScene() resolve sombra + cor de verdade em dois passes.
     static void Submit(const Ref<Mesh>& mesh, const Material& material, const glm::mat4& transform);
 
+    // Mesmo que Submit, mas com skinning: jointMatrices (global * inverseBind)
+    // das kMaxSkinJoints primeiras juntas, avaliadas pela SkinData do animator.
+    static void SubmitSkinned(const Ref<Mesh>& mesh, const Material& material, const glm::mat4& transform,
+                              const glm::mat4* jointMatrices, uint32_t jointCount);
+
     // Empilha um lote de partículas (billboards sempre de frente pra câmera, GPU-instanced —
     // um glDrawElementsInstanced por lote, não um draw call por partícula). Sem textura (nullptr)
     // usa um degradê radial procedural; recorta pra kMaxParticlesPerBatch se vier maior que isso.
@@ -129,6 +139,7 @@ private:
         Ref<Mesh> MeshAsset;
         Material Mat;
         glm::mat4 Transform;
+        std::vector<glm::mat4> Joints; // vazio = malha estática
     };
 
     static Ref<Shader> s_MeshShader;

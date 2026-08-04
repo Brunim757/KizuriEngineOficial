@@ -6,6 +6,7 @@
 #include "kizuri/renderer/Camera.hpp"
 #include "kizuri/renderer/TextRenderer.hpp" // TextAlignment (TextComponent)
 #include "kizuri/audio/AudioEngine.hpp"
+#include "kizuri/ecs/Animator.hpp"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -182,6 +183,25 @@ struct CameraComponent {
 
     bool Primary = true;
     bool FixedAspectRatio = false;
+};
+
+// Animador esquelético: toca uma AnimationClip de um .glb/.gltf (skinning).
+// MeshPath deve apontar pro mesmo arquivo do MeshRenderer. Skin/Time são
+// estado runtime; o resto é serializado (a skin é reparseada no load).
+struct AnimatorComponent {
+    std::string MeshPath;  // fonte .glb/.gltf (mesma do MeshRenderer)
+    std::string ClipName;  // clip atual (vazio = pose de repouso)
+    bool Playing = true;
+    bool Loop = true;
+    float Speed = 1.0f;
+    float Time = 0.0f;
+
+    Ref<SkinData> Skin;    // runtime — não serializado
+
+    bool HasClip(const std::string& name) const { return Skin && Skin->GetClipIndex(name) >= 0; }
+    void Play(const std::string& name) {
+        if (HasClip(name)) { ClipName = name; Time = 0.0f; Playing = true; }
+    }
 };
 
 // ---------------------------------------------------------------------------

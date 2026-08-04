@@ -2399,6 +2399,53 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<MeshRendererComponent>();
         }
 
+        if (m_SelectedEntity.HasComponent<AnimatorComponent>()) {
+            auto& ac = m_SelectedEntity.GetComponent<AnimatorComponent>();
+            if (DrawComponentHeader("Animador (skinning)", &removeThis)) {
+                // Skin carregada sob demanda (path do .glb/.gltf).
+                if (!ac.Skin && !ac.MeshPath.empty())
+                    ac.Skin = kizuri::SkinData::CreateFromGLTF(Project::ResolvePath(ac.MeshPath));
+
+                char animPath[512];
+                strncpy(animPath, ac.MeshPath.c_str(), sizeof(animPath) - 1);
+                animPath[sizeof(animPath) - 1] = '\0';
+                if (ImGui::InputText("Malha animada (.glb/.gltf)", animPath, sizeof(animPath))) {
+                    ac.MeshPath = animPath;
+                    ac.Skin = ac.MeshPath.empty() ? nullptr : kizuri::SkinData::CreateFromGLTF(Project::ResolvePath(ac.MeshPath));
+                    if (!ac.Skin || ac.Skin->Clips.empty()) ac.ClipName.clear();
+                }
+
+                if (ac.Skin && !ac.Skin->Clips.empty()) {
+                    // Seletor de clip.
+                    int currentClip = ac.Skin->GetClipIndex(ac.ClipName);
+                    const char* preview = (currentClip >= 0) ? ac.Skin->Clips[(size_t)currentClip].Name.c_str() : "(pose de repouso)";
+                    if (ImGui::BeginCombo("Animação", preview)) {
+                        for (int i = 0; i < (int)ac.Skin->Clips.size(); ++i) {
+                            bool selected = (i == currentClip);
+                            if (ImGui::Selectable(ac.Skin->Clips[(size_t)i].Name.c_str(), selected)) {
+                                ac.Play(ac.Skin->Clips[(size_t)i].Name);
+                                currentClip = i;
+                            }
+                        }
+                        ImGui::EndCombo();
+                    }
+
+                    // Transporte de preview (roda em modo edição, no viewport).
+                    ImGui::Checkbox("Tocando", &ac.Playing);
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Em loop", &ac.Loop);
+                    ImGui::DragFloat("Velocidade", &ac.Speed, 0.05f, 0.0f, 10.0f);
+                    float dur = ac.Skin->GetClipDuration(ac.ClipName);
+                    ImGui::DragFloat("Tempo", &ac.Time, 0.01f, 0.0f, dur > 0.0f ? dur : 1.0f);
+                    ImGui::TextDisabled("Juntas: %d | Clipes: %d", (int)ac.Skin->Joints.size(), (int)ac.Skin->Clips.size());
+                } else {
+                    ImGui::TextDisabled("Aponte o caminho de um .glb/.gltf com skin + animações.");
+                }
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<AnimatorComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<TextComponent>()) {
             auto& tc = m_SelectedEntity.GetComponent<TextComponent>();
             if (DrawComponentHeader("Texto", &removeThis)) {
@@ -2687,6 +2734,8 @@ void EditorLayer::DrawAddComponentButton() {
         }
         if (!m_SelectedEntity.HasComponent<LightComponent>() && ImGui::MenuItem("Light"))
             m_SelectedEntity.AddComponent<LightComponent>();
+        if (!m_SelectedEntity.HasComponent<AnimatorComponent>() && ImGui::MenuItem("Animador (skinning)"))
+            m_SelectedEntity.AddComponent<AnimatorComponent>();
         if (!m_SelectedEntity.HasComponent<TextComponent>() && ImGui::MenuItem("Texto (HUD)"))
             m_SelectedEntity.AddComponent<TextComponent>();
         if (!m_SelectedEntity.HasComponent<SpriteAnimationComponent>() && ImGui::MenuItem("Animação de Sprite"))

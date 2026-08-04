@@ -56,6 +56,15 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_entity_add_light(uint entity, int type, float r, float g, float b, float intensity, float range, float innerConeDeg, float outerConeDeg);
     [DllImport(Lib)] internal static extern int kz_entity_add_mesh_renderer(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string meshSource);
 
+    // ---- Animação esquelética (skinning) -------------------------------------
+    [DllImport(Lib)] internal static extern int kz_entity_add_animator(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string meshPath);
+    [DllImport(Lib)] internal static extern int kz_animator_play(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string clipName);
+    [DllImport(Lib)] internal static extern float kz_animator_get_time(uint entity);
+    [DllImport(Lib)] internal static extern void kz_animator_set_time(uint entity, float time);
+    [DllImport(Lib)] internal static extern void kz_animator_set_speed(uint entity, float speed);
+    [DllImport(Lib)] internal static extern void kz_animator_set_loop(uint entity, int loop);
+    [DllImport(Lib)] internal static extern void kz_animator_set_playing(uint entity, int playing);
+
     // ---- Mutação de componentes em runtime ------------------------------------
     [DllImport(Lib)] internal static extern int kz_sprite_set_texture(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern int kz_sprite_set_color(uint entity, float r, float g, float b, float a);

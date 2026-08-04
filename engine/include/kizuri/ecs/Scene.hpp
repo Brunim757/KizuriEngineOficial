@@ -101,6 +101,7 @@ private:
     void UpdateParticleSystems(Timestep ts);
     void SubmitParticleSystems();
     void UpdateSpriteAnimations(Timestep ts);
+    void UpdateAnimators(Timestep ts); // avança o relógio dos AnimatorComponent (roda em edição p/ preview)
     void UpdateAudio(Timestep ts);
     void RenderUI();
     void UpdateUIPointer();

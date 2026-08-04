@@ -1012,6 +1012,7 @@ void Scene::OnUpdateRuntime(Timestep ts) {
 
     UpdateParticleSystems(ts);
     UpdateSpriteAnimations(ts);
+    UpdateAnimators(ts);
     UpdateAudio(ts);
 
     RenderScene2D(nullptr);
@@ -1022,6 +1023,7 @@ void Scene::OnUpdateRuntime(Timestep ts) {
 void Scene::OnUpdateEditor3D(Timestep ts, PerspectiveCamera& editorCamera) {
     KZ_TRACE_SCOPE("Scene::OnUpdateEditor3D");
     UpdateSpriteAnimations(ts); // preview de animação no viewport, mesmo em edição
+    UpdateAnimators(ts);        // idem pros esqueletos
     // Modo 3D do viewport: malhas + grid via câmera livre do editor. O
     // passe 2D continua rodando com a câmera primária da PRÓPRIA cena, se
     // houver uma — é o que permite um HUD/overlay 2D aparecer sobre uma
@@ -1034,6 +1036,7 @@ void Scene::OnUpdateEditor3D(Timestep ts, PerspectiveCamera& editorCamera) {
 void Scene::OnUpdateEditor2D(Timestep ts, OrthographicCamera& editorCamera) {
     KZ_TRACE_SCOPE("Scene::OnUpdateEditor2D");
     UpdateSpriteAnimations(ts); // preview de animação no viewport, mesmo em edição
+    UpdateAnimators(ts);
     // Modo 2D do viewport: navegação livre (pan/zoom) via a própria
     // câmera do editor, ignorando qualquer CameraComponent da cena — não
     // precisa de uma entidade de câmera só pra poder editar sprites. Sem
@@ -1205,6 +1208,27 @@ void Scene::UpdateSpriteAnimations(Timestep ts) {
     }
 }
 
+// Avança o relógio dos animadores esqueléticos. Roda também em modo edição
+// (preview no viewport), igual às animações de sprite.
+void Scene::UpdateAnimators(Timestep ts) {
+    m_Registry.view<AnimatorComponent>().each([=](auto, auto& ac) {
+        // Skin carregada sob demanda (a 1ª vez em que a entidade existe).
+        if (!ac.Skin) {
+            if (ac.MeshPath.empty()) return;
+            ac.Skin = SkinData::CreateFromGLTF(Project::ResolvePath(ac.MeshPath));
+            if (!ac.Skin) return;
+        }
+        if (ac.Skin->Joints.empty()) return; // arquivo sem skin
+        if (!ac.Playing || ac.ClipName.empty()) return;
+
+        ac.Time += (float)ts * ac.Speed;
+        if (ac.Loop) {
+            float dur = ac.Skin->GetClipDuration(ac.ClipName);
+            if (dur > 0.0001f) ac.Time = fmodf(ac.Time, dur);
+        }
+    });
+}
+
 void Scene::SubmitLights() {
     auto lights = m_Registry.view<TransformComponent, LightComponent>();
     if (lights.begin() == lights.end()) {
@@ -1312,16 +1336,33 @@ void Scene::UpdateAudio(Timestep) {
 
 void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
     KZ_TRACE_SCOPE("Scene::RenderScene3D");
+
+    auto SubmitMeshes = [&]() {
+        auto meshes = m_Registry.view<TransformComponent, MeshRendererComponent>();
+        for (auto me : meshes) {
+            auto& mr = meshes.get<MeshRendererComponent>(me);
+            if (!mr.MeshAsset) continue;
+            glm::mat4 world = GetWorldTransform(Entity{ me, this });
+            auto* animator = m_Registry.try_get<AnimatorComponent>(me);
+            if (animator && animator->Skin && !animator->Skin->Joints.empty()) {
+                glm::mat4 joints[kMaxSkinJoints];
+                if (animator->Skin->Evaluate(animator->ClipName, animator->Time, joints, kMaxSkinJoints))
+                    Renderer3D::SubmitSkinned(mr.MeshAsset, mr.MeshMaterial, world, joints,
+                                              (uint32_t)animator->Skin->Joints.size());
+                else
+                    Renderer3D::Submit(mr.MeshAsset, mr.MeshMaterial, world);
+            } else {
+                Renderer3D::Submit(mr.MeshAsset, mr.MeshMaterial, world);
+            }
+        }
+    };
+
     if (overrideCamera) {
         Renderer3D::BeginScene(*overrideCamera);
         SubmitLights();
         SubmitParticleSystems();
         Renderer3D::DrawGrid();
-        auto meshes = m_Registry.view<TransformComponent, MeshRendererComponent>();
-        for (auto me : meshes) {
-            auto& mr = meshes.get<MeshRendererComponent>(me);
-            if (mr.MeshAsset) Renderer3D::Submit(mr.MeshAsset, mr.MeshMaterial, GetWorldTransform(Entity{ me, this }));
-        }
+        SubmitMeshes();
         Renderer3D::EndScene();
         return;
     }
@@ -1342,11 +1383,7 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
         Renderer3D::BeginScene(cam);
         SubmitLights();
         SubmitParticleSystems();
-        auto meshes = m_Registry.view<TransformComponent, MeshRendererComponent>();
-        for (auto me : meshes) {
-            auto& mr = meshes.get<MeshRendererComponent>(me);
-            if (mr.MeshAsset) Renderer3D::Submit(mr.MeshAsset, mr.MeshMaterial, GetWorldTransform(Entity{ me, this }));
-        }
+        SubmitMeshes();
         Renderer3D::EndScene();
         break;
     }

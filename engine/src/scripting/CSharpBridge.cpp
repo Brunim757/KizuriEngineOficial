@@ -155,6 +155,7 @@ KZ_SCRIPT_API int kz_entity_has_component(uint32_t entity, int componentType) {
         case 10: return e.HasComponent<kizuri::CircleCollider2DComponent>() ? 1 : 0;
         case 11: return e.HasComponent<kizuri::MeshRendererComponent>() ? 1 : 0;
         case 12: return e.HasComponent<kizuri::ParticleSystemComponent>() ? 1 : 0;
+        case 13: return e.HasComponent<kizuri::AnimatorComponent>() ? 1 : 0;
         default: return 0;
     }
 }
@@ -610,6 +611,58 @@ KZ_SCRIPT_API void kz_camera_set_params(uint32_t entity, float fovDeg, float nea
     cc.PerspectiveFOV = fovDeg;
     cc.NearClip = nearClip;
     cc.FarClip = farClip;
+}
+
+// ---------------------------------------------------------------------------
+// Animação esquelética (skinning via glTF)
+// ---------------------------------------------------------------------------
+KZ_SCRIPT_API int kz_entity_add_animator(uint32_t entity, const char* meshPath) {
+    auto e = Resolve(entity);
+    if (!e || meshPath == nullptr) return 0;
+    auto& ac = e.AddOrReplaceComponent<kizuri::AnimatorComponent>();
+    ac.MeshPath = meshPath;
+    ac.Skin = kizuri::SkinData::CreateFromGLTF(kizuri::Project::ResolvePath(meshPath));
+    return ac.Skin ? 1 : 0;
+}
+
+KZ_SCRIPT_API int kz_animator_play(uint32_t entity, const char* clipName) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::AnimatorComponent>() || clipName == nullptr) return 0;
+    auto& ac = e.GetComponent<kizuri::AnimatorComponent>();
+    if (!ac.Skin && !ac.MeshPath.empty())
+        ac.Skin = kizuri::SkinData::CreateFromGLTF(kizuri::Project::ResolvePath(ac.MeshPath));
+    ac.Play(clipName);
+    return ac.ClipName == clipName ? 1 : 0;
+}
+
+KZ_SCRIPT_API float kz_animator_get_time(uint32_t entity) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::AnimatorComponent>()) return 0.0f;
+    return e.GetComponent<kizuri::AnimatorComponent>().Time;
+}
+
+KZ_SCRIPT_API void kz_animator_set_time(uint32_t entity, float time) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::AnimatorComponent>()) return;
+    e.GetComponent<kizuri::AnimatorComponent>().Time = time;
+}
+
+KZ_SCRIPT_API void kz_animator_set_speed(uint32_t entity, float speed) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::AnimatorComponent>()) return;
+    e.GetComponent<kizuri::AnimatorComponent>().Speed = speed;
+}
+
+KZ_SCRIPT_API void kz_animator_set_loop(uint32_t entity, int loop) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::AnimatorComponent>()) return;
+    e.GetComponent<kizuri::AnimatorComponent>().Loop = loop != 0;
+}
+
+KZ_SCRIPT_API void kz_animator_set_playing(uint32_t entity, int playing) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::AnimatorComponent>()) return;
+    e.GetComponent<kizuri::AnimatorComponent>().Playing = playing != 0;
 }
 
 } // extern "C"

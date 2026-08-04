@@ -1,5 +1,6 @@
 #include "kizuri/renderer/Renderer3D.hpp"
 #include "kizuri/renderer/RenderCommand.hpp"
+#include "kizuri/ecs/Animator.hpp"
 #include "kizuri/core/Log.hpp"
 #include <glad/gl.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -79,18 +80,35 @@ static const char* s_MeshVertexSrc = R"(
 layout(location = 0) in vec3 a_Position;
 layout(location = 1) in vec3 a_Normal;
 layout(location = 2) in vec2 a_TexCoord;
+layout(location = 3) in vec4 a_JointIndices;
+layout(location = 4) in vec4 a_JointWeights;
 
 uniform mat4 u_ViewProjection;
 uniform mat4 u_Transform;
 uniform mat3 u_NormalMatrix;
+uniform bool u_Animated;
+uniform mat4 u_JointMatrices[64];
 
 out vec3 v_FragPos;
 out vec3 v_Normal;
 out vec2 v_TexCoord;
 
 void main() {
-    v_FragPos = vec3(u_Transform * vec4(a_Position, 1.0));
-    v_Normal = u_NormalMatrix * a_Normal;
+    vec3 pos = a_Position;
+    vec3 nrm = a_Normal;
+    if (u_Animated) {
+        // 4 juntas por vértice (peso 0 nos não usados). Índices chegam como
+        // float e viram int() aqui — GLSL 330 não tem índice dinâmico de
+        // array, mas mat4 por índice de atributo int() é constante.
+        mat4 skin = u_JointMatrices[int(a_JointIndices.x)] * a_JointWeights.x
+                  + u_JointMatrices[int(a_JointIndices.y)] * a_JointWeights.y
+                  + u_JointMatrices[int(a_JointIndices.z)] * a_JointWeights.z
+                  + u_JointMatrices[int(a_JointIndices.w)] * a_JointWeights.w;
+        pos = vec3(skin * vec4(a_Position, 1.0));
+        nrm = mat3(skin) * a_Normal;
+    }
+    v_FragPos = vec3(u_Transform * vec4(pos, 1.0));
+    v_Normal = u_NormalMatrix * nrm;
     v_TexCoord = a_TexCoord;
     gl_Position = u_ViewProjection * vec4(v_FragPos, 1.0);
 }
@@ -1484,6 +1502,18 @@ void Renderer3D::EndScene() {
             s_MeshShader->SetFloat("u_Roughness", cmd.Mat.Roughness);
             s_MeshShader->SetFloat("u_AO", cmd.Mat.AO);
 
+            // Skinning: se o comando trouxe juntas, sobe as matrizes e liga
+            // o branch no vertex shader (malha estática = weights 0 = identidade).
+            if (cmd.Joints.empty()) {
+                s_MeshShader->SetInt("u_Animated", 0);
+            } else {
+                s_MeshShader->SetInt("u_Animated", 1);
+                for (uint32_t j = 0; j < kMaxSkinJoints; ++j) {
+                    glm::mat4 m = (j < cmd.Joints.size()) ? cmd.Joints[j] : glm::mat4(1.0f);
+                    s_MeshShader->SetMat4("u_JointMatrices[" + std::to_string(j) + "]", m);
+                }
+            }
+
             bool hasAlbedo = (bool)cmd.Mat.AlbedoMap;
             s_MeshShader->SetInt("u_HasAlbedoMap", hasAlbedo ? 1 : 0);
             if (hasAlbedo) {
@@ -1652,7 +1682,21 @@ void Renderer3D::DrawGrid() {
 }
 
 void Renderer3D::Submit(const Ref<Mesh>& mesh, const Material& material, const glm::mat4& transform) {
-    s_DrawList.push_back({ mesh, material, transform });
+    s_DrawList.push_back({ mesh, material, transform, {} });
+}
+
+void Renderer3D::SubmitSkinned(const Ref<Mesh>& mesh, const Material& material, const glm::mat4& transform,
+                               const glm::mat4* jointMatrices, uint32_t jointCount) {
+    DrawCommand cmd;
+    cmd.MeshAsset = mesh;
+    cmd.Mat = material;
+    cmd.Transform = transform;
+    if (jointMatrices && jointCount > 0) {
+        uint32_t count = jointCount < (uint32_t)kMaxSkinJoints ? jointCount : (uint32_t)kMaxSkinJoints;
+        cmd.Joints.reserve(count);
+        for (uint32_t i = 0; i < count; ++i) cmd.Joints.push_back(jointMatrices[i]);
+    }
+    s_DrawList.push_back(std::move(cmd));
 }
 
 } // namespace kizuri

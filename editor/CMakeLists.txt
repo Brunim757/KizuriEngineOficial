@@ -25,11 +25,3 @@ if(WIN32)
     target_link_options(KizuriEditor PRIVATE $<$<AND:$<CXX_COMPILER_ID:GNU>,$<CONFIG:Release>>:-mwindows>)
     set_target_properties(KizuriEditor PROPERTIES WIN32_EXECUTABLE $<CONFIG:Release>)
 endif()
-
-# .NET embutido (engine self-contained): copia o SDK pro bin/dotnet depois
-# do build (função kz_bundle_dotnet definida no CMakeLists da raiz). Precisa
-# ser chamado DENTRO deste diretório — add_custom_command(TARGET) não cruza
-# escopo de diretório do CMake.
-if(COMMAND kz_bundle_dotnet)
-    kz_bundle_dotnet(KizuriEditor)
-endif()

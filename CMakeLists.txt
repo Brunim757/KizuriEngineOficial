@@ -25,40 +25,6 @@ option(KZ_BUILD_TESTS   "Build unit tests"                OFF)
 # código real em kizuri_v2/.
 option(KZ_BUILD_V2      "Build the Kizuri Engine v2 foundation" OFF)
 
-# Copia o SDK .NET pra junto do editor (bin/dotnet) depois do build — a
-# engine roda jogo C# e compila/publica sem o usuário instalar o .NET.
-# Desligue com -DKZ_BUNDLE_DOTNET=OFF se não quiser os ~250MB no bin/.
-option(KZ_BUNDLE_DOTNET "Bundle o SDK .NET embutido junto ao editor" ON)
-
-# Copia a pasta inteira do SDK .NET local pra bin/<target>/dotnet. A raiz
-# vem de DOTNET_ROOT (ou da pasta do `dotnet` do PATH). O CoreCLRHost acha o
-# hostfxr embutido via <exe_dir>/dotnet/host/fxr e o GameExporter usa o
-# <exe_dir>/dotnet/dotnet pra build/publish — tudo sem .NET instalado.
-function(kz_bundle_dotnet target)
-    if(NOT KZ_BUNDLE_DOTNET)
-        return()
-    endif()
-    set(_root "")
-    if(DEFINED ENV{DOTNET_ROOT})
-        set(_root "$ENV{DOTNET_ROOT}")
-    endif()
-    if(NOT _root)
-        find_program(_dotnet_exe dotnet)
-        if(_dotnet_exe)
-            get_filename_component(_root "${_dotnet_exe}" DIRECTORY)
-        endif()
-    endif()
-    if(NOT _root OR NOT EXISTS "${_root}/dotnet${CMAKE_EXECUTABLE_SUFFIX}")
-        message(STATUS "kz_bundle_dotnet: SDK .NET não encontrado — editor sem .NET embutido")
-        return()
-    endif()
-    add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${_root}"
-            "$<TARGET_FILE_DIR:${target}>/dotnet"
-        COMMENT "Copiando o SDK .NET (${_root}) pra junto de ${target} (bin/dotnet)")
-endfunction()
-
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 # bin/, não lib/: KizuriEngine volta a ser SHARED (ver engine/CMakeLists.txt)

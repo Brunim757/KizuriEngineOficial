@@ -43,10 +43,7 @@ jobs:
             ${{ runner.os }}-kizuri-deps-
 
       - name: Configurar (CMake)
-        # KZ_BUNDLE_DOTNET=OFF aqui: o runner já tem .NET pré-instalado e
-        # copiar o SDK a cada build só atrasa. O .NET embutido entra no
-        # artifact pelo job 'package' (que faz setup-dotnet e copia o SDK).
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DKZ_BUNDLE_DOTNET=OFF
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Compilar
         run: cmake --build build --config Release --parallel
@@ -152,21 +149,6 @@ jobs:
           mkdir -p dist/bin dist/managed
           mv staging/engine/* dist/bin/
           mv staging/managed/* dist/managed/
-
-      - name: Configurar .NET SDK 10 (pra embutir no artifact)
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-
-      # A engine é distribuída self-contained: o SDK .NET inteiro vai dentro
-      # de bin/dotnet/ do zip — o usuário roda o editor e compila/publica
-      # jogos C# sem instalar o .NET. (CoreCLRHost procura o hostfxr embutido
-      # e o GameExporter usa o dotnet embutido.)
-      - name: Embutir .NET no artifact
-        shell: bash
-        run: |
-          cp -r "$DOTNET_ROOT" dist/bin/dotnet
-          echo "SDK .NET embutido em dist/bin/dotnet ($(du -sh dist/bin/dotnet | cut -f1))"
 
       - name: Publicar artefato combinado
         uses: actions/upload-artifact@v4

@@ -144,12 +144,6 @@ dor de cabeça em CI antes.
   fallback antigo (cópia da pasta do assembly).
 - O publish é síncrono (UI congela ~10-60s). Próximo passo: rodar em thread e
   mostrar progresso no modal.
-- **Fallback também embute o runtime**: se o export copia a pasta do assembly
-  (sem projeto / checkbox off) e o `Game/` não é self-contained, o GameExporter
-  copia o runtime .NET instalado na máquina pra dentro (`EmbedDotnetRuntime`:
-  hostfxr/hostpolicy + `shared/Microsoft.NETCore.App/<versão>`, layout padrão de
-  dotnet_root). Todo jogo exportado roda sem o jogador instalar nada — o .NET
-  da máquina serve só pra gerar, nunca pro jogador.
 
 ### Fix do ALC do Host (0 scripts registrados)
 - `Host.InitializeGameModule` carregava o assembly do jogo com
@@ -179,18 +173,12 @@ dor de cabeça em CI antes.
   contexto, com undo); Ctrl+D duplica e seleciona a cópia (edge-detect no D);
   Ctrl já fazia snap do gizmo.
 
-### .NET embutido (engine self-contained)
-- A engine é distribuída com o **SDK .NET inteiro em `bin/dotnet/`** — o
-  usuário roda o editor e compila/publica jogos C# **sem instalar o .NET**.
-- `CoreCLRHost::FindHostfxr` procura primeiro o hostfxr embutido junto ao
-  executável (`<exe_dir>/dotnet/host/fxr/<versão>`), antes do DOTNET_ROOT/sistema.
-- `GameExporter::ResolveDotnetCli` usa o `dotnet` embutido
-  (`<exe_dir>/dotnet/dotnet(.exe)`) pra `dotnet build` (Play) e `dotnet publish`
-  (export), caindo pro PATH se não houver.
-- Local (dev): opção CMake `KZ_BUNDLE_DOTNET` (default ON) copia o SDK pro
-  `bin/dotnet` via `kz_bundle_dotnet(KizuriEditor)`.
-- CI: o job `package` roda `setup-dotnet` e copia `$DOTNET_ROOT` pra
-  `dist/bin/dotnet` — o artifact do zip vem com o .NET embutido (~250MB a mais).
+### .NET — modelo "normal" (como as outras engines)
+- O .NET NÃO vem embutido na engine: é pré-requisito instalado na máquina do
+  dev (SDK pra compilar, runtime pro editor rodar os scripts) — igual Godot
+  .NET. O export self-contained (checkbox "Embutir runtime .NET") continua
+  existindo: nesse caso o jogo final leva o runtime embutido e o jogador não
+  instala nada. Sem a checkbox, o jogador precisa do .NET Runtime.
 
 ### Editor
 - Dockspace ImGui + ImGuizmo (mover/rotacionar/escalar).

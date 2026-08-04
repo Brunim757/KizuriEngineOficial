@@ -147,19 +147,19 @@ public readonly struct Entity
 	public bool AddSphereCollider3D(float radius = 0.5f)
 		=> Interop.KizuriNative.kz_entity_add_sphere_collider3d(Handle, radius) != 0;
 
-	public bool ApplyForce(Vector3 force)
+	public bool ApplyForce(Math.Vector3 force)
 		=> Interop.KizuriNative.kz_rigidbody3d_apply_force(Handle, force.X, force.Y, force.Z) != 0;
 
-	public bool ApplyImpulse(Vector3 impulse)
+	public bool ApplyImpulse(Math.Vector3 impulse)
 		=> Interop.KizuriNative.kz_rigidbody3d_apply_impulse(Handle, impulse.X, impulse.Y, impulse.Z) != 0;
 
-	public bool TryGetVelocity(out Vector3 velocity)
+	public bool TryGetVelocity(out Math.Vector3 velocity)
 	{
-		velocity = Vector3.Zero;
+		velocity = Math.Vector3.Zero;
 		return Interop.KizuriNative.kz_rigidbody3d_get_linear_velocity(Handle, out velocity.X, out velocity.Y, out velocity.Z) != 0;
 	}
 
-	public void SetVelocity(Vector3 velocity)
+	public void SetVelocity(Math.Vector3 velocity)
 		=> Interop.KizuriNative.kz_rigidbody3d_set_linear_velocity(Handle, velocity.X, velocity.Y, velocity.Z);
 
 	public bool AddCircleCollider2D(float radius = 0.5f, float density = 1f, float friction = 0.5f, float restitution = 0f)

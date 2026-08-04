@@ -150,6 +150,51 @@ jobs:
           mv staging/engine/* dist/bin/
           mv staging/managed/* dist/managed/
 
+      # ---- Content Pack (assets CC0 reais, download na CI) -------------------
+      # Modelos glTF (glTF-Sample-Models/Khronos) e HDRIs (Poly Haven) entram
+      # no zip como conteúdo de exemplo USÁVEL: o BoxAnimated/Fox têm skin +
+      # animações (valida o Animator do editor) e os .hdr alimentam o céu
+      # HDRI/IBL. Tudo best-effort: se um download falhar, só falta aquele
+      # arquivo — nunca quebra o build. O MANIFEST registra o que veio.
+      - name: Baixar Content Pack (CC0)
+        shell: bash
+        run: |
+          set +e
+          mkdir -p dist/content/models dist/content/skies dist/content/audio
+          manifest="dist/content/MANIFEST.txt"
+          : > "$manifest"
+          dl() { # $1=url $2=destino $3=nome
+            if command -v curl >/dev/null 2>&1; then
+              curl -fsSL --max-time 60 -o "$2" "$1" 2>/dev/null
+            else
+              wget -q -O "$2" "$1" 2>/dev/null
+            fi
+            if [ -s "$2" ]; then
+              size=$(wc -c < "$2")
+              printf '%-28s %10s bytes\n' "$3" "$size" >> "$manifest"
+            else
+              rm -f "$2"
+            fi
+          }
+          base="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0"
+          dl "$base/Fox/glTF-Binary/Fox.glb"                    dist/content/models/Fox.glb                    Fox.glb
+          dl "$base/BoxAnimated/glTF-Binary/BoxAnimated.glb"    dist/content/models/BoxAnimated.glb            BoxAnimated.glb
+          dl "$base/DamagedHelmet/glTF-Binary/DamagedHelmet.glb" dist/content/models/DamagedHelmet.glb         DamagedHelmet.glb
+          dl "$base/Avocado/glTF-Binary/Avocado.glb"            dist/content/models/Avocado.glb                Avocado.glb
+          dl "$base/BoomBox/glTF-Binary/BoomBox.glb"            dist/content/models/BoomBox.glb                BoomBox.glb
+          dl "$base/Duck/glTF-Binary/Duck.glb"                  dist/content/models/Duck.glb                    Duck.glb
+          dl "$base/CesiumMilkTruck/glTF-Binary/CesiumMilkTruck.glb" dist/content/models/CesiumMilkTruck.glb    CesiumMilkTruck.glb
+          dl "$base/SimpleMaterials/glTF-Binary/SimpleMaterials.glb" dist/content/models/SimpleMaterials.glb    SimpleMaterials.glb
+          sky="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k"
+          dl "$sky/qwantani_puresky_1k.hdr"                     dist/content/skies/qwantani_puresky_1k.hdr     qwantani_puresky.hdr
+          dl "$sky/kloofendal_48d_partly_cloudy_puresky_1k.hdr" dist/content/skies/kloofendal_1k.hdr          kloofendal_partly_cloudy.hdr
+          dl "$sky/spruit_sunrise_1k.hdr"                       dist/content/skies/spruit_sunrise_1k.hdr       spruit_sunrise.hdr
+          dl "$sky/venice_sunset_1k.hdr"                        dist/content/skies/venice_sunset_1k.hdr        venice_sunset.hdr
+          total=0; while read -r _ s _; do total=$((total + ${s:-0})); done < "$manifest"
+          echo "---- Content Pack: $(grep -c . "$manifest") arquivos, ~$((total/1024)) KB ----" >> "$manifest"
+          echo "Manifest:"
+          cat "$manifest"
+
       - name: Publicar artefato combinado
         uses: actions/upload-artifact@v4
         with:

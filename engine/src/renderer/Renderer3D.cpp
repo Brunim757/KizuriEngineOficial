@@ -1512,7 +1512,8 @@ void Renderer3D::EndScene() {
         s_MeshShader->SetFloat("u_MaxPrefilterLod", (float)(kPrefilterMipLevels - 1));
 
         s_MeshShader->SetInt("u_FogEnabled", s_Settings.FogEnabled ? 1 : 0);
-        s_MeshShader->SetFloat3("u_FogColor", s_Settings.FogColor);
+        s_MeshShader->SetFloat3("u_FogColor",
+            glm::vec3(s_Settings.FogColor[0], s_Settings.FogColor[1], s_Settings.FogColor[2]));
         s_MeshShader->SetFloat("u_FogDensity", s_Settings.FogDensity);
 
         s_MeshShader->SetInt("u_LightCount", (int)s_LightList.size());

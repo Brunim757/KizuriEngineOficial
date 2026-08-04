@@ -27,6 +27,9 @@ public static class Input
 {
 	public static bool IsKeyPressed(Key key) => Interop.KizuriNative.kz_input_is_key_pressed((int)key) != 0;
 
+	// True só no frame em que a tecla foi pressionada (edge-detect, estilo GetKeyDown).
+	public static bool IsKeyDown(Key key) => Interop.KizuriNative.kz_input_is_key_down((int)key) != 0;
+
 	public static bool IsMouseButtonPressed(MouseButton button)
 		=> Interop.KizuriNative.kz_input_is_mouse_button_pressed((int)button) != 0;
 

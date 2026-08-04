@@ -12,4 +12,7 @@ public static class Audio
 
 	// Para todos os sons em reprodução (usado por trocas de cena).
 	public static void StopAll() => Interop.KizuriNative.kz_audio_stop_all();
+
+	// Volume mestre global (0..1) de todos os sons.
+	public static void SetMasterVolume(float volume) => Interop.KizuriNative.kz_audio_set_master_volume(volume);
 }

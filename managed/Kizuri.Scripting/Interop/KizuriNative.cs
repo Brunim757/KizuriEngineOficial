@@ -26,6 +26,7 @@ internal static class KizuriNative
 
     // ---- Input --------------------------------------------------------------
     [DllImport(Lib)] internal static extern int kz_input_is_key_pressed(int key);
+    [DllImport(Lib)] internal static extern int kz_input_is_key_down(int key);
     [DllImport(Lib)] internal static extern int kz_input_is_mouse_button_pressed(int button);
     [DllImport(Lib)] internal static extern void kz_input_get_mouse_position(out float x, out float y);
 
@@ -43,6 +44,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern uint kz_scene_instantiate_prefab([MarshalAs(UnmanagedType.LPUTF8Str)] string path, float x, float y, float z);
     [DllImport(Lib)] internal static extern void kz_scene_request_load([MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern uint kz_scene_get_primary_camera();
+    [DllImport(Lib)] internal static extern uint kz_scene_find_entity([MarshalAs(UnmanagedType.LPUTF8Str)] string name);
     [DllImport(Lib)] internal static extern uint kz_scene_duplicate_entity(uint entity);
 
     // ---- Adicionar componentes em runtime -------------------------------------
@@ -107,6 +109,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_audio_stop(uint entity);
     [DllImport(Lib)] internal static extern void kz_audio_play_one_shot([MarshalAs(UnmanagedType.LPUTF8Str)] string path, float volume);
     [DllImport(Lib)] internal static extern void kz_audio_stop_all();
+    [DllImport(Lib)] internal static extern void kz_audio_set_master_volume(float volume);
 
     // ---- Physics 2D ----------------------------------------------------------
     [DllImport(Lib)] internal static extern int kz_entity_get_rigidbody2d(uint entity, out int bodyType, out Math.Vector2 velocity);

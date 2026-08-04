@@ -25,6 +25,10 @@ public static class Scene
 	public static Entity GetPrimaryCamera()
 		=> new(Interop.KizuriNative.kz_scene_get_primary_camera());
 
+	// Primeira entidade da cena com o nome dado (Tag). Invalid se não achar.
+	public static Entity Find(string name)
+		=> new(Interop.KizuriNative.kz_scene_find_entity(name));
+
 	// Duplica a entidade (com toda a subárvore) e devolve a cópia, com um
 	// leve deslocamento pra não nascer em cima do original.
 	public static Entity Duplicate(Entity entity)

@@ -42,7 +42,9 @@ public sealed class Demo3D : Script
 		var cam = Scene.GetPrimaryCamera();
 		if (cam.IsValid) cam.SetCamera(60f, 0.05f, 500f);
 
-		Log.Info("Demo3D pronto: sol + luz pontual + cubo PBR + física 3D.");
+		// Busca por nome (valida Scene.Find).
+		var found = Scene.Find("Cubo");
+		Log.Info($"Demo3D pronto: sol + luz pontual + cubo PBR + física 3D. (Scene.Find('Cubo')={(found.IsValid ? "ok" : "falhou")})");
 	}
 
 	public override void OnUpdate(float deltaSeconds)
@@ -60,6 +62,11 @@ public sealed class Demo3D : Script
 
 		// De tempos em tempos dá um impulso pra cima na caixa (Bullet3).
 		_impulseTimer -= deltaSeconds;
+		if (Input.IsKeyDown(Key.Space))
+		{
+			_impulseTimer = 3f; // espaço dispara imediatamente
+			if (_physicsBox.IsValid) _physicsBox.ApplyImpulse(new Vector3(0f, 8f, 0f));
+		}
 		if (_impulseTimer <= 0f && _physicsBox.IsValid)
 		{
 			_impulseTimer = 3f;

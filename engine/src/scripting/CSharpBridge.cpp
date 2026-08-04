@@ -114,6 +114,21 @@ KZ_SCRIPT_API int kz_input_is_mouse_button_pressed(int button) {
     return kizuri::Input::IsMouseButtonPressed(button) ? 1 : 0;
 }
 
+// Edge-detect de tecla (GetKeyDown): true só no frame em que a tecla foi
+// pressionada. Mantém o estado anterior por tecla consultada — scripts que
+// consultam todo frame funcionam normalmente.
+std::unordered_map<int, bool>& PrevKeyState() {
+    static std::unordered_map<int, bool> s_Prev;
+    return s_Prev;
+}
+KZ_SCRIPT_API int kz_input_is_key_down(int key) {
+    bool pressed = kizuri::Input::IsKeyPressed(key);
+    bool& prev = PrevKeyState()[key];
+    bool down = pressed && !prev;
+    prev = pressed;
+    return down ? 1 : 0;
+}
+
 KZ_SCRIPT_API void kz_input_get_mouse_position(float* outX, float* outY) {
     auto [x, y] = kizuri::Input::GetMousePosition();
     if (outX) *outX = x;
@@ -208,6 +223,16 @@ KZ_SCRIPT_API uint32_t kz_scene_get_primary_camera() {
         if (view.get<kizuri::CameraComponent>(e).Primary) {
             return kizuri::scripting::RegisterEntityHandle(kizuri::Entity{ e, s_ActiveScene });
         }
+    }
+    return 0;
+}
+
+KZ_SCRIPT_API uint32_t kz_scene_find_entity(const char* name) {
+    if (s_ActiveScene == nullptr || name == nullptr) return 0;
+    auto view = s_ActiveScene->GetRegistry().view<kizuri::TagComponent>();
+    for (auto e : view) {
+        if (view.get<kizuri::TagComponent>(e).Tag == name)
+            return kizuri::scripting::RegisterEntityHandle(kizuri::Entity{ e, s_ActiveScene });
     }
     return 0;
 }
@@ -442,6 +467,10 @@ KZ_SCRIPT_API void kz_audio_play_one_shot(const char* path, float volume) {
 
 KZ_SCRIPT_API void kz_audio_stop_all() {
     kizuri::AudioEngine::StopAll();
+}
+
+KZ_SCRIPT_API void kz_audio_set_master_volume(float volume) {
+    kizuri::AudioEngine::SetMasterVolume(volume);
 }
 
 KZ_SCRIPT_API int kz_entity_get_transform(uint32_t entity, float* outPosition, float* outRotation, float* outScale) {

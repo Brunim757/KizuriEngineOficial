@@ -118,6 +118,34 @@
 
 ---
 
+## ✅ v0.4 — Materiais & Atmosfera (feito)
+
+- [x] **Material completo**: `Emissive` + `EmissiveStrength`, mapa
+  `MetallicRoughness` (G=roughness, B=metallic, convenção glTF) e mapa
+  emissivo — serializados, com drop no Inspetor e API C#
+  (`SetMaterialEmissive`, `SetMaterialMetallicRoughnessMap`)
+- [x] **Fog exponencial** por distância no shader de mesh (`GraphicsSettings`:
+  FogEnabled/Density/Color, presets + `settings.json` + UI)
+- [x] **`Texture2D::CreateFromMemory`** (bytes em memória, sem flip — UV glTF):
+  base pra extrair texturas embutidas de .glb
+- [x] **`Mesh::ExtractMaterialFromGLTF`**: fatores PBR + texturas embutidas do
+  modelo; drop de .glb (viewport ou Inspetor) aplica o material
+  automaticamente
+- [x] **Content Pack**: +BrainStem/CesiumMan/RiggedFigure (esqueléticos),
+  +HDRIs 4k e +texturas PBR ambientCG 2K (6 conjuntos) — **artifact ~200MB**
+
+---
+
+## ✅ v0.5 — Showcase & Ferramentas (feito)
+
+- [x] **Cena de Demonstração 3D** (Arquivo): Fox esquelético animado (Survey),
+  DamagedHelmet PBR com texturas reais, primitivas (torus metálico + esfera
+  emissiva → bloom), HDRI de céu, fog e 2 luzes — cai pros builtins sem o pack
+- [x] **Gizmos de colisor** no viewport (debug-draw verde): círculo/box 2D e
+  box/esfera 3D da entidade selecionada
+
+---
+
 ## 🎯 Próximas etapas
 
 ### Content Pack (~1GB — o peso profissional)

@@ -645,6 +645,12 @@ void EditorLayer::DrawGraphicsSettings() {
         ImGui::Separator();
         customTweak |= ImGui::DragFloat("Exposição", &m_GraphicsSettings.Exposure, 0.01f, 0.1f, 8.0f);
         customTweak |= ImGui::Checkbox("VSync", &m_GraphicsSettings.VSync);
+        ImGui::Separator();
+        customTweak |= ImGui::Checkbox("Névoa (fog exponencial)", &m_GraphicsSettings.FogEnabled);
+        if (m_GraphicsSettings.FogEnabled) {
+            customTweak |= ImGui::DragFloat("Densidade da névoa", &m_GraphicsSettings.FogDensity, 0.001f, 0.0f, 0.2f);
+            customTweak |= ImGui::ColorEdit3("Cor da névoa", m_GraphicsSettings.FogColor);
+        }
 
         ImGui::Separator();
         ImGui::TextDisabled("Ambiente (céu) — vazio = procedural, ou um .hdr equirectangular:");
@@ -843,6 +849,12 @@ Entity EditorLayer::CreateEntityFromAsset(const std::string& path, const glm::ve
         auto& mr = created.AddComponent<MeshRendererComponent>();
         mr.MeshSource = Project::MakeRelativePath(path);
         mr.MeshAsset = Mesh::FromSource(path);
+    } else if ((lower.size() > 4 && (lower.substr(lower.size() - 4) == ".glb" || lower.substr(lower.size() - 4) == ".gltf"))) {
+        created = m_ActiveScene->CreateEntity(std::filesystem::path(path).stem().string());
+        auto& mr = created.AddComponent<MeshRendererComponent>();
+        mr.MeshSource = Project::MakeRelativePath(path);
+        mr.MeshAsset = Mesh::FromSource(path);
+        mr.MeshMaterial = Mesh::ExtractMaterialFromGLTF(path); // material PBR do modelo
     } else {
         std::string ext = lower.size() >= 4 ? lower.substr(lower.size() - 4) : "";
         bool isImage = (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".tga" || ext == ".gif");
@@ -2355,20 +2367,31 @@ void EditorLayer::DrawInspector() {
                 meshBuf[sizeof(meshBuf) - 1] = '\0';
                 if (ImGui::InputText("Malha (.obj/.glb/.gltf)", meshBuf, sizeof(meshBuf))) {
                     mr.MeshSource = meshBuf;
-                    if (!mr.MeshSource.empty()) mr.MeshAsset = kizuri::Mesh::FromSource(mr.MeshSource);
+                    if (!mr.MeshSource.empty()) {
+                        mr.MeshAsset = kizuri::Mesh::FromSource(mr.MeshSource);
+                        // Modelo glTF importado traz material PBR próprio — aplica.
+                        if (mr.MeshSource.find(".glb") != std::string::npos || mr.MeshSource.find(".gltf") != std::string::npos)
+                            mr.MeshMaterial = kizuri::Mesh::ExtractMaterialFromGLTF(Project::ResolvePath(mr.MeshSource));
+                    }
                 }
                 std::string droppedMesh;
                 if (AcceptAssetDrop(droppedMesh)) {
                     mr.MeshSource = kizuri::Project::MakeRelativePath(droppedMesh);
                     mr.MeshAsset = kizuri::Mesh::FromSource(mr.MeshSource);
+                    if (mr.MeshSource.find(".glb") != std::string::npos || mr.MeshSource.find(".gltf") != std::string::npos)
+                        mr.MeshMaterial = kizuri::Mesh::ExtractMaterialFromGLTF(Project::ResolvePath(mr.MeshSource));
                 }
                 ImGui::ColorEdit3("Albedo", &mat.Albedo.x);
                 ImGui::DragFloat("Metallic", &mat.Metallic, 0.01f, 0.0f, 1.0f);
                 ImGui::DragFloat("Roughness", &mat.Roughness, 0.01f, 0.02f, 1.0f);
                 ImGui::DragFloat("AO", &mat.AO, 0.01f, 0.0f, 1.0f);
-                char albBuf[512], nrmBuf[512];
+                ImGui::ColorEdit3("Emissive", &mat.Emissive.x);
+                ImGui::DragFloat("Intensidade emissiva", &mat.EmissiveStrength, 0.01f, 0.0f, 20.0f);
+                char albBuf[512], nrmBuf[512], mrBuf[512], emBuf[512];
                 strncpy(albBuf, mat.AlbedoMapPath.c_str(), sizeof(albBuf) - 1); albBuf[sizeof(albBuf) - 1] = '\0';
                 strncpy(nrmBuf, mat.NormalMapPath.c_str(), sizeof(nrmBuf) - 1); nrmBuf[sizeof(nrmBuf) - 1] = '\0';
+                strncpy(mrBuf, mat.MetallicRoughnessMapPath.c_str(), sizeof(mrBuf) - 1); mrBuf[sizeof(mrBuf) - 1] = '\0';
+                strncpy(emBuf, mat.EmissiveMapPath.c_str(), sizeof(emBuf) - 1); emBuf[sizeof(emBuf) - 1] = '\0';
                 if (ImGui::InputText("Mapa de Albedo", albBuf, sizeof(albBuf))) {
                     mat.AlbedoMapPath = albBuf;
                     mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.AlbedoMapPath);
@@ -2390,6 +2413,24 @@ void EditorLayer::DrawInspector() {
                 if (AcceptAssetDrop(droppedNormal)) {
                     mat.NormalMapPath = kizuri::Project::MakeRelativePath(droppedNormal);
                     mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.NormalMapPath);
+                }
+                if (ImGui::InputText("Mapa Metallic/Roughness", mrBuf, sizeof(mrBuf))) {
+                    mat.MetallicRoughnessMapPath = mrBuf;
+                    mat.MetallicRoughnessMap = mat.MetallicRoughnessMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.MetallicRoughnessMapPath);
+                }
+                std::string droppedMR;
+                if (AcceptAssetDrop(droppedMR)) {
+                    mat.MetallicRoughnessMapPath = kizuri::Project::MakeRelativePath(droppedMR);
+                    mat.MetallicRoughnessMap = mat.MetallicRoughnessMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.MetallicRoughnessMapPath);
+                }
+                if (ImGui::InputText("Mapa Emissivo", emBuf, sizeof(emBuf))) {
+                    mat.EmissiveMapPath = emBuf;
+                    mat.EmissiveMap = mat.EmissiveMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.EmissiveMapPath);
+                }
+                std::string droppedEmissive;
+                if (AcceptAssetDrop(droppedEmissive)) {
+                    mat.EmissiveMapPath = kizuri::Project::MakeRelativePath(droppedEmissive);
+                    mat.EmissiveMap = mat.EmissiveMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.EmissiveMapPath);
                 }
                 if (mat.NormalMap) {
                     uint32_t texID = mat.NormalMap->GetRendererID();

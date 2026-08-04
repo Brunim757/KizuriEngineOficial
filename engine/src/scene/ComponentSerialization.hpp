@@ -110,8 +110,12 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
             { "Metallic", mat.Metallic },
             { "Roughness", mat.Roughness },
             { "AO", mat.AO },
+            { "Emissive", Vec3ToJson(mat.Emissive) },
+            { "EmissiveStrength", mat.EmissiveStrength },
             { "AlbedoMapPath", mat.AlbedoMapPath },
-            { "NormalMapPath", mat.NormalMapPath }
+            { "NormalMapPath", mat.NormalMapPath },
+            { "MetallicRoughnessMapPath", mat.MetallicRoughnessMapPath },
+            { "EmissiveMapPath", mat.EmissiveMapPath }
         };
     }
 
@@ -318,10 +322,16 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         mat.Metallic = jm.value("Metallic", 0.0f);
         mat.Roughness = jm.value("Roughness", 0.5f);
         mat.AO = jm.value("AO", 1.0f);
+        mat.Emissive = jm.contains("Emissive") ? JsonToVec3(jm["Emissive"]) : glm::vec3(0.0f);
+        mat.EmissiveStrength = jm.value("EmissiveStrength", 0.0f);
         mat.AlbedoMapPath = jm.value("AlbedoMapPath", "");
         mat.NormalMapPath = jm.value("NormalMapPath", "");
+        mat.MetallicRoughnessMapPath = jm.value("MetallicRoughnessMapPath", "");
+        mat.EmissiveMapPath = jm.value("EmissiveMapPath", "");
         if (!mat.AlbedoMapPath.empty()) mat.AlbedoMap = Texture2D::Create(ResolveSerializedPath(mat.AlbedoMapPath));
         if (!mat.NormalMapPath.empty()) mat.NormalMap = Texture2D::Create(ResolveSerializedPath(mat.NormalMapPath));
+        if (!mat.MetallicRoughnessMapPath.empty()) mat.MetallicRoughnessMap = Texture2D::Create(ResolveSerializedPath(mat.MetallicRoughnessMapPath));
+        if (!mat.EmissiveMapPath.empty()) mat.EmissiveMap = Texture2D::Create(ResolveSerializedPath(mat.EmissiveMapPath));
     }
 
     if (je.contains("Camera")) {
@@ -552,10 +562,16 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         mat.Metallic = jm.value("Metallic", 0.0f);
         mat.Roughness = jm.value("Roughness", 0.5f);
         mat.AO = jm.value("AO", 1.0f);
+        mat.Emissive = jm.contains("Emissive") ? JsonToVec3(jm["Emissive"]) : glm::vec3(0.0f);
+        mat.EmissiveStrength = jm.value("EmissiveStrength", 0.0f);
         mat.AlbedoMapPath = jm.value("AlbedoMapPath", "");
         mat.NormalMapPath = jm.value("NormalMapPath", "");
+        mat.MetallicRoughnessMapPath = jm.value("MetallicRoughnessMapPath", "");
+        mat.EmissiveMapPath = jm.value("EmissiveMapPath", "");
         mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.AlbedoMapPath));
         mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.NormalMapPath));
+        mat.MetallicRoughnessMap = mat.MetallicRoughnessMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.MetallicRoughnessMapPath));
+        mat.EmissiveMap = mat.EmissiveMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.EmissiveMapPath));
     } else if (entity.HasComponent<MeshRendererComponent>()) {
         entity.RemoveComponent<MeshRendererComponent>();
     }

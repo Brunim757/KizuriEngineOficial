@@ -22,6 +22,10 @@ public:
     static Ref<Texture2D> Create(uint32_t width, uint32_t height);
     static Ref<Texture2D> Create(const std::string& path);
 
+    // Textura a partir de bytes em memória (ex.: imagens embutidas num .glb).
+    // NÃO inverte verticalmente — convenção UV do glTF (v=0 no topo).
+    static Ref<Texture2D> CreateFromMemory(const void* data, size_t size, const std::string& debugName = "");
+
 private:
     std::string m_Path;
     uint32_t m_Width = 0, m_Height = 0;

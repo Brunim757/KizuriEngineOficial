@@ -605,6 +605,23 @@ KZ_SCRIPT_API int kz_material_set_normal_map(uint32_t entity, const char* path) 
     return 1;
 }
 
+KZ_SCRIPT_API int kz_material_set_metallic_roughness_map(uint32_t entity, const char* path) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::MeshRendererComponent>() || path == nullptr) return 0;
+    auto& mat = e.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial;
+    mat.MetallicRoughnessMapPath = path;
+    mat.MetallicRoughnessMap = kizuri::Texture2D::Create(kizuri::Project::ResolvePath(path));
+    return 1;
+}
+
+KZ_SCRIPT_API void kz_material_set_emissive(uint32_t entity, float r, float g, float b, float strength) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::MeshRendererComponent>()) return;
+    auto& mat = e.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial;
+    mat.Emissive = { r, g, b };
+    mat.EmissiveStrength = strength;
+}
+
 // ---------------------------------------------------------------------------
 // Câmera — parâmetros de perspectiva em runtime
 // ---------------------------------------------------------------------------

@@ -126,14 +126,24 @@ uniform vec3 u_Albedo;
 uniform float u_Metallic;
 uniform float u_Roughness;
 uniform float u_AO;
+uniform vec3 u_Emissive;
+uniform float u_EmissiveStrength;
 uniform sampler2D u_AlbedoMap;
 uniform bool u_HasAlbedoMap;
 uniform sampler2D u_NormalMap;
 uniform bool u_HasNormalMap;
+uniform sampler2D u_MetallicRoughnessMap;
+uniform bool u_HasMetallicRoughnessMap;
+uniform sampler2D u_EmissiveMap;
+uniform bool u_HasEmissiveMap;
 
 uniform vec3 u_ViewPos;
 uniform mat4 u_View;
 uniform bool u_HasShadow; // se a luz índice 0 é a que projeta sombra
+
+uniform vec3 u_FogColor;
+uniform float u_FogDensity;
+uniform bool u_FogEnabled;
 
 #define CASCADE_COUNT 3
 uniform sampler2D u_ShadowMap0;
@@ -248,6 +258,14 @@ vec3 ApplyNormalMap(vec3 N) {
 void main() {
     vec3 albedo = u_HasAlbedoMap ? texture(u_AlbedoMap, v_TexCoord).rgb * u_Albedo : u_Albedo;
 
+    float metallic = u_Metallic;
+    float roughness = u_Roughness;
+    if (u_HasMetallicRoughnessMap) {
+        vec3 mr = texture(u_MetallicRoughnessMap, v_TexCoord).rgb;
+        roughness *= mr.g; // convenção glTF
+        metallic *= mr.b;
+    }
+
     vec3 N = normalize(v_Normal);
     if (u_HasNormalMap) N = ApplyNormalMap(N);
 
@@ -281,8 +299,8 @@ void main() {
 
         vec3 H = normalize(V + L);
         float NdotL = max(dot(N, L), 0.0);
-        float NDF = DistributionGGX(N, H, u_Roughness);
-        float G = GeometrySmith(N, V, L, u_Roughness);
+        float NDF = DistributionGGX(N, H, roughness);
+        float G = GeometrySmith(N, V, L, roughness);
         vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
         vec3 specularBRDF = (NDF * G * F) / max(4.0 * NdotV * NdotL, 0.0001);
 
@@ -297,17 +315,30 @@ void main() {
     }
 
     // --- Luz ambiente (IBL) — nunca é sombreada, luz indireta ainda chega em área de sombra ---
-    vec3 F_ibl = FresnelSchlickRoughness(NdotV, F0, u_Roughness);
-    vec3 kD_ibl = (vec3(1.0) - F_ibl) * (1.0 - u_Metallic);
+    vec3 F_ibl = FresnelSchlickRoughness(NdotV, F0, roughness);
+    vec3 kD_ibl = (vec3(1.0) - F_ibl) * (1.0 - metallic);
     vec3 diffuseIBL = texture(u_IrradianceMap, N).rgb * albedo;
-    vec3 prefilteredColor = textureLod(u_PrefilterMap, R, u_Roughness * u_MaxPrefilterLod).rgb;
-    vec2 envBRDF = EnvBRDFApprox(NdotV, u_Roughness);
+    vec3 prefilteredColor = textureLod(u_PrefilterMap, R, roughness * u_MaxPrefilterLod).rgb;
+    vec2 envBRDF = EnvBRDFApprox(NdotV, roughness);
     vec3 specularIBL = prefilteredColor * (F_ibl * envBRDF.x + envBRDF.y);
     vec3 ambient = (kD_ibl * diffuseIBL + specularIBL) * u_AO;
 
+    // Emissivo soma direto (e, acima de 1.0, alimenta o bright-pass do bloom).
+    vec3 emissive = u_Emissive * u_EmissiveStrength;
+    if (u_HasEmissiveMap) emissive *= texture(u_EmissiveMap, v_TexCoord).rgb;
+
+    vec3 color = ambient + directLighting + emissive;
+
+    // Névoa exponencial (distância da câmera) — nunca no skybox, que não passa por aqui.
+    if (u_FogEnabled) {
+        float dist = length(u_ViewPos - v_FragPos);
+        float fogFactor = 1.0 - exp(-u_FogDensity * u_FogDensity * dist * dist);
+        color = mix(color, u_FogColor, clamp(fogFactor, 0.0, 1.0));
+    }
+
     // Sem tonemap aqui — sai HDR linear cru de propósito. O passe de composição
     // (bright-pass + bloom + ACES) é quem faz o tonemap, uma vez só, no final.
-    o_Color = vec4(ambient + directLighting, 1.0);
+    o_Color = vec4(color, 1.0);
 }
 )";
 
@@ -1480,6 +1511,10 @@ void Renderer3D::EndScene() {
         s_MeshShader->SetInt("u_PrefilterMap", 6);
         s_MeshShader->SetFloat("u_MaxPrefilterLod", (float)(kPrefilterMipLevels - 1));
 
+        s_MeshShader->SetInt("u_FogEnabled", s_Settings.FogEnabled ? 1 : 0);
+        s_MeshShader->SetFloat3("u_FogColor", s_Settings.FogColor);
+        s_MeshShader->SetFloat("u_FogDensity", s_Settings.FogDensity);
+
         s_MeshShader->SetInt("u_LightCount", (int)s_LightList.size());
         for (size_t i = 0; i < s_LightList.size(); ++i) {
             const Light& l = s_LightList[i];
@@ -1526,6 +1561,20 @@ void Renderer3D::EndScene() {
                 cmd.Mat.NormalMap->Bind(4);
                 s_MeshShader->SetInt("u_NormalMap", 4);
             }
+            bool hasMR = (bool)cmd.Mat.MetallicRoughnessMap;
+            s_MeshShader->SetInt("u_HasMetallicRoughnessMap", hasMR ? 1 : 0);
+            if (hasMR) {
+                cmd.Mat.MetallicRoughnessMap->Bind(7);
+                s_MeshShader->SetInt("u_MetallicRoughnessMap", 7);
+            }
+            bool hasEmissive = (bool)cmd.Mat.EmissiveMap;
+            s_MeshShader->SetInt("u_HasEmissiveMap", hasEmissive ? 1 : 0);
+            if (hasEmissive) {
+                cmd.Mat.EmissiveMap->Bind(8);
+                s_MeshShader->SetInt("u_EmissiveMap", 8);
+            }
+            s_MeshShader->SetFloat3("u_Emissive", cmd.Mat.Emissive);
+            s_MeshShader->SetFloat("u_EmissiveStrength", cmd.Mat.EmissiveStrength);
 
             RenderCommand::DrawIndexed(cmd.MeshAsset->GetVertexArray(), cmd.MeshAsset->GetIndexCount());
         }

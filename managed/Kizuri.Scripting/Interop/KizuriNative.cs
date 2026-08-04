@@ -89,6 +89,8 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_material_set_roughness(uint entity, float roughness);
     [DllImport(Lib)] internal static extern int kz_material_set_albedo_map(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern int kz_material_set_normal_map(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
+    [DllImport(Lib)] internal static extern int kz_material_set_metallic_roughness_map(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
+    [DllImport(Lib)] internal static extern void kz_material_set_emissive(uint entity, float r, float g, float b, float strength);
 
     // ---- UI (Canvas / Rect / Botão / Texto em espaço de tela) ------------------
     [DllImport(Lib)] internal static extern int kz_entity_add_ui_canvas(uint entity, float orthoSize);

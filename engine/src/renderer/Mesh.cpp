@@ -7,6 +7,25 @@
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
 
+namespace {
+
+// Carrega a textura de uma textura_view do glTF: prioriza a imagem embutida
+// no buffer (glb) via CreateFromMemory (sem flip — UV glTF), senão o arquivo
+// externo (uri). Devolve null se não houver textura.
+Ref<Texture2D> LoadGLTFTexture(const cgltf_texture_view& view) {
+    if (!view.texture || !view.texture->image) return nullptr;
+    const cgltf_image* img = view.texture->image;
+    if (img->buffer_view && img->buffer_view->buffer && img->buffer_view->buffer->data) {
+        const cgltf_buffer_view* bv = img->buffer_view;
+        return Texture2D::CreateFromMemory((const uint8_t*)bv->buffer->data + bv->offset, bv->size,
+                                           img->name ? img->name : "gltf");
+    }
+    if (img->uri) return Texture2D::Create(img->uri);
+    return nullptr;
+}
+
+} // namespace
+
 #include <glm/gtc/constants.hpp>
 #include <cmath>
 #include <string>
@@ -358,6 +377,33 @@ Ref<Mesh> Mesh::LoadFromGLTF(const std::string& path) {
     }
     KZ_CORE_INFO("Malha glTF carregada: {0} ({1} vértices).", path, vertices.size());
     return CreateRef<Mesh>(vertices, indices);
+}
+
+Material Mesh::ExtractMaterialFromGLTF(const std::string& path) {
+    Material mat;
+    cgltf_options options = {};
+    cgltf_data* data = nullptr;
+    if (cgltf_parse_file(&options, path.c_str(), &data) != cgltf_result_success) return mat;
+    if (cgltf_load_buffers(&options, data, path.c_str()) != cgltf_result_success) {
+        cgltf_free(data);
+        return mat;
+    }
+
+    if (data->materials_count > 0) {
+        const cgltf_material& gm = data->materials[0];
+        const cgltf_pbr_metallic_roughness& pbr = gm.pbr_metallic_roughness;
+        mat.Albedo = { pbr.base_color_factor[0], pbr.base_color_factor[1], pbr.base_color_factor[2] };
+        mat.Metallic = pbr.metallic_factor;
+        mat.Roughness = pbr.roughness_factor;
+        mat.Emissive = { gm.emissive_factor[0], gm.emissive_factor[1], gm.emissive_factor[2] };
+        if (gm.has_emissive_strength) mat.EmissiveStrength = gm.emissive_strength;
+        mat.AlbedoMap = LoadGLTFTexture(pbr.base_color_texture);
+        mat.MetallicRoughnessMap = LoadGLTFTexture(pbr.metallic_roughness_texture);
+        mat.NormalMap = LoadGLTFTexture(gm.normal_texture);
+        mat.EmissiveMap = LoadGLTFTexture(gm.emissive_texture);
+    }
+    cgltf_free(data);
+    return mat;
 }
 
 } // namespace kizuri

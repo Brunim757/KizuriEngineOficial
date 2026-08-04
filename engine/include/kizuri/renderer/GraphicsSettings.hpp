@@ -40,6 +40,11 @@ struct GraphicsSettings {
     // Exposição multiplicada antes do tonemap ACES (equivalente ao "EV").
     float Exposure = 1.0f;
 
+    // Névoa exponencial por distância (aplicada no shader de mesh).
+    bool FogEnabled = false;
+    float FogDensity = 0.012f;
+    float FogColor[3] = { 0.55f, 0.6f, 0.66f };
+
     bool VSync = true;
 
     void ApplyPreset(QualityPreset preset);

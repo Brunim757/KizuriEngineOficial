@@ -33,6 +33,7 @@ void GraphicsSettings::Clamp() {
     SSAOSamples = std::clamp(SSAOSamples, 8, 64);
     SSAORadius = std::clamp(SSAORadius, 0.05f, 2.0f);
     Exposure = std::clamp(Exposure, 0.1f, 8.0f);
+    FogDensity = std::clamp(FogDensity, 0.0f, 0.2f);
 }
 
 void GraphicsSettings::ApplyPreset(QualityPreset preset) {
@@ -42,24 +43,32 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             BloomEnabled = true;  BloomThreshold = 1.2f; BloomIntensity = 0.45f;
             SSAOEnabled = true;   SSAOSamples = 64;      SSAORadius = 0.5f;
             Exposure = 1.0f;      VSync = true;
+            FogEnabled = false;   FogDensity = 0.012f;
+            FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
             break;
         case QualityPreset::High:
             RenderScale = 1.0f; MSAA = 4; ShadowMapSize = 2048; ShadowPCFRadius = 2;
             BloomEnabled = true;  BloomThreshold = 1.2f; BloomIntensity = 0.45f;
             SSAOEnabled = true;   SSAOSamples = 32;      SSAORadius = 0.5f;
             Exposure = 1.0f;      VSync = true;
+            FogEnabled = false;   FogDensity = 0.012f;
+            FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
             break;
         case QualityPreset::Medium:
             RenderScale = 1.0f; MSAA = 2; ShadowMapSize = 1024; ShadowPCFRadius = 1;
             BloomEnabled = true;  BloomThreshold = 1.2f; BloomIntensity = 0.35f;
             SSAOEnabled = true;   SSAOSamples = 16;      SSAORadius = 0.5f;
             Exposure = 1.0f;      VSync = true;
+            FogEnabled = false;   FogDensity = 0.012f;
+            FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
             break;
         case QualityPreset::Low:
             RenderScale = 0.75f; MSAA = 1; ShadowMapSize = 1024; ShadowPCFRadius = 0;
             BloomEnabled = false; BloomThreshold = 1.2f; BloomIntensity = 0.0f;
             SSAOEnabled = false;  SSAOSamples = 8;       SSAORadius = 0.5f;
             Exposure = 1.0f;      VSync = false;
+            FogEnabled = false;   FogDensity = 0.012f;
+            FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
             break;
         default:
             break; // Custom: mantém os valores atuais
@@ -82,6 +91,9 @@ bool SaveGraphicsSettings(const std::string& path, const GraphicsSettings& setti
     j["ssao_samples"] = settings.SSAOSamples;
     j["ssao_radius"] = settings.SSAORadius;
     j["exposure"] = settings.Exposure;
+    j["fog_enabled"] = settings.FogEnabled;
+    j["fog_density"] = settings.FogDensity;
+    j["fog_color"] = { settings.FogColor[0], settings.FogColor[1], settings.FogColor[2] };
     j["vsync"] = settings.VSync;
 
     std::ofstream out(path);
@@ -108,6 +120,10 @@ bool LoadGraphicsSettings(const std::string& path, GraphicsSettings& out) {
         out.SSAOSamples = j.value("ssao_samples", out.SSAOSamples);
         out.SSAORadius = j.value("ssao_radius", out.SSAORadius);
         out.Exposure = j.value("exposure", out.Exposure);
+        out.FogEnabled = j.value("fog_enabled", out.FogEnabled);
+        out.FogDensity = j.value("fog_density", out.FogDensity);
+        if (j.contains("fog_color") && j["fog_color"].is_array() && j["fog_color"].size() == 3)
+            for (int i = 0; i < 3; ++i) out.FogColor[i] = j["fog_color"][i].get<float>();
         out.VSync = j.value("vsync", out.VSync);
         out.Clamp();
         return true;

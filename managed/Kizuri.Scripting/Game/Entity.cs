@@ -118,6 +118,10 @@ public readonly struct Entity
 		=> Interop.KizuriNative.kz_material_set_albedo_map(Handle, path) != 0;
 	public bool SetMaterialNormalMap(string path)
 		=> Interop.KizuriNative.kz_material_set_normal_map(Handle, path) != 0;
+	public bool SetMaterialMetallicRoughnessMap(string path)
+		=> Interop.KizuriNative.kz_material_set_metallic_roughness_map(Handle, path) != 0;
+	public void SetMaterialEmissive(float r, float g, float b, float strength = 1f)
+		=> Interop.KizuriNative.kz_material_set_emissive(Handle, r, g, b, strength);
 
 	// ---- Animação esquelética (skinning via glTF) ----
 

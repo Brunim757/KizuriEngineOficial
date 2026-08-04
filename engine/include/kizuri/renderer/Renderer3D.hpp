@@ -44,6 +44,10 @@ public:
     static Ref<Mesh> LoadFromOBJ(const std::string& path);
     static Ref<Mesh> LoadFromGLTF(const std::string& path); // .glb/.gltf via cgltf
 
+    // Extrai o material PBR do primeiro material do .glb/.gltf (fatores +
+    // texturas embutidas no arquivo). Vazio/padrão se o arquivo não tiver.
+    static Material ExtractMaterialFromGLTF(const std::string& path);
+
     // Reconstrói uma mesh a partir da string serializável do editor
     // ("builtin:cube|plane|sphere|cylinder|cone|capsule|torus" | caminho .obj/.glb/.gltf).
     static Ref<Mesh> FromSource(const std::string& source);
@@ -60,12 +64,18 @@ struct Material {
     float Metallic = 0.0f;
     float Roughness = 0.5f;
     float AO = 1.0f; // oclusão ambiente escalar, só afeta a parte IBL
+    glm::vec3 Emissive = glm::vec3(0.0f); // cor emissiva (alimenta o bloom)
+    float EmissiveStrength = 0.0f;
     Ref<Texture2D> AlbedoMap;
     Ref<Texture2D> NormalMap; // tangent-space; TBN calculado por derivada de tela, sem atributo extra na mesh
+    Ref<Texture2D> MetallicRoughnessMap; // canal G = roughness, canal B = metallic (convenção glTF)
+    Ref<Texture2D> EmissiveMap;
     // Caminhos serializáveis — é o que permite salvar/abrir cena com
     // textura de material (ver ComponentSerialization.hpp). Vazios = sem mapa.
     std::string AlbedoMapPath;
     std::string NormalMapPath;
+    std::string MetallicRoughnessMapPath;
+    std::string EmissiveMapPath;
 };
 
 enum class LightType { Directional = 0, Point = 1, Spot = 2 };

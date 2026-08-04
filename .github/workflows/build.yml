@@ -43,7 +43,10 @@ jobs:
             ${{ runner.os }}-kizuri-deps-
 
       - name: Configurar (CMake)
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        # KZ_BUNDLE_DOTNET=OFF aqui: o runner já tem .NET pré-instalado e
+        # copiar o SDK a cada build só atrasa. O .NET embutido entra no
+        # artifact pelo job 'package' (que faz setup-dotnet e copia o SDK).
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DKZ_BUNDLE_DOTNET=OFF
 
       - name: Compilar
         run: cmake --build build --config Release --parallel

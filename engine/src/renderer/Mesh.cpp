@@ -12,15 +12,15 @@ namespace {
 // Carrega a textura de uma textura_view do glTF: prioriza a imagem embutida
 // no buffer (glb) via CreateFromMemory (sem flip — UV glTF), senão o arquivo
 // externo (uri). Devolve null se não houver textura.
-Ref<Texture2D> LoadGLTFTexture(const cgltf_texture_view& view) {
+kizuri::Ref<kizuri::Texture2D> LoadGLTFTexture(const cgltf_texture_view& view) {
     if (!view.texture || !view.texture->image) return nullptr;
     const cgltf_image* img = view.texture->image;
     if (img->buffer_view && img->buffer_view->buffer && img->buffer_view->buffer->data) {
         const cgltf_buffer_view* bv = img->buffer_view;
-        return Texture2D::CreateFromMemory((const uint8_t*)bv->buffer->data + bv->offset, bv->size,
-                                           img->name ? img->name : "gltf");
+        return kizuri::Texture2D::CreateFromMemory((const uint8_t*)bv->buffer->data + bv->offset, bv->size,
+                                                   img->name ? img->name : "gltf");
     }
-    if (img->uri) return Texture2D::Create(img->uri);
+    if (img->uri) return kizuri::Texture2D::Create(img->uri);
     return nullptr;
 }
 

@@ -16,6 +16,7 @@
 #include "kizuri/audio/AudioEngine.hpp"
 
 #include <box2d/box2d.h>
+#include <box2d/b2_distance.h> // b2Distance/b2DistanceInput (não vem no box2d.h)
 #include <btBulletDynamicsCommon.h>
 #include <glm/gtc/random.hpp>
 #include <algorithm>
@@ -188,6 +189,28 @@ public:
     }
 };
 
+// Callback do b2World::QueryAABB pro OverlapCircle2D — acha o fixture cujo
+// gap (b2Distance) pro círculo é o menor; <= 0 = o círculo toca o collider.
+class OverlapCircleCallback : public b2QueryCallback {
+public:
+    b2CircleShape* Query = nullptr;
+    b2Fixture* Best = nullptr;
+    float BestGap = std::numeric_limits<float>::max();
+
+    bool ReportFixture(b2Fixture* fixture) override {
+        b2DistanceInput input;
+        input.proxyA.Set(Query, 0);
+        input.proxyB.Set(fixture->GetShape(), 0);
+        input.transformA = b2Transform_identity;
+        input.transformB = fixture->GetBody()->GetTransform();
+        input.useRadii = true;
+        b2DistanceOutput output;
+        b2Distance(&output, &input);
+        if (output.distance < BestGap) { BestGap = output.distance; Best = fixture; }
+        return true;
+    }
+};
+
 } // namespace
 
 bool Scene::Raycast2D(const glm::vec2& from, const glm::vec2& to,
@@ -220,23 +243,12 @@ bool Scene::OverlapCircle2D(const glm::vec2& center, float radius, Entity& outEn
     aabb.lowerBound = { center.x - radius, center.y - radius };
     aabb.upperBound = { center.x + radius, center.y + radius };
 
-    b2Fixture* best = nullptr;
-    float bestGap = std::numeric_limits<float>::max();
-    m_PhysicsWorld2D->QueryAABB([&](b2Fixture* fixture) -> bool {
-        b2DistanceInput input;
-        input.proxyA.Set(&queryCircle, 0);
-        input.proxyB.Set(fixture->GetShape(), 0);
-        input.transformA = b2Transform_identity;
-        input.transformB = fixture->GetBody()->GetTransform();
-        input.useRadii = true;
-        b2DistanceOutput output;
-        b2Distance(&output, &input);
-        if (output.distance < bestGap) { bestGap = output.distance; best = fixture; }
-        return true; // continua procurando
-    }, aabb);
+    OverlapCircleCallback cb;
+    cb.Query = &queryCircle;
+    m_PhysicsWorld2D->QueryAABB(&cb, aabb);
 
-    if (best == nullptr || bestGap > 0.0f) return false;
-    uintptr_t ptr = best->GetBody()->GetUserData().pointer;
+    if (cb.Best == nullptr || cb.BestGap > 0.0f) return false;
+    uintptr_t ptr = cb.Best->GetBody()->GetUserData().pointer;
     outEntity = Entity{ static_cast<entt::entity>(ptr), this };
     return true;
 }

@@ -169,6 +169,12 @@ FetchContent_Declare(tinyobjloader
     GIT_REPOSITORY https://github.com/tinyobjloader/tinyobjloader.git
     GIT_TAG        v2.0.0rc13)
 
+# cgltf - importação de modelos glTF/glb (single header, o padrão da
+# indústria de assets 3D: meshes, hierarquia de nós, materiais PBR)
+FetchContent_Declare(cgltf
+    GIT_REPOSITORY https://github.com/jkuhlmann/cgltf.git
+    GIT_TAG        v1.15)
+
 # ImGui - UI de debug / editor
 FetchContent_Declare(imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
@@ -188,7 +194,7 @@ FetchContent_Declare(json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG        v3.11.3)
 
-FetchContent_MakeAvailable(glfw glm entt spdlog miniaudio stb tinyobjloader json)
+FetchContent_MakeAvailable(glfw glm entt spdlog miniaudio stb tinyobjloader cgltf json)
 
 # Bullet e Box2D são maiores; deixamos como submódulos opcionais de física
 FetchContent_MakeAvailable(bullet3 box2d)

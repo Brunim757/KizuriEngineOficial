@@ -55,6 +55,13 @@ public readonly struct Entity
 	public void SetPosition(Math.Vector3 position)
 		=> Interop.KizuriNative.kz_transform_set_position(Handle, position.X, position.Y, position.Z);
 
+	// Rotação em radianos (euler) e escala — controle completo do Transform em runtime.
+	public void SetRotation(Math.Vector3 rotation)
+		=> Interop.KizuriNative.kz_transform_set_rotation(Handle, rotation.X, rotation.Y, rotation.Z);
+
+	public void SetScale(Math.Vector3 scale)
+		=> Interop.KizuriNative.kz_transform_set_scale(Handle, scale.X, scale.Y, scale.Z);
+
 	// Parenta 'this' a 'parent' (ou destaca, com SetParent() sem argumento).
 	public void SetParent(Entity parent)
 		=> Interop.KizuriNative.kz_entity_set_parent(Handle, parent.Handle);
@@ -78,6 +85,39 @@ public readonly struct Entity
 
 	public bool AddCamera(bool perspective3D = false)
 		=> Interop.KizuriNative.kz_entity_add_camera(Handle, perspective3D ? 1 : 0) != 0;
+
+	// FOV (graus) + clipes de perspectiva em runtime.
+	public void SetCamera(float fovDeg, float nearClip = 0.01f, float farClip = 1000f)
+		=> Interop.KizuriNative.kz_camera_set_params(Handle, fovDeg, nearClip, farClip);
+
+	// Luz dinâmica: type 0=Direcional (direção = rotação da entidade),
+	// 1=Ponto, 2=Spot (cones em graus). A 1ª direcional da cena projeta sombra.
+	public bool AddLight(LightType type, float r = 1f, float g = 1f, float b = 1f,
+	                     float intensity = 1f, float range = 10f,
+	                     float innerConeDeg = 20f, float outerConeDeg = 30f)
+		=> Interop.KizuriNative.kz_entity_add_light(Handle, (int)type, r, g, b, intensity, range, innerConeDeg, outerConeDeg) != 0;
+
+	// Mesh 3D: "builtin:cube" | "builtin:plane" | "builtin:sphere" ou caminho
+	// relativo de .obj/.glb/.gltf (ex.: "Assets/Models/Cube.glb").
+	public bool AddMeshRenderer(string meshSource = "builtin:cube")
+		=> Interop.KizuriNative.kz_entity_add_mesh_renderer(Handle, meshSource) != 0;
+
+	public void SetLightColor(float r, float g, float b)
+		=> Interop.KizuriNative.kz_light_set_color(Handle, r, g, b);
+	public void SetLightIntensity(float intensity)
+		=> Interop.KizuriNative.kz_light_set_intensity(Handle, intensity);
+
+	public void SetMaterial(float r, float g, float b, float metallic = 0f, float roughness = 0.5f)
+	{
+		Interop.KizuriNative.kz_material_set_albedo(Handle, r, g, b);
+		Interop.KizuriNative.kz_material_set_metallic(Handle, metallic);
+		Interop.KizuriNative.kz_material_set_roughness(Handle, roughness);
+	}
+
+	public bool SetMaterialAlbedoMap(string path)
+		=> Interop.KizuriNative.kz_material_set_albedo_map(Handle, path) != 0;
+	public bool SetMaterialNormalMap(string path)
+		=> Interop.KizuriNative.kz_material_set_normal_map(Handle, path) != 0;
 
 	public bool AddCircleCollider2D(float radius = 0.5f, float density = 1f, float friction = 0.5f, float restitution = 0f)
 		=> Interop.KizuriNative.kz_entity_add_circle_collider2d(Handle, radius, density, friction, restitution) != 0;
@@ -142,4 +182,14 @@ public enum ComponentType
 	UIButton = 8,
 	UICanvas = 9,
 	CircleCollider2D = 10,
+	MeshRenderer = 11,
+	ParticleSystem = 12,
+}
+
+// Tipos de luz expostos ao C# (mesmos do C++ Renderer3D.hpp).
+public enum LightType
+{
+	Directional = 0,
+	Point = 1,
+	Spot = 2,
 }

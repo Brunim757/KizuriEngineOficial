@@ -133,6 +133,7 @@ target_include_directories(KizuriEngine SYSTEM PUBLIC
     ${miniaudio_SOURCE_DIR}
     ${stb_SOURCE_DIR}
     ${tinyobjloader_SOURCE_DIR}
+    ${cgltf_SOURCE_DIR}
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
     ${bullet3_SOURCE_DIR}/src

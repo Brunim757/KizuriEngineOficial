@@ -3,9 +3,11 @@
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
+#include <cgltf.h>
 
 #include <glm/gtc/constants.hpp>
 #include <cmath>
+#include <string>
 
 namespace kizuri {
 
@@ -144,8 +146,87 @@ Ref<Mesh> Mesh::FromSource(const std::string& source) {
     if (source == "builtin:cube")    return CreateCube();
     if (source == "builtin:plane")   return CreatePlane();
     if (source == "builtin:sphere")  return CreateSphere();
-    if (!source.empty()) return LoadFromOBJ(source);
+    if (!source.empty()) {
+        size_t dot = source.find_last_of('.');
+        if (dot != std::string::npos) {
+            std::string ext = source.substr(dot + 1);
+            if (ext == "glb" || ext == "gltf") return LoadFromGLTF(source);
+        }
+        return LoadFromOBJ(source);
+    }
     return CreateCube();
+}
+
+Ref<Mesh> Mesh::LoadFromGLTF(const std::string& path) {
+    cgltf_options options = {};
+    cgltf_data* data = nullptr;
+
+    cgltf_result result = cgltf_parse_file(&options, path.c_str(), &data);
+    if (result != cgltf_result_success) {
+        KZ_CORE_ERROR("Falha ao carregar a malha glTF '{0}' (cgltf erro {1}).", path, (int)result);
+        return CreateCube();
+    }
+    result = cgltf_load_buffers(&options, data, path.c_str());
+    if (result != cgltf_result_success) {
+        KZ_CORE_ERROR("Falha ao carregar os buffers do glTF '{0}' (cgltf erro {1}).", path, (int)result);
+        cgltf_free(data);
+        return CreateCube();
+    }
+
+    // Acha os accessors certos por atributo dentro de cada primitiva.
+    auto FindAttr = [](const cgltf_primitive& prim, cgltf_attribute_type type, int idx) -> const cgltf_accessor* {
+        for (cgltf_size a = 0; a < prim.attributes_count; ++a) {
+            const cgltf_attribute& attr = prim.attributes[a];
+            if (attr.type == type && (int)attr.index == idx) return attr.data;
+        }
+        return nullptr;
+    };
+
+    std::vector<Vertex3D> vertices;
+    std::vector<uint32_t> indices;
+    uint32_t base = 0;
+
+    for (cgltf_size m = 0; m < data->meshes_count; ++m) {
+        const cgltf_mesh& mesh = data->meshes[m];
+        for (cgltf_size p = 0; p < mesh.primitives_count; ++p) {
+            const cgltf_primitive& prim = mesh.primitives[p];
+            if (prim.type != cgltf_primitive_type_triangles) continue; // só triângulos (v1)
+
+            const cgltf_accessor* pos = FindAttr(prim, cgltf_attribute_type_position, 0);
+            if (!pos) continue;
+            const cgltf_accessor* nrm = FindAttr(prim, cgltf_attribute_type_normal, 0);
+            const cgltf_accessor* uv  = FindAttr(prim, cgltf_attribute_type_texcoord, 0);
+
+            cgltf_size count = pos->count;
+            for (cgltf_size i = 0; i < count; ++i) {
+                Vertex3D v{};
+                cgltf_accessor_read_float(pos, i, &v.Position.x, 3);
+                if (nrm) cgltf_accessor_read_float(nrm, i, &v.Normal.x, 3);
+                else v.Normal = glm::vec3(0.0f, 1.0f, 0.0f);
+                if (uv) cgltf_accessor_read_float(uv, i, &v.TexCoord.x, 2);
+                vertices.push_back(v);
+            }
+
+            if (prim.indices) {
+                for (cgltf_size i = 0; i < prim.indices->count; ++i) {
+                    uint32_t idx = 0;
+                    cgltf_accessor_read_index(prim.indices, i, &idx);
+                    indices.push_back(base + idx);
+                }
+            } else {
+                for (cgltf_size i = 0; i < count; ++i) indices.push_back(base + (uint32_t)i);
+            }
+            base += (uint32_t)count;
+        }
+    }
+    cgltf_free(data);
+
+    if (vertices.empty()) {
+        KZ_CORE_ERROR("O glTF '{0}' não contém malhas triangulares.", path);
+        return CreateCube();
+    }
+    KZ_CORE_INFO("Malha glTF carregada: {0} ({1} vértices).", path, vertices.size());
+    return CreateRef<Mesh>(vertices, indices);
 }
 
 } // namespace kizuri

@@ -33,9 +33,10 @@ public:
     static Ref<Mesh> CreatePlane();
     static Ref<Mesh> CreateSphere(uint32_t sectors = 32, uint32_t stacks = 16);
     static Ref<Mesh> LoadFromOBJ(const std::string& path);
+    static Ref<Mesh> LoadFromGLTF(const std::string& path); // .glb/.gltf via cgltf
 
     // Reconstrói uma mesh a partir da string serializável do editor
-    // ("builtin:cube" | "builtin:plane" | "builtin:sphere" | caminho .obj).
+    // ("builtin:cube" | "builtin:plane" | "builtin:sphere" | caminho .obj/.glb/.gltf).
     static Ref<Mesh> FromSource(const std::string& source);
 
 private:

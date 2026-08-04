@@ -153,6 +153,8 @@ KZ_SCRIPT_API int kz_entity_has_component(uint32_t entity, int componentType) {
         case 8: return e.HasComponent<kizuri::UIButtonComponent>() ? 1 : 0;
         case 9: return e.HasComponent<kizuri::UICanvasComponent>() ? 1 : 0;
         case 10: return e.HasComponent<kizuri::CircleCollider2DComponent>() ? 1 : 0;
+        case 11: return e.HasComponent<kizuri::MeshRendererComponent>() ? 1 : 0;
+        case 12: return e.HasComponent<kizuri::ParticleSystemComponent>() ? 1 : 0;
         default: return 0;
     }
 }
@@ -500,6 +502,114 @@ KZ_SCRIPT_API int kz_physics2d_overlap_circle(float x, float y, float radius,
     if (!s_ActiveScene->OverlapCircle2D({ x, y }, radius, hit)) return 0;
     if (outHitEntity) *outHitEntity = kizuri::scripting::RegisterEntityHandle(hit);
     return 1;
+}
+
+// ---------------------------------------------------------------------------
+// Transform — rotação (euler, radianos) e escala em runtime
+// ---------------------------------------------------------------------------
+KZ_SCRIPT_API void kz_transform_set_rotation(uint32_t entity, float x, float y, float z) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TransformComponent>()) return;
+    e.GetComponent<kizuri::TransformComponent>().Rotation = { x, y, z };
+}
+
+KZ_SCRIPT_API void kz_transform_set_scale(uint32_t entity, float x, float y, float z) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TransformComponent>()) return;
+    e.GetComponent<kizuri::TransformComponent>().Scale = { x, y, z };
+}
+
+// ---------------------------------------------------------------------------
+// Luz — cria/atualiza LightComponent em runtime (a direção da direcional/
+// spot é derivada da rotação do Transform, igual ao editor)
+// ---------------------------------------------------------------------------
+KZ_SCRIPT_API int kz_entity_add_light(uint32_t entity, int type, float r, float g, float b,
+                                      float intensity, float range, float innerConeDeg, float outerConeDeg) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& lc = e.AddOrReplaceComponent<kizuri::LightComponent>();
+    lc.Type = (kizuri::LightType)type;
+    lc.Color = { r, g, b };
+    lc.Intensity = intensity;
+    lc.Range = range;
+    lc.InnerConeDeg = innerConeDeg;
+    lc.OuterConeDeg = outerConeDeg;
+    return 1;
+}
+
+KZ_SCRIPT_API void kz_light_set_color(uint32_t entity, float r, float g, float b) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::LightComponent>()) return;
+    e.GetComponent<kizuri::LightComponent>().Color = { r, g, b };
+}
+
+KZ_SCRIPT_API void kz_light_set_intensity(uint32_t entity, float intensity) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::LightComponent>()) return;
+    e.GetComponent<kizuri::LightComponent>().Intensity = intensity;
+}
+
+// ---------------------------------------------------------------------------
+// Mesh renderer + material PBR em runtime
+// ---------------------------------------------------------------------------
+KZ_SCRIPT_API int kz_entity_add_mesh_renderer(uint32_t entity, const char* meshSource) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    std::string src = (meshSource != nullptr && *meshSource != '\0') ? meshSource : "builtin:cube";
+    auto& mc = e.AddOrReplaceComponent<kizuri::MeshRendererComponent>();
+    mc.MeshSource = src;
+    if (src.rfind("builtin:", 0) == 0) mc.MeshAsset = kizuri::Mesh::FromSource(src);
+    else mc.MeshAsset = kizuri::Mesh::FromSource(kizuri::Project::ResolvePath(src));
+    mc.MeshMaterial = {};
+    return 1;
+}
+
+KZ_SCRIPT_API void kz_material_set_albedo(uint32_t entity, float r, float g, float b) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::MeshRendererComponent>()) return;
+    e.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial.Albedo = { r, g, b };
+}
+
+KZ_SCRIPT_API void kz_material_set_metallic(uint32_t entity, float metallic) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::MeshRendererComponent>()) return;
+    e.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial.Metallic = metallic;
+}
+
+KZ_SCRIPT_API void kz_material_set_roughness(uint32_t entity, float roughness) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::MeshRendererComponent>()) return;
+    e.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial.Roughness = roughness;
+}
+
+KZ_SCRIPT_API int kz_material_set_albedo_map(uint32_t entity, const char* path) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::MeshRendererComponent>() || path == nullptr) return 0;
+    auto& mat = e.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial;
+    mat.AlbedoMapPath = path;
+    mat.AlbedoMap = kizuri::Texture2D::Create(kizuri::Project::ResolvePath(path));
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_material_set_normal_map(uint32_t entity, const char* path) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::MeshRendererComponent>() || path == nullptr) return 0;
+    auto& mat = e.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial;
+    mat.NormalMapPath = path;
+    mat.NormalMap = kizuri::Texture2D::Create(kizuri::Project::ResolvePath(path));
+    return 1;
+}
+
+// ---------------------------------------------------------------------------
+// Câmera — parâmetros de perspectiva em runtime
+// ---------------------------------------------------------------------------
+KZ_SCRIPT_API void kz_camera_set_params(uint32_t entity, float fovDeg, float nearClip, float farClip) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::CameraComponent>()) return;
+    auto& cc = e.GetComponent<kizuri::CameraComponent>();
+    cc.PerspectiveFOV = fovDeg;
+    cc.NearClip = nearClip;
+    cc.FarClip = farClip;
 }
 
 } // extern "C"

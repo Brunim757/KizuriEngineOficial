@@ -108,7 +108,7 @@ struct TilemapComponent {
 struct MeshRendererComponent {
     Ref<Mesh> MeshAsset;
     Material MeshMaterial;
-    std::string MeshSource; // serializável: "builtin:cube|plane|sphere" ou caminho .obj
+    std::string MeshSource; // serializável: "builtin:cube|plane|sphere" ou caminho .obj/.glb/.gltf
 };
 
 // Espelha kizuri::Light (Renderer3D.hpp) — entidade de luz de verdade na cena,

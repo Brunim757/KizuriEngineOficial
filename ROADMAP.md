@@ -89,6 +89,35 @@
 
 ---
 
+## ✅ v0.3 — Produção 3D (feito)
+
+### Animação esquelética (skinning via glTF)
+- [x] **SkinData/AnimationClip**: parse de skins + animações do `.glb/.gltf`
+  (juntas, inverse bind, hierarquia topológica, canais TRS com lerp/slerp)
+- [x] **SkinnedMesh**: Vertex3D com Joints/Weights, shader com até 64 juntas,
+  `Renderer3D::SubmitSkinned`
+- [x] **AnimatorComponent** serializado (path/clip/loop/speed/time) + skin
+  recarregada sob demanda; `Scene::UpdateAnimators` roda em edição (preview)
+- [x] Editor: painel **Animador** (seletor de clip, play/pause, time scrubber)
+- [x] C# API: `AddAnimator`, `PlayAnimation`, `AnimationTime`,
+  `SetAnimationTime/Speed/Loop/Playing`
+
+### Física 3D em C# (Bullet3)
+- [x] `AddRigidbody3D` (estático/dinâmico/cinemático), `AddBoxCollider3D`,
+  `AddSphereCollider3D`, `ApplyForce`, `ApplyImpulse`, `TryGetVelocity`,
+  `SetVelocity`
+- [x] Registro lazy de corpos: entidades criadas em runtime ganham corpo no
+  primeiro frame do UpdatePhysics (2D e 3D)
+
+### Primitivas 3D + conteúdo
+- [x] Novos builtins: `cylinder`, `cone`, `capsule`, `torus` (procedurais)
+- [x] **Content Pack na CI**: job `package` baixa modelos glTF CC0 (Fox,
+  BoxAnimated, DamagedHelmet, Avocado, BoomBox, Duck, CesiumMilkTruck,
+  SimpleMaterials — o Fox/BoxAnimated exercitam o skinning) + HDRIs Poly
+  Haven (céu HDRI/IBL) direto pro artifact, com manifest — best-effort
+
+---
+
 ## 🎯 Próximas etapas
 
 ### Content Pack (~1GB — o peso profissional)

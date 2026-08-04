@@ -180,6 +180,34 @@ dor de cabeça em CI antes.
   existindo: nesse caso o jogo final leva o runtime embutido e o jogador não
   instala nada. Sem a checkbox, o jogador precisa do .NET Runtime.
 
+### v0.2 — Gráficos ultra (OpenGL 3.3 mínimo) + pipeline de conteúdo
+- **`GraphicsSettings`** (engine/include/kizuri/renderer/GraphicsSettings.hpp):
+  struct único com preset + todos os controles; persistido em `settings.json`
+  pelo editor. O `Renderer3D` lê `s_Settings` no início do frame e recria
+  recursos de forma preguiçosa (shadow maps via `EnsureShadowMaps`, HDR/MSAA
+  via `EnsurePostBuffers(w,h,msaa)`, SSAO via `EnsureSSAOBuffers`) quando o
+  tamanho/msaa muda — trocar preset em runtime não reinicia nada.
+- **Pipeline HDR hoje**: cena -> FBO HDR (multisample se MSAA>1) -> blit
+  resolve cor+profundidade -> SSAO (meia-resolução, depth reconstruct) ->
+  bright-pass -> blur ping-pong -> composite (AO + exposição + ACES + gamma)
+  pro destino do chamador. O depth do FBO é TEXTO (s_HDRDepthTexture) — é de
+  onde o SSAO amostra; o viewport do editor continua sendo o mesmo FBO de
+  sempre, só que agora como destino final do composite.
+- **HDRI**: `Renderer3D::SetEnvironmentHDRIPath(path)` guarda o caminho e
+  rebakeia (procedural se vazio ou se o load falhar). O bake converte a
+  equirectangular pra cubemap (shader `s_EquirectFragmentSrc`) e reaproveita
+  o pipeline existente de irradiância + pré-filtro GGX.
+- **2D em GLSL 330**: o shader de quads saiu de 450 pra 330 — batching agora
+  é POR textura (flush quando a textura muda) em vez de sampler array
+  dinâmico. Engine inteira roda num contexto 3.3 core de verdade.
+- **glTF**: cgltf via FetchContent (v1.15). `Mesh::LoadFromGLTF` mescla todas
+  as primitivas triangulares (POSITION/NORMAL/TEXCOORD_0) num VAO só —
+  material por sub-mesh ainda é limitação (v1 aplica um material só).
+- **ABI C# nova**: transform completo (rotação/escala), luzes (direcional/
+  ponto/spot + cor/intensidade), mesh renderer + material PBR (inclui mapas
+  de albedo/normal), parâmetros de câmera. `ComponentType` agora cobre
+  MeshRenderer e ParticleSystem.
+
 ### Editor
 - Dockspace ImGui + ImGuizmo (mover/rotacionar/escalar).
 - **Toolbar do viewport com ícones** (Move/Rotate/Scale/Play/Stop desenhados
@@ -281,7 +309,6 @@ dor de cabeça em CI antes.
 ---
 
 ## 4. Coisas pra lembrar antes de mexer em código
-
 - Comentários novos: **no máximo 2 linhas, só o que for importante** — isso foi pedido
   explicitamente numa sessão anterior. Não precisa reescrever comentário antigo que já
   existe, mas se for editar um arquivo que tem comentário antigo verboso na área que você

@@ -7,6 +7,12 @@
 > Objetivo da v1: engine **funcional e jogável** — criar no editor, scriptar
 > em C# (assembly managed) e exportar um executável standalone.
 
+> Objetivo da v0.2 ("Profissional"): transformar o protótipo numa engine de
+> verdade — gráficos no ultra (mínimo OpenGL 3.3 core), pipeline de
+> conteúdo, editor com ferramentas de qualidade — e crescer o pacote
+> distribuído pra casa de centenas de MB a **~1GB** com um **Content Pack**
+> real (modelos glTF, texturas PBR, HDRIs de céu, áudios, prefabs).
+
 ---
 
 ## ✅ Base jogável (feito)
@@ -32,55 +38,96 @@
 - [x] `SaveSystem` — persistência de jogo em JSON (puramente managed)
 
 ### Sistema de UI + utilidades de gameplay
-- [x] **UI interativo**: `UICanvasComponent` (espaço de tela, 0,0 = centro) +
-  `UIRectComponent` (posição/tamanho/cor) + `UIButtonComponent` (hover/pressed/
-  clique) + texto sobre o rect — renderizado após a cena e com hit-test no Play
-- [x] API C# de UI: `AddUICanvas/AddUIRect/AddUIButton/AddUIText`,
-  `UIButtonWasClicked()/UIButtonIsHovered()`, `SetUIRect/SetUIColor`
-- [x] Serialização das UI components (`.kzscene`/`.kzprefab`/Play) + painéis
-  no Inspetor
+- [x] **UI interativo**: `UICanvasComponent` + `UIRectComponent` + `UIButtonComponent` + texto
+- [x] API C# de UI + serialização + painéis no Inspetor
 - [x] **Corrotinas** estilo Unity: `StartCoroutine` + `WaitForSeconds`/`WaitForFrames`
-- [x] **`Time.TimeScale`** (câmera lenta; escala o dt dos scripts)
-- [x] **`Rand`** — Float/Int/Chance/Vector2/Vector3
-
-### 2D Game Framework + Editor Power
-- [x] **Sorting layers**: `SortingLayer` nos componentes 2D (sprite/círculo/
-  texto/animação/tilemap) + passe de desenho 2D ordenado
-- [x] **`CircleCollider2D`** (novo collider Box2D: raio/offset/densidade/fricção)
-- [x] **`Scene.OverlapCircle2D`** + **`Scene.Duplicate`** (duplica entidade+subárvore)
-- [x] **`Mathf`** — Clamp/Lerp/MoveTowards/SmoothDamp/Repeat/Distance
-- [x] Editor: **Del** apaga entidade (com undo), **Ctrl+D** duplica, Ctrl = snap no gizmo
+- [x] **`Time.TimeScale`** · **`Rand`** · **`Mathf`**
+- [x] **Sorting layers** 2D · **`CircleCollider2D`** · **`OverlapCircle2D`** · **`Duplicate`**
 
 ### Editor / produto
 - [x] Hierarquia, Inspetor, Console, Content Browser, gizmos, Play/Stop
-- [x] Salvar Prefab (menu de contexto) + arrastar `.kzprefab` pro viewport
+- [x] Salvar Prefab + arrastar `.kzprefab` pro viewport
 - [x] **Exportar Jogo...** (pasta com KizuriGame + cena + assets + módulo)
 - [x] Cena inicial do projeto (`.kzproj` → `StartScenePath`)
-- [x] Caminhos de asset relativos ao projeto
-- [x] `KizuriGame` com resize de viewport e troca de cena
+- [x] Caminhos de asset relativos ao projeto · `KizuriGame` com resize/troca de cena
+
+---
+
+## ✅ v0.2 — Profissional (feito)
+
+### Gráficos no ultra — mínimo **OpenGL 3.3 core**
+- [x] **`GraphicsSettings` + presets** Ultra/High/Medium/Low/Custom: resolução
+  interna (render scale), MSAA, tamanho do shadow map, raio do PCF, bloom,
+  SSAO, exposição e VSync — aplicado em runtime sem reiniciar
+- [x] **MSAA no framebuffer HDR** (multisample + blit resolve cor/profundidade)
+- [x] **SSAO** (oclusão de ambiente em espaço de tela): kernel de hemisfério
+  de 64 amostras + ruído 4x4, meia resolução + blur separável
+- [x] **HDRI / equirect IBL**: `Renderer3D::SetEnvironmentHDRIPath` carrega
+  `.hdr`, converte pra cubemap e rebakeia irradiância + pré-filtro GGX
+  (fallback procedural se falhar)
+- [x] **Exposição** no composite (antes do tonemap ACES) · bloom e PCF
+  configuráveis · **2D 100% GLSL 330** (batching por textura — fim do 450)
+
+### Pipeline de conteúdo
+- [x] **Import glTF/glb** via cgltf (`Mesh::LoadFromGLTF`): primitivas
+  triangulares, indices 16/32-bit; `FromSource` roteia .obj/.glb/.gltf
+- [x] **`content/` = Content Pack**: `models/Cube.glb` (1º asset real, ~1.8KB)
+
+### API C# 3D profissional
+- [x] `SetRotation` / `SetScale` (Transform completo em runtime)
+- [x] `AddLight` (direcional/ponto/spot) + `SetLightColor`/`SetLightIntensity`
+- [x] `AddMeshRenderer` + `SetMaterial` (albedo/metallic/roughness + mapas)
+- [x] `SetCamera` (FOV/clipes) · `ComponentType` += MeshRenderer/ParticleSystem
+- [x] `Demo3D.cs` (sol + luz pontual + cubo PBR girando) no SampleGame
+
+### Editor Pro
+- [x] **Configurações Gráficas** (Arquivo): presets, MSAA, SSAO, bloom, HDRI
+  do céu — persistido em `settings.json`, aplicado ao vivo
+- [x] **Gizmo de luz** no viewport 3D (ponto/spot/direcional)
+- [x] **Previews reais** de imagem no Content Browser (cache por caminho)
+- [x] **Drop de assets** do Content Browser nos slots de Malha/Albedo/Normais
 
 ---
 
 ## 🎯 Próximas etapas
 
-### Polimento de fluxo
-- [ ] Texto alinhamento avançado / dialogos no editor
-- [ ] Preview de sprite/atlas no Inspetor
-- [ ] Painel de material mais completo
-- [ ] Camadas/ordenação 2D (sorting layer)
+### Content Pack (~1GB — o peso profissional)
+- [ ] `content/skies/` — 8–16 HDRIs CC0 (noite, pôr-do-sol, estúdio, névoa...)
+- [ ] `content/textures/` — conjuntos PBR CC0 (albedo/normal/metallic/roughness/AO)
+- [ ] `content/models/` — dezenas de glTF CC0 (Khronos Sample Assets e afins)
+- [ ] `content/audio/` — SFX + música CC0
+- [ ] `content/prefabs/` — personagem, inimigo, coletável, luzes prontas
+- [ ] CI baixa packs grandes pro `dist/content/` (sem inchar o git)
 
-### Produção
-- [ ] Pipeline de import (normais, reimport, previews)
-- [ ] Animações 3D (skinning)
-- [x] Runtime C# na engine (host CoreCLR via hostfxr carrega `Kizuri.Scripting`)
-- [ ] Testes automatizados (`KZ_BUILD_TESTS`)
+### Animações e gameplay 3D
+- [ ] **Skinning** (esqueletos + pesos via glTF) + Animator state machine
+- [ ] API C# de física 3D (Rigidbody3D, colliders, ApplyForce/Impulse)
+- [ ] Partículas com textura + curvas de cor/tamanho por vida
+- [ ] NavMesh / pathfinding
+
+### Renderer (continuar o ultra)
+- [ ] **Deferred shading** (GBuffer) no preset Ultra com luzes pontuais/spot
+- [ ] SSR (reflexos em espaço de tela) + relighting
+- [ ] Volumetric fog / light shafts
+- [ ] Post FX: motion blur, vignette, chromatic aberration, god rays
+- [ ] Quality presets por cena salva em `.kzscene`
+
+### Editor (ferramentas profissionais)
+- [ ] **Pipeline de import**: `.meta`/GUIDs, reimport, normais, previews
+- [ ] Asset database + carregamento assíncrono/streaming
+- [ ] Gizmos de colisor (2D e 3D) + Debug draw da física
+- [ ] Terrain / tilemap 3D
+- [ ] Projeto: painel de settings do projeto + build settings multi-plataforma
 
 ---
 
 ## 🧹 Dívida técnica
 
 - [ ] CSM blend / texel snapping
-- [ ] Bloom exponível na UI
+- [ ] Renderer3D estático (single instance) → virar objeto com múltiplos contexts
 - [ ] Diálogos nativos de arquivo só no Windows
 - [ ] Remover `cmake/glad_stub/`
 - [ ] Stats Renderer2D (círculos) / picking de texto (descenders)
+- [ ] `Shutdown()` do Renderer3D não libera shadow FBOs/cubemaps (ok hoje, o
+  processo morre logo depois — vira problema quando trocar de cena/projeto
+  sem reiniciar)

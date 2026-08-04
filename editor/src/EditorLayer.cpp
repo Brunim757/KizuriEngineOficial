@@ -266,6 +266,8 @@ void EditorLayer::CreateDemoScene3D() {
     KZ_CORE_INFO("Cena de demonstração 3D criada.");
 }
 
+void EditorLayer::OnDetach() {}
+
 void EditorLayer::OnUpdate(Timestep ts) {
     KZ_CORE_TRACE("EditorLayer::OnUpdate — início (viewport {0}x{1})", m_ViewportSize.x, m_ViewportSize.y);
 

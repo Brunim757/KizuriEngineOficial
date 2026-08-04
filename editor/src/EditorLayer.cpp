@@ -140,7 +140,131 @@ void EditorLayer::CreateDefaultSceneContent() {
     m_SelectedEntity = quad;
 }
 
-void EditorLayer::OnDetach() {}
+// Cena de demonstração 3D — monta um showcase com o Content Pack (quando
+// presente em ../content): Fox esquelético animado, DamagedHelmet PBR,
+// primitivas, HDRI de céu e fog. Sem o pack (dev local) cai nos builtins.
+void EditorLayer::CreateDemoScene3D() {
+    if (m_SceneState != SceneState::Edit) return;
+
+    m_ActiveScene = CreateRef<Scene>("Demonstração 3D");
+    m_ScenePath.clear();
+    m_SelectedEntity = {};
+
+    const std::string contentDir = "../content";
+
+    Entity camera = m_ActiveScene->CreateEntity("Câmera Principal");
+    auto& cc = camera.AddComponent<CameraComponent>();
+    cc.Type = CameraComponent::ProjectionType::Perspective3D;
+    cc.PerspectiveFOV = 50.0f;
+    auto& camT = camera.GetComponent<TransformComponent>();
+    camT.Translation = { 0.0f, 2.6f, 7.5f };
+    camT.Rotation = { glm::radians(-12.0f), glm::radians(-90.0f), 0.0f };
+
+    Entity sun = m_ActiveScene->CreateEntity("Sol");
+    auto& lc = sun.AddComponent<LightComponent>();
+    lc.Type = LightType::Directional;
+    lc.Color = { 1.0f, 0.95f, 0.85f };
+    lc.Intensity = 2.0f;
+    sun.GetComponent<TransformComponent>().Rotation = { glm::radians(50.0f), glm::radians(30.0f), 0.0f };
+
+    Entity light2 = m_ActiveScene->CreateEntity("Luz de Preenchimento");
+    auto& lc2 = light2.AddComponent<LightComponent>();
+    lc2.Type = LightType::Directional;
+    lc2.Color = { 0.35f, 0.45f, 0.8f };
+    lc2.Intensity = 0.35f;
+    light2.GetComponent<TransformComponent>().Rotation = { glm::radians(30.0f), glm::radians(-140.0f), 0.0f };
+
+    Entity ground = m_ActiveScene->CreateEntity("Chão");
+    auto& gm = ground.AddComponent<MeshRendererComponent>();
+    gm.MeshSource = "builtin:plane";
+    gm.MeshAsset = Mesh::FromSource(gm.MeshSource);
+    gm.MeshMaterial.Albedo = { 0.15f, 0.16f, 0.19f };
+    gm.MeshMaterial.Roughness = 0.9f;
+    ground.GetComponent<TransformComponent>().Scale = { 12.0f, 1.0f, 12.0f };
+
+    // HDRI de céu (content pack). Sem ele, mantém o céu procedural.
+    std::string hdri = contentDir + "/skies/qwantani_puresky_1k.hdr";
+    if (std::filesystem::exists(hdri)) {
+        Renderer3D::SetEnvironmentHDRIPath(hdri);
+        KZ_CORE_INFO("Demo 3D: céu HDRI carregado ({0}).", hdri);
+    }
+
+    // Fox esquelético animado (skinning) — o coração do v0.3.
+    std::string foxPath = contentDir + "/models/Fox.glb";
+    if (std::filesystem::exists(foxPath)) {
+        Entity fox = m_ActiveScene->CreateEntity("Fox (animado)");
+        auto& fm = fox.AddComponent<MeshRendererComponent>();
+        fm.MeshSource = foxPath;
+        fm.MeshAsset = Mesh::FromSource(foxPath);
+        fm.MeshMaterial = Mesh::ExtractMaterialFromGLTF(foxPath);
+        auto& fa = fox.AddComponent<AnimatorComponent>();
+        fa.MeshPath = foxPath;
+        fa.Skin = SkinData::CreateFromGLTF(foxPath);
+        fa.ClipName = "Survey";
+        auto& ft = fox.GetComponent<TransformComponent>();
+        ft.Translation = { -1.8f, 0.0f, 0.5f };
+        ft.Scale = { 1.5f, 1.5f, 1.5f };
+        KZ_CORE_INFO("Demo 3D: Fox carregado com {0} juntas e {1} animações.",
+                     fa.Skin ? fa.Skin->Joints.size() : 0, fa.Skin ? fa.Skin->Clips.size() : 0);
+    }
+
+    // DamagedHelmet PBR num pedestal.
+    std::string helmetPath = contentDir + "/models/DamagedHelmet.glb";
+    if (std::filesystem::exists(helmetPath)) {
+        Entity pedestal = m_ActiveScene->CreateEntity("Pedestal");
+        auto& pm = pedestal.AddComponent<MeshRendererComponent>();
+        pm.MeshSource = "builtin:cylinder";
+        pm.MeshAsset = Mesh::FromSource(pm.MeshSource);
+        pm.MeshMaterial.Albedo = { 0.1f, 0.1f, 0.12f };
+        pm.MeshMaterial.Roughness = 0.6f;
+        auto& pt = pedestal.GetComponent<TransformComponent>();
+        pt.Translation = { 2.2f, 0.25f, 0.0f };
+        pt.Scale = { 0.7f, 0.5f, 0.7f };
+
+        Entity helmet = m_ActiveScene->CreateEntity("Capacete (PBR)");
+        auto& hm = helmet.AddComponent<MeshRendererComponent>();
+        hm.MeshSource = helmetPath;
+        hm.MeshAsset = Mesh::FromSource(helmetPath);
+        hm.MeshMaterial = Mesh::ExtractMaterialFromGLTF(helmetPath);
+        auto& ht = helmet.GetComponent<TransformComponent>();
+        ht.Translation = { 2.2f, 0.8f, 0.0f };
+        ht.Scale = { 1.4f, 1.4f, 1.4f };
+    }
+
+    // Primitivas de exemplo (novas builtins).
+    Entity torus = m_ActiveScene->CreateEntity("Torus Metálico");
+    auto& tm = torus.AddComponent<MeshRendererComponent>();
+    tm.MeshSource = "builtin:torus";
+    tm.MeshAsset = Mesh::FromSource(tm.MeshSource);
+    tm.MeshMaterial.Albedo = { 0.75f, 0.55f, 0.2f };
+    tm.MeshMaterial.Metallic = 1.0f;
+    tm.MeshMaterial.Roughness = 0.25f;
+    auto& tt = torus.GetComponent<TransformComponent>();
+    tt.Translation = { 0.0f, 1.0f, -2.2f };
+    tt.Rotation = { glm::radians(70.0f), 0.0f, 0.0f };
+
+    Entity neon = m_ActiveScene->CreateEntity("Esfera Emissiva");
+    auto& nm = neon.AddComponent<MeshRendererComponent>();
+    nm.MeshSource = "builtin:sphere";
+    nm.MeshAsset = Mesh::FromSource(nm.MeshSource);
+    nm.MeshMaterial.Albedo = { 0.02f, 0.02f, 0.05f };
+    nm.MeshMaterial.Emissive = { 0.1f, 0.6f, 1.0f };
+    nm.MeshMaterial.EmissiveStrength = 6.0f; // alimenta o bloom
+    neon.GetComponent<TransformComponent>().Translation = { -2.6f, 0.8f, -1.5f };
+
+    // Fog exponencial dá atmosfera (desligável nas Configurações Gráficas).
+    auto settings = Renderer3D::GetGraphicsSettings();
+    settings.FogEnabled = true;
+    settings.FogDensity = 0.02f;
+    Renderer3D::SetGraphicsSettings(settings);
+
+    m_ViewportMode = ViewportMode::Mode3D;
+    m_EditorCamPos = { 0.0f, 2.6f, 7.5f };
+    m_EditorCamYaw = -90.0f;
+    m_EditorCamPitch = -12.0f;
+    m_SelectedEntity = sun;
+    KZ_CORE_INFO("Cena de demonstração 3D criada.");
+}
 
 void EditorLayer::OnUpdate(Timestep ts) {
     KZ_CORE_TRACE("EditorLayer::OnUpdate — início (viewport {0}x{1})", m_ViewportSize.x, m_ViewportSize.y);
@@ -566,6 +690,85 @@ void EditorLayer::DrawLightGizmo() {
                 dl->AddLine(ImVec2(tip.x + perp.x * 5.0f, tip.y + perp.y * 5.0f),
                             ImVec2(tip.x - perp.x * 5.0f, tip.y - perp.y * 5.0f), color, 2.5f);
             }
+        }
+    }
+}
+
+// Wireframe dos colisores da entidade selecionada (verde, estilo "debug draw"
+// de engine): círculo/box 2D no modo 2D; box/esfera 3D no modo 3D. Usa
+// ImDrawList em espaço de tela (mesmo padrão dos gizmos de câmera/luz).
+void EditorLayer::DrawColliderGizmo() {
+    if (!m_SelectedEntity || m_SceneState != SceneState::Edit) return;
+
+    glm::mat4 viewProj = (m_ViewportMode == ViewportMode::Mode2D)
+        ? m_Editor2DCamera.GetViewProjectionMatrix()
+        : m_EditorCamera.GetViewProjectionMatrix();
+    glm::vec2 vpPos = m_ViewportBounds[0], vpSize = m_ViewportBounds[1] - m_ViewportBounds[0];
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    const ImU32 color = IM_COL32(120, 220, 120, 220);
+    glm::vec3 pos = glm::vec3(m_ActiveScene->GetWorldTransform(m_SelectedEntity)[3]);
+
+    auto Project = [&](const glm::vec3& wp, ImVec2& out) {
+        return ProjectToViewport(viewProj, wp, vpPos, vpSize, out);
+    };
+    auto Line = [&](const glm::vec3& a, const glm::vec3& b) {
+        ImVec2 sa, sb;
+        if (Project(a, sa) && Project(b, sb)) dl->AddLine(sa, sb, color, 1.5f);
+    };
+
+    if (m_ViewportMode == ViewportMode::Mode2D) {
+        if (m_SelectedEntity.HasComponent<CircleCollider2DComponent>()) {
+            auto& col = m_SelectedEntity.GetComponent<CircleCollider2DComponent>();
+            ImVec2 center;
+            glm::vec3 c = pos + glm::vec3(col.Offset.x, col.Offset.y, 0.0f);
+            glm::vec3 e = c + glm::vec3(col.Radius, 0.0f, 0.0f);
+            if (Project(c, center)) {
+                ImVec2 edge;
+                if (Project(e, edge)) {
+                    float rpx = glm::length(glm::vec2(edge.x - center.x, edge.y - center.y));
+                    dl->AddCircle(center, rpx, color, 48, 1.5f);
+                }
+            }
+        }
+        if (m_SelectedEntity.HasComponent<BoxCollider2DComponent>()) {
+            auto& col = m_SelectedEntity.GetComponent<BoxCollider2DComponent>();
+            glm::vec3 c = pos + glm::vec3(col.Offset.x, col.Offset.y, 0.0f);
+            glm::vec3 h(col.Size.x * 0.5f, col.Size.y * 0.5f, 0.0f);
+            glm::vec3 corners[4] = {
+                c + glm::vec3(-h.x, -h.y, 0), c + glm::vec3(h.x, -h.y, 0),
+                c + glm::vec3(h.x, h.y, 0), c + glm::vec3(-h.x, h.y, 0),
+            };
+            for (int i = 0; i < 4; ++i) Line(corners[i], corners[(i + 1) % 4]);
+        }
+    } else {
+        glm::vec3 scale = m_SelectedEntity.GetComponent<TransformComponent>().Scale;
+        if (m_SelectedEntity.HasComponent<SphereCollider3DComponent>()) {
+            auto& col = m_SelectedEntity.GetComponent<SphereCollider3DComponent>();
+            float r = col.Radius * scale.x;
+            ImVec2 center;
+            if (Project(pos, center)) {
+                glm::vec3 rx = pos + glm::vec3(r, 0, 0), ry = pos + glm::vec3(0, r, 0), rz = pos + glm::vec3(0, 0, r);
+                ImVec2 px, py, pz;
+                if (Project(rx, px) && Project(ry, py) && Project(rz, pz)) {
+                    float a = glm::length(glm::vec2(px.x - center.x, px.y - center.y));
+                    float b = glm::length(glm::vec2(py.x - center.x, py.y - center.y));
+                    float c = glm::length(glm::vec2(pz.x - center.x, pz.y - center.y));
+                    dl->AddCircle(center, a, color, 48, 1.5f);
+                    dl->AddCircle(center, b, color, 48, 1.5f);
+                    dl->AddCircle(center, c, color, 48, 1.5f);
+                }
+            }
+        }
+        if (m_SelectedEntity.HasComponent<BoxCollider3DComponent>()) {
+            auto& col = m_SelectedEntity.GetComponent<BoxCollider3DComponent>();
+            glm::vec3 h = col.HalfExtents * scale;
+            glm::vec3 corners[8];
+            for (int i = 0; i < 8; ++i) {
+                glm::vec3 s((i & 1) ? h.x : -h.x, (i & 2) ? h.y : -h.y, (i & 4) ? h.z : -h.z);
+                corners[i] = pos + s;
+            }
+            const int edges[12][2] = { {0,1},{1,3},{3,2},{2,0}, {4,5},{5,7},{7,6},{6,4}, {0,4},{1,5},{2,6},{3,7} };
+            for (auto& e : edges) Line(corners[e[0]], corners[e[1]]);
         }
     }
 }
@@ -1132,6 +1335,8 @@ void EditorLayer::DrawDockspace() {
         // m_ActiveScene no meio do runtime descartaria a cópia em execução
         // por baixo e é comportamento de modo edição dentro do jogo.
         if (ImGui::MenuItem("Nova Cena", nullptr, false, m_SceneState == SceneState::Edit)) NewScene();
+        if (ImGui::MenuItem("Cena de Demonstração 3D...", nullptr, false, m_SceneState == SceneState::Edit))
+            CreateDemoScene3D();
         ImGui::Separator();
         if (ImGui::MenuItem("Abrir Cena...", nullptr, false, m_SceneState == SceneState::Edit)) {
             strncpy(m_ScenePathBuffer, m_ScenePath.empty() ? "cena.kzscene" : m_ScenePath.c_str(), sizeof(m_ScenePathBuffer));
@@ -3011,6 +3216,7 @@ void EditorLayer::OnImGuiRender() {
         KZ_CORE_TRACE("EditorLayer::OnImGuiRender — DrawGizmo ok");
         DrawCameraGizmo();
         DrawLightGizmo();
+        DrawColliderGizmo();
     } else {
         KZ_CORE_TRACE("EditorLayer::OnImGuiRender — gizmo pulado (Play)");
     }

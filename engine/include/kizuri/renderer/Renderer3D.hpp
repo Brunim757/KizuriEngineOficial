@@ -11,6 +11,7 @@
 
 namespace kizuri {
 
+struct Material; // forward — o struct completo vem logo abaixo do Mesh
 // Vértice 3D. Joints/Weights (índices como float, convertido com int() no
 // shader — evita glVertexAttribIPointer) ficam 0 pra malha estática, então
 // o skinning é identidade e o mesmo shader atende os dois casos.

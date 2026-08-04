@@ -274,7 +274,7 @@ void main() {
     float NdotV = max(dot(N, V), 0.0);
 
     // Dielétrico ~4% de F0 fixo; metal usa o próprio albedo como F0 (colore o especular).
-    vec3 F0 = mix(vec3(0.04), albedo, u_Metallic);
+    vec3 F0 = mix(vec3(0.04), albedo, metallic);
     float shadow = u_HasShadow ? CalculateShadow(N, normalize(-u_LightDirections[0])) : 0.0;
 
     // --- Soma de todas as luzes dinâmicas do frame, Cook-Torrance por luz ---
@@ -305,7 +305,7 @@ void main() {
         vec3 specularBRDF = (NDF * G * F) / max(4.0 * NdotV * NdotL, 0.0001);
 
         vec3 kS = F;
-        vec3 kD = (vec3(1.0) - kS) * (1.0 - u_Metallic);
+        vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
         vec3 radiance = u_LightColors[i] * u_LightIntensities[i] * attenuation;
         vec3 contribution = (kD * albedo / PI + specularBRDF) * radiance * NdotL;
 

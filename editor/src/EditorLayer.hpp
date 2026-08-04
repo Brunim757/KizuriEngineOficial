@@ -48,6 +48,7 @@ private:
     void DrawGizmo();
     void DrawCameraGizmo(); // pirâmide de frustum + seta de direção, só quando uma Camera tá selecionada
     void DrawLightGizmo();  // marcador de luz (ponto/spot/direcional) no viewport
+    void DrawColliderGizmo(); // wireframe dos colisores 2D/3D da entidade selecionada
     void Reparent(kizuri::Entity child, kizuri::Entity newParent);
 
     // Configurações gráficas (qualidade, MSAA, SSAO, bloom, HDRI do céu).
@@ -63,6 +64,11 @@ private:
     void SaveScene();
     void SaveSceneAs();
     void OpenScene(const std::string& path);
+
+    // Cena de demonstração 3D: monta um showcase com o Content Pack (se
+    // presente) — Fox esquelético animado, DamagedHelmet PBR, primitivas,
+    // HDRI de céu, fog — pra mostrar a engine trabalhando junta.
+    void CreateDemoScene3D();
 
     // Cria uma entidade a partir de um arquivo de asset (soltado do Content
     // Browser no viewport): .obj -> MeshRenderer, imagem -> SpriteRenderer.

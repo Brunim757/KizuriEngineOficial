@@ -89,6 +89,24 @@
 
 ---
 
+## ✅ v0.6 — Conteúdo embutido (`kzres://`) + fixes de Play (feito)
+
+- [x] **Recursos embutidos no .exe/.dll**: `cmake/EmbedContent.cmake` gera um
+  registro name->bytes compilado no binário; qualquer slot de asset aceita
+  `kzres://<nome>` (mesh, textura, skin, HDRI). Atual: `models/Cube.glb` e
+  `skies/sky_gradient.hdr` (HDRI procedural) — a demo 3D tem céu embutido
+- [x] **Fix Play — câmera com gimbal lock**: RenderScene3D decompunha a matriz
+  do transform via `glm::eulerAngles`; em yaw = ±90° (singularidade) extraía
+  pitch ±180° e a câmera olhava pra trás. Agora a orientação é lida direto do
+  euler local do TransformComponent (à prova de gimbal lock)
+- [x] **Fix Play — texturas cinza**: mapas EMBUTIDOS no .glb (sem caminho de
+  arquivo) se perdiam ao desserializar (Play/cópia/save/undo) → material
+  cinza. `RestoreGLTFTextureMaps()` reextrai do próprio .glb só os mapas
+  vazios na recarga
+- [x] Diagnóstico: RenderScene3D loga erro quando não há câmera primária 3D
+
+---
+
 ## ✅ v0.3 — Produção 3D (feito)
 
 ### Animação esquelética (skinning via glTF)

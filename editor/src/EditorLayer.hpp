@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <vector>
 #include <unordered_map>
+#include <memory>
 
 // EditorLayer implementa o esqueleto do Kizuri Editor: dockspace ImGui,
 // painel de hierarquia de entidades e inspetor de componentes básico.
@@ -104,6 +105,17 @@ private:
     kizuri::Ref<kizuri::Scene> m_ActiveScene;
     kizuri::Ref<kizuri::Framebuffer> m_Framebuffer;
     kizuri::Entity m_SelectedEntity;
+
+    // Carregamento ASSÍNCRONO de cena: projetos grandes não podem travar o
+    // editor (janela congelada que não fecha). OpenScene() prepara o
+    // SceneSerializer e cada OnUpdate processa um lote por tempo; quando
+    // termina, a cena nova substitui m_ActiveScene. Enquanto carrega, um
+    // overlay de progresso é desenhado e o loop de eventos continua vivo.
+    bool m_SceneLoading = false;
+    float m_PendingLoadProgress = 0.0f;
+    std::string m_PendingScenePath;
+    kizuri::Ref<kizuri::Scene> m_PendingScene;
+    std::unique_ptr<kizuri::SceneSerializer> m_PendingLoader;
 
     // Caminho do .kzscene atualmente aberto. Vazio enquanto a cena nunca
     // tiver sido salva — nesse estado "Salvar Cena" se comporta como

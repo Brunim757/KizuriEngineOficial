@@ -269,3 +269,21 @@
 - [x] **Configurações > Gráficos**: grupo de reflexos por raio (SSR)
 
 ---
+
+## ✅ v0.19 — Carregamento incremental (projetos grandes sem travar)
+
+- [x] Bug: abrir projeto/cena muito grande congelava o editor (deserialize
+  síncrono no main thread: mesh/textura/skin carregavam tudo de uma vez —
+  janela "não responde" e não fechava)
+- [x] `SceneSerializer` ganhou API INCREMENTAL: `BeginDeserializeStepwiseFile`
+  + `StepDeserialize(maxEntidades)` + `StepDeserializeTime(orçamento)` —
+  processa lotes por frame com progresso; hierarquias resolvidas no fim
+- [x] `OpenScene` e cena inicial do projeto viram assíncronos: cada OnUpdate
+  consome ~4ms de trabalho, overlay de progresso centrado, loop de eventos
+  continua vivo (janela fecha normalmente a qualquer momento)
+- [x] `Scene.Load` em runtime (Play) também usa o carregamento assíncrono —
+  a conclusão religa o runtime da cena nova
+- [x] `Deserialize()`/`DeserializeFromJson()` mantêm o comportamento síncrono
+  (Prefab e snapshot de Play/Stop não mudam)
+
+---

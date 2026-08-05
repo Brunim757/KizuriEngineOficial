@@ -548,6 +548,37 @@ void EditorLayer::OnUpdate(Timestep ts) {
         m_FpsSmoothed = m_FpsSmoothed > 0.0f ? m_FpsSmoothed * 0.95f + inst * 0.05f : inst;
     }
 
+    // Carregamento assíncrono de cena: processa um lote por orçamento de
+    // tempo (~4ms) a cada frame. A janela continua viva (eventos processados,
+    // overlay de progresso desenhado) — nada de travar com projeto grande.
+    if (m_SceneLoading) {
+        float progress = m_PendingLoadProgress;
+        bool done = false;
+        if (m_PendingLoader)
+            done = m_PendingLoader->StepDeserializeTime(0.004f, progress);
+
+        if (done) {
+            m_PendingLoadProgress = 1.0f;
+            m_ActiveScene = m_PendingScene;
+            m_SelectedEntity = {};
+            m_ScenePath = m_PendingScenePath;
+            m_History.Clear();
+            m_SceneLoading = false;
+            m_PendingLoader.reset();
+            m_PendingScene.reset();
+            KZ_CORE_INFO("Cena carregada com sucesso: {0}", m_ScenePath);
+            // Se a troca veio de um Scene.Load durante o Play, religa o
+            // runtime da cena nova (a cópia antiga já foi parada).
+            if (m_SceneState == SceneState::Play) {
+                m_ActiveScene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
+                m_ActiveScene->OnRuntimeStart();
+            }
+        } else {
+            m_PendingLoadProgress = progress;
+        }
+        return; // nada de atualizar a cena enquanto o load roda
+    }
+
     // Telinha de carregamento: avança o relógio e entra no editor quando o
     // tempo mínimo passa (o carregamento em si é quase instantâneo — o
     // mínimo existe pra tela ser percebida, como em engines maiores).
@@ -599,15 +630,20 @@ void EditorLayer::OnUpdate(Timestep ts) {
         if (m_ActiveScene->PollPendingLoad(nextScene)) {
             m_ActiveScene->OnRuntimeStop();
             AudioEngine::StopAll();
+            // Carrega a cena pedida pelo script de forma ASSÍNCRONA — o
+            // runtime não congela e a conclusão religa o Play (ver bloco de
+            // m_SceneLoading no topo do OnUpdate).
             auto loaded = CreateRef<Scene>("Cena");
-            if (SceneSerializer(loaded).Deserialize(Project::ResolvePath(nextScene))) {
-                loaded->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
-                m_ActiveScene = loaded;
-                m_SelectedEntity = {};
-                m_ActiveScene->OnRuntimeStart();
-            } else {
+            auto loader = std::make_unique<SceneSerializer>(loaded);
+            if (!loader->BeginDeserializeStepwiseFile(Project::ResolvePath(nextScene))) {
                 KZ_CORE_ERROR("Falha ao carregar cena pedida pelo script: {0}", nextScene);
                 OnSceneStop();
+            } else {
+                m_PendingScene = loaded;
+                m_PendingLoader = std::move(loader);
+                m_PendingScenePath = nextScene;
+                m_PendingLoadProgress = 0.0f;
+                m_SceneLoading = true;
             }
         }
     } else if (m_ViewportMode == ViewportMode::Mode3D) {
@@ -1664,14 +1700,25 @@ void EditorLayer::OpenScene(const std::string& path) {
         KZ_CORE_WARN("EditorLayer::OpenScene — ignorado durante o Play (trocar a cena no meio do runtime descartaria a cópia em execução).");
         return;
     }
-    auto newScene = CreateRef<Scene>("Nova Cena");
-    SceneSerializer serializer(newScene);
-    if (!serializer.Deserialize(path)) return;
+    if (m_SceneLoading) {
+        KZ_CORE_WARN("EditorLayer::OpenScene — já existe uma cena sendo carregada; ignorando '{0}'.", path);
+        return;
+    }
 
-    m_ActiveScene = newScene;
-    m_SelectedEntity = {};
-    m_ScenePath = path;
-    m_History.Clear();
+    // Carregamento ASSÍNCRONO: prepara o SceneSerializer e devolve na hora.
+    // Cada OnUpdate processa um lote (por orçamento de tempo), então a janela
+    // continua respondendo mesmo com projetos gigantes — e o usuário pode
+    // fechar/desistir sem a engine travar.
+    auto newScene = CreateRef<Scene>("Carregando...");
+    auto loader = std::make_unique<SceneSerializer>(newScene);
+    if (!loader->BeginDeserializeStepwiseFile(path)) return;
+
+    m_PendingScene = newScene;
+    m_PendingLoader = std::move(loader);
+    m_PendingScenePath = path;
+    m_PendingLoadProgress = 0.0f;
+    m_SceneLoading = true;
+    KZ_CORE_INFO("Carregando cena em segundo plano: {0}", path);
 }
 
 void EditorLayer::DrawTitlebar() {
@@ -2301,21 +2348,19 @@ void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
     // inicial configurada, se houver.
     m_SelectedEntity = {};
     m_History.Clear();
+
+    // Cena inicial do projeto: carrega de forma ASSÍNCRONA (projeto grande
+    // não pode travar o editor). Enquanto carrega, mostra o conteúdo padrão
+    // do modo — e a cena real substitui quando terminar.
+    m_ActiveScene = CreateRef<Scene>("Nova Cena");
+    m_ScenePath.clear();
+    CreateDefaultSceneContent();
+
     std::string startScene = project->GetConfig().StartScenePath;
     if (!startScene.empty()) {
-        m_ActiveScene = CreateRef<Scene>("Cena");
-        if (SceneSerializer(m_ActiveScene).Deserialize(Project::ResolvePath(startScene))) {
-            m_ScenePath = Project::ResolvePath(startScene);
-        } else {
-            KZ_CORE_ERROR("Falha ao carregar a cena inicial do projeto: {0}", startScene);
-            m_ActiveScene = CreateRef<Scene>("Nova Cena");
-            m_ScenePath.clear();
-            CreateDefaultSceneContent();
-        }
-    } else {
-        m_ActiveScene = CreateRef<Scene>("Nova Cena");
-        m_ScenePath.clear();
-        CreateDefaultSceneContent();
+        std::string resolved = Project::ResolvePath(startScene);
+        m_ScenePath = resolved;
+        OpenScene(resolved); // assíncrono — a cena nova substitui m_ActiveScene quando pronta
     }
 
     RememberProject(project);
@@ -4158,6 +4203,33 @@ void EditorLayer::OnImGuiRender() {
 
     // Janela de configurações (Arquivo > Configurações).
     DrawSettings();
+
+    // Overlay de progresso do carregamento assíncrono de cena. A janela é
+    // desenhada por último (fica por cima de tudo) e o loop de eventos segue
+    // vivo — com projeto grande o usuário vê o progresso e pode fechar o
+    // editor, em vez de ficar com a janela congelada.
+    if (m_SceneLoading) {
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(420.0f, 0.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.08f, 0.10f, 0.14f, 0.96f));
+        if (ImGui::Begin("##loading_overlay", nullptr,
+                         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+                         ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoResize |
+                         ImGuiWindowFlags_NoSavedSettings)) {
+            ImGui::TextUnformatted("Carregando cena...");
+            ImGui::TextColored(ImVec4(0.7f, 0.75f, 0.85f, 1.0f), "%s", m_PendingScenePath.c_str());
+            ImGui::Spacing();
+            char pct[16];
+            snprintf(pct, sizeof(pct), "%.0f%%", m_PendingLoadProgress * 100.0f);
+            ImGui::ProgressBar(m_PendingLoadProgress, ImVec2(-1.0f, 0.0f), pct);
+            ImGui::TextDisabled("A janela continua respondendo — você pode fechar a qualquer momento.");
+        }
+        ImGui::End();
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+    }
 
     ImGui::End();
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — fim");

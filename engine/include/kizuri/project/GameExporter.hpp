@@ -34,6 +34,12 @@ public:
                                 const std::string& engineRoot,
                                 std::string& outDllPath,
                                 std::string& outError);
+
+    // Acha a .dll do jogo JÁ COMPILADA (a mais recente com .runtimeconfig
+    // em <projeto>/bin) sem compilar nada — caminho rápido pra abrir projeto
+    // sem travar o editor (o build real fica pro Play, estilo Unity).
+    static bool FindGameModuleDll(const std::string& csprojPath,
+                                  std::string& outDllPath);
 };
 
 } // namespace kizuri

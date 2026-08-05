@@ -8,6 +8,8 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <thread>
+#include <atomic>
 
 // EditorLayer implementa o esqueleto do Kizuri Editor: dockspace ImGui,
 // painel de hierarquia de entidades e inspetor de componentes básico.
@@ -116,6 +118,18 @@ private:
     std::string m_PendingScenePath;
     kizuri::Ref<kizuri::Scene> m_PendingScene;
     std::unique_ptr<kizuri::SceneSerializer> m_PendingLoader;
+
+    // Compilação do C# em SEGUNDO PLANO no Play (estilo Unity): dotnet build
+    // pode levar segundos e baixar pacotes na 1ª vez — síncrono travava o
+    // editor. A thread compila; o OnUpdate consome o resultado e entra no
+    // Play; um overlay de "Compilando..." aparece no meio.
+    void StartPlayInternal();
+    std::thread m_PlayBuildThread;
+    std::atomic<bool> m_PlayBuildDone{ false };
+    std::atomic<bool> m_PlayBuildCancelled{ false };
+    bool m_PlayBuildActive = false;
+    bool m_PlayBuildOk = false;
+    std::string m_PlayBuildDll, m_PlayBuildError;
 
     // Caminho do .kzscene atualmente aberto. Vazio enquanto a cena nunca
     // tiver sido salva — nesse estado "Salvar Cena" se comporta como

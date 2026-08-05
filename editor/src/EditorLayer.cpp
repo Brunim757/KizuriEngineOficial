@@ -343,7 +343,14 @@ void EditorLayer::CreateDemoScene3D() {
     KZ_CORE_INFO("Cena de demonstração 3D criada.");
 }
 
-void EditorLayer::OnDetach() {}
+void EditorLayer::OnDetach() {
+    // Não pode fechar o editor com a thread de build do C# viva (o
+    // destruidor de std::thread chamaria std::terminate). Espera terminar.
+    if (m_PlayBuildActive || m_PlayBuildThread.joinable()) {
+        m_PlayBuildCancelled = true;
+        if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join();
+    }
+}
 
 // Cena de demonstração 2D — showcase do pipeline 2D: sprites, física Box2D
 // (chão + caixas caindo), círculos, texto e UI (canvas + botão). Roda 100%
@@ -582,6 +589,26 @@ void EditorLayer::OnUpdate(Timestep ts) {
         // termina; a tela cobre o carregamento inteiro).
         if (m_EditorState == EditorState::Loading) m_LoadingElapsed += (float)ts;
         return; // nada de atualizar a cena enquanto o load roda
+    }
+
+    // Compilação do C# em segundo plano (Play): espera o build terminar e
+    // entra no Play — a janela continua viva com o overlay "Compilando...".
+    if (m_PlayBuildActive) {
+        if (m_PlayBuildDone && !m_PlayBuildCancelled) {
+            if (m_PlayBuildOk) {
+                if (!ScriptEngine::LoadModule(m_PlayBuildDll))
+                    KZ_CORE_ERROR("Play: não foi possível carregar o assembly compilado: {0}",
+                                  ScriptEngine::GetLastError());
+            } else {
+                KZ_CORE_ERROR("Play cancelado — falha ao compilar o jogo:\n{0}", m_PlayBuildError);
+            }
+            m_PlayBuildActive = false;
+            if (m_PlayBuildOk) StartPlayInternal();
+        } else if (m_PlayBuildDone && m_PlayBuildCancelled) {
+            m_PlayBuildActive = false;
+            if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join(); // deixa a thread terminar em paz
+        }
+        return; // não atualiza a cena enquanto o build roda
     }
 
     // Telinha de carregamento: avança o relógio e entra no editor quando o
@@ -1586,26 +1613,41 @@ void EditorLayer::DrawGizmo() {
 
 void EditorLayer::OnScenePlay() {
     KZ_TRACE_SCOPE("EditorLayer::OnScenePlay");
+    if (m_SceneLoading || m_PlayBuildActive) return;
 
-    // Compilar no Play, estilo Unity: se houver um projeto de jogo
-    // (Source/*.csproj), compila o assembly C# de novo e recarrega ANTES de
-    // entrar no Play. Se a compilação falhar, não entra no Play com o código
-    // velho em silêncio — mostra o erro e aborta.
+    // Compilar no Play, estilo Unity, em SEGUNDO PLANO: dotnet build pode
+    // levar segundos (e baixar pacotes na 1ª vez) — síncrono travava o
+    // editor. Enquanto compila, um overlay de "Compilando C#..." aparece e
+    // o Play entra quando o build termina (consumido no OnUpdate).
     if (m_AutoCompileOnPlay) {
         std::string csproj, engineRoot;
         GetGameBuildInfo(csproj, engineRoot);
         if (!csproj.empty()) {
-            std::string dllPath, buildError;
-            if (GameExporter::BuildGameModule(csproj, engineRoot, dllPath, buildError)) {
-                if (!ScriptEngine::LoadModule(dllPath))
-                    KZ_CORE_ERROR("Play: não foi possível recarregar o assembly compilado: {0}",
-                                  ScriptEngine::GetLastError());
-            } else {
-                KZ_CORE_ERROR("Play cancelado — falha ao compilar o jogo:\n{0}", buildError);
-                return;
-            }
+            m_PlayBuildError.clear();
+            m_PlayBuildDll.clear();
+            m_PlayBuildOk = false;
+            m_PlayBuildDone = false;
+            m_PlayBuildCancelled = false;
+            m_PlayBuildActive = true;
+            m_PlayBuildThread = std::thread([this, csproj, engineRoot]() {
+                std::string dll, err;
+                m_PlayBuildOk = GameExporter::BuildGameModule(csproj, engineRoot, dll, err);
+                m_PlayBuildDll = dll;
+                m_PlayBuildError = err;
+                m_PlayBuildDone = true;
+            });
+            return; // entra no Play quando o build terminar
         }
     }
+
+    StartPlayInternal();
+}
+
+// Entra de fato no Play (cópia da cena + runtime) — usado direto pelo
+// OnScenePlay quando não há build pendente, ou pelo OnUpdate quando o
+// build em segundo plano termina.
+void EditorLayer::StartPlayInternal() {
+    if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join();
 
     m_EditorScene = m_ActiveScene;
     m_ActiveScene = Scene::Copy(m_EditorScene);
@@ -1619,6 +1661,13 @@ void EditorLayer::OnScenePlay() {
 
 void EditorLayer::OnSceneStop() {
     KZ_TRACE_SCOPE("EditorLayer::OnSceneStop");
+
+    // Se um build de Play está em andamento, cancela a entrada no Play.
+    if (m_PlayBuildActive) {
+        m_PlayBuildCancelled = true;
+        return;
+    }
+
     m_ActiveScene->OnRuntimeStop();
     AudioEngine::StopAll(); // OnRuntimeStop só cuida de física/scripts — sem isso, som ficava tocando pra sempre
     m_SelectedEntity = {};
@@ -2378,17 +2427,20 @@ void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
     RememberProject(project);
 
     // Unity-style: sem carregar DLL manualmente. Se o projeto já tem um
-    // assembly compilado (Source/bin), carrega na hora — os scripts aparecem
+    // assembly COMPILADO (Source/bin), carrega na hora — os scripts aparecem
     // no dropdown "Script Nativo" já no modo edição. Projeto novo (ainda sem
     // build) fica vazio até o primeiro Play, que compila e carrega sozinho.
+    // IMPORTANTE: aqui só se CARREGA a dll existente (rápido). Compilar
+    // (dotnet build) de forma síncrona neste ponto travava o editor ao abrir
+    // o projeto — o build é responsabilidade do fluxo do Play.
     std::string csproj, engineRoot;
     GetGameBuildInfo(csproj, engineRoot);
     if (!csproj.empty()) {
-        std::string dllPath, err;
-        if (GameExporter::BuildGameModule(csproj, engineRoot, dllPath, err))
+        std::string dllPath;
+        if (GameExporter::FindGameModuleDll(csproj, dllPath))
             ScriptEngine::LoadModule(dllPath);
         else
-            KZ_CORE_INFO("Projeto ainda sem assembly compilado (o Play vai compilar): {0}", err);
+            KZ_CORE_INFO("Projeto sem assembly compilado ainda (o Play vai compilar).");
     }
 
     // Entra com a telinha de carregamento (transição Hub -> Editor).
@@ -4253,6 +4305,28 @@ void EditorLayer::OnImGuiRender() {
             snprintf(pct, sizeof(pct), "%.0f%%", m_PendingLoadProgress * 100.0f);
             ImGui::ProgressBar(m_PendingLoadProgress, ImVec2(-1.0f, 0.0f), pct);
             ImGui::TextDisabled("A janela continua respondendo — você pode fechar a qualquer momento.");
+        }
+        ImGui::End();
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+    }
+
+    // Overlay de compilação do C# (Play) — dotnet build roda em segundo
+    // plano; aqui só o aviso + spinner, a janela nunca trava.
+    if (m_PlayBuildActive && !m_PlayBuildDone) {
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(360.0f, 0.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.08f, 0.10f, 0.14f, 0.96f));
+        if (ImGui::Begin("##compile_overlay", nullptr,
+                         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+                         ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoResize |
+                         ImGuiWindowFlags_NoSavedSettings)) {
+            ImGui::TextUnformatted("Compilando assembly do jogo...");
+            ImGui::Spacing();
+            ImGui::ProgressBar(-1.0f, ImVec2(-1.0f, 0.0f), "dotnet build (1ª vez pode demorar)");
+            ImGui::TextDisabled("A janela continua respondendo.");
         }
         ImGui::End();
         ImGui::PopStyleColor();

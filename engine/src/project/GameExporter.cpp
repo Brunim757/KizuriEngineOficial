@@ -445,7 +445,25 @@ bool GameExporter::BuildGameModule(const std::string& csprojPath,
 
     // A .dll do jogo é a que tem um .runtimeconfig.json do lado (a
     // Kizuri.Scripting.dll não tem). Pega a mais recente em <projeto>/bin.
-    fs::path binDir = csproj.parent_path() / "bin";
+    if (!FindGameModuleDll(csprojPath, outDllPath)) {
+        outError = "O build terminou mas não achou a .dll do jogo em "
+            + (csproj.parent_path() / "bin").string();
+        return false;
+    }
+
+    KZ_CORE_INFO("Assembly do jogo compilado: {0}", outDllPath);
+    return true;
+}
+
+// Acha a .dll do jogo já COMPILADA (a mais recente com .runtimeconfig.json
+// ao lado, em <projeto>/bin), SEM compilar nada. É o caminho rápido que o
+// editor usa ao abrir o projeto — rodar dotnet build aí travaria a janela
+// (o build fica pro Play, que compila no fluxo estilo Unity).
+bool GameExporter::FindGameModuleDll(const std::string& csprojPath,
+                                     std::string& outDllPath) {
+    fs::path binDir = fs::path(csprojPath).parent_path() / "bin";
+    if (!fs::is_directory(binDir)) return false;
+
     fs::path best;
     auto bestTime = fs::file_time_type::min();
     std::error_code rec;
@@ -459,13 +477,9 @@ bool GameExporter::BuildGameModule(const std::string& csprojPath,
         auto t = fs::last_write_time(entry.path(), tec);
         if (!tec && t > bestTime) { bestTime = t; best = entry.path(); }
     }
-    if (best.empty()) {
-        outError = "O build terminou mas não achou a .dll do jogo em " + binDir.string();
-        return false;
-    }
+    if (best.empty()) return false;
 
     outDllPath = best.string();
-    KZ_CORE_INFO("Assembly do jogo compilado: {0}", outDllPath);
     return true;
 }
 

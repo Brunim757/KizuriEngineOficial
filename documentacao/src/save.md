@@ -7,7 +7,7 @@ order: 10
 # SaveSystem
 
 Persistência simples de jogo em um arquivo **JSON** (`save.json` no diretório
-de trabalho por padrão). **Puramente managed** (System.Text.Json) — nada de ABI.
+de trabalho por padrão).
 
 ## Guardar valores
 

@@ -70,7 +70,7 @@ public static class MeuGameModule
 
 ## 5. Carregue o GameModule
 
-1. Compile a DLL (ex.: `dotnet build`).
+1. Compile o projeto (a DLL é o que o editor carrega).
 2. No editor: **Arquivo → Carregar GameModule…** e escolha a DLL.
 3. Selecione a entidade do jogador no Inspetor e adicione o componente de
    script **MeuJogador**.

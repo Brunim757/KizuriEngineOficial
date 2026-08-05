@@ -17,12 +17,12 @@
   <nav id="toc">
 <div class="group">Introdução</div>
 <a href="index.html" class="">Visão geral</a>
-<a href="instalacao.html" class="">Instalação e build</a>
+<a href="instalacao.html" class="">Instalação</a>
 <a href="primeiro-projeto.html" class="">Seu primeiro projeto</a>
 <div class="group">Conceitos</div>
 <a href="projeto.html" class="">Projetos, cenas e prefabs</a>
 <a href="hierarquia.html" class="">Hierarquia e transform</a>
-<a href="recursos-embutidos.html" class="">Recursos embutidos (kzres://)</a>
+<a href="recursos-embutidos.html" class="">Assets padrão</a>
 <div class="group">Editor</div>
 <a href="interface.html" class="">Interface do editor</a>
 <a href="viewport.html" class="">Viewport e câmera</a>
@@ -77,7 +77,7 @@
 </header>
 <article>
 <h1 id="rand-e-log">Rand e Log</h1>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI).</p>
+<p>Utilidades de aleatoriedade e registro de mensagens.</p>
 <h2 id="rand">Rand</h2>
 <p>Números aleatórios para o jogo. O nome é curto de propósito — "Random" colidiria com <code>System.Random</code>.</p>
 <table><thead><tr><th>Método</th><th>Descrição</th></tr></thead><tbody><tr><td><code>Rand.Float(min, max)</code></td><td>Float em <strong>[min, max]</strong></td></tr><tr><td><code>Rand.Int(min, max)</code></td><td>Int em <strong>[min, max)</strong> (min incluso, max excluso)</td></tr><tr><td><code>Rand.Chance(probability)</code></td><td><code>true</code> com probabilidade (0..1)</td></tr><tr><td><code>Rand.Vector2(minX, maxX, minY, maxY)</code></td><td>Vetor 2D aleatório</td></tr><tr><td><code>Rand.Vector3(minX, maxX, minY, maxY, minZ, maxZ)</code></td><td>Vetor 3D aleatório</td></tr></tbody></table>
@@ -91,7 +91,7 @@ destroco.AddSprite();
 destroco.SetPosition(new Vector3(
     Rand.Float(-5f, 5f), Rand.Float(0f, 5f), Rand.Float(-5f, 5f)));</code></pre>
 <h2 id="log">Log</h2>
-<p>Registro de mensagens no <strong>Console</strong> do editor (a engine loga via spdlog interno).</p>
+<p>Registro de mensagens no <strong>Console</strong> do editor.</p>
 <table><thead><tr><th>Método</th><th>Nível</th></tr></thead><tbody><tr><td><code>Log.Info(msg)</code></td><td>Informação</td></tr><tr><td><code>Log.Warn(msg)</code></td><td>Aviso (amarelo)</td></tr><tr><td><code>Log.Error(msg)</code></td><td>Erro (vermelho)</td></tr></tbody></table>
 <pre><code class="language-csharp">Log.Info($"Jogador {Entity.Id} pronto.");
 Log.Warn($"Vida baixa: {vida}");

@@ -6,7 +6,7 @@ order: 2
 
 # Pipeline 2D
 
-O renderer 2D é um pipeline **dedicado em GLSL 330**, desenhado depois do 3D
+O renderer 2D é um pipeline **dedicado**, desenhado depois do 3D
 e antes da UI:
 
 ```

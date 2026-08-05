@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Instalação e build — Kizuri Engine</title>
+<title>Instalação — Kizuri Engine</title>
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -17,12 +17,12 @@
   <nav id="toc">
 <div class="group">Introdução</div>
 <a href="index.html" class="">Visão geral</a>
-<a href="instalacao.html" class="active">Instalação e build</a>
+<a href="instalacao.html" class="active">Instalação</a>
 <a href="primeiro-projeto.html" class="">Seu primeiro projeto</a>
 <div class="group">Conceitos</div>
 <a href="projeto.html" class="">Projetos, cenas e prefabs</a>
 <a href="hierarquia.html" class="">Hierarquia e transform</a>
-<a href="recursos-embutidos.html" class="">Recursos embutidos (kzres://)</a>
+<a href="recursos-embutidos.html" class="">Assets padrão</a>
 <div class="group">Editor</div>
 <a href="interface.html" class="">Interface do editor</a>
 <a href="viewport.html" class="">Viewport e câmera</a>
@@ -69,34 +69,43 @@
 </aside>
 <main>
 <header class="top">
-  <div class="crumbs"><span class="crumb">Introdução</span><span class="sep">/</span><span>Instalação e build</span></div>
+  <div class="crumbs"><span class="crumb">Introdução</span><span class="sep">/</span><span>Instalação</span></div>
   <div class="toggles">
     <a href="busca.html" class="btn">🔎 Buscar</a>
     <a href="index.html" class="btn">Início</a>
   </div>
 </header>
 <article>
-<h1 id="instalação-e-build">Instalação e build</h1>
-<h2 id="requisitos">Requisitos</h2>
-<table><thead><tr><th>Item</th><th>Requisito</th></tr></thead><tbody><tr><td><strong>CMake</strong></td><td>≥ 3.24</td></tr><tr><td><strong>Compilador</strong></td><td>C++20 (MSVC / MinGW / GCC / Clang)</td></tr><tr><td><strong>OpenGL</strong></td><td>mínimo <strong>3.3 core</strong> (4.0+ libera o modo "ultra")</td></tr><tr><td><strong>Build</strong></td><td>Ninja (opcional, usado nos presets)</td></tr><tr><td><strong>.NET SDK</strong></td><td>8+ (para compilar o assembly C# do jogo)</td></tr></tbody></table>
-<div class="callout info"><strong>Dependências automáticas.</strong> GLFW, glm, EnTT, spdlog, Bullet3, Box2D, miniaudio, stb, tinyobjloader, Dear ImGui, ImGuizmo e nlohmann/json são baixadas por <code>FetchContent</code>. O <code>glad</code> (GL 4.5 core) é pré-gerado e comitado. Você não instala nada manualmente.</div>
-<h2 id="compilando">Compilando</h2>
-<pre><code class="language-bash"># configurar + compilar (Release)
-cmake --preset linux-release      # ou windows-release / debug
-cmake --build --preset linux-release</code></pre>
-<p>Os binários vão para <code>build/bin/</code> (ou <code>build-debug/bin/</code>):</p>
-<table><thead><tr><th>Executável</th><th>O que é</th></tr></thead><tbody><tr><td><code>KizuriEditor</code></td><td>O editor visual completo</td></tr><tr><td><code>KizuriGame</code></td><td>Executável de jogo standalone (cena inicial + assembly C#)</td></tr><tr><td><code>Sandbox</code></td><td>Exemplo mínimo de uso da engine via API</td></tr></tbody></table>
-<h2 id="opções-do-cmake">Opções do CMake</h2>
-<table><thead><tr><th>Opção</th><th>Padrão</th><th>Descrição</th></tr></thead><tbody><tr><td><code>KZ_BUILD_EDITOR</code></td><td><code>ON</code></td><td>Compila o editor</td></tr><tr><td><code>KZ_BUILD_GAME</code></td><td><code>ON</code></td><td>Compila o jogo standalone</td></tr><tr><td><code>KZ_BUILD_SANDBOX</code></td><td><code>ON</code></td><td>Compila o exemplo sandbox</td></tr><tr><td><code>KZ_BUILD_TESTS</code></td><td><code>OFF</code></td><td>Testes unitários (não há suíte ainda)</td></tr><tr><td><code>KZ_EMBED_DEMO_DIR</code></td><td>—</td><td>Pasta com assets de demonstração a <strong>embutir</strong> no binário (<code>kzres://</code>)</td></tr></tbody></table>
-<div class="callout ok"><strong>Assets de demonstração embutidos.</strong> Na distribuição oficial, Fox animado e capacete PBR são baixados no build e <strong>compilados dentro do executável</strong>. Sem isso, a demo 3D cai para os builtins — nenhuma função padrão quebra.</div>
-<h2 id="primeira-execução">Primeira execução</h2>
-<p>Abra o <code>KizuriEditor</code>. A primeira tela é o <strong>hub</strong> de projetos:</p>
+<h1 id="instalação">Instalação</h1>
+<p>O <strong>Kizuri Editor</strong> é um programa pronto — você não compila nada. Basta baixar e abrir.</p>
+<h2 id="requisitos-do-sistema">Requisitos do sistema</h2>
+<table><thead><tr><th>Item</th><th>Mínimo</th></tr></thead><tbody><tr><td><strong>Sistema</strong></td><td>Windows 10+ ou Linux</td></tr><tr><td><strong>Placa de vídeo</strong></td><td>Qualquer placa com <strong>OpenGL 3.3</strong> ou superior (qualquer GPU dos últimos ~15 anos)</td></tr><tr><td><strong>Memória</strong></td><td>4 GB ou mais</td></tr></tbody></table>
+<div class="callout info"><strong>Qualidade automática.</strong> O editor ajusta a qualidade gráfica sozinho conforme a sua placa de vídeo. Em máquinas mais fracas ele reduz os efeitos para manter a fluidez; em máquinas fortes ele liga tudo. Você pode ajustar à mão em <strong>Configurações → Gráficos</strong>.</div>
+<h2 id="como-obter">Como obter</h2>
+<ol>
+<li>Pegue o pacote mais recente do <strong>Kizuri Editor</strong> (distribuição oficial);</li>
+<li>Extraia a pasta onde quiser (não precisa instalar);</li>
+<li>Abra o <strong>KizuriEditor</strong>.</li>
+</ol>
+<h2 id="primeiros-passos">Primeiros passos</h2>
+<ol>
+<li>Na tela inicial, escolha <strong>Novo Projeto</strong> e o modo (<strong>2D</strong>, <strong>3D</strong> ou</li>
+</ol>
+<p>   <strong>Vazio</strong>);</p>
+<ol>
+<li>Aperte <strong>F5</strong> para testar a cena com <strong>Play</strong>;</li>
+<li><strong>Shift+F5</strong> volta à edição.</li>
+</ol>
+<h2 id="se-der-problema-para-abrir">Se der problema para abrir</h2>
 <ul>
-<li><strong>Novo Projeto</strong> — escolha o modo <strong>2D</strong>, <strong>3D</strong> ou <strong>Vazio</strong>;</li>
-<li><strong>Abrir Projeto</strong> — carregue um <code>.kzproj</code> existente;</li>
-<li><strong>Voltar ao Início</strong> — retorna ao hub (menu Arquivo).</li>
+<li>Confirme que a placa de vídeo tem OpenGL 3.3+ (qualquer GPU razoável);</li>
+<li>Feche outros programas pesados — o editor é um programa de jogo e gosta de</li>
 </ul>
-<p>Aperte <strong>F5</strong> para testar a cena com física e scripts reais.</p>
+<p>  recursos livres;</p>
+<ul>
+<li>Atualize o driver da placa de vídeo.</li>
+</ul>
+<div class="callout ok">Nenhuma etapa extra é necessária: os assets de demonstração e as fontes já vêm com o editor.</div>
 
 </article>
 <div class="pager">

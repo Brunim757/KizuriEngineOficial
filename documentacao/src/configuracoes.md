@@ -45,5 +45,5 @@ mude o preset e veja o viewport reagir na hora.
 ## Salvo onde?
 
 As configurações gráficas são salvas em `settings.json` ao lado do executável.
-O valor de `TuneToHardware()` define padrões pelo hardware (3.3 conservador,
-4.0+ agressivo) e o arquivo sobrescreve.
+Os padrões são escolhidos automaticamente pelo seu hardware, e o arquivo
+sobrescreve com o que você ajustou.

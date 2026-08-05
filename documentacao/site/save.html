@@ -17,12 +17,12 @@
   <nav id="toc">
 <div class="group">Introdução</div>
 <a href="index.html" class="">Visão geral</a>
-<a href="instalacao.html" class="">Instalação e build</a>
+<a href="instalacao.html" class="">Instalação</a>
 <a href="primeiro-projeto.html" class="">Seu primeiro projeto</a>
 <div class="group">Conceitos</div>
 <a href="projeto.html" class="">Projetos, cenas e prefabs</a>
 <a href="hierarquia.html" class="">Hierarquia e transform</a>
-<a href="recursos-embutidos.html" class="">Recursos embutidos (kzres://)</a>
+<a href="recursos-embutidos.html" class="">Assets padrão</a>
 <div class="group">Editor</div>
 <a href="interface.html" class="">Interface do editor</a>
 <a href="viewport.html" class="">Viewport e câmera</a>
@@ -77,7 +77,7 @@
 </header>
 <article>
 <h1 id="savesystem">SaveSystem</h1>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI.</p>
+<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão).</p>
 <h2 id="guardar-valores">Guardar valores</h2>
 <pre><code class="language-csharp">SaveSystem.Set("score", 100);                      // int
 SaveSystem.Set("nome", "Kizuri");                  // string

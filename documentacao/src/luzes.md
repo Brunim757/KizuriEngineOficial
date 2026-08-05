@@ -13,8 +13,8 @@ Entidades com **LightComponent** são luzes reais na cena. Há três tipos.
 | Tipo | Descrição |
 |------|-----------|
 | **Direcional** | Luz paralela sem posição (o "sol"). A **direção** vem da rotação da entidade. A **primeira** direcional da cena projeta sombra em cascata. |
-| **Ponto** | Luz radial com alcance (`Range`). Projeta sombra (depth cubemap) em GL 4.0+, se `CastsShadow`. |
-| **Spot** | Cone com ângulos interno/externo em graus. Projeta sombra se `CastsShadow` (GL 4.0+). |
+| **Ponto** | Luz radial com alcance (`Range`). Projeta sombra quando o hardware suporta. |
+| **Spot** | Cone com ângulos interno/externo em graus. Projeta sombra se `CastsShadow`. |
 
 ## Propriedades
 
@@ -25,7 +25,7 @@ Entidades com **LightComponent** são luzes reais na cena. Há três tipos.
 | **Intensity** | Intensidade (multiplicador HDR) |
 | **Range** | Alcance (Ponto/Spot) |
 | **InnerConeDeg / OuterConeDeg** | Ângulos do cone do spot, em graus |
-| **CastsShadow** | Ponto/Spot projetam sombra? (GL 4.0+) |
+| **CastsShadow** | Ponto/Spot projetam sombra? (automático pelo hardware) |
 
 ## Limites
 
@@ -54,6 +54,6 @@ Selecione a luz e use o **gizmo de luz** no viewport para posicionar e apontar.
 O gizmo mostra a direção (direcional) ou o cone/alcance (ponto/spot).
 
 ::: info
-As **sombras** dependem da versão do OpenGL — veja
-[Pipeline 3D](pipeline-3d.html). Em GL 3.3, a luz pontual ilumina sem sombra.
+Sombras de luz pontual dependem do hardware — o motor liga automaticamente
+quando a placa suporta.
 :::

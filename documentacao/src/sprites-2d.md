@@ -6,9 +6,8 @@ order: 2
 
 # Sprites, círculos e texto 2D
 
-Os elementos 2D são renderizados pelo **Renderer 2D** (GLSL 330) depois do
-passe 3D e antes da UI — por isso sprites aparecem na frente de meshes 3D e
-atrás da UI.
+Os elementos 2D são desenhados **depois do mundo 3D e antes da interface**
+— por isso sprites aparecem na frente de objetos 3D e atrás dos menus.
 
 ## SpriteRenderer
 

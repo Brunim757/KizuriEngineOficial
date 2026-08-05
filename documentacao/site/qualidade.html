@@ -17,12 +17,12 @@
   <nav id="toc">
 <div class="group">Introdução</div>
 <a href="index.html" class="">Visão geral</a>
-<a href="instalacao.html" class="">Instalação e build</a>
+<a href="instalacao.html" class="">Instalação</a>
 <a href="primeiro-projeto.html" class="">Seu primeiro projeto</a>
 <div class="group">Conceitos</div>
 <a href="projeto.html" class="">Projetos, cenas e prefabs</a>
 <a href="hierarquia.html" class="">Hierarquia e transform</a>
-<a href="recursos-embutidos.html" class="">Recursos embutidos (kzres://)</a>
+<a href="recursos-embutidos.html" class="">Assets padrão</a>
 <div class="group">Editor</div>
 <a href="interface.html" class="">Interface do editor</a>
 <a href="viewport.html" class="">Viewport e câmera</a>
@@ -77,27 +77,22 @@
 </header>
 <article>
 <h1 id="qualidade-gráfica">Qualidade gráfica</h1>
-<p>Todas as configurações gráficas vivem em um único struct (<code>GraphicsSettings</code>) e podem ser ajustadas em <strong>Configurações → Gráficos</strong> (<kbd>Ctrl+,</kbd>), aplicadas <strong>em tempo real</strong>, sem reiniciar.</p>
+<p>Ajuste a aparência e o desempenho em <strong>Configurações → Gráficos</strong> (<kbd>Ctrl+,</kbd>). Tudo é aplicado <strong>na hora</strong>, sem reiniciar o editor.</p>
 <h2 id="presets">Presets</h2>
-<table><thead><tr><th>Preset</th><th>Uso</th></tr></thead><tbody><tr><td><strong>Ultra</strong></td><td>Máximo — para PC com GL 4.0+</td></tr><tr><td><strong>High</strong></td><td>Balanceado</td></tr><tr><td><strong>Medium</strong></td><td>Consumo moderado</td></tr><tr><td><strong>Low</strong></td><td>Máquina fraca / integrada</td></tr><tr><td><strong>Custom</strong></td><td>Você ajustou manualmente (mostrado como Custom)</td></tr></tbody></table>
-<h2 id="referência-das-opções">Referência das opções</h2>
-<table><thead><tr><th>Opção</th><th>Faixa</th><th>Descrição</th></tr></thead><tbody><tr><td><strong>Resolução interna</strong></td><td>0.25 – 2.0</td><td>Fração do alvo; <1 = mais barato + upscale; >1 = supersampling</td></tr><tr><td><strong>MSAA</strong></td><td>0/1/2/4/8</td><td>Amostras do framebuffer HDR</td></tr><tr><td><strong>Shadow map (CSM)</strong></td><td>512–4096</td><td>Resolução de cada cascata</td></tr><tr><td><strong>PCF (raio)</strong></td><td>0–3</td><td>Vizinhança do PCF (3.3 e 4.0+)</td></tr><tr><td><strong>PCSS (suavidade)</strong></td><td>0–1</td><td>Largura da penumbra (4.0+)</td></tr><tr><td><strong>Shadow map pontual</strong></td><td>256–2048</td><td>Cubemap da luz pontual (4.0+)</td></tr><tr><td><strong>Bloom</strong></td><td>on/off</td><td>Bright-pass + blur</td></tr><tr><td><strong>Limiar do bloom</strong></td><td>0.1–10</td><td>Brilho mínimo que "glowa"</td></tr><tr><td><strong>Intensidade do bloom</strong></td><td>0–3</td><td>Força do brilho</td></tr><tr><td><strong>Iterações do bloom</strong></td><td>1–12</td><td>Glow mais largo</td></tr><tr><td><strong>Tonemapping</strong></td><td>ACES/Reinhard/Filmic</td><td>Mapeamento HDR→LDR</td></tr><tr><td><strong>SSAO</strong></td><td>on/off</td><td>Oclusão de ambiente</td></tr><tr><td><strong>Amostras SSAO</strong></td><td>8–64</td><td>Qualidade da oclusão</td></tr><tr><td><strong>Raio SSAO</strong></td><td>0.05–2</td><td>Alcance da oclusão</td></tr><tr><td><strong>Exposição</strong></td><td>0.1–8</td><td>Multiplicador pré-tonemap (EV)</td></tr><tr><td><strong>VSync</strong></td><td>on/off</td><td>Sincronização vertical</td></tr><tr><td><strong>Névoa</strong></td><td>on/off</td><td>Fog exponencial</td></tr><tr><td><strong>Densidade da névoa</strong></td><td>0–0.2</td><td>Espessura</td></tr><tr><td><strong>Vinheta / Aberração / Grão</strong></td><td>—</td><td>Pós-cinema (composite)</td></tr></tbody></table>
-<h2 id="tunetohardware">TuneToHardware()</h2>
-<p>No início, a engine ajusta os padrões pelo <strong>hardware</strong>:</p>
+<table><thead><tr><th>Preset</th><th>Uso</th></tr></thead><tbody><tr><td><strong>Ultra</strong></td><td>Máximo de fidelidade (para máquinas fortes)</td></tr><tr><td><strong>High</strong></td><td>Balanceado</td></tr><tr><td><strong>Medium</strong></td><td>Bom meio-termo</td></tr><tr><td><strong>Low</strong></td><td>Máquina fraca / integrada</td></tr><tr><td><strong>Custom</strong></td><td>Você ajustou manualmente</td></tr></tbody></table>
+<p>O editor já começa com o preset adequado ao seu hardware — em geral você não precisa mexer em nada.</p>
+<h2 id="configurações">Configurações</h2>
+<table><thead><tr><th>Opção</th><th>O que faz</th></tr></thead><tbody><tr><td><strong>Resolução interna</strong></td><td>Renderiza em resolução menor e amplia (ganho grande de FPS); >1 = superamostragem</td></tr><tr><td><strong>MSAA</strong></td><td>Suaviza as bordas (2x, 4x, 8x)</td></tr><tr><td><strong>Shadow map (CSM)</strong></td><td>Resolução das sombras (512–4096)</td></tr><tr><td><strong>Suavização de sombra</strong></td><td>Bordas de sombra mais suaves</td></tr><tr><td><strong>Bloom</strong></td><td>Brilho dos objetos luminosos (limiar, intensidade, largura)</td></tr><tr><td><strong>Tonemapping</strong></td><td>Acabamento de cor: ACES (cinematográfico) / Reinhard (suave) / Filmic (contraste)</td></tr><tr><td><strong>SSAO</strong></td><td>Sombras de contato entre objetos (amostras, raio)</td></tr><tr><td><strong>Exposição</strong></td><td>Brilho geral da imagem</td></tr><tr><td><strong>VSync</strong></td><td>Trava ao refresh do monitor (evita "rasgo" de tela)</td></tr><tr><td><strong>Névoa</strong></td><td>Atmosfera por distância (densidade)</td></tr><tr><td><strong>Vinheta / Aberração / Grão</strong></td><td>Efeitos de câmera de filme</td></tr></tbody></table>
+<h2 id="ajuste-automático">Ajuste automático</h2>
+<p>O editor escolhe padrões adequados pela <strong>sua</strong> placa de vídeo e depois aplica suas escolhas manuais por cima. As configurações ficam salvas e são mantidas entre sessões.</p>
+<h2 id="dicas-de-desempenho">Dicas de desempenho</h2>
 <ul>
-<li>GL 3.3 → conservador (MSAA 4x, SSAO com teto seguro);</li>
-<li>GL 4.0+ → mais agressivo (MSAA 8x, PCSS ligado);</li>
-<li>GL 4.3+/4.5+ → ainda mais (sombras e SSAO maiores).</li>
+<li><strong>Resolução interna 0.75</strong> é o ganho mais rápido em máquinas fracas;</li>
+<li><strong>SSAO</strong> e <strong>bloom</strong> são os efeitos que mais pesam — desligue no Low;</li>
+<li><strong>Sombras em 2048</strong> é um bom equilíbrio;</li>
+<li>Se o jogo estiver lento, diminua primeiro o preset — <strong>Low</strong> costuma</li>
 </ul>
-<p>Depois, o <code>settings.json</code> (ao lado do executável) <strong>sobrescreve</strong> os padrões com as escolhas do usuário.</p>
-<div class="callout info"><strong>Tudo roda em 3.3 core como mínimo.</strong> MSAA, SSAO, bloom, CSM e PBR forward são todos compatíveis com GL 3.3. As exceções (PCSS, sombra de ponto) são tratadas pelo caminho version-gated — veja <a href="pipeline-3d.html">Pipeline 3D</a>.</div>
-<h2 id="dicas-de-performance">Dicas de performance</h2>
-<ul>
-<li><strong>Resolução interna 0.5–0.75</strong> é o maior ganho em máquinas fracas;</li>
-<li><strong>SSAO</strong> e <strong>bloom</strong> são os pós que mais custam — desligue no Low;</li>
-<li><strong>Shadow map 2048</strong> é o equilíbrio; 4096 é para close-ups;</li>
-<li><strong>PCSS + PCF</strong> aumentam o custo da sombra — reduza se houver quedas.</li>
-</ul>
+<p>  resolver.</p>
 
 </article>
 <div class="pager">

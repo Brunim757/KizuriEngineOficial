@@ -6,34 +6,33 @@ order: 1
 
 # Scripting C#
 
-A **única API pública de gameplay** é o assembly `Kizuri.Scripting`. O motor
-C++ fica 100% privado: o seu jogo conversa com a engine apenas por um **ABI
-C** (`kz_*`) — nenhum header ou dependência interna é exposta.
+A lógica do seu jogo é escrita em **C#**, com uma API simples e completa
+chamada `Kizuri.Scripting`. Você cria classes que respondem a eventos do
+jogo, e o editor cuida do resto.
 
-## Modelo
+## Como funciona
 
+1. Você escreve uma classe que herda de `Script`;
+2. Você registra essa classe em um **GameModule**;
+3. O editor (ou o jogo exportado) cria as instâncias e chama seus métodos
+   quando o jogo pede: quando a entidade nasce, a cada frame, quando colide…
+
+## Um script mínimo
+
+```csharp
+using Kizuri;
+
+public sealed class MeuJogador : Script
+{
+    public override void OnCreate() { }                        // quando nasceu
+    public override void OnUpdate(float deltaSeconds) { }      // a cada frame
+    public override void OnCollisionBegin(Entity other) { }    // colidiu
+    public override void OnCollisionEnd(Entity other) { }      // saiu da colisão
+    public override void OnDestroy() { }                       // quando morreu
+}
 ```
-┌─────────────────────────────────────────────┐
-│  Seu jogo (assembly C#)                     │
-│  ┌───────────────────────────────────────┐  │
-│  │  Kizuri.Scripting (API pública)       │  │
-│  └───────────────────────────────────────┘  │
-│         │  ABI C (kz_*)                     │
-└─────────────────────────────────────────────┘
-                 │
-        ┌──────────────────┐
-        │  Motor (C++20)   │  ← privado
-        └──────────────────┘
-```
 
-## Ciclo de vida
-
-1. **`[GameEntryPoint]`** — método que registra seus scripts em `GameModule`;
-2. **`Script`** — classe que você herda, com callbacks de gameplay;
-3. O editor/`KizuriGame` instancia os scripts registrados e chama os
-   callbacks a cada frame.
-
-## Registro de scripts
+## Registrando seus scripts
 
 ```csharp
 public static class MeuGameModule
@@ -41,44 +40,36 @@ public static class MeuGameModule
     [Kizuri.GameEntryPoint]
     public static void RegisterAll()
     {
-        Kizuri.GameModule.Register<Jogador>("Jogador");
+        Kizuri.GameModule.Register<MeuJogador>("MeuJogador");
         Kizuri.GameModule.Register<Inimigo>("Inimigo");
     }
 }
 ```
 
-No editor: **Arquivo → Carregar GameModule…** aponta para a DLL. No **Play**,
-o C# é **recompilado e recarregado automaticamente** — se a compilação falhar,
-o Play é abortado e o erro aparece no Console.
+## Usando no editor
 
-## Onde colocar o código
+1. Compile seu projeto C# — a **DLL** gerada é o que o editor carrega;
+2. **Arquivo → Carregar GameModule…** e escolha a DLL;
+3. No **Play**, o editor **recompila e recarrega seu código automaticamente**
+   — alterou o C#, salvou, apertou Play de novo, já rodou a versão nova. Se
+   houver erro de compilação, o Play é abortado e o erro aparece no Console.
 
-Um projeto C# que referencia `Kizuri.Scripting`:
+## O que a API oferece
 
-```bash
-dotnet new classlib -o MeuJogo
-dotnet add MeuJogo reference ../../managed/Kizuri.Scripting/Kizuri.Scripting.csproj
-```
-
-## Namespaces
-
-- `Kizuri` — tudo: `Script`, `Entity`, `Scene`, `Input`, `Time`, `Audio`,
-  `Mathf`, `SaveSystem`, `Rand`, `Log`, `GameModule`…
-- `Kizuri.Math` — `Vector2`, `Vector3`, `Vector4`.
-
-## Callbacks principais
-
-```csharp
-public override void OnCreate() { }                          // nasceu
-public override void OnUpdate(float deltaSeconds) { }        // a cada frame
-public override void OnCollisionBegin(Entity other) { }      // colidiu
-public override void OnCollisionEnd(Entity other) { }        // saiu da colisão
-public override void OnDestroy() { }                         // morreu
-```
+| Área | Classe/namespace |
+|------|------------------|
+| Entidades e componentes | `Entity` |
+| Cena, prefabs e queries | `Scene` |
+| Teclado e mouse | `Input` |
+| Tempo | `Time` |
+| Matemática | `Mathf` + `Kizuri.Math` (Vector2/3) |
+| Áudio | `Audio` |
+| Salvamento | `SaveSystem` |
+| Aleatório e log | `Rand`, `Log` |
 
 ## Próximos passos
 
-- [Classe Script e corrotinas](script.html) — callbacks em detalhe;
-- [Entity — referência](entity.html) — fazer coisas com entidades;
-- [Scene — referência](scene.html) — criar entidades, prefabs, queries;
-- [Exemplos completos](exemplos.html) — código de jogo real.
+- [Classe Script e corrotinas](script.html) — callbacks e ações com espera;
+- [Entity — referência](entity.html) — o que dá para fazer com uma entidade;
+- [Scene — referência](scene.html) — criar entidades, prefabs, detecção;
+- [Exemplos completos](exemplos.html) — código de jogo pronto.

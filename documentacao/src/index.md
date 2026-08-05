@@ -6,56 +6,43 @@ order: 1
 
 # Kizuri Engine
 
-A **Kizuri Engine** é uma engine de jogos **2D + 3D** escrita em C++20, com
-editor visual integrado e programação em **C#**. Você monta a cena no editor,
-escreve a lógica em C# e exporta um executável standalone — no mesmo espírito
-de Unity e Godot, mas com uma arquitetura enxuta e privada.
+A **Kizuri Engine** é uma engine de jogos **2D + 3D** para criar e publicar
+seus próprios jogos: monte a cena no editor visual, programe a lógica em
+**C#** e exporte um jogo executável — sem se preocupar com nada além do jogo.
 
-## O que a engine oferece
+## O que ela faz por você
 
 | Área | Recursos |
 |------|----------|
-| **Renderer 3D** | PBR (Cook-Torrance), IBL, CSM, PCSS, sombra de luz pontual, bloom, tonemapping (ACES/Reinhard/Filmic), SSAO, névoa, partículas GPU, skinning, até 16 luzes |
-| **Renderer 2D** | Sprites, círculos (SDF), texto com fonte embutida, tilemaps, animação por frames, ordenação por camadas |
-| **UI** | Canvas + Rect/Button/Text em espaço de tela, com hover/clique detectáveis por script |
-| **Física** | Box2D (2D) e Bullet3 (3D) — corpos, colliders, forças, torque, raycasts, overlaps, callbacks de colisão |
-| **Áudio** | miniaudio — sources posicionais 3D, one-shots, volume mestre |
-| **Scripting** | Assembly C# `Kizuri.Scripting` conversando com o motor só por um ABI C |
-| **Conteúdo** | `kzres://` — assets padrão **embutidos no executável**; Content Pack opcional |
-| **Exportação** | Executável standalone com cena inicial + assembly C# |
+| **Criação de cenas** | Editor visual com arrastar-e-soltar, gizmos, hierarquia e pré-visualização em tempo real |
+| **Renderer 3D** | PBR, céu (IBL), sombras em cascata, bloom, luzes dinâmicas, partículas, personagens animados |
+| **Renderer 2D** | Sprites, círculos, texto, tilemaps, animação por frames e ordenação por camadas |
+| **Interface (UI)** | Menus e HUD em espaço de tela, com botões clicáveis |
+| **Física** | 2D e 3D — corpos, colisões, forças, raios de detecção, impulso de pulo |
+| **Áudio** | Sons e músicas, inclusive **posicionados no mundo** (sons 3D) |
+| **Programação** | C# com API completa: entidades, cena, input, tempo, matemática, salvamento |
+| **Publicação** | Exporta um executável do seu jogo com um clique |
 
-## Arquitetura em uma frase
+## Como se trabalha
 
-> O motor C++ é 100% privado. O jogo é um assembly **C#** que conversa com a
-> engine por um **ABI C** (`kz_*`) — nenhum header ou dependência interna é
-> exposta ao usuário.
+1. **Editor** — você constrói a cena visualmente: adicione entidades,
+   componentes, luzes, física e UI. Aperte **Play** para testar com física e
+   scripts reais.
+2. **C#** — a lógica do jogo fica em classes simples. O editor compila e
+   carrega seu código automaticamente no Play.
+3. **Exportar** — `Arquivo → Exportar Jogo…` gera um executável pronto para
+   distribuir.
 
-## Modelo de trabalho
+## Tudo já vem pronto
 
-1. **Editor** — você constrói a cena visualmente: entidades, componentes,
-   luzes, física, UI. Aperte **Play** para testar com física e scripts reais.
-2. **C#** — a lógica do jogo vive em classes que herdam de `Script`, com
-   `OnCreate`, `OnUpdate`, `OnCollisionBegin/End`. O editor recompila o C# no
-   Play automaticamente.
-3. **Exportar** — `Arquivo → Exportar Jogo…` gera um executável standalone
-   que abre a cena inicial e roda o assembly.
+As cenas de demonstração e os assets padrão (modelos 3D, céu, primitivas)
+**já acompanham o editor** — você não precisa baixar nem instalar nada
+separado, e nenhuma função padrão deixa de funcionar se um arquivo for
+removido.
 
-## Self-contained
+## Por onde começar
 
-Os assets usados como **padrão** (modelos da demonstração 3D — Fox animado e
-capacete PBR —, céu HDRI, primitivas) são **compilados dentro do executável**,
-acessíveis pelo esquema `kzres://`. Apagar um arquivo do disco **não quebra
-nenhuma função padrão**: a prioridade é sempre embutido → Content Pack →
-builtins procedurais.
-
-::: info
-**"Pesada" por features, não por pacote.** A engine é grande por ter muitos
-recursos — não por depender de um monte de conteúdo solto que se apaga.
-:::
-
-## Onde começar
-
-- **[Instalação e build](instalacao.html)** — requisitos e compilação.
+- **[Instalação](instalacao.html)** — baixar e abrir o editor.
 - **[Seu primeiro projeto](primeiro-projeto.html)** — do zero ao Play.
 - **[Interface do editor](interface.html)** — conheça os painéis.
-- **[Scripting C#](scripting.html)** — a API de gameplay.
+- **[Scripting C#](scripting.html)** — como programar seu jogo.

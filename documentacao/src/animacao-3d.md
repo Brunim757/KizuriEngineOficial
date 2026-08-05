@@ -44,7 +44,6 @@ var t = Entity.AnimationTime;
 
 ## Sobre a skin
 
-- A **skin é reparseada** ao abrir a cena (não é serializada);
 - `SkinData` suporta juntas, pesos por vértice e múltiplos **clips**;
 - O Fox de demonstração tem 19 juntas e ~8 animações — experimente na
   [demonstração 3D](interface.html) (menu **Cena**).

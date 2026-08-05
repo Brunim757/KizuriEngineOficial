@@ -17,12 +17,12 @@
   <nav id="toc">
 <div class="group">Introdução</div>
 <a href="index.html" class="active">Visão geral</a>
-<a href="instalacao.html" class="">Instalação e build</a>
+<a href="instalacao.html" class="">Instalação</a>
 <a href="primeiro-projeto.html" class="">Seu primeiro projeto</a>
 <div class="group">Conceitos</div>
 <a href="projeto.html" class="">Projetos, cenas e prefabs</a>
 <a href="hierarquia.html" class="">Hierarquia e transform</a>
-<a href="recursos-embutidos.html" class="">Recursos embutidos (kzres://)</a>
+<a href="recursos-embutidos.html" class="">Assets padrão</a>
 <div class="group">Editor</div>
 <a href="interface.html" class="">Interface do editor</a>
 <a href="viewport.html" class="">Viewport e câmera</a>
@@ -77,39 +77,36 @@
 </header>
 <article>
 <h1 id="kizuri-engine">Kizuri Engine</h1>
-<p>A <strong>Kizuri Engine</strong> é uma engine de jogos <strong>2D + 3D</strong> escrita em C++20, com editor visual integrado e programação em <strong>C#</strong>. Você monta a cena no editor, escreve a lógica em C# e exporta um executável standalone — no mesmo espírito de Unity e Godot, mas com uma arquitetura enxuta e privada.</p>
-<h2 id="o-que-a-engine-oferece">O que a engine oferece</h2>
-<table><thead><tr><th>Área</th><th>Recursos</th></tr></thead><tbody><tr><td><strong>Renderer 3D</strong></td><td>PBR (Cook-Torrance), IBL, CSM, PCSS, sombra de luz pontual, bloom, tonemapping (ACES/Reinhard/Filmic), SSAO, névoa, partículas GPU, skinning, até 16 luzes</td></tr><tr><td><strong>Renderer 2D</strong></td><td>Sprites, círculos (SDF), texto com fonte embutida, tilemaps, animação por frames, ordenação por camadas</td></tr><tr><td><strong>UI</strong></td><td>Canvas + Rect/Button/Text em espaço de tela, com hover/clique detectáveis por script</td></tr><tr><td><strong>Física</strong></td><td>Box2D (2D) e Bullet3 (3D) — corpos, colliders, forças, torque, raycasts, overlaps, callbacks de colisão</td></tr><tr><td><strong>Áudio</strong></td><td>miniaudio — sources posicionais 3D, one-shots, volume mestre</td></tr><tr><td><strong>Scripting</strong></td><td>Assembly C# <code>Kizuri.Scripting</code> conversando com o motor só por um ABI C</td></tr><tr><td><strong>Conteúdo</strong></td><td><code>kzres://</code> — assets padrão <strong>embutidos no executável</strong>; Content Pack opcional</td></tr><tr><td><strong>Exportação</strong></td><td>Executável standalone com cena inicial + assembly C#</td></tr></tbody></table>
-<h2 id="arquitetura-em-uma-frase">Arquitetura em uma frase</h2>
-<blockquote>O motor C++ é 100% privado. O jogo é um assembly <strong>C#</strong> que conversa com a engine por um <strong>ABI C</strong> (<code>kz_*</code>) — nenhum header ou dependência interna é exposta ao usuário.</blockquote>
-<h2 id="modelo-de-trabalho">Modelo de trabalho</h2>
+<p>A <strong>Kizuri Engine</strong> é uma engine de jogos <strong>2D + 3D</strong> para criar e publicar seus próprios jogos: monte a cena no editor visual, programe a lógica em <strong>C#</strong> e exporte um jogo executável — sem se preocupar com nada além do jogo.</p>
+<h2 id="o-que-ela-faz-por-você">O que ela faz por você</h2>
+<table><thead><tr><th>Área</th><th>Recursos</th></tr></thead><tbody><tr><td><strong>Criação de cenas</strong></td><td>Editor visual com arrastar-e-soltar, gizmos, hierarquia e pré-visualização em tempo real</td></tr><tr><td><strong>Renderer 3D</strong></td><td>PBR, céu (IBL), sombras em cascata, bloom, luzes dinâmicas, partículas, personagens animados</td></tr><tr><td><strong>Renderer 2D</strong></td><td>Sprites, círculos, texto, tilemaps, animação por frames e ordenação por camadas</td></tr><tr><td><strong>Interface (UI)</strong></td><td>Menus e HUD em espaço de tela, com botões clicáveis</td></tr><tr><td><strong>Física</strong></td><td>2D e 3D — corpos, colisões, forças, raios de detecção, impulso de pulo</td></tr><tr><td><strong>Áudio</strong></td><td>Sons e músicas, inclusive <strong>posicionados no mundo</strong> (sons 3D)</td></tr><tr><td><strong>Programação</strong></td><td>C# com API completa: entidades, cena, input, tempo, matemática, salvamento</td></tr><tr><td><strong>Publicação</strong></td><td>Exporta um executável do seu jogo com um clique</td></tr></tbody></table>
+<h2 id="como-se-trabalha">Como se trabalha</h2>
 <ol>
-<li><strong>Editor</strong> — você constrói a cena visualmente: entidades, componentes,</li>
+<li><strong>Editor</strong> — você constrói a cena visualmente: adicione entidades,</li>
 </ol>
-<p>   luzes, física, UI. Aperte <strong>Play</strong> para testar com física e scripts reais.</p>
+<p>   componentes, luzes, física e UI. Aperte <strong>Play</strong> para testar com física e    scripts reais.</p>
 <ol>
-<li><strong>C#</strong> — a lógica do jogo vive em classes que herdam de <code>Script</code>, com</li>
+<li><strong>C#</strong> — a lógica do jogo fica em classes simples. O editor compila e</li>
 </ol>
-<p>   <code>OnCreate</code>, <code>OnUpdate</code>, <code>OnCollisionBegin/End</code>. O editor recompila o C# no    Play automaticamente.</p>
+<p>   carrega seu código automaticamente no Play.</p>
 <ol>
-<li><strong>Exportar</strong> — <code>Arquivo → Exportar Jogo…</code> gera um executável standalone</li>
+<li><strong>Exportar</strong> — <code>Arquivo → Exportar Jogo…</code> gera um executável pronto para</li>
 </ol>
-<p>   que abre a cena inicial e roda o assembly.</p>
-<h2 id="self-contained">Self-contained</h2>
-<p>Os assets usados como <strong>padrão</strong> (modelos da demonstração 3D — Fox animado e capacete PBR —, céu HDRI, primitivas) são <strong>compilados dentro do executável</strong>, acessíveis pelo esquema <code>kzres://</code>. Apagar um arquivo do disco <strong>não quebra nenhuma função padrão</strong>: a prioridade é sempre embutido → Content Pack → builtins procedurais.</p>
-<div class="callout info"><strong>"Pesada" por features, não por pacote.</strong> A engine é grande por ter muitos recursos — não por depender de um monte de conteúdo solto que se apaga.</div>
-<h2 id="onde-começar">Onde começar</h2>
+<p>   distribuir.</p>
+<h2 id="tudo-já-vem-pronto">Tudo já vem pronto</h2>
+<p>As cenas de demonstração e os assets padrão (modelos 3D, céu, primitivas) <strong>já acompanham o editor</strong> — você não precisa baixar nem instalar nada separado, e nenhuma função padrão deixa de funcionar se um arquivo for removido.</p>
+<h2 id="por-onde-começar">Por onde começar</h2>
 <ul>
-<li><strong><a href="instalacao.html">Instalação e build</a></strong> — requisitos e compilação.</li>
+<li><strong><a href="instalacao.html">Instalação</a></strong> — baixar e abrir o editor.</li>
 <li><strong><a href="primeiro-projeto.html">Seu primeiro projeto</a></strong> — do zero ao Play.</li>
 <li><strong><a href="interface.html">Interface do editor</a></strong> — conheça os painéis.</li>
-<li><strong><a href="scripting.html">Scripting C#</a></strong> — a API de gameplay.</li>
+<li><strong><a href="scripting.html">Scripting C#</a></strong> — como programar seu jogo.</li>
 </ul>
 
 </article>
 <div class="pager">
 <span class="navbtn"></span>
-<a class="navbtn next" href="instalacao.html">Instalação e build →</a>
+<a class="navbtn next" href="instalacao.html">Instalação →</a>
 </div>
 <footer class="footer">
   Kizuri Engine — documentação (site estático). Fonte em <code>documentacao/src/</code>;

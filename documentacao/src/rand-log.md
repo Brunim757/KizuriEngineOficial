@@ -6,8 +6,7 @@ order: 11
 
 # Rand e Log
 
-Utilidades de aleatoriedade e registro de mensagens. Ambas **managed** (o Log
-escreve no console da engine via ABI).
+Utilidades de aleatoriedade e registro de mensagens.
 
 ## Rand
 
@@ -36,8 +35,7 @@ destroco.SetPosition(new Vector3(
 
 ## Log
 
-Registro de mensagens no **Console** do editor (a engine loga via spdlog
-interno).
+Registro de mensagens no **Console** do editor.
 
 | Método | Nível |
 |--------|-------|

@@ -17,12 +17,12 @@
   <nav id="toc">
 <div class="group">Introdução</div>
 <a href="index.html" class="">Visão geral</a>
-<a href="instalacao.html" class="">Instalação e build</a>
+<a href="instalacao.html" class="">Instalação</a>
 <a href="primeiro-projeto.html" class="">Seu primeiro projeto</a>
 <div class="group">Conceitos</div>
 <a href="projeto.html" class="">Projetos, cenas e prefabs</a>
 <a href="hierarquia.html" class="">Hierarquia e transform</a>
-<a href="recursos-embutidos.html" class="">Recursos embutidos (kzres://)</a>
+<a href="recursos-embutidos.html" class="">Assets padrão</a>
 <div class="group">Editor</div>
 <a href="interface.html" class="">Interface do editor</a>
 <a href="viewport.html" class="">Viewport e câmera</a>
@@ -77,7 +77,7 @@
 </header>
 <article>
 <h1 id="pipeline-2d">Pipeline 2D</h1>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI:</p>
+<p>O renderer 2D é um pipeline <strong>dedicado</strong>, desenhado depois do 3D e antes da UI:</p>
 <pre><code class="language-">3D → 2D → UI</code></pre>
 <h2 id="o-que-ele-desenha">O que ele desenha</h2>
 <table><thead><tr><th>Elemento</th><th>Componente</th><th>Página</th></tr></thead><tbody><tr><td>Quad com textura / cor</td><td><code>SpriteRenderer</code></td><td><a href="sprites-2d.html">Sprites</a></td></tr><tr><td>Círculo (SDF, disco/anel)</td><td><code>CircleRenderer</code></td><td><a href="sprites-2d.html">Sprites</a></td></tr><tr><td>Texto com fonte embutida</td><td><code>TextComponent</code></td><td><a href="sprites-2d.html">Sprites</a></td></tr><tr><td>Animação por frames</td><td><code>SpriteAnimation</code></td><td><a href="animacao-2d.html">Animação 2D</a></td></tr><tr><td>Grade de tiles</td><td><code>Tilemap</code></td><td><a href="tilemap.html">Tilemap</a></td></tr><tr><td>Grid de referência</td><td>—</td><td>desenhado no viewport</td></tr></tbody></table>

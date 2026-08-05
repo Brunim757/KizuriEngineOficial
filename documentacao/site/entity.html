@@ -17,12 +17,12 @@
   <nav id="toc">
 <div class="group">Introdução</div>
 <a href="index.html" class="">Visão geral</a>
-<a href="instalacao.html" class="">Instalação e build</a>
+<a href="instalacao.html" class="">Instalação</a>
 <a href="primeiro-projeto.html" class="">Seu primeiro projeto</a>
 <div class="group">Conceitos</div>
 <a href="projeto.html" class="">Projetos, cenas e prefabs</a>
 <a href="hierarquia.html" class="">Hierarquia e transform</a>
-<a href="recursos-embutidos.html" class="">Recursos embutidos (kzres://)</a>
+<a href="recursos-embutidos.html" class="">Assets padrão</a>
 <div class="group">Editor</div>
 <a href="interface.html" class="">Interface do editor</a>
 <a href="viewport.html" class="">Viewport e câmera</a>
@@ -77,7 +77,7 @@
 </header>
 <article>
 <h1 id="entity-referência">Entity — referência</h1>
-<p><code>Entity</code> é um handle opaco para uma entidade da cena. A engine é fechada — você nunca vê o EnTT por baixo.</p>
+<p><code>Entity</code> representa uma entidade da cena. Tudo que você faz com ela passa pela API — sem expor detalhes internos.</p>
 <h2 id="propriedades">Propriedades</h2>
 <table><thead><tr><th>Membro</th><th>Tipo</th><th>Descrição</th></tr></thead><tbody><tr><td><code>Entity.Invalid</code></td><td><code>Entity</code></td><td>Handle inválido (não existe)</td></tr><tr><td><code>IsValid</code></td><td><code>bool</code></td><td><code>Handle != 0</code></td></tr><tr><td><code>Id</code></td><td><code>uint</code></td><td>Identificador numérico</td></tr><tr><td><code>Name</code></td><td><code>string</code></td><td>Nome (Tag) — <strong>leitura e renomeio em runtime</strong></td></tr></tbody></table>
 <pre><code class="language-csharp">Entity e = Scene.CreateEntity("Jogador");

@@ -17,12 +17,12 @@
   <nav id="toc">
 <div class="group">Introdução</div>
 <a href="index.html" class="">Visão geral</a>
-<a href="instalacao.html" class="">Instalação e build</a>
+<a href="instalacao.html" class="">Instalação</a>
 <a href="primeiro-projeto.html" class="">Seu primeiro projeto</a>
 <div class="group">Conceitos</div>
 <a href="projeto.html" class="">Projetos, cenas e prefabs</a>
 <a href="hierarquia.html" class="">Hierarquia e transform</a>
-<a href="recursos-embutidos.html" class="">Recursos embutidos (kzres://)</a>
+<a href="recursos-embutidos.html" class="">Assets padrão</a>
 <div class="group">Editor</div>
 <a href="interface.html" class="">Interface do editor</a>
 <a href="viewport.html" class="">Viewport e câmera</a>
@@ -79,10 +79,10 @@
 <h1 id="perguntas-frequentes">Perguntas frequentes</h1>
 <h2 id="a-engine-precisa-do-content-pack-para-funcionar">A engine precisa do Content Pack para funcionar?</h2>
 <p><strong>Não.</strong> Todos os padrões (modelos da demo 3D, céu, primitivas) estão <strong>embutidos no executável</strong> via <code>kzres://</code>. O Content Pack apenas enriquece as demos.</p>
-<h2 id="meu-pc-tem-opengl-33-perco-alguma-coisa">Meu PC tem OpenGL 3.3. Perco alguma coisa?</h2>
-<p>Só o que exige loop dinâmico no shader: <strong>PCSS</strong> e <strong>sombra de luz pontual</strong>, que são reservados para GL 4.0+. Todo o resto — PBR, IBL, CSM, bloom, SSAO, partículas, skinning — roda em 3.3 com o caminho estável comprovado.</p>
-<h2 id="como-a-engine-detecta-a-versão-do-glsl">Como a engine detecta a versão do GLSL?</h2>
-<p>Pela versão reportada pelo driver no contexto real da janela (<code>GL_SHADING_LANGUAGE_VERSION</code>), travada pelo teto do contexto core criado. Sem chutes: se o driver diz 3.3, os shaders são 330.</p>
+<h2 id="minha-placa-de-vídeo-é-antiga-perco-alguma-coisa">Minha placa de vídeo é antiga. Perco alguma coisa?</h2>
+<p>Só o acabamento mais sofisticado de sombras, que exige uma placa mais nova. Tudo o resto — luzes, céu, partículas, personagens animados, 2D e UI — funciona em qualquer placa que rode o editor. O motor escolhe o melhor automaticamente.</p>
+<h2 id="preciso-me-preocupar-com-placa-de-vídeo">Preciso me preocupar com placa de vídeo?</h2>
+<p>Só se ela tiver <strong>OpenGL 3.3</strong> ou mais (qualquer GPU razoável dos últimos ~15 anos). O motor ajusta a qualidade sozinho pelo seu hardware — em geral você não precisa mexer em nada.</p>
 <h2 id="como-escrevo-scripts">Como escrevo scripts?</h2>
 <p>Em um projeto C# que referencia <code>Kizuri.Scripting</code>. No editor, <strong>Arquivo → Carregar GameModule…</strong> aponta para a DLL. No Play, o C# é recompilado e recarregado automaticamente.</p>
 <h2 id="o-que-vejo-no-play-é-o-que-sai-no-build">O que vejo no Play é o que sai no build?</h2>
@@ -104,8 +104,8 @@
 <p><code>Scene.InstantiatePrefab("Assets/Inimigo.kzprefab", posicao, rotacao)</code> — a física e o <code>OnCreate</code> dos scripts rodam de verdade.</p>
 <h2 id="como-salvo-o-jogo">Como salvo o jogo?</h2>
 <p><code>SaveSystem.Set("chave", valor)</code> + <code>SaveSystem.Save()</code> grava um <code>save.json</code>; os <code>Get*</code> carregam automaticamente.</p>
-<h2 id="onde-fica-a-documentação-de-desenvolvimento">Onde fica a documentação de desenvolvimento?</h2>
-<p>Em <code>docs/NOTAS_INTERNAS.md</code> no repositório (estado real, sem filtro).</p>
+<h2 id="consigo-misturar-2d-e-3d-na-mesma-cena">Consigo misturar 2D e 3D na mesma cena?</h2>
+<p>Sim — cenas <strong>2.5D</strong> (fundo 3D, gameplay 2D, UI por cima) funcionam com duas câmeras. Há uma demonstração pronta no menu <strong>Cena</strong>.</p>
 
 </article>
 <div class="pager">

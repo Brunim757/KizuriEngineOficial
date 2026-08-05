@@ -1,65 +1,50 @@
 ---
-title: Instalação e build
+title: Instalação
 group: Introdução
 order: 2
 ---
 
-# Instalação e build
+# Instalação
 
-## Requisitos
+O **Kizuri Editor** é um programa pronto — você não compila nada. Basta baixar
+e abrir.
 
-| Item | Requisito |
-|------|-----------|
-| **CMake** | ≥ 3.24 |
-| **Compilador** | C++20 (MSVC / MinGW / GCC / Clang) |
-| **OpenGL** | mínimo **3.3 core** (4.0+ libera o modo "ultra") |
-| **Build** | Ninja (opcional, usado nos presets) |
-| **.NET SDK** | 8+ (para compilar o assembly C# do jogo) |
+## Requisitos do sistema
+
+| Item | Mínimo |
+|------|--------|
+| **Sistema** | Windows 10+ ou Linux |
+| **Placa de vídeo** | Qualquer placa com **OpenGL 3.3** ou superior (qualquer GPU dos últimos ~15 anos) |
+| **Memória** | 4 GB ou mais |
 
 ::: info
-**Dependências automáticas.** GLFW, glm, EnTT, spdlog, Bullet3, Box2D,
-miniaudio, stb, tinyobjloader, Dear ImGui, ImGuizmo e nlohmann/json são
-baixadas por `FetchContent`. O `glad` (GL 4.5 core) é pré-gerado e comitado.
-Você não instala nada manualmente.
+**Qualidade automática.** O editor ajusta a qualidade gráfica sozinho
+conforme a sua placa de vídeo. Em máquinas mais fracas ele reduz os efeitos
+para manter a fluidez; em máquinas fortes ele liga tudo. Você pode ajustar à
+mão em **Configurações → Gráficos**.
 :::
 
-## Compilando
+## Como obter
 
-```bash
-# configurar + compilar (Release)
-cmake --preset linux-release      # ou windows-release / debug
-cmake --build --preset linux-release
-```
+1. Pegue o pacote mais recente do **Kizuri Editor** (distribuição oficial);
+2. Extraia a pasta onde quiser (não precisa instalar);
+3. Abra o **KizuriEditor**.
 
-Os binários vão para `build/bin/` (ou `build-debug/bin/`):
+## Primeiros passos
 
-| Executável | O que é |
-|------------|---------|
-| `KizuriEditor` | O editor visual completo |
-| `KizuriGame` | Executável de jogo standalone (cena inicial + assembly C#) |
-| `Sandbox` | Exemplo mínimo de uso da engine via API |
+1. Na tela inicial, escolha **Novo Projeto** e o modo (**2D**, **3D** ou
+   **Vazio**);
+2. Aperte **F5** para testar a cena com **Play**;
+3. **Shift+F5** volta à edição.
 
-## Opções do CMake
+## Se der problema para abrir
 
-| Opção | Padrão | Descrição |
-|-------|--------|-----------|
-| `KZ_BUILD_EDITOR` | `ON` | Compila o editor |
-| `KZ_BUILD_GAME` | `ON` | Compila o jogo standalone |
-| `KZ_BUILD_SANDBOX` | `ON` | Compila o exemplo sandbox |
-| `KZ_BUILD_TESTS` | `OFF` | Testes unitários (não há suíte ainda) |
-| `KZ_EMBED_DEMO_DIR` | — | Pasta com assets de demonstração a **embutir** no binário (`kzres://`) |
+- Confirme que a placa de vídeo tem OpenGL 3.3+ (qualquer GPU razoável);
+- Feche outros programas pesados — o editor é um programa de jogo e gosta de
+  recursos livres;
+- Atualize o driver da placa de vídeo.
 
 ::: ok
-**Assets de demonstração embutidos.** Na distribuição oficial, Fox animado e
-capacete PBR são baixados no build e **compilados dentro do executável**.
-Sem isso, a demo 3D cai para os builtins — nenhuma função padrão quebra.
+Nenhuma etapa extra é necessária: os assets de demonstração e as fontes já
+vêm com o editor.
 :::
-
-## Primeira execução
-
-Abra o `KizuriEditor`. A primeira tela é o **hub** de projetos:
-- **Novo Projeto** — escolha o modo **2D**, **3D** ou **Vazio**;
-- **Abrir Projeto** — carregue um `.kzproj` existente;
-- **Voltar ao Início** — retorna ao hub (menu Arquivo).
-
-Aperte **F5** para testar a cena com física e scripts reais.

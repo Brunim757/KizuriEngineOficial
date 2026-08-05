@@ -17,12 +17,12 @@
   <nav id="toc">
 <div class="group">Introdução</div>
 <a href="index.html" class="">Visão geral</a>
-<a href="instalacao.html" class="">Instalação e build</a>
+<a href="instalacao.html" class="">Instalação</a>
 <a href="primeiro-projeto.html" class="">Seu primeiro projeto</a>
 <div class="group">Conceitos</div>
 <a href="projeto.html" class="">Projetos, cenas e prefabs</a>
 <a href="hierarquia.html" class="">Hierarquia e transform</a>
-<a href="recursos-embutidos.html" class="">Recursos embutidos (kzres://)</a>
+<a href="recursos-embutidos.html" class="">Assets padrão</a>
 <div class="group">Editor</div>
 <a href="interface.html" class="">Interface do editor</a>
 <a href="viewport.html" class="">Viewport e câmera</a>
@@ -79,9 +79,9 @@
 <h1 id="luzes">Luzes</h1>
 <p>Entidades com <strong>LightComponent</strong> são luzes reais na cena. Há três tipos.</p>
 <h2 id="tipos">Tipos</h2>
-<table><thead><tr><th>Tipo</th><th>Descrição</th></tr></thead><tbody><tr><td><strong>Direcional</strong></td><td>Luz paralela sem posição (o "sol"). A <strong>direção</strong> vem da rotação da entidade. A <strong>primeira</strong> direcional da cena projeta sombra em cascata.</td></tr><tr><td><strong>Ponto</strong></td><td>Luz radial com alcance (<code>Range</code>). Projeta sombra (depth cubemap) em GL 4.0+, se <code>CastsShadow</code>.</td></tr><tr><td><strong>Spot</strong></td><td>Cone com ângulos interno/externo em graus. Projeta sombra se <code>CastsShadow</code> (GL 4.0+).</td></tr></tbody></table>
+<table><thead><tr><th>Tipo</th><th>Descrição</th></tr></thead><tbody><tr><td><strong>Direcional</strong></td><td>Luz paralela sem posição (o "sol"). A <strong>direção</strong> vem da rotação da entidade. A <strong>primeira</strong> direcional da cena projeta sombra em cascata.</td></tr><tr><td><strong>Ponto</strong></td><td>Luz radial com alcance (<code>Range</code>). Projeta sombra quando o hardware suporta.</td></tr><tr><td><strong>Spot</strong></td><td>Cone com ângulos interno/externo em graus. Projeta sombra se <code>CastsShadow</code>.</td></tr></tbody></table>
 <h2 id="propriedades">Propriedades</h2>
-<table><thead><tr><th>Campo</th><th>Descrição</th></tr></thead><tbody><tr><td><strong>Type</strong></td><td>Direcional / Ponto / Spot</td></tr><tr><td><strong>Color</strong></td><td>Cor RGB</td></tr><tr><td><strong>Intensity</strong></td><td>Intensidade (multiplicador HDR)</td></tr><tr><td><strong>Range</strong></td><td>Alcance (Ponto/Spot)</td></tr><tr><td><strong>InnerConeDeg / OuterConeDeg</strong></td><td>Ângulos do cone do spot, em graus</td></tr><tr><td><strong>CastsShadow</strong></td><td>Ponto/Spot projetam sombra? (GL 4.0+)</td></tr></tbody></table>
+<table><thead><tr><th>Campo</th><th>Descrição</th></tr></thead><tbody><tr><td><strong>Type</strong></td><td>Direcional / Ponto / Spot</td></tr><tr><td><strong>Color</strong></td><td>Cor RGB</td></tr><tr><td><strong>Intensity</strong></td><td>Intensidade (multiplicador HDR)</td></tr><tr><td><strong>Range</strong></td><td>Alcance (Ponto/Spot)</td></tr><tr><td><strong>InnerConeDeg / OuterConeDeg</strong></td><td>Ângulos do cone do spot, em graus</td></tr><tr><td><strong>CastsShadow</strong></td><td>Ponto/Spot projetam sombra? (automático pelo hardware)</td></tr></tbody></table>
 <h2 id="limites">Limites</h2>
 <ul>
 <li>Até <strong>16 luzes</strong> por frame (todas avaliadas no forward pass);</li>
@@ -101,7 +101,7 @@ lanterna.SetLightColor(1f, 0.8f, 0.5f);
 lanterna.SetLightIntensity(8f);</code></pre>
 <h2 id="no-editor">No editor</h2>
 <p>Selecione a luz e use o <strong>gizmo de luz</strong> no viewport para posicionar e apontar. O gizmo mostra a direção (direcional) ou o cone/alcance (ponto/spot).</p>
-<div class="callout info">As <strong>sombras</strong> dependem da versão do OpenGL — veja <a href="pipeline-3d.html">Pipeline 3D</a>. Em GL 3.3, a luz pontual ilumina sem sombra.</div>
+<div class="callout info">Sombras de luz pontual dependem do hardware — o motor liga automaticamente quando a placa suporta.</div>
 
 </article>
 <div class="pager">

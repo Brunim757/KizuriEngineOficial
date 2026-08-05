@@ -12,17 +12,18 @@ order: 2
 **embutidos no executável** via `kzres://`. O Content Pack apenas enriquece as
 demos.
 
-## Meu PC tem OpenGL 3.3. Perco alguma coisa?
+## Minha placa de vídeo é antiga. Perco alguma coisa?
 
-Só o que exige loop dinâmico no shader: **PCSS** e **sombra de luz pontual**,
-que são reservados para GL 4.0+. Todo o resto — PBR, IBL, CSM, bloom, SSAO,
-partículas, skinning — roda em 3.3 com o caminho estável comprovado.
+Só o acabamento mais sofisticado de sombras, que exige uma placa mais nova.
+Tudo o resto — luzes, céu, partículas, personagens animados, 2D e UI —
+funciona em qualquer placa que rode o editor. O motor escolhe o melhor
+automaticamente.
 
-## Como a engine detecta a versão do GLSL?
+## Preciso me preocupar com placa de vídeo?
 
-Pela versão reportada pelo driver no contexto real da janela
-(`GL_SHADING_LANGUAGE_VERSION`), travada pelo teto do contexto core criado.
-Sem chutes: se o driver diz 3.3, os shaders são 330.
+Só se ela tiver **OpenGL 3.3** ou mais (qualquer GPU razoável dos últimos
+~15 anos). O motor ajusta a qualidade sozinho pelo seu hardware — em geral
+você não precisa mexer em nada.
 
 ## Como escrevo scripts?
 
@@ -69,6 +70,7 @@ física e o `OnCreate` dos scripts rodam de verdade.
 `SaveSystem.Set("chave", valor)` + `SaveSystem.Save()` grava um `save.json`;
 os `Get*` carregam automaticamente.
 
-## Onde fica a documentação de desenvolvimento?
+## Consigo misturar 2D e 3D na mesma cena?
 
-Em `docs/NOTAS_INTERNAS.md` no repositório (estado real, sem filtro).
+Sim — cenas **2.5D** (fundo 3D, gameplay 2D, UI por cima) funcionam com duas
+câmeras. Há uma demonstração pronta no menu **Cena**.

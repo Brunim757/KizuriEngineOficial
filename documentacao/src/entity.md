@@ -6,8 +6,8 @@ order: 3
 
 # Entity — referência
 
-`Entity` é um handle opaco para uma entidade da cena. A engine é fechada —
-você nunca vê o EnTT por baixo.
+`Entity` representa uma entidade da cena. Tudo que você faz com ela passa
+pela API — sem expor detalhes internos.
 
 ## Propriedades
 

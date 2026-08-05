@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Recursos embutidos (kzres://) — Kizuri Engine</title>
+<title>Assets padrão — Kizuri Engine</title>
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -17,12 +17,12 @@
   <nav id="toc">
 <div class="group">Introdução</div>
 <a href="index.html" class="">Visão geral</a>
-<a href="instalacao.html" class="">Instalação e build</a>
+<a href="instalacao.html" class="">Instalação</a>
 <a href="primeiro-projeto.html" class="">Seu primeiro projeto</a>
 <div class="group">Conceitos</div>
 <a href="projeto.html" class="">Projetos, cenas e prefabs</a>
 <a href="hierarquia.html" class="">Hierarquia e transform</a>
-<a href="recursos-embutidos.html" class="active">Recursos embutidos (kzres://)</a>
+<a href="recursos-embutidos.html" class="active">Assets padrão</a>
 <div class="group">Editor</div>
 <a href="interface.html" class="">Interface do editor</a>
 <a href="viewport.html" class="">Viewport e câmera</a>
@@ -69,32 +69,36 @@
 </aside>
 <main>
 <header class="top">
-  <div class="crumbs"><span class="crumb">Conceitos</span><span class="sep">/</span><span>Recursos embutidos (kzres://)</span></div>
+  <div class="crumbs"><span class="crumb">Conceitos</span><span class="sep">/</span><span>Assets padrão</span></div>
   <div class="toggles">
     <a href="busca.html" class="btn">🔎 Buscar</a>
     <a href="index.html" class="btn">Início</a>
   </div>
 </header>
 <article>
-<h1 id="recursos-embutidos-kzres">Recursos embutidos (kzres://)</h1>
-<h2 id="o-problema-que-resolve">O problema que resolve</h2>
-<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>.</p>
-<h2 id="o-esquema-kzres">O esquema <code>kzres://</code></h2>
-<p>Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin):</p>
-<table><thead><tr><th>Recurso</th><th>Uso</th></tr></thead><tbody><tr><td><code>kzres://models/Cube.glb</code></td><td>Cubo (demonstração 3D)</td></tr><tr><td><code>kzres://models/Fox.glb</code></td><td>Fox animado (skinning) — demo 3D</td></tr><tr><td><code>kzres://models/DamagedHelmet.glb</code></td><td>Capacete PBR — demo 3D</td></tr><tr><td><code>kzres://skies/sky_gradient.hdr</code></td><td>Céu HDRI padrão</td></tr></tbody></table>
-<h2 id="prioridade-ao-carregar">Prioridade ao carregar</h2>
-<p>Quando um asset de demonstração é usado, a ordem é sempre:</p>
-<pre><code class="language-">1. Embutido (kzres://)     → sempre disponível
-2. Content Pack no disco   → mais rico, se presente
-3. Builtins procedurais    → malhas geradas em código</code></pre>
-<div class="callout ok"><strong>Consequência prática:</strong> apague a pasta <code>content/</code> do lado do executável e a demonstração 3D continua funcionando — o Fox, o capacete e o céu já estão dentro do binário.</div>
-<h2 id="o-content-pack">O Content Pack</h2>
-<p>Os pacotes distribuídos acompanham um <strong>Content Pack</strong> (modelos glTF, HDRIs de céu e texturas PBR, todos CC0). Ele <strong>enriquece</strong> as demos — mas <strong>nunca é requisito</strong> para o motor funcionar.</p>
-<h2 id="na-prática">Na prática</h2>
-<pre><code class="language-csharp">// carrega um modelo embutido como qualquer outro asset
-Entity f = Scene.CreateEntity("Fox");
-f.AddMeshRenderer("kzres://models/Fox.glb");</code></pre>
-<p>No editor, basta digitar o caminho <code>kzres://…</code> no campo de mesh — ou usar a <strong>demonstração 3D</strong> (menu Cena), que já usa os embutidos automaticamente.</p>
+<h1 id="assets-padrão">Assets padrão</h1>
+<p>O editor <strong>já vem com tudo pronto</strong> para você começar a criar — sem baixar nada separado.</p>
+<h2 id="o-que-já-vem-junto">O que já vem junto</h2>
+<ul>
+<li><strong>Modelos 3D</strong> — cubo, plano, esfera, cilindro, cone, cápsula e toro</li>
+</ul>
+<p>  (gerados pelo motor);</p>
+<ul>
+<li><strong>Cenas de demonstração</strong> — 2D, 2.5D e 3D (com personagem animado e</li>
+</ul>
+<p>  objetos PBR), prontas no menu <strong>Cena</strong>;</p>
+<ul>
+<li><strong>Céu</strong> — HDRI padrão;</li>
+<li><strong>Fonte</strong> — a fonte de texto dos HUDs já está incluída;</li>
+<li><strong>Textura de partículas</strong> — o efeito de partículas funciona sem textura</li>
+</ul>
+<p>  (usa um brilho suave gerado pelo motor).</p>
+<h2 id="caminhos-prontos">Caminhos prontos</h2>
+<p>Alguns campos de asset aceitam caminhos especiais que <strong>sempre funcionam</strong>:</p>
+<table><thead><tr><th>Caminho</th><th>O que é</th></tr></thead><tbody><tr><td><code>builtin:cube</code> / <code>builtin:plane</code> / <code>builtin:sphere</code> / …</td><td>Malhas geradas pelo motor</td></tr><tr><td><code>kzres://…</code></td><td>Asset padrão do editor (ex.: <code>kzres://models/Fox.glb</code>)</td></tr></tbody></table>
+<div class="callout ok"><strong>Nada quebra se você apagar um arquivo.</strong> Os padrões usados pelas funções e demonstrações não dependem de arquivos soltos — remova o que quiser que as funções continuam funcionando.</div>
+<h2 id="seus-próprios-assets">Seus próprios assets</h2>
+<p>Seus arquivos (modelos <code>.obj</code>/<code>.glb</code>, imagens, sons) ficam na pasta do seu projeto e são vistos no <a href="content-browser.html">Content Browser</a>. O Content Pack da distribuição só <strong>enriquece</strong> as demos com assets extras — nunca é obrigatório.</p>
 
 </article>
 <div class="pager">

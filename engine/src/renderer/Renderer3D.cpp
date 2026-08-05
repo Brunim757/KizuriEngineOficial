@@ -158,14 +158,19 @@ uniform sampler2D u_ShadowMap1;
 uniform sampler2D u_ShadowMap2;
 uniform mat4 u_LightSpaceMatrix[CASCADE_COUNT];
 uniform float u_CascadeSplits[CASCADE_COUNT]; // distância (view-space) onde cada cascata termina
-uniform int u_ShadowPCF; // raio da busca de bloqueadores do PCSS
-uniform float u_ShadowSoftness; // suavidade da penumbra (PCSS)
+uniform int u_ShadowPCF; // raio do PCF (3.3) / busca de bloqueadores (4.x)
 
+// PCSS + sombra de luz pontual só em GL 4.0+: os loops dinâmicos do PCSS
+// quebram em compiladores 3.3/emuladores (ex.: Wine) e corrompem o shader
+// (objetos brancos). No 3.3 o mesh shader fica byte-a-byte o comprovado.
+#if KZ_GLSL_VERSION >= 400
+uniform float u_ShadowSoftness; // suavidade da penumbra (PCSS)
 uniform samplerCube u_PointShadowMap;
 uniform bool u_HasPointShadow;
 uniform int u_PointShadowLightIndex;
 uniform vec3 u_PointLightPos;
 uniform float u_PointLightFar;
+#endif
 
 #define MAX_LIGHTS 16
 uniform int u_LightCount;
@@ -184,9 +189,25 @@ uniform float u_MaxPrefilterLod;
 
 const float PI = 3.14159265359;
 
-// PCSS (Percentage-Closer Soft Shadows): busca os bloqueadores, estima a
-// penumbra pela distância deles e faz PCF com raio proporcional — sombra
-// suave de verdade. Só afeta sombras.
+// PCF simples (usado no 3.3 e como fallback): média numa vizinhança de raio
+// configurável. Comprovado — não corrompe em nenhum compilador.
+float SampleShadowPCF(sampler2D map, vec3 projCoords, float bias) {
+    if (projCoords.z > 1.0) return 0.0;
+    float shadow = 0.0;
+    vec2 texelSize = 1.0 / textureSize(map, 0);
+    int r = max(u_ShadowPCF, 0);
+    for (int x = -r; x <= r; ++x) {
+        for (int y = -r; y <= r; ++y) {
+            float pcfDepth = texture(map, projCoords.xy + vec2(x, y) * texelSize).r;
+            shadow += (projCoords.z - bias > pcfDepth) ? 1.0 : 0.0;
+        }
+    }
+    float count = float((2 * r + 1) * (2 * r + 1));
+    return shadow / count;
+}
+
+#if KZ_GLSL_VERSION >= 400
+// PCSS (Percentage-Closer Soft Shadows) — sombra suave de verdade, só 4.x.
 float BlockerSearch(sampler2D map, vec3 p, float bias) {
     vec2 texelSize = 1.0 / textureSize(map, 0);
     int r = max(u_ShadowPCF, 1);
@@ -203,7 +224,7 @@ float BlockerSearch(sampler2D map, vec3 p, float bias) {
 float PCSS(sampler2D map, vec3 p, float bias) {
     if (p.z > 1.0) return 0.0;
     float avg = BlockerSearch(map, p, bias);
-    if (avg < 0.0) return 0.0; // sem bloqueadores -> totalmente iluminado
+    if (avg < 0.0) return 0.0;
     float penumbra = clamp((p.z - bias - avg) * u_ShadowSoftness * 140.0, 0.5, 3.0);
     int r = int(ceil(float(max(u_ShadowPCF, 1)) * penumbra));
     r = min(r, 6);
@@ -218,9 +239,8 @@ float PCSS(sampler2D map, vec3 p, float bias) {
     return shadow / float(cnt);
 }
 
-// Sombra de luz PONTUAL: amostra o cubemap de profundidade LINEAR com um
-// pequeno PCF 3D (9 taps). Array com tamanho EXPLÍCITO (vec3[9]) — a forma
-// vec3[]() sem tamanho é rejeitada por alguns drivers e quebrava o shader.
+// Sombra de luz PONTUAL (só 4.x): amostra o cubemap de profundidade LINEAR
+// com um PCF 3D de 9 taps. Array com tamanho EXPLÍCITO (vec3[9]).
 float PointShadow(vec3 fragToLight, float bias) {
     if (!u_HasPointShadow) return 0.0;
     float current = length(fragToLight) / max(u_PointLightFar, 0.001);
@@ -238,6 +258,7 @@ float PointShadow(vec3 fragToLight, float bias) {
     }
     return shadow / 9.0;
 }
+#endif // KZ_GLSL_VERSION >= 400
 
 // Escolhe a cascata pela profundidade view-space e amostra o shadow map certo — GLSL 330
 // core não permite indexar array de sampler com índice dinâmico, daí o if/else explícito.
@@ -246,6 +267,7 @@ float CalculateShadow(vec3 N, vec3 L) {
     int idx = (viewDepth < u_CascadeSplits[0]) ? 0 : (viewDepth < u_CascadeSplits[1]) ? 1 : 2;
     float bias = max(0.0025 * (1.0 - dot(N, L)), 0.0006);
 
+#if KZ_GLSL_VERSION >= 400
     if (idx == 0) {
         vec4 p = u_LightSpaceMatrix[0] * vec4(v_FragPos, 1.0);
         return PCSS(u_ShadowMap0, p.xyz / p.w * 0.5 + 0.5, bias);
@@ -256,6 +278,18 @@ float CalculateShadow(vec3 N, vec3 L) {
         vec4 p = u_LightSpaceMatrix[2] * vec4(v_FragPos, 1.0);
         return PCSS(u_ShadowMap2, p.xyz / p.w * 0.5 + 0.5, bias);
     }
+#else
+    if (idx == 0) {
+        vec4 p = u_LightSpaceMatrix[0] * vec4(v_FragPos, 1.0);
+        return SampleShadowPCF(u_ShadowMap0, p.xyz / p.w * 0.5 + 0.5, bias);
+    } else if (idx == 1) {
+        vec4 p = u_LightSpaceMatrix[1] * vec4(v_FragPos, 1.0);
+        return SampleShadowPCF(u_ShadowMap1, p.xyz / p.w * 0.5 + 0.5, bias);
+    } else {
+        vec4 p = u_LightSpaceMatrix[2] * vec4(v_FragPos, 1.0);
+        return SampleShadowPCF(u_ShadowMap2, p.xyz / p.w * 0.5 + 0.5, bias);
+    }
+#endif
 }
 
 // Distribuição GGX/Trowbridge-Reitz: alinhamento dos micro-facetos com o meio-vetor H.
@@ -364,11 +398,13 @@ void main() {
         // Sombra só se aplica à luz 0 quando ela é a shadow caster (sempre a Directional, ver C++).
         if (i == 0 && u_HasShadow) contribution *= (1.0 - shadow);
 
-        // Sombra da luz PONTUAL (a marcada como castora no frame).
+#if KZ_GLSL_VERSION >= 400
+        // Sombra da luz PONTUAL (a marcada como castora no frame) — só 4.x.
         if (u_HasPointShadow && i == u_PointShadowLightIndex) {
             float pbias = max(0.01 * (1.0 - dot(N, L)), 0.005);
             contribution *= (1.0 - PointShadow(toLight, pbias));
         }
+#endif
         directLighting += contribution;
     }
 

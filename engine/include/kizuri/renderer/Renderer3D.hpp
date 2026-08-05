@@ -49,7 +49,9 @@ public:
 
     // Extrai o material PBR do primeiro material do .glb/.gltf (fatores +
     // texturas embutidas no arquivo). Vazio/padrão se o arquivo não tiver.
+    // Aceita caminho de disco OU kzres:// (recurso embutido).
     static Material ExtractMaterialFromGLTF(const std::string& path);
+    static Material ExtractMaterialFromGLTFMemory(const void* data, std::size_t size); // .glb em memória (embutido)
 
     // Reconstrói uma mesh a partir da string serializável do editor
     // ("builtin:cube|plane|sphere|cylinder|cone|capsule|torus" | caminho .obj/.glb/.gltf).

@@ -8,11 +8,50 @@
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
 
+#include <array>
+#include <vector>
+#include <cstring>
+#include <cstdint>
+
 namespace {
 
+// Decodifica uma data-URI base64 ("data:image/png;base64,...."). Alguns .glb
+// embutem as imagens como data-URI em vez de buffer view do BIN — sem isso o
+// material fica sem textura (a saga do "Fox cinza" não pode voltar).
+std::vector<uint8_t> DecodeBase64DataURI(const char* uri) {
+    std::vector<uint8_t> out;
+    if (!uri || strncmp(uri, "data:", 5) != 0) return out;
+    const char* comma = strchr(uri, ',');
+    if (!comma) return out;
+    const char* b64 = comma + 1;
+    auto BuildTable = [] {
+        std::array<int8_t, 256> t{};
+        t.fill(-1);
+        for (int i = 0; i < 26; ++i) { t['A' + i] = (int8_t)i; t['a' + i] = (int8_t)(26 + i); }
+        for (int i = 0; i < 10; ++i) t['0' + i] = (int8_t)(52 + i);
+        t['+'] = 62; t['/'] = 63;
+        return t;
+    };
+    static const auto table = BuildTable();
+    uint32_t acc = 0;
+    int bits = 0;
+    for (const char* p = b64; *p; ++p) {
+        if (*p == '\r' || *p == '\n') continue;
+        int8_t v = table[(uint8_t)*p];
+        if (v < 0) continue; // ignora padding '='
+        acc = (acc << 6) | (uint32_t)v;
+        bits += 6;
+        if (bits >= 8) {
+            bits -= 8;
+            out.push_back((uint8_t)((acc >> bits) & 0xFF));
+        }
+    }
+    return out;
+}
+
 // Carrega a textura de uma textura_view do glTF: prioriza a imagem embutida
-// no buffer (glb) via CreateFromMemory (sem flip — UV glTF), senão o arquivo
-// externo (uri). Devolve null se não houver textura.
+// no buffer (glb) via CreateFromMemory (sem flip — UV glTF), senão data-URI
+// base64, senão o arquivo externo (uri). Devolve null se não houver textura.
 kizuri::Ref<kizuri::Texture2D> LoadGLTFTexture(const cgltf_texture_view& view) {
     if (!view.texture || !view.texture->image) return nullptr;
     const cgltf_image* img = view.texture->image;
@@ -21,7 +60,14 @@ kizuri::Ref<kizuri::Texture2D> LoadGLTFTexture(const cgltf_texture_view& view) {
         return kizuri::Texture2D::CreateFromMemory((const uint8_t*)bv->buffer->data + bv->offset, bv->size,
                                                    img->name ? img->name : "gltf");
     }
-    if (img->uri) return kizuri::Texture2D::Create(img->uri);
+    if (img->uri) {
+        std::vector<uint8_t> bytes = DecodeBase64DataURI(img->uri);
+        if (!bytes.empty()) {
+            return kizuri::Texture2D::CreateFromMemory(bytes.data(), bytes.size(),
+                                                       img->name ? img->name : "gltf-base64");
+        }
+        return kizuri::Texture2D::Create(img->uri);
+    }
     return nullptr;
 }
 
@@ -410,16 +456,9 @@ Ref<Mesh> Mesh::LoadFromGLTFMemory(const void* data, std::size_t size) {
     return BuildMeshFromGLTF(gltf, "memória");
 }
 
-Material Mesh::ExtractMaterialFromGLTF(const std::string& path) {
+// Extrai o material PBR (texturas incluídas) de um glTF já parseado.
+static Material ExtractMaterialFromGLTFData(cgltf_data* data) {
     Material mat;
-    cgltf_options options = {};
-    cgltf_data* data = nullptr;
-    if (cgltf_parse_file(&options, path.c_str(), &data) != cgltf_result_success) return mat;
-    if (cgltf_load_buffers(&options, data, path.c_str()) != cgltf_result_success) {
-        cgltf_free(data);
-        return mat;
-    }
-
     if (data->materials_count > 0) {
         const cgltf_material& gm = data->materials[0];
         const cgltf_pbr_metallic_roughness& pbr = gm.pbr_metallic_roughness;
@@ -432,7 +471,41 @@ Material Mesh::ExtractMaterialFromGLTF(const std::string& path) {
         mat.NormalMap = LoadGLTFTexture(gm.normal_texture);
         mat.EmissiveMap = LoadGLTFTexture(gm.emissive_texture);
     }
+    return mat;
+}
+
+Material Mesh::ExtractMaterialFromGLTF(const std::string& path) {
+    // kzres:// → parse em memória (conteúdo embutido) — não depende de disco.
+    if (IsEmbeddedPath(path)) {
+        EmbeddedBuffer buf;
+        if (!GetEmbeddedResource(EmbeddedNameFromPath(path), buf)) {
+            KZ_CORE_ERROR("Recurso embutido não encontrado: {0}", path);
+            return Material{};
+        }
+        return ExtractMaterialFromGLTFMemory(buf.Data, buf.Size);
+    }
+    cgltf_options options = {};
+    cgltf_data* data = nullptr;
+    if (cgltf_parse_file(&options, path.c_str(), &data) != cgltf_result_success) return Material{};
+    if (cgltf_load_buffers(&options, data, path.c_str()) != cgltf_result_success) {
+        cgltf_free(data);
+        return Material{};
+    }
+    Material mat = ExtractMaterialFromGLTFData(data);
     cgltf_free(data);
+    return mat;
+}
+
+Material Mesh::ExtractMaterialFromGLTFMemory(const void* dataPtr, std::size_t size) {
+    cgltf_options options = {};
+    cgltf_data* gltf = nullptr;
+    if (cgltf_parse(&options, dataPtr, size, &gltf) != cgltf_result_success) return Material{};
+    if (cgltf_load_buffers(&options, gltf, nullptr) != cgltf_result_success) {
+        cgltf_free(gltf);
+        return Material{};
+    }
+    Material mat = ExtractMaterialFromGLTFData(gltf);
+    cgltf_free(gltf);
     return mat;
 }
 

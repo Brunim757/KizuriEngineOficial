@@ -66,6 +66,25 @@ file(WRITE ${KZ_EMBED_CONTENT_MANIFEST}
 file(APPEND ${KZ_EMBED_CONTENT_MANIFEST}
     "skies/sky_gradient.hdr\t${KZ_EMBEDDED_CONTENT_DIR}/skies/sky_gradient.hdr\n"
 )
+
+# Assets de DEMONSTRAÇÃO baixados pela CI (KZ_EMBED_DEMO_DIR): embute o que
+# existir (Fox skinned + DamagedHelmet PBR) pra o editor/engine ser
+# self-contained. Se a pasta não existir (dev local), só os embutidos fixos.
+set(KZ_EMBED_DEMO_DEPENDS "")
+if(DEFINED KZ_EMBED_DEMO_DIR)
+    if(EXISTS "${KZ_EMBED_DEMO_DIR}/models/Fox.glb")
+        file(APPEND ${KZ_EMBED_CONTENT_MANIFEST}
+            "models/Fox.glb\t${KZ_EMBED_DEMO_DIR}/models/Fox.glb\n"
+        )
+        list(APPEND KZ_EMBED_DEMO_DEPENDS "${KZ_EMBED_DEMO_DIR}/models/Fox.glb")
+    endif()
+    if(EXISTS "${KZ_EMBED_DEMO_DIR}/models/DamagedHelmet.glb")
+        file(APPEND ${KZ_EMBED_CONTENT_MANIFEST}
+            "models/DamagedHelmet.glb\t${KZ_EMBED_DEMO_DIR}/models/DamagedHelmet.glb\n"
+        )
+        list(APPEND KZ_EMBED_DEMO_DEPENDS "${KZ_EMBED_DEMO_DIR}/models/DamagedHelmet.glb")
+    endif()
+endif()
 add_custom_command(
     OUTPUT ${KZ_EMBEDDED_CONTENT_HPP}
     COMMAND ${CMAKE_COMMAND}
@@ -76,6 +95,7 @@ add_custom_command(
         ${KZ_EMBED_CONTENT_MANIFEST}
         ${KZ_EMBEDDED_CONTENT_DIR}/models/Cube.glb
         ${KZ_EMBEDDED_CONTENT_DIR}/skies/sky_gradient.hdr
+        ${KZ_EMBED_DEMO_DEPENDS}
         ${KIZURI_REPO_ROOT}/cmake/EmbedContent.cmake
     COMMENT "Gerando registro de conteúdo embutido (kzres://)"
 )

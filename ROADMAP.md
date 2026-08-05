@@ -229,45 +229,24 @@
 
 ---
 
-## 🎯 Próximas etapas
+## ✅ v0.17 — Self-contained de verdade (assets padrão EMBUTIDOS)
 
-### Content Pack (~1GB — o peso profissional)
-- [ ] `content/skies/` — 8–16 HDRIs CC0 (noite, pôr-do-sol, estúdio, névoa...)
-- [ ] `content/textures/` — conjuntos PBR CC0 (albedo/normal/metallic/roughness/AO)
-- [ ] `content/models/` — dezenas de glTF CC0 (Khronos Sample Assets e afins)
-- [ ] `content/audio/` — SFX + música CC0
-- [ ] `content/prefabs/` — personagem, inimigo, coletável, luzes prontas
-- [ ] CI baixa packs grandes pro `dist/content/` (sem inchar o git)
+> Motivação: a engine não pode depender do Content Pack pra funcionar — se o
+> usuário apagar um arquivo, nenhuma função padrão pode quebrar. Os assets
+> que a engine usa como padrão (demonstrações, céu, modelos) passam a vir
+> DENTRO do executável via `kzres://`, e a "pesada" da engine vem de
+> **features**, não de um pacote solto.
 
-### Animações e gameplay 3D
-- [ ] **Skinning** (esqueletos + pesos via glTF) + Animator state machine
-- [ ] API C# de física 3D (Rigidbody3D, colliders, ApplyForce/Impulse)
-- [ ] Partículas com textura + curvas de cor/tamanho por vida
-- [ ] NavMesh / pathfinding
-
-### Renderer (continuar o ultra)
-- [ ] **Deferred shading** (GBuffer) no preset Ultra com luzes pontuais/spot
-- [ ] SSR (reflexos em espaço de tela) + relighting
-- [ ] Volumetric fog / light shafts
-- [ ] Post FX: motion blur, vignette, chromatic aberration, god rays
-- [ ] Quality presets por cena salva em `.kzscene`
-
-### Editor (ferramentas profissionais)
-- [ ] **Pipeline de import**: `.meta`/GUIDs, reimport, normais, previews
-- [ ] Asset database + carregamento assíncrono/streaming
-- [ ] Gizmos de colisor (2D e 3D) + Debug draw da física
-- [ ] Terrain / tilemap 3D
-- [ ] Projeto: painel de settings do projeto + build settings multi-plataforma
+- [x] CI baixa Fox.glb (skinned + animado) e DamagedHelmet.glb (PBR) no build
+  e o CMake os EMBUTE no binário (manifest `EmbedContent` + `kzres://`)
+- [x] Prioridade de asset: **embutido (`kzres://`) → Content Pack → builtins** —
+  a demo 3D nunca fica sem o Fox/capacete, mesmo se `../content` sumir
+- [x] `Mesh::ExtractMaterialFromGLTF` aceita `kzres://` (parse em memória) +
+  `ExtractMaterialFromGLTFMemory`
+- [x] `LoadGLTFTexture` decodifica data-URI base64 (alguns .glb embutem imagem
+  como base64 em vez de buffer view) — material nunca mais perde textura
+- [x] Céu padrão da demo: Content Pack → **`kzres://skies/sky_gradient.hdr`**
+  (embutido) → procedural atmosférico
+- [x] Cenas padrão 2D/3D, demos 2D e 2.5D: 100% builtins (sem dependência externa)
 
 ---
-
-## 🧹 Dívida técnica
-
-- [ ] CSM blend / texel snapping
-- [ ] Renderer3D estático (single instance) → virar objeto com múltiplos contexts
-- [ ] Diálogos nativos de arquivo só no Windows
-- [ ] Remover `cmake/glad_stub/`
-- [ ] Stats Renderer2D (círculos) / picking de texto (descenders)
-- [ ] `Shutdown()` do Renderer3D não libera shadow FBOs/cubemaps (ok hoje, o
-  processo morre logo depois — vira problema quando trocar de cena/projeto
-  sem reiniciar)

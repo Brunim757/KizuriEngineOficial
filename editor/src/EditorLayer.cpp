@@ -25,6 +25,20 @@
 
 using namespace kizuri;
 
+// Escolhe a fonte de um asset de DEMONSTRAÇÃO com prioridade:
+//   1. Embutido no executável (kzres://) — sempre funciona, mesmo sem o
+//      Content Pack no disco e mesmo se o usuário apagar o arquivo externo.
+//   2. Content Pack no disco (../content) — asset mais rico quando presente.
+//   3. String vazia → a demo cai pros builtins (malhas procedurais).
+// É isso que deixa o editor/engine "pesado de verdade": os padrões usados
+// nas demonstrações vêm EMBUTIDOS, a função nunca quebra por falta de arquivo.
+static std::string PickDemoAsset(const char* kzresName, const char* contentRelative) {
+    if (HasEmbeddedResource(kzresName)) return std::string("kzres://") + kzresName;
+    std::string disk = "../content/" + std::string(contentRelative);
+    if (std::filesystem::exists(disk)) return disk;
+    return "";
+}
+
 // Decompõe uma matriz de transformação em translação/rotação(euler,
 // radianos)/escala. Usado pra converter o resultado do ImGuizmo::Manipulate
 // (uma mat4 só) de volta pros três campos separados de TransformComponent.
@@ -167,9 +181,11 @@ void EditorLayer::CreateDefaultSceneContent() {
     }
 }
 
-// Cena de demonstração 3D — monta um showcase com o Content Pack (quando
-// presente em ../content): Fox esquelético animado, DamagedHelmet PBR,
-// primitivas, HDRI de céu e fog. Sem o pack (dev local) cai nos builtins.
+// Cena de demonstração 3D — showcase: Fox esquelético animado, DamagedHelmet
+// PBR, primitivas, HDRI de céu e fog. Os assets padrão vêm EMBUTIDOS no
+// executável (kzres:// — a CI injeta Fox + DamagedHelmet no binário); o
+// Content Pack no disco só é preferido quando presente (asset mais rico).
+// Sem nenhum dos dois, cai nos builtins (malhas procedurais + céu embutido).
 void EditorLayer::CreateDemoScene3D() {
     if (m_SceneState != SceneState::Edit) return;
 
@@ -209,13 +225,18 @@ void EditorLayer::CreateDemoScene3D() {
     gm.MeshMaterial.Roughness = 0.9f;
     ground.GetComponent<TransformComponent>().Scale = { 12.0f, 1.0f, 12.0f };
 
-    // Céu: atmosférico procedural por padrão (estável). Se o Content Pack
-    // estiver presente, troca pro HDRI real dele.
+    // Céu: atmosférico procedural por padrão (estável). Prioridade:
+    // Content Pack (HDRI rico) → EMBUTIDO (kzres://skies/sky_gradient.hdr,
+    // sempre disponível) → procedural. Se apagarem o arquivo externo, o
+    // embutido assume — o céu nunca deixa de funcionar.
     Renderer3D::SetEnvironmentHDRIPath("");
     std::string hdri = contentDir + "/skies/qwantani_puresky_1k.hdr";
     if (std::filesystem::exists(hdri)) {
         Renderer3D::SetEnvironmentHDRIPath(hdri);
         KZ_CORE_INFO("Demo 3D: céu HDRI do content pack carregado ({0}).", hdri);
+    } else if (HasEmbeddedResource("skies/sky_gradient.hdr")) {
+        Renderer3D::SetEnvironmentHDRIPath("kzres://skies/sky_gradient.hdr");
+        KZ_CORE_INFO("Demo 3D: céu EMBUTIDO (kzres://skies/sky_gradient.hdr).");
     }
 
     // Cubo EMBUTIDO (kzres://models/Cube.glb) — sempre carrega, mesmo sem o
@@ -228,9 +249,11 @@ void EditorLayer::CreateDemoScene3D() {
     ecm.MeshMaterial.Roughness = 0.4f;
     embeddedCube.GetComponent<TransformComponent>().Translation = { -2.6f, 0.5f, 1.6f };
 
-    // Fox esquelético animado (skinning) — o coração do v0.3.
-    std::string foxPath = contentDir + "/models/Fox.glb";
-    if (std::filesystem::exists(foxPath)) {
+    // Fox esquelético animado (skinning) — o coração do v0.3. EMBUTIDO na CI
+    // (kzres://models/Fox.glb), senão Content Pack, senão não carrega (a cena
+    // segue completa com builtins).
+    std::string foxPath = PickDemoAsset("models/Fox.glb", "models/Fox.glb");
+    if (!foxPath.empty()) {
         Entity fox = m_ActiveScene->CreateEntity("Fox (animado)");
         auto& fm = fox.AddComponent<MeshRendererComponent>();
         fm.MeshSource = foxPath;
@@ -243,13 +266,13 @@ void EditorLayer::CreateDemoScene3D() {
         auto& ft = fox.GetComponent<TransformComponent>();
         ft.Translation = { -1.8f, 0.0f, 0.5f };
         ft.Scale = { 1.5f, 1.5f, 1.5f };
-        KZ_CORE_INFO("Demo 3D: Fox carregado com {0} juntas e {1} animações.",
-                     fa.Skin ? fa.Skin->Joints.size() : 0, fa.Skin ? fa.Skin->Clips.size() : 0);
+        KZ_CORE_INFO("Demo 3D: Fox carregado de '{0}' ({1} juntas, {2} animações).",
+                     foxPath, fa.Skin ? fa.Skin->Joints.size() : 0, fa.Skin ? fa.Skin->Clips.size() : 0);
     }
 
-    // DamagedHelmet PBR num pedestal.
-    std::string helmetPath = contentDir + "/models/DamagedHelmet.glb";
-    if (std::filesystem::exists(helmetPath)) {
+    // DamagedHelmet PBR num pedestal — também embutido na CI.
+    std::string helmetPath = PickDemoAsset("models/DamagedHelmet.glb", "models/DamagedHelmet.glb");
+    if (!helmetPath.empty()) {
         Entity pedestal = m_ActiveScene->CreateEntity("Pedestal");
         auto& pm = pedestal.AddComponent<MeshRendererComponent>();
         pm.MeshSource = "builtin:cylinder";

@@ -52,8 +52,25 @@ jobs:
           max-size: "1G"
           key: ${{ matrix.os }}
 
+      # Baixa os assets de DEMONSTRAÇÃO pra EMBUTIR no executável (kzres://):
+      # o editor/engine fica self-contained — a demo 3D usa Fox (skinned) +
+      # DamagedHelmet (PBR) embutidos, sem depender de arquivo externo. Se o
+      # download falhar, o build não quebra: o CMake só embute o que existe e
+      # as demos caem pros builtins.
+      - name: Baixar assets de demonstração (embutir no exe)
+        shell: bash
+        run: |
+          set +e
+          mkdir -p demo_content/models
+          base="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0"
+          dl() { curl -fsSL --max-time 60 -o "$2" "$1" 2>/dev/null; [ -s "$2" ] || rm -f "$2"; }
+          dl "$base/Fox/glTF-Binary/Fox.glb" demo_content/models/Fox.glb
+          dl "$base/DamagedHelmet/glTF-Binary/DamagedHelmet.glb" demo_content/models/DamagedHelmet.glb
+          echo "Demo assets embutíveis:"
+          ls -la demo_content/models/ 2>/dev/null || true
+
       - name: Configurar (CMake)
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DKZ_EMBED_DEMO_DIR=${{ github.workspace }}/demo_content
 
       - name: Compilar
         run: cmake --build build --config Release --parallel

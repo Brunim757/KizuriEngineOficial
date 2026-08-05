@@ -209,6 +209,24 @@
   (vinheta/CA/grão) · SSAO com teto de escurecimento · PCSS + sombra de luz
   pontual **versão-gated** (GL 4.0+) — 3.3 mantém o PCF simples estável
 
+### v0.12 — Mundo mais vivo
+- [x] Partículas com textura (componente + serialização + Inspetor + C#)
+- [x] Sombra ANIMADA: o passe de sombra aplica skinning (pose animada do Fox)
+
+### v0.13 — Controle 3D
+- [x] `Entity.TryGetWorldPosition` (respeita hierarquia) · `Entity.LookAt(target)`
+
+### v0.14 — Sons 3D
+- [x] `Audio.PlayOneShotAt(path, vol, position)` — one-shot posicional (pool
+  seguro de ma_sound: end-callback marca o slot; uninit no main thread)
+
+### v0.15 — Content Browser pro
+- [x] Renomear arquivo (menu de contexto + modal) · ícones coloridos por tipo
+
+### v0.16 — Física fina & 2D
+- [x] `Rigidbody2D.GravityScale` (<0 invertida, 0 sem gravidade) — aplicada no
+  corpo e em runtime · `Sprite.FlipX/FlipY` (espaço local, serializado)
+
 ---
 
 ## 🎯 Próximas etapas

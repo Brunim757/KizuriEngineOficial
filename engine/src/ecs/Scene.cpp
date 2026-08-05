@@ -1383,21 +1383,29 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
         auto& camera = camView.get<CameraComponent>(e);
         if (!camera.Primary || camera.Type != CameraComponent::ProjectionType::Perspective3D) continue;
 
-        glm::vec3 pos, euler;
-        DecomposeTransform(GetWorldTransform(Entity{ e, this }), pos, euler);
+        // Posição pelo transform MUNDIAL (respeita pai). Orientação pelo
+        // euler LOCAL do TransformComponent — NÃO decompor a matriz composta
+        // (gimbal lock: em yaw = ±90° o glm::eulerAngles devolve pitch ±180°,
+        // virando a câmera de cabeça pra baixo/trás no Play — era o bug da
+        // cena de demonstração sumir ao apertar Play).
+        glm::vec3 pos = glm::vec3(GetWorldTransform(Entity{ e, this })[3]);
+        const auto& tc = camView.get<TransformComponent>(e);
 
         float aspect = m_ViewportHeight ? (float)m_ViewportWidth / (float)m_ViewportHeight : 16.0f / 9.0f;
         PerspectiveCamera cam(camera.PerspectiveFOV, aspect, camera.NearClip, camera.FarClip);
         cam.SetPosition(pos);
-        cam.SetRotation(glm::degrees(euler.y), glm::degrees(euler.x));
+        cam.SetRotation(glm::degrees(tc.Rotation.y), glm::degrees(tc.Rotation.x));
 
         Renderer3D::BeginScene(cam);
         SubmitLights();
         SubmitParticleSystems();
         SubmitMeshes();
         Renderer3D::EndScene();
-        break;
+        return;
     }
+    // Sem nenhuma câmera primária de perspectiva, o Play não renderiza nada —
+    // loga uma vez pra não deixar o "tudo some" sem explicação.
+    KZ_CORE_ERROR("RenderScene3D: nenhuma câmera primária (Perspective3D) na cena — Play sem render 3D.");
 }
 
 } // namespace kizuri

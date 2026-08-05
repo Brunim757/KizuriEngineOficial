@@ -1,6 +1,7 @@
 #include "kizuri/renderer/Renderer3D.hpp"
 #include "kizuri/renderer/RenderCommand.hpp"
 #include "kizuri/ecs/Animator.hpp"
+#include "kizuri/core/EmbeddedContent.hpp"
 #include "kizuri/core/Log.hpp"
 #include <glad/gl.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -1305,7 +1306,19 @@ void Renderer3D::GenerateEnvironment() {
 // 2D float; a conversão pra cubemap acontece no bake (GenerateEnvironment).
 bool Renderer3D::LoadHDRI(const std::string& path) {
     int w = 0, h = 0, comp = 0;
-    float* data = stbi_loadf(path.c_str(), &w, &h, &comp, 4);
+    float* data = nullptr;
+
+    if (IsEmbeddedPath(path)) {
+        EmbeddedBuffer buf;
+        if (!GetEmbeddedResource(EmbeddedNameFromPath(path), buf)) {
+            KZ_CORE_ERROR("Renderer3D::LoadHDRI: recurso embutido não encontrado '{0}'.", path);
+            return false;
+        }
+        data = stbi_loadf_from_memory((const stbi_uc*)buf.Data, (int)buf.Size, &w, &h, &comp, 4);
+    } else {
+        data = stbi_loadf(path.c_str(), &w, &h, &comp, 4);
+    }
+
     if (!data) {
         KZ_CORE_ERROR("Renderer3D::LoadHDRI: falha ao carregar '{0}' (não é imagem HDR suportada?).", path);
         return false;

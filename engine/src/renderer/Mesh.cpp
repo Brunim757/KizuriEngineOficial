@@ -1,5 +1,6 @@
 #include "kizuri/renderer/Renderer3D.hpp"
 #include "kizuri/core/Log.hpp"
+#include "kizuri/core/EmbeddedContent.hpp"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
@@ -292,6 +293,13 @@ Ref<Mesh> Mesh::FromSource(const std::string& source) {
     if (source == "builtin:capsule")  return CreateCapsule();
     if (source == "builtin:torus")    return CreateTorus();
     if (!source.empty()) {
+        if (IsEmbeddedPath(source)) {
+            EmbeddedBuffer buf;
+            if (GetEmbeddedResource(EmbeddedNameFromPath(source), buf))
+                return LoadFromGLTFMemory(buf.Data, buf.Size);
+            KZ_CORE_ERROR("Recurso embutido não encontrado: {0}", source);
+            return CreateCube();
+        }
         size_t dot = source.find_last_of('.');
         if (dot != std::string::npos) {
             std::string ext = source.substr(dot + 1);
@@ -302,22 +310,10 @@ Ref<Mesh> Mesh::FromSource(const std::string& source) {
     return CreateCube();
 }
 
-Ref<Mesh> Mesh::LoadFromGLTF(const std::string& path) {
-    cgltf_options options = {};
-    cgltf_data* data = nullptr;
-
-    cgltf_result result = cgltf_parse_file(&options, path.c_str(), &data);
-    if (result != cgltf_result_success) {
-        KZ_CORE_ERROR("Falha ao carregar a malha glTF '{0}' (cgltf erro {1}).", path, (int)result);
-        return CreateCube();
-    }
-    result = cgltf_load_buffers(&options, data, path.c_str());
-    if (result != cgltf_result_success) {
-        KZ_CORE_ERROR("Falha ao carregar os buffers do glTF '{0}' (cgltf erro {1}).", path, (int)result);
-        cgltf_free(data);
-        return CreateCube();
-    }
-
+// Flatten compartilhado: converte um cgltf_data já parseado (meshes +
+// primitivas triangulares) num Mesh único. Usado tanto pelo caminho de
+// arquivo quanto pelo caminho em memória.
+static Ref<Mesh> BuildMeshFromGLTF(cgltf_data* data, const std::string& label) {
     // Acha os accessors certos por atributo dentro de cada primitiva.
     auto FindAttr = [](const cgltf_primitive& prim, cgltf_attribute_type type, int idx) -> const cgltf_accessor* {
         for (cgltf_size a = 0; a < prim.attributes_count; ++a) {
@@ -372,11 +368,46 @@ Ref<Mesh> Mesh::LoadFromGLTF(const std::string& path) {
     cgltf_free(data);
 
     if (vertices.empty()) {
-        KZ_CORE_ERROR("O glTF '{0}' não contém malhas triangulares.", path);
+        KZ_CORE_ERROR("O glTF '{0}' não contém malhas triangulares.", label);
         return CreateCube();
     }
-    KZ_CORE_INFO("Malha glTF carregada: {0} ({1} vértices).", path, vertices.size());
+    KZ_CORE_INFO("Malha glTF carregada: {0} ({1} vértices).", label, vertices.size());
     return CreateRef<Mesh>(vertices, indices);
+}
+
+Ref<Mesh> Mesh::LoadFromGLTF(const std::string& path) {
+    cgltf_options options = {};
+    cgltf_data* data = nullptr;
+
+    cgltf_result result = cgltf_parse_file(&options, path.c_str(), &data);
+    if (result != cgltf_result_success) {
+        KZ_CORE_ERROR("Falha ao carregar a malha glTF '{0}' (cgltf erro {1}).", path, (int)result);
+        return CreateCube();
+    }
+    result = cgltf_load_buffers(&options, data, path.c_str());
+    if (result != cgltf_result_success) {
+        KZ_CORE_ERROR("Falha ao carregar os buffers do glTF '{0}' (cgltf erro {1}).", path, (int)result);
+        cgltf_free(data);
+        return CreateCube();
+    }
+    return BuildMeshFromGLTF(data, path);
+}
+
+Ref<Mesh> Mesh::LoadFromGLTFMemory(const void* data, std::size_t size) {
+    cgltf_options options = {};
+    cgltf_data* gltf = nullptr;
+    cgltf_result result = cgltf_parse(&options, data, size, &gltf);
+    if (result != cgltf_result_success) {
+        KZ_CORE_ERROR("Falha ao carregar a malha glTF em memória (cgltf erro {0}).", (int)result);
+        return CreateCube();
+    }
+    result = cgltf_load_buffers(&options, gltf, nullptr); // .glb: buffers já vêm do chunk BIN
+    if (result != cgltf_result_success) {
+        KZ_CORE_ERROR("Falha ao carregar os buffers do glTF em memória (cgltf erro {0}).", (int)result);
+        cgltf_free(gltf);
+        return CreateCube();
+    }
+    return BuildMeshFromGLTF(gltf, "memória");
 }
 
 Material Mesh::ExtractMaterialFromGLTF(const std::string& path) {

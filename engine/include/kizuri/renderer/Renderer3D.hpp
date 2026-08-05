@@ -6,6 +6,7 @@
 #include "kizuri/renderer/Shader.hpp"
 #include "kizuri/renderer/GraphicsSettings.hpp"
 #include <glm/glm.hpp>
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -44,6 +45,7 @@ public:
     static Ref<Mesh> CreateTorus(uint32_t majorSeg = 48, uint32_t minorSeg = 24);
     static Ref<Mesh> LoadFromOBJ(const std::string& path);
     static Ref<Mesh> LoadFromGLTF(const std::string& path); // .glb/.gltf via cgltf
+    static Ref<Mesh> LoadFromGLTFMemory(const void* data, std::size_t size); // .glb em memória (embutido)
 
     // Extrai o material PBR do primeiro material do .glb/.gltf (fatores +
     // texturas embutidas no arquivo). Vazio/padrão se o arquivo não tiver.

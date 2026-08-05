@@ -2,6 +2,7 @@
 #include "kizuri/Core.hpp"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -48,6 +49,7 @@ struct SkinData {
     std::vector<int> Order;   // ordem topológica (pai antes do filho)
 
     static Ref<SkinData> CreateFromGLTF(const std::string& path);
+    static Ref<SkinData> CreateFromGLTFMemory(const void* data, std::size_t size); // .glb em memória (embutido)
 
     int GetClipIndex(const std::string& name) const;
     float GetClipDuration(const std::string& name) const;

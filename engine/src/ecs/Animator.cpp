@@ -1,5 +1,6 @@
 #include "kizuri/ecs/Animator.hpp"
 #include "kizuri/core/Log.hpp"
+#include "kizuri/core/EmbeddedContent.hpp"
 #include <cgltf.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -28,7 +29,19 @@ glm::vec4 SampleChannel(const AnimChannel& ch, float time) {
 
 } // namespace
 
+// Definido abaixo (compartilhado entre o caminho de arquivo e o de memória).
+static Ref<SkinData> BuildSkinFromGLTF(cgltf_data* data, const std::string& label);
+
 Ref<SkinData> SkinData::CreateFromGLTF(const std::string& path) {
+    if (IsEmbeddedPath(path)) {
+        EmbeddedBuffer buf;
+        if (!GetEmbeddedResource(EmbeddedNameFromPath(path), buf)) {
+            KZ_CORE_ERROR("Animator: recurso embutido não encontrado '{0}'.", path);
+            return nullptr;
+        }
+        return CreateFromGLTFMemory(buf.Data, buf.Size);
+    }
+
     cgltf_options options = {};
     cgltf_data* data = nullptr;
     cgltf_result result = cgltf_parse_file(&options, path.c_str(), &data);
@@ -42,11 +55,31 @@ Ref<SkinData> SkinData::CreateFromGLTF(const std::string& path) {
         cgltf_free(data);
         return nullptr;
     }
+    return BuildSkinFromGLTF(data, path);
+}
 
+Ref<SkinData> SkinData::CreateFromGLTFMemory(const void* data, std::size_t size) {
+    cgltf_options options = {};
+    cgltf_data* gltf = nullptr;
+    cgltf_result result = cgltf_parse(&options, data, size, &gltf);
+    if (result != cgltf_result_success) {
+        KZ_CORE_ERROR("Animator: falha ao parsear glTF em memória (cgltf erro {0}).", (int)result);
+        return nullptr;
+    }
+    result = cgltf_load_buffers(&options, gltf, nullptr); // .glb: buffers vêm do chunk BIN
+    if (result != cgltf_result_success) {
+        KZ_CORE_ERROR("Animator: falha ao carregar buffers do glTF em memória (cgltf erro {0}).", (int)result);
+        cgltf_free(gltf);
+        return nullptr;
+    }
+    return BuildSkinFromGLTF(gltf, "memória");
+}
+
+static Ref<SkinData> BuildSkinFromGLTF(cgltf_data* data, const std::string& label) {
     auto skin = CreateRef<SkinData>();
     if (data->skins_count == 0) {
         cgltf_free(data);
-        KZ_CORE_WARN("Animator: '{0}' não tem skin — sem esqueleto pra animar.", path);
+        KZ_CORE_WARN("Animator: '{0}' não tem skin — sem esqueleto pra animar.", label);
         return skin; // vazio (Joints==0) => entidade segue estática
     }
 
@@ -54,7 +87,7 @@ Ref<SkinData> SkinData::CreateFromGLTF(const std::string& path) {
     cgltf_size jointCount = gskin.joints_count;
     if (jointCount == 0 || jointCount > kMaxSkinJoints) {
         cgltf_free(data);
-        KZ_CORE_ERROR("Animator: '{0}' tem {1} juntas (máx. {2}).", path, jointCount, kMaxSkinJoints);
+        KZ_CORE_ERROR("Animator: '{0}' tem {1} juntas (máx. {2}).", label, jointCount, kMaxSkinJoints);
         return nullptr;
     }
 
@@ -142,7 +175,7 @@ Ref<SkinData> SkinData::CreateFromGLTF(const std::string& path) {
     }
 
     cgltf_free(data);
-    KZ_CORE_INFO("Skin carregada: {0} ({1} juntas, {2} animações).", path, jointCount, skin->Clips.size());
+    KZ_CORE_INFO("Skin carregada: {0} ({1} juntas, {2} animações).", label, jointCount, skin->Clips.size());
     return skin;
 }
 

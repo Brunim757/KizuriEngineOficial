@@ -192,6 +192,7 @@ std::string Project::GetAssetDirectory() const {
 std::string Project::MakeRelativePath(const std::string& path) {
     if (path.empty()) return path;
     if (path.rfind("builtin:", 0) == 0) return path;
+    if (path.rfind("kzres://", 0) == 0) return path;
 
     auto& active = GetActive();
     if (!active) return path;
@@ -210,6 +211,7 @@ std::string Project::MakeRelativePath(const std::string& path) {
 std::string Project::ResolvePath(const std::string& path) {
     if (path.empty()) return path;
     if (path.rfind("builtin:", 0) == 0) return path;
+    if (path.rfind("kzres://", 0) == 0) return path; // recurso embutido, sem resolução de disco
 
     fs::path p(path);
     if (p.is_absolute()) return path;

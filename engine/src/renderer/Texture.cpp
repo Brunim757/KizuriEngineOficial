@@ -1,5 +1,6 @@
 #include "kizuri/renderer/Texture.hpp"
 #include "kizuri/core/Log.hpp"
+#include "kizuri/core/EmbeddedContent.hpp"
 #include <glad/gl.h>
 
 #define STB_IMAGE_IMPLEMENTATION_GUARD
@@ -63,7 +64,16 @@ void Texture2D::Bind(uint32_t slot) const {
 }
 
 Ref<Texture2D> Texture2D::Create(uint32_t width, uint32_t height) { return CreateRef<Texture2D>(width, height); }
-Ref<Texture2D> Texture2D::Create(const std::string& path)         { return CreateRef<Texture2D>(path); }
+Ref<Texture2D> Texture2D::Create(const std::string& path) {
+    if (IsEmbeddedPath(path)) {
+        EmbeddedBuffer buf;
+        if (GetEmbeddedResource(EmbeddedNameFromPath(path), buf))
+            return CreateFromMemory(buf.Data, buf.Size, path);
+        KZ_CORE_ERROR("Recurso embutido não encontrado: {0}", path);
+        return CreateRef<Texture2D>(1, 1);
+    }
+    return CreateRef<Texture2D>(path);
+}
 
 Ref<Texture2D> Texture2D::CreateFromMemory(const void* data, size_t size, const std::string& debugName) {
     int width, height, channels;

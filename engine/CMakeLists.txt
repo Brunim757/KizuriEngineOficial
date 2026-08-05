@@ -50,6 +50,32 @@ add_custom_command(
 )
 add_custom_target(KizuriEmbeddedFonts DEPENDS ${KZ_FONT_REGULAR_HPP} ${KZ_FONT_BOLD_HPP})
 
+# ---- Conteúdo embutido (kzres://) ------------------------------------------
+# Pequeno conjunto de assets compilado DENTRO do executável/dll — modelos,
+# HDRIs e texturas que a engine carrega mesmo sem nenhum arquivo no disco.
+# O registrador (cmake/EmbedContent.cmake) gera EmbeddedContent.gen.hpp com
+# a tabela name->bytes; os carregadores (Texture2D/Mesh/SkinData/HDRI)
+# aceitam caminhos "kzres://<nome>" e resolvem aqui.
+set(KZ_EMBEDDED_CONTENT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/resources/embedded_content)
+set(KZ_EMBEDDED_CONTENT_HPP ${CMAKE_CURRENT_BINARY_DIR}/generated/kizuri/EmbeddedContent.gen.hpp)
+set(KZ_EMBED_CONTENT_ENTRIES
+    "models/Cube.glb|${KZ_EMBEDDED_CONTENT_DIR}/models/Cube.glb"
+    "skies/sky_gradient.hdr|${KZ_EMBEDDED_CONTENT_DIR}/skies/sky_gradient.hdr"
+)
+add_custom_command(
+    OUTPUT ${KZ_EMBEDDED_CONTENT_HPP}
+    COMMAND ${CMAKE_COMMAND}
+        -DOUTPUT_FILE=${KZ_EMBEDDED_CONTENT_HPP}
+        "-DENTRIES=${KZ_EMBED_CONTENT_ENTRIES}"
+        -P ${KIZURI_REPO_ROOT}/cmake/EmbedContent.cmake
+    DEPENDS
+        ${KZ_EMBEDDED_CONTENT_DIR}/models/Cube.glb
+        ${KZ_EMBEDDED_CONTENT_DIR}/skies/sky_gradient.hdr
+        ${KIZURI_REPO_ROOT}/cmake/EmbedContent.cmake
+    COMMENT "Gerando registro de conteúdo embutido (kzres://)"
+)
+add_custom_target(KizuriEmbeddedContent DEPENDS ${KZ_EMBEDDED_CONTENT_HPP})
+
 # SHARED. Necessário pro roadmap (GameModule.dll carregado em runtime pelo
 # editor precisa enxergar a MESMA instância da engine em memória — ver
 # kizuri/scripting/ScriptEngine.hpp). Isso já tinha sido tentado antes e
@@ -118,12 +144,14 @@ if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 add_dependencies(KizuriEngine KizuriEmbeddedFonts)
+add_dependencies(KizuriEngine KizuriEmbeddedContent)
 
 target_include_directories(KizuriEngine
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE
         ${KZ_EMBEDDED_FONTS_DIR}
+        ${CMAKE_CURRENT_BINARY_DIR}/generated/kizuri
 )
 # Includes de terceiros marcados como SYSTEM (vira -isystem no GCC/Clang):
 # os warnings dentro de stb/bullet/miniaudio/box2d etc são das libs, não

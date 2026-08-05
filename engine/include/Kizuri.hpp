@@ -18,6 +18,7 @@
 #include "kizuri/core/Timestep.hpp"
 #include "kizuri/core/ImGuiLayer.hpp"
 #include "kizuri/core/UUID.hpp"
+#include "kizuri/core/EmbeddedContent.hpp"
 
 // ---- Renderer ----
 #include "kizuri/renderer/Renderer.hpp"

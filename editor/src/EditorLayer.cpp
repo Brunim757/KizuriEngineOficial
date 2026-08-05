@@ -182,12 +182,25 @@ void EditorLayer::CreateDemoScene3D() {
     gm.MeshMaterial.Roughness = 0.9f;
     ground.GetComponent<TransformComponent>().Scale = { 12.0f, 1.0f, 12.0f };
 
-    // HDRI de céu (content pack). Sem ele, mantém o céu procedural.
+    // Céu HDRI: preferência pro Content Pack, senão o céu EMBUTIDO no
+    // executável (kzres://) — a demo sempre tem um céu bonito, sem depender
+    // de arquivo externo.
+    Renderer3D::SetEnvironmentHDRIPath("kzres://skies/sky_gradient.hdr");
     std::string hdri = contentDir + "/skies/qwantani_puresky_1k.hdr";
     if (std::filesystem::exists(hdri)) {
         Renderer3D::SetEnvironmentHDRIPath(hdri);
-        KZ_CORE_INFO("Demo 3D: céu HDRI carregado ({0}).", hdri);
+        KZ_CORE_INFO("Demo 3D: céu HDRI do content pack carregado ({0}).", hdri);
     }
+
+    // Cubo EMBUTIDO (kzres://models/Cube.glb) — sempre carrega, mesmo sem o
+    // Content Pack: prova do conteúdo embutido no executável.
+    Entity embeddedCube = m_ActiveScene->CreateEntity("Cubo Embutido (kzres)");
+    auto& ecm = embeddedCube.AddComponent<MeshRendererComponent>();
+    ecm.MeshSource = "kzres://models/Cube.glb";
+    ecm.MeshAsset = Mesh::FromSource(ecm.MeshSource);
+    ecm.MeshMaterial.Albedo = { 0.85f, 0.35f, 0.3f };
+    ecm.MeshMaterial.Roughness = 0.4f;
+    embeddedCube.GetComponent<TransformComponent>().Translation = { -2.6f, 0.5f, 1.6f };
 
     // Fox esquelético animado (skinning) — o coração do v0.3.
     std::string foxPath = contentDir + "/models/Fox.glb";

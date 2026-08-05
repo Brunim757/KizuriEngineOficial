@@ -397,6 +397,110 @@ void EditorLayer::CreateDemoScene2D() {
     KZ_CORE_INFO("Cena de demonstração 2D criada.");
 }
 
+// Cena de demonstração 2.5D — mundo 3D de fundo, gameplay 2D na frente e UI
+// por cima: uma cena com as DUAS câmeras primárias (perspectiva + ortográfica).
+// No Play a engine roda 3D -> 2D -> UI, então sprites aparecem sobre o 3D.
+void EditorLayer::CreateDemoScene2_5D() {
+    if (m_SceneState != SceneState::Edit) return;
+    m_ActiveScene = CreateRef<Scene>("Demonstração 2.5D");
+    m_ScenePath.clear();
+    m_SelectedEntity = {};
+    m_ViewportMode = ViewportMode::Mode3D;
+
+    // Câmera 3D (fundo).
+    Entity cam3d = m_ActiveScene->CreateEntity("Câmera 3D");
+    auto& cc3 = cam3d.AddComponent<CameraComponent>();
+    cc3.Type = CameraComponent::ProjectionType::Perspective3D;
+    cc3.Primary = true;
+    cc3.PerspectiveFOV = 55.0f;
+    auto& c3t = cam3d.GetComponent<TransformComponent>();
+    c3t.Translation = { 0.0f, 3.5f, 9.0f };
+    c3t.Rotation = { glm::radians(-14.0f), glm::radians(-90.0f), 0.0f };
+
+    // Câmera 2D (camada de jogo, na frente).
+    Entity cam2d = m_ActiveScene->CreateEntity("Câmera 2D");
+    auto& cc2 = cam2d.AddComponent<CameraComponent>();
+    cc2.Type = CameraComponent::ProjectionType::Orthographic2D;
+    cc2.Primary = true;
+    cc2.OrthoSize = 6.0f;
+
+    // Mundo 3D: sol + chão + primitivas.
+    Entity sun = m_ActiveScene->CreateEntity("Sol");
+    auto& lc = sun.AddComponent<LightComponent>();
+    lc.Type = LightType::Directional;
+    lc.Color = { 1.0f, 0.95f, 0.85f };
+    lc.Intensity = 2.0f;
+    sun.GetComponent<TransformComponent>().Rotation = { glm::radians(45.0f), glm::radians(35.0f), 0.0f };
+
+    Entity ground = m_ActiveScene->CreateEntity("Chão 3D");
+    auto& gm = ground.AddComponent<MeshRendererComponent>();
+    gm.MeshSource = "builtin:plane";
+    gm.MeshAsset = Mesh::FromSource(gm.MeshSource);
+    gm.MeshMaterial.Albedo = { 0.14f, 0.15f, 0.18f };
+    gm.MeshMaterial.Roughness = 0.9f;
+    ground.GetComponent<TransformComponent>().Scale = { 10.0f, 1.0f, 10.0f };
+
+    Entity torus = m_ActiveScene->CreateEntity("Torus Metálico");
+    auto& tm = torus.AddComponent<MeshRendererComponent>();
+    tm.MeshSource = "builtin:torus";
+    tm.MeshAsset = Mesh::FromSource(tm.MeshSource);
+    tm.MeshMaterial.Albedo = { 0.75f, 0.55f, 0.2f };
+    tm.MeshMaterial.Metallic = 1.0f;
+    tm.MeshMaterial.Roughness = 0.25f;
+    auto& tt = torus.GetComponent<TransformComponent>();
+    tt.Translation = { 2.5f, 1.2f, 0.0f };
+    tt.Rotation = { glm::radians(70.0f), 0.0f, 0.0f };
+
+    Entity colCube = m_ActiveScene->CreateEntity("Cubo de Coluna");
+    auto& cm = colCube.AddComponent<MeshRendererComponent>();
+    cm.MeshSource = "builtin:cube";
+    cm.MeshAsset = Mesh::FromSource(cm.MeshSource);
+    cm.MeshMaterial.Albedo = { 0.3f, 0.55f, 0.85f };
+    colCube.GetComponent<TransformComponent>().Scale = { 1.0f, 3.0f, 1.0f };
+
+    // Camada 2D: sprites + moedas na frente do 3D.
+    Entity player = m_ActiveScene->CreateEntity("Jogador 2D");
+    auto& ps = player.AddComponent<SpriteRendererComponent>();
+    ps.Color = { 0.95f, 0.45f, 0.15f, 1.0f };
+    auto& pt = player.GetComponent<TransformComponent>();
+    pt.Translation = { -3.0f, 0.5f, 0.0f };
+    pt.Scale = { 1.4f, 1.4f, 1.0f };
+
+    for (int i = 0; i < 5; ++i) {
+        Entity coin = m_ActiveScene->CreateEntity("Moeda " + std::to_string(i + 1));
+        auto& cs = coin.AddComponent<CircleRendererComponent>();
+        cs.Color = { 1.0f, 0.8f, 0.2f, 1.0f };
+        cs.Thickness = 1.0f;
+        auto& ct = coin.GetComponent<TransformComponent>();
+        ct.Translation = { -1.0f + i * 1.6f, 1.5f, 0.0f };
+        ct.Scale = { 0.7f, 0.7f, 1.0f };
+    }
+
+    Entity label = m_ActiveScene->CreateEntity("Rótulo");
+    auto& ltext = label.AddComponent<TextComponent>();
+    ltext.Text = "2.5D — fundo 3D, gameplay 2D";
+    ltext.FontSize = 30.0f;
+    ltext.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    label.GetComponent<TransformComponent>().Translation = { -6.0f, 4.5f, 0.0f };
+
+    // UI por cima de tudo.
+    Entity canvas = m_ActiveScene->CreateEntity("Canvas");
+    canvas.AddComponent<UICanvasComponent>();
+    Entity button = m_ActiveScene->CreateEntity("Botão");
+    auto& ur = button.AddComponent<UIRectComponent>();
+    ur.Position = { 0.0f, -4.5f };
+    ur.Size = { 4.0f, 1.0f };
+    ur.Color = { 0.82f, 0.24f, 0.27f, 1.0f };
+    button.AddComponent<UIButtonComponent>();
+    auto& btext = button.AddComponent<TextComponent>();
+    btext.Text = "2.5D!";
+    btext.FontSize = 0.45f;
+    btext.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    button.SetParent(canvas);
+
+    KZ_CORE_INFO("Cena de demonstração 2.5D criada.");
+}
+
 void EditorLayer::OnUpdate(Timestep ts) {
     KZ_CORE_TRACE("EditorLayer::OnUpdate — início (viewport {0}x{1})", m_ViewportSize.x, m_ViewportSize.y);
 
@@ -1638,6 +1742,8 @@ void EditorLayer::DrawDockspace() {
         ImGui::Separator();
         if (ImGui::MenuItem("Cena de Demonstração 2D...", nullptr, false, m_SceneState == SceneState::Edit))
             CreateDemoScene2D();
+        if (ImGui::MenuItem("Cena de Demonstração 2.5D...", nullptr, false, m_SceneState == SceneState::Edit))
+            CreateDemoScene2_5D();
         if (ImGui::MenuItem("Cena de Demonstração 3D...", nullptr, false, m_SceneState == SceneState::Edit))
             CreateDemoScene3D();
         ImGui::EndPopup();
@@ -2654,20 +2760,41 @@ void EditorLayer::DrawSceneHierarchy() {
     // iteração invalidaria o iterador do EnTT.
     Entity entityToDelete;
 
-    // Só entra na recursão a partir das raízes (sem pai) — DrawEntityNode
-    // desenha os filhos dela mesma, então cada entidade aparece uma única
-    // vez na árvore em vez de duplicada como lista plana.
-    m_ActiveScene->GetRegistry().view<TagComponent, RelationshipComponent>().each(
-        [&](auto entityHandle, TagComponent&, RelationshipComponent& rel) {
-            if (rel.Parent.IsValid()) return;
-            Entity entity{ entityHandle, m_ActiveScene.get() };
-            DrawEntityNode(entity, entityToDelete, editable);
-        });
+    // Busca por nome (filtra): mostra uma lista plana das entidades que casam.
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+    ImGui::SetNextItemWidth(-1.0f);
+    ImGui::InputTextWithHint("##hierarchy_search", "Buscar entidade (nome)...",
+                             m_HierarchySearchBuffer, sizeof(m_HierarchySearchBuffer));
+    ImGui::PopStyleVar();
 
-    if (editable && entityToDelete) {
-        if (m_SelectedEntity == entityToDelete) m_SelectedEntity = {};
-        m_History.Push(CreateRef<DeleteEntityCommand>(entityToDelete));
-        m_ActiveScene->DestroyEntity(entityToDelete);
+    if (m_HierarchySearchBuffer[0] != '\0') {
+        std::string query = m_HierarchySearchBuffer;
+        for (auto& c : query) c = (char)tolower((unsigned char)c);
+        m_ActiveScene->GetRegistry().view<TagComponent>().each(
+            [&](auto entityHandle, TagComponent& tag) {
+                std::string name = tag.Tag;
+                for (auto& c : name) c = (char)tolower((unsigned char)c);
+                if (name.find(query) == std::string::npos) return;
+                Entity entity{ entityHandle, m_ActiveScene.get() };
+                if (ImGui::Selectable(tag.Tag.c_str(), m_SelectedEntity == entity))
+                    m_SelectedEntity = entity;
+            });
+    } else {
+        // Só entra na recursão a partir das raízes (sem pai) — DrawEntityNode
+        // desenha os filhos dela mesma, então cada entidade aparece uma única
+        // vez na árvore em vez de duplicada como lista plana.
+        m_ActiveScene->GetRegistry().view<TagComponent, RelationshipComponent>().each(
+            [&](auto entityHandle, TagComponent&, RelationshipComponent& rel) {
+                if (rel.Parent.IsValid()) return;
+                Entity entity{ entityHandle, m_ActiveScene.get() };
+                DrawEntityNode(entity, entityToDelete, editable);
+            });
+
+        if (editable && entityToDelete) {
+            if (m_SelectedEntity == entityToDelete) m_SelectedEntity = {};
+            m_History.Push(CreateRef<DeleteEntityCommand>(entityToDelete));
+            m_ActiveScene->DestroyEntity(entityToDelete);
+        }
     }
 
     if (editable) {

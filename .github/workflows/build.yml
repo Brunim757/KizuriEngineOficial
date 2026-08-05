@@ -192,6 +192,9 @@ jobs:
           dl "$base/BrainStem/glTF-Binary/BrainStem.glb"        dist/content/models/BrainStem.glb              BrainStem.glb
           dl "$base/CesiumMan/glTF-Binary/CesiumMan.glb"        dist/content/models/CesiumMan.glb              CesiumMan.glb
           dl "$base/RiggedFigure/glTF-Binary/RiggedFigure.glb"  dist/content/models/RiggedFigure.glb           RiggedFigure.glb
+          dl "$base/SimpleSkin/glTF-Binary/SimpleSkin.glb"      dist/content/models/SimpleSkin.glb              SimpleSkin.glb
+          dl "$base/ReciprocatingSaw/glTF-Binary/ReciprocatingSaw.glb" dist/content/models/ReciprocatingSaw.glb ReciprocatingSaw.glb
+          dl "$base/Character/glTF-Binary/Character.glb"        dist/content/models/Character.glb              Character.glb
           dl "$base/DamagedHelmet/glTF-Binary/DamagedHelmet.glb" dist/content/models/DamagedHelmet.glb         DamagedHelmet.glb
           dl "$base/Avocado/glTF-Binary/Avocado.glb"            dist/content/models/Avocado.glb                Avocado.glb
           dl "$base/BoomBox/glTF-Binary/BoomBox.glb"            dist/content/models/BoomBox.glb                BoomBox.glb
@@ -221,7 +224,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          for id in Wood049 Metal032 Bricks072 Concrete034 Planks016 Ground037; do
+          for id in Wood049 Metal032 Bricks072 Concrete034 Planks016 Ground037 Bricks076 Rocks010 PavingStones034 Fabric048; do
             for res in 2K; do
               zip="dist/content/textures/${id}_${res}-JPG.zip"
               mkdir -p dist/content/textures

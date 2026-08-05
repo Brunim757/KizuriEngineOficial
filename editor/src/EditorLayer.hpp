@@ -75,6 +75,9 @@ private:
     void CreateDemoScene3D();
     // Cena de demonstração 2D: sprites, física Box2D, partículas, texto e UI.
     void CreateDemoScene2D();
+    // Cena de demonstração 2.5D: mundo 3D de fundo + camada de jogo 2D na
+    // frente + UI (prova a composição 3D -> 2D -> UI com as duas câmeras).
+    void CreateDemoScene2_5D();
 
     // Cria uma entidade a partir de um arquivo de asset (soltado do Content
     // Browser no viewport): .obj -> MeshRenderer, imagem -> SpriteRenderer.
@@ -174,6 +177,9 @@ private:
     std::filesystem::path m_ContentBrowserRoot;
     std::filesystem::path m_ContentBrowserCurrentDir;
     std::unordered_map<std::string, kizuri::Ref<kizuri::Texture2D>> m_ThumbCache;
+
+    // Busca de entidade na Hierarquia (filtra por nome; lista plana).
+    char m_HierarchySearchBuffer[64] = "";
 
     // Janela de configurações (Arquivo > Configurações).
     bool m_ShowSettings = false;

@@ -796,7 +796,7 @@ void main() {
         float sampleDepth = texture(u_Depth, offset.xy).r;
         // rangeCheck descarta amostras de fundo que "vazam" pra frente da silhueta
         float rangeCheck = smoothstep(0.0, 1.0, u_Radius / abs(fragPos.z - ReconstructViewPos(offset.xy, sampleDepth).z));
-        occlusion += (sampleDepth >= offset.z + 0.025 ? 1.0 : 0.0) * rangeCheck;
+        occlusion += (sampleDepth >= offset.z + 0.03 ? 1.0 : 0.0) * rangeCheck;
     }
     occlusion = 1.0 - occlusion / float(u_SampleCount);
     o_AO = pow(occlusion, u_Power);
@@ -1888,7 +1888,7 @@ void Renderer3D::EndScene() {
         s_SSAOShader->SetMat4("u_Projection", s_Projection);
         s_SSAOShader->SetMat4("u_InverseProjection", glm::inverse(s_Projection));
         s_SSAOShader->SetFloat("u_Radius", s_Settings.SSAORadius);
-        s_SSAOShader->SetFloat("u_Power", 2.0f);
+        s_SSAOShader->SetFloat("u_Power", 1.2f); // 2.0 escurecia demais (relato de cena 'meio escura' no 4.0)
         s_SSAOShader->SetInt("u_SampleCount", s_Settings.SSAOSamples);
         for (size_t i = 0; i < s_SSAOKernel.size(); ++i)
             s_SSAOShader->SetFloat3("u_Samples[" + std::to_string(i) + "]", s_SSAOKernel[i]);

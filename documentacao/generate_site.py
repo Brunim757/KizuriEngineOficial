@@ -302,7 +302,7 @@ def page_template(pages, fm, body, groups):
 {pn}
 </div>
 <footer class="footer">
-  © Kizuri Engine. Todos os direitos reservados.
+  © Kizuri Studio. Todos os direitos reservados.
 </footer>
 </main>
 </div>
@@ -353,7 +353,7 @@ def search_page(pages):
 <div id="results"></div>
 </article>
 <footer class="footer">
-  © Kizuri Engine. Todos os direitos reservados.
+  © Kizuri Studio. Todos os direitos reservados.
 </footer>
 </main>
 </div>

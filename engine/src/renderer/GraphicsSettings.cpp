@@ -1,10 +1,29 @@
 #include "kizuri/renderer/GraphicsSettings.hpp"
+#include "kizuri/renderer/Shader.hpp"
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <algorithm>
 
 namespace kizuri {
 
+void GraphicsSettings::TuneToHardware() {
+    // Extrai o MÁXIMO de cada versão do OpenGL: 3.3 = mínimo sólido,
+    // 4.0/4.1 sobe, 4.3+ sobe mais, 4.5+ = teto.
+    int glsl = GetGLSLVersion();
+    if (glsl >= 450) {
+        MSAA = 8; ShadowMapSize = 4096; ShadowPCFRadius = 3; SSAOSamples = 64;
+        BloomIterations = 8;
+    } else if (glsl >= 430) {
+        MSAA = 8; ShadowMapSize = 4096; ShadowPCFRadius = 3; SSAOSamples = 48;
+        BloomIterations = 6;
+    } else if (glsl >= 400) {
+        MSAA = 8; ShadowMapSize = 4096; ShadowPCFRadius = 3; SSAOSamples = 48;
+        BloomIterations = 5;
+    } else {
+        MSAA = 4; ShadowMapSize = 2048; ShadowPCFRadius = 2; SSAOSamples = 32;
+        BloomIterations = 4;
+    }
+}
 static const char* PresetName(QualityPreset p) {
     switch (p) {
         case QualityPreset::Ultra:  return "Ultra";
@@ -34,6 +53,10 @@ void GraphicsSettings::Clamp() {
     SSAORadius = std::clamp(SSAORadius, 0.05f, 2.0f);
     Exposure = std::clamp(Exposure, 0.1f, 8.0f);
     FogDensity = std::clamp(FogDensity, 0.0f, 0.2f);
+    Vignette = std::clamp(Vignette, 0.0f, 1.0f);
+    ChromaticAberration = std::clamp(ChromaticAberration, 0.0f, 0.02f);
+    FilmGrain = std::clamp(FilmGrain, 0.0f, 0.2f);
+    BloomIterations = std::clamp(BloomIterations, 1, 12);
 }
 
 void GraphicsSettings::ApplyPreset(QualityPreset preset) {
@@ -45,6 +68,8 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             Exposure = 1.0f;      VSync = true;
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
+            Vignette = 0.25f; ChromaticAberration = 0.002f; FilmGrain = 0.02f;
+            BloomIterations = 8;
             break;
         case QualityPreset::High:
             RenderScale = 1.0f; MSAA = 4; ShadowMapSize = 2048; ShadowPCFRadius = 2;
@@ -53,6 +78,8 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             Exposure = 1.0f;      VSync = true;
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
+            Vignette = 0.22f; ChromaticAberration = 0.0015f; FilmGrain = 0.015f;
+            BloomIterations = 5;
             break;
         case QualityPreset::Medium:
             RenderScale = 1.0f; MSAA = 2; ShadowMapSize = 1024; ShadowPCFRadius = 1;
@@ -61,6 +88,8 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             Exposure = 1.0f;      VSync = true;
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
+            Vignette = 0.18f; ChromaticAberration = 0.001f; FilmGrain = 0.01f;
+            BloomIterations = 3;
             break;
         case QualityPreset::Low:
             RenderScale = 0.75f; MSAA = 1; ShadowMapSize = 1024; ShadowPCFRadius = 0;
@@ -69,6 +98,8 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             Exposure = 1.0f;      VSync = false;
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
+            Vignette = 0.1f; ChromaticAberration = 0.0f; FilmGrain = 0.0f;
+            BloomIterations = 2;
             break;
         default:
             break; // Custom: mantém os valores atuais
@@ -94,6 +125,10 @@ bool SaveGraphicsSettings(const std::string& path, const GraphicsSettings& setti
     j["fog_enabled"] = settings.FogEnabled;
     j["fog_density"] = settings.FogDensity;
     j["fog_color"] = { settings.FogColor[0], settings.FogColor[1], settings.FogColor[2] };
+    j["vignette"] = settings.Vignette;
+    j["chromatic_aberration"] = settings.ChromaticAberration;
+    j["film_grain"] = settings.FilmGrain;
+    j["bloom_iterations"] = settings.BloomIterations;
     j["vsync"] = settings.VSync;
 
     std::ofstream out(path);
@@ -124,6 +159,10 @@ bool LoadGraphicsSettings(const std::string& path, GraphicsSettings& out) {
         out.FogDensity = j.value("fog_density", out.FogDensity);
         if (j.contains("fog_color") && j["fog_color"].is_array() && j["fog_color"].size() == 3)
             for (int i = 0; i < 3; ++i) out.FogColor[i] = j["fog_color"][i].get<float>();
+        out.Vignette = j.value("vignette", out.Vignette);
+        out.ChromaticAberration = j.value("chromatic_aberration", out.ChromaticAberration);
+        out.FilmGrain = j.value("film_grain", out.FilmGrain);
+        out.BloomIterations = j.value("bloom_iterations", out.BloomIterations);
         out.VSync = j.value("vsync", out.VSync);
         out.Clamp();
         return true;

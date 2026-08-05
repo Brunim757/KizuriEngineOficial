@@ -62,6 +62,7 @@ uint32_t Renderer3D::s_NoiseTexture = 0;
 Ref<Shader> Renderer3D::s_SSAOShader;
 std::vector<glm::vec3> Renderer3D::s_SSAOKernel;
 uint32_t Renderer3D::s_SSAOWidth = 0, Renderer3D::s_SSAOHeight = 0;
+static float s_PostTime = 0.0f; // relógio do pós-processamento (grão de filme animado)
 
 std::vector<Renderer3D::ParticleBatch> Renderer3D::s_ParticleBatches;
 uint32_t Renderer3D::s_ParticleVAO = 0, Renderer3D::s_ParticleQuadVBO = 0;
@@ -74,7 +75,6 @@ static constexpr uint32_t kPrefilterBaseSize = 128;
 static constexpr uint32_t kPrefilterMipLevels = 5;
 
 static constexpr uint32_t kMaxLights = 16;
-static constexpr uint32_t kBloomBlurIterations = 4; // 4x horizontal + 4x vertical, ping-pong
 
 static const char* s_MeshVertexSrc = R"(
 #version 330 core
@@ -365,39 +365,74 @@ void main() {
 }
 )";
 
-// Céu procedural: gradiente horizonte->zênite acima do horizonte, um chão
-// escuro simples abaixo (evita "buraco preto" olhando pra baixo), e um sol
-// desenhado como disco + halo na direção da luz direcional ativa. Não
-// depende de nenhuma textura/HDRI externa — consistente com o resto da
-// engine (fontes embutidas, sem pasta assets/ obrigatória).
+// Céu atmosférico procedural: espalhamento Rayleigh (céu azul, avermelhado no
+// pôr-do-sol) + Mie (halo do sol) + estrelas à noite. É uma aproximação
+// artística de 1 termo (não o traçado físico completo), mas roda 100% em GLSL
+// 330 e escala pra qualquer versão. Saída HDR linear (tonemap no composite).
 static const char* s_SkyFragmentSrc = R"(
 #version 330 core
 in vec3 v_LocalPos;
 out vec4 o_Color;
 
-uniform vec3 u_SunDir;   // aponta DA superfície PRA o sol (oposto de DirectionalLight::Direction)
+uniform vec3 u_SunDir;   // aponta DA superfície PRA o sol
 uniform vec3 u_SunColor;
+
+const float PI = 3.14159265359;
+// Coeficientes de espalhamento (escala artística, não física — calibrados
+// pra sair bonito depois do ACES).
+const vec3 BETA_R = vec3(0.18, 0.38, 0.70);  // Rayleigh (azul)
+const vec3 BETA_M = vec3(0.55, 0.50, 0.42);  // Mie (acinzentado/quente)
+
+float phaseRayleigh(float mu) { return 3.0 / (16.0 * PI) * (1.0 + mu * mu); }
+float phaseMie(float mu) {
+    float g = 0.76;
+    float g2 = g * g;
+    return 3.0 / (8.0 * PI) * ((1.0 - g2) * (1.0 + mu * mu)) / ((2.0 + g2) * pow(1.0 + g2 - 2.0 * g * mu, 1.5));
+}
 
 void main() {
     vec3 dir = normalize(v_LocalPos);
+    vec3 sun = normalize(u_SunDir);
+    float mu = dot(dir, sun);
+    float sunLift = max(sun.y, 0.0);
+    float view = dir.y;
 
-    // Cores em HDR linear. Cuidado: passam por tonemap ACES + gamma no fim do
-    // pipeline — valores claros demais (ex: horizonte 0.45) explodem pra ~0.8
-    // depois do ACES e viram um branco "névoa" em vez de céu azul (era esse o
-    // sintoma reportado: céu parecendo neblina e uma faixa clara sobre o grid,
-    // que fica exatamente na linha do horizonte). Por isso o horizonte e o
-    // zenite ficam propositalmente escuros/saturados aqui.
-    vec3 horizonColor = vec3(0.12, 0.22, 0.42);
-    vec3 zenithColor   = vec3(0.04, 0.13, 0.40);
-    vec3 groundColor   = vec3(0.07, 0.08, 0.10);
+    // Comprimento óptico: espesso na horizontal, fino no zênite (abaixo do
+    // horizonte inverte pro chão). Valores calibrados pra NÃO estourar no
+    // ACES (horizonte claro é real, mas não pode virar branco).
+    float optical = 1.0 / max(abs(view) * 2.5 + 0.35, 0.35);
 
-    vec3 sky = (dir.y >= 0.0)
-        ? mix(horizonColor, zenithColor, smoothstep(-0.05, 0.35, dir.y))
-        : mix(horizonColor, groundColor, smoothstep(0.0, 0.6, -dir.y));
+    // Scattering integrado (Rayleigh + Mie) escalado pela elevação do sol.
+    vec3 sky = (BETA_R * phaseRayleigh(mu) + BETA_M * phaseMie(mu)) * optical;
+    sky *= u_SunColor * (0.4 + sunLift * 1.2);
 
-    float sunDot = max(dot(dir, normalize(u_SunDir)), 0.0);
-    sky += u_SunColor * pow(sunDot, 900.0) * 12.0; // disco do sol, pequeno e intenso
-    sky += u_SunColor * pow(sunDot, 16.0) * 0.10;  // halo suave ao redor
+    // Base de dia (azul) que some à noite; tom quente no pôr-do-sol.
+    vec3 dayBase = mix(vec3(0.10, 0.17, 0.40), vec3(0.38, 0.52, 0.85), smoothstep(0.0, 0.6, sunLift));
+    vec3 sunsetTint = vec3(0.85, 0.35, 0.12);
+    float sunsetFade = smoothstep(0.08, 0.45, sunLift);
+    vec3 base = mix(sunsetTint, dayBase, sunsetFade);
+    sky = mix(base, sky, 0.9);
+
+    // Chão: escurece e espelha um pouco do tom do céu no horizonte.
+    if (view < 0.0) {
+        float g = smoothstep(0.0, -0.5, view);
+        sky = mix(sky, vec3(0.035, 0.04, 0.05) * (0.5 + sunLift), g);
+    }
+
+    // Disco do sol + halo Mie.
+    sky += u_SunColor * pow(max(mu, 0.0), 4000.0) * 16.0;
+    sky += u_SunColor * pow(max(mu, 0.0), 160.0) * 1.2;
+    sky += u_SunColor * pow(max(mu, 0.0), 12.0) * 0.10;
+
+    // Estrelas quando o sol está abaixo do horizonte.
+    if (sunLift < 0.06) {
+        vec3 sp = dir * 600.0;
+        vec2 cell = floor(sp.xy);
+        vec2 f = fract(sp.xy) - 0.5;
+        float star = smoothstep(0.48, 0.5, 1.0 - length(f));
+        star *= step(0.997, fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453));
+        sky += vec3(0.85, 0.9, 1.0) * star * (1.0 - sunLift * 16.0) * 0.5;
+    }
 
     o_Color = vec4(sky, 1.0);
 }
@@ -614,8 +649,9 @@ void main() {
 }
 )";
 
-// Soma cena HDR + bloom, aplica tonemap ACES (aproximação de Narkowicz) e gamma —
-// é o único lugar do pipeline inteiro que converte de HDR linear pra LDR de tela.
+// Soma cena HDR + bloom, aplica oclusão + exposição, tonemap ACES, gamma e o
+// "pós-cinema": aberração cromática (desloca R/B radialmente), vinheta e
+// grão de filme animado. É o único lugar do pipeline que converte HDR->LDR.
 static const char* s_CompositeFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
@@ -626,6 +662,10 @@ uniform float u_BloomIntensity;
 uniform float u_Exposure;
 uniform sampler2D u_AOTexture;
 uniform bool u_HasAO;
+uniform float u_Vignette;
+uniform float u_ChromaticAberration;
+uniform float u_FilmGrain;
+uniform float u_Time;
 
 vec3 ACESFilm(vec3 x) {
     float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
@@ -633,13 +673,33 @@ vec3 ACESFilm(vec3 x) {
 }
 
 void main() {
-    vec3 hdr = texture(u_SceneColor, v_TexCoord).rgb;
-    vec3 bloom = texture(u_BloomBlur, v_TexCoord).rgb;
+    vec2 uv = v_TexCoord;
+    // Aberração cromática: R e B amostrados deslocados radialmente (sutil).
+    vec2 dir = uv - 0.5;
+    vec2 caDir = length(dir) > 0.0001 ? normalize(dir) : vec2(0.0, 1.0);
+    float ca = u_ChromaticAberration * length(dir) * 4.0;
+    vec3 hdr;
+    hdr.r = texture(u_SceneColor, uv + caDir * ca).r;
+    hdr.g = texture(u_SceneColor, uv).g;
+    hdr.b = texture(u_SceneColor, uv - caDir * ca).b;
+
+    vec3 bloom = texture(u_BloomBlur, uv).rgb;
     vec3 color = hdr + bloom * u_BloomIntensity;
-    if (u_HasAO) color *= texture(u_AOTexture, v_TexCoord).r;
+    if (u_HasAO) color *= texture(u_AOTexture, uv).r;
     color *= u_Exposure;
     color = ACESFilm(color);
     color = pow(color, vec3(1.0 / 2.2));
+
+    // Vinheta (pós-gamma).
+    float vig = 1.0 - u_Vignette * smoothstep(0.55, 1.35, length(dir * 2.0));
+    color *= clamp(vig, 0.0, 1.0);
+
+    // Grão de filme animado (hash determinístico + tempo).
+    if (u_FilmGrain > 0.0) {
+        float g = fract(sin(dot(uv * vec2(1920.0, 1080.0), vec2(12.9898, 78.233)) + u_Time * 60.0) * 43758.5453) - 0.5;
+        color += g * u_FilmGrain;
+    }
+
     o_Color = vec4(color, 1.0);
 }
 )";
@@ -824,16 +884,10 @@ void main() {
 void Renderer3D::Init() {
     KZ_TRACE_SCOPE("Renderer3D::Init");
 
-    // Auto-tune por hardware: GL 4.x permite configuração mais agressiva
-    // (MSAA 8x + shadow 4096); em 3.3 fica mais conservador pra iGPU
-    // antiga não engasgar. O editor pode sobrescrever via settings.json.
-    if (GetGLSLVersion() >= 400) {
-        s_Settings.MSAA = 8;
-        s_Settings.ShadowMapSize = 4096;
-    } else {
-        s_Settings.MSAA = 4;
-        s_Settings.ShadowMapSize = 2048;
-    }
+    // Auto-tune por hardware: extrai o máximo de cada versão do OpenGL
+    // (3.3 conservador, 4.0+ agressivo, 4.5+ teto). O editor pode
+    // sobrescrever via settings.json.
+    s_Settings.TuneToHardware();
 
     s_MeshShader = CreateRef<Shader>("Renderer3D_Mesh", s_MeshVertexSrc, s_MeshFragmentSrc);
     s_LineShader = CreateRef<Shader>("Renderer3D_Line", s_LineVertexSrc, s_LineFragmentSrc);
@@ -1717,8 +1771,9 @@ void Renderer3D::EndScene() {
 
         // --- Passe 3: blur gaussiano separável, ping-pong entre os dois FBOs de bloom ---
         bool horizontal = true;
+        uint32_t blurIterations = glm::max(1u, (uint32_t)s_Settings.BloomIterations);
         s_BlurShader->Bind();
-        for (uint32_t i = 0; i < kBloomBlurIterations * 2; ++i) {
+        for (uint32_t i = 0; i < blurIterations * 2; ++i) {
             int writeIdx = 1 - bloomReadIdx;
             glBindFramebuffer(GL_FRAMEBUFFER, s_BloomFBO[writeIdx]);
             glActiveTexture(GL_TEXTURE0);
@@ -1743,6 +1798,11 @@ void Renderer3D::EndScene() {
     s_CompositeShader->SetInt("u_BloomBlur", 1);
     s_CompositeShader->SetFloat("u_BloomIntensity", s_Settings.BloomEnabled ? s_Settings.BloomIntensity : 0.0f);
     s_CompositeShader->SetFloat("u_Exposure", s_Settings.Exposure);
+    s_CompositeShader->SetFloat("u_Vignette", s_Settings.Vignette);
+    s_CompositeShader->SetFloat("u_ChromaticAberration", s_Settings.ChromaticAberration);
+    s_CompositeShader->SetFloat("u_FilmGrain", s_Settings.FilmGrain);
+    s_PostTime += 0.016f; // grão de filme animado (relógio de pós-processamento)
+    s_CompositeShader->SetFloat("u_Time", s_PostTime);
     s_CompositeShader->SetInt("u_HasAO", hasAO ? 1 : 0);
     if (hasAO) {
         glActiveTexture(GL_TEXTURE2);

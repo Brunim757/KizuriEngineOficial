@@ -1031,6 +1031,7 @@ void EditorLayer::DrawSettingsGraphics() {
         customTweak |= ImGui::DragFloat("Limiar do bloom", &m_GraphicsSettings.BloomThreshold, 0.01f, 0.1f, 10.0f);
         customTweak |= ImGui::DragFloat("Intensidade do bloom", &m_GraphicsSettings.BloomIntensity, 0.01f, 0.0f, 3.0f);
     }
+    customTweak |= ImGui::SliderInt("Iterações do bloom (glow)", &m_GraphicsSettings.BloomIterations, 1, 12);
     ImGui::Separator();
     customTweak |= ImGui::Checkbox("SSAO", &m_GraphicsSettings.SSAOEnabled);
     if (m_GraphicsSettings.SSAOEnabled) {
@@ -1046,6 +1047,10 @@ void EditorLayer::DrawSettingsGraphics() {
         customTweak |= ImGui::DragFloat("Densidade da névoa", &m_GraphicsSettings.FogDensity, 0.001f, 0.0f, 0.2f);
         customTweak |= ImGui::ColorEdit3("Cor da névoa", m_GraphicsSettings.FogColor);
     }
+    ImGui::Separator();
+    customTweak |= ImGui::DragFloat("Vinheta", &m_GraphicsSettings.Vignette, 0.01f, 0.0f, 1.0f);
+    customTweak |= ImGui::DragFloat("Aberração cromática", &m_GraphicsSettings.ChromaticAberration, 0.0005f, 0.0f, 0.02f);
+    customTweak |= ImGui::DragFloat("Grão de filme", &m_GraphicsSettings.FilmGrain, 0.005f, 0.0f, 0.2f);
 
     ImGui::Separator();
     ImGui::TextDisabled("Ambiente (céu) — vazio = procedural, ou um .hdr equirectangular:");

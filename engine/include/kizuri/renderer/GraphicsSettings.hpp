@@ -45,7 +45,20 @@ struct GraphicsSettings {
     float FogDensity = 0.012f;
     float FogColor[3] = { 0.55f, 0.6f, 0.66f };
 
+    // Pós-cinema: vinheta, aberração cromática e grão de filme (composite).
+    float Vignette = 0.25f;            // 0 = desligado
+    float ChromaticAberration = 0.002f; // deslocamento radial dos canais
+    float FilmGrain = 0.02f;           // 0 = desligado
+
+    // Qualidade do bloom (iterações do blur ping-pong; mais = glow mais largo).
+    int BloomIterations = 4;
+
     bool VSync = true;
+
+    // Ajusta os padrões pelo HARDWARE (versão GLSL detectada): GL 3.3 fica
+    // conservador, 4.0+ mais agressivo, 4.3+ e 4.5+ ainda mais. Chamado no
+    // Init da engine antes de carregar settings.json (que sobrescreve).
+    void TuneToHardware();
 
     void ApplyPreset(QualityPreset preset);
     void Clamp();

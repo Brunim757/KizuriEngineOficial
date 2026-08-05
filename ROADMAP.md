@@ -303,3 +303,19 @@
   desligado silenciosamente se o driver rejeitar (em vez de frame quebrado)
 
 ---
+
+## ✅ v0.21 — Viewport preto em 4.x: fallback de versão GLSL + contexto 4.5 + diagnóstico na tela
+
+- [x] Suspeita: drivers que anunciam GLSL 4.60 mas rejeitam `#version 460`
+  (Mesa/llvmpipe, VMs, iGPU antigas) — TODOS os shaders falhavam = tudo preto
+- [x] Shader: fallback automático de versão — tenta 460→450→430→410→400→330
+  (o 330 é o caminho comprovado; features 4.x degradam via `#if`). Shader que
+  um driver rejeite numa versão compila na anterior em vez de quebrar o frame
+- [x] Contexto: cadeia agora tem TETO 4.5 (o glad é 4.5; 4.6 não agrega nada e
+  é onde os drivers mentem sobre GLSL)
+- [x] Diagnóstico NA TELA: faixa vermelha no viewport com a última falha de
+  shader/FBO/GL (SetShaderDiagnostic) — sem precisar caçar o log
+- [x] FBOs incompletos (HDR/MSAA/bloom/SSAO/SSR) e glGetError viram aviso na
+  tela + fallback de MSAA (clampa no driver e desliga se falhar)
+
+---

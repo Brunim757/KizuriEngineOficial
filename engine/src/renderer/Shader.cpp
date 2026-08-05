@@ -17,6 +17,10 @@ namespace kizuri {
 static int s_ContextGLSL = 0; // teto definido pela janela (0 = sem teto)
 void SetContextGLSLVersion(int glsl) { s_ContextGLSL = glsl; }
 
+static std::string s_RenderDiagnostic; // última falha de driver/shader (tela)
+void SetShaderDiagnostic(const std::string& msg) { s_RenderDiagnostic = msg; }
+const std::string& GetShaderDiagnostic() { return s_RenderDiagnostic; }
+
 int GetGLSLVersion() {
     static int s_glsl = 0;
     if (s_glsl == 0) {
@@ -49,11 +53,11 @@ std::string GetOpenGLVersionString() {
 
 namespace {
 
-// Troca a linha "#version ..." (se houver) pelo #version do contexto atual +
-// um #define KZ_GLSL_VERSION <n> que os shaders usam pra features condicionais.
-// Remove a diretiva de versão de QUALQUER lugar (e pré-adiciona a do contexto),
+// Troca a linha "#version ..." (se houver) pelo #version pedido + um
+// #define KZ_GLSL_VERSION <n> que os shaders usam pra features condicionais.
+// Remove a diretiva de versão de QUALQUER lugar (e pré-adiciona a pedida),
 // garantindo que o resultado sempre começa com "#version".
-std::string RewriteVersion(const std::string& src) {
+std::string RewriteVersionFor(const std::string& src, int glsl) {
     std::string body = src;
     size_t pos = body.find("#version");
     if (pos != std::string::npos) {
@@ -61,7 +65,6 @@ std::string RewriteVersion(const std::string& src) {
         if (lineEnd != std::string::npos) body.erase(pos, lineEnd - pos + 1);
         else body.erase(pos);
     }
-    int glsl = GetGLSLVersion();
     return "#version " + std::to_string(glsl) + " core\n"
            "#define KZ_GLSL_VERSION " + std::to_string(glsl) + "\n" + body;
 }
@@ -91,29 +94,56 @@ static uint32_t CompileStage(GLenum type, const std::string& source, const std::
 Shader::Shader(const std::string& name, const std::string& vertexSrc, const std::string& fragmentSrc)
     : m_Name(name) {
     KZ_TRACE_SCOPE("Shader::Shader");
-    uint32_t vs = CompileStage(GL_VERTEX_SHADER, RewriteVersion(vertexSrc), name);
-    uint32_t fs = CompileStage(GL_FRAGMENT_SHADER, RewriteVersion(fragmentSrc), name);
 
-    m_RendererID = glCreateProgram();
-    glAttachShader(m_RendererID, vs);
-    glAttachShader(m_RendererID, fs);
-    glLinkProgram(m_RendererID);
+    // Tenta a versão detectada primeiro; se o driver rejeitar (ex.: anuncia
+    // GLSL 4.60 mas só compila 4.50 — comum em Mesa/llvmpipe e VMs), desce:
+    // 450 -> 430 -> 410 -> 400 -> 330. O 330 é o caminho COMPROVADO e todos
+    // os shaders são escritos pra 330 (as features 4.x ficam em
+    // #if KZ_GLSL_VERSION >= 400, então degradam em vez de quebrar). Sem esse
+    // fallback, um driver que mente sobre a versão deixava o viewport preto.
+    int glsl = GetGLSLVersion();
+    const int fallbacks[] = { glsl, 450, 430, 410, 400, 330 };
+    int prevVersion = 0;
+    for (int attempt = 0; attempt < 6; ++attempt) {
+        int version = fallbacks[attempt];
+        if (version <= 0) continue;
+        if (version > glsl && attempt > 0) continue; // nunca SOBE além do detectado
+        if (version == prevVersion) continue;        // sem repetir a mesma versão
+        prevVersion = version;
 
-    int isLinked;
-    glGetProgramiv(m_RendererID, GL_LINK_STATUS, &isLinked);
-    m_IsValid = (isLinked == GL_TRUE);
-    glDeleteShader(vs);
-    glDeleteShader(fs);
-    if (!m_IsValid) {
-        int len;
-        glGetProgramiv(m_RendererID, 0x8B84, &len);
-        std::vector<char> info(len);
-        glGetProgramInfoLog(m_RendererID, len, &len, info.data());
-        KZ_CORE_ERROR("Falha ao vincular o programa de shader '{0}': {1}", name, info.data());
-        return; // m_RendererID continua alocado, mas o shader não é válido
+        uint32_t vs = CompileStage(GL_VERTEX_SHADER, RewriteVersionFor(vertexSrc, version), name);
+        uint32_t fs = CompileStage(GL_FRAGMENT_SHADER, RewriteVersionFor(fragmentSrc, version), name);
+        if (vs == 0 || fs == 0) {
+            if (vs) glDeleteShader(vs);
+            if (fs) glDeleteShader(fs);
+            continue; // tenta a próxima versão
+        }
+
+        m_RendererID = glCreateProgram();
+        glAttachShader(m_RendererID, vs);
+        glAttachShader(m_RendererID, fs);
+        glLinkProgram(m_RendererID);
+
+        int isLinked;
+        glGetProgramiv(m_RendererID, GL_LINK_STATUS, &isLinked);
+        m_IsValid = (isLinked == GL_TRUE);
+        glDeleteShader(vs);
+        glDeleteShader(fs);
+
+        if (m_IsValid) {
+            KZ_CORE_INFO("Shader '{0}' compilado como GLSL {1} (id={2}).", name, version, m_RendererID);
+            return;
+        }
+        glDeleteProgram(m_RendererID);
+        m_RendererID = 0;
     }
 
-    KZ_CORE_INFO("Shader '{0}' compilado com sucesso (id={1}).", name, m_RendererID);
+    // Todas as versões falharam: loga o motivo (compile info do último alvo).
+    uint32_t lastVs = CompileStage(GL_VERTEX_SHADER, RewriteVersionFor(vertexSrc, 330), name);
+    uint32_t lastFs = CompileStage(GL_FRAGMENT_SHADER, RewriteVersionFor(fragmentSrc, 330), name);
+    if (lastVs) glDeleteShader(lastVs);
+    if (lastFs) glDeleteShader(lastFs);
+    SetShaderDiagnostic("SHADER '" + m_Name + "' FALHOU EM TODAS AS VERSÕES");
 }
 
 Shader::~Shader() { glDeleteProgram(m_RendererID); }

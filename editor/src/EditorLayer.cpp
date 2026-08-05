@@ -4140,6 +4140,23 @@ void EditorLayer::OnImGuiRender() {
         (void)gs;
     }
 
+    // Faixa de DIAGNÓSTICO (vermelha): mostra na tela a última falha de
+    // driver/shader/FBO — sem precisar caçar o KizuriEngine.log. Some sozinha
+    // quando um frame passa limpo.
+    const std::string& diag = kizuri::GetShaderDiagnostic();
+    if (!diag.empty()) {
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        ImVec2 pos = ImGui::GetCursorScreenPos();
+        ImVec2 textSize = ImGui::CalcTextSize(diag.c_str());
+        float pad = 8.0f;
+        dl->AddRectFilled(ImVec2(pos.x + pad, pos.y + 8.0f),
+                          ImVec2(pos.x + pad + textSize.x + pad * 2.0f,
+                                 pos.y + 8.0f + textSize.y + pad * 2.0f),
+                          IM_COL32(180, 30, 30, 220), 6.0f);
+        dl->AddText(ImVec2(pos.x + pad * 2.0f, pos.y + 8.0f + pad),
+                    IM_COL32(255, 235, 235, 255), diag.c_str());
+    }
+
     // O gizmo precisa desenhar ANTES do teste de clique abaixo — é isso
     // que atualiza ImGuizmo::IsOver()/IsUsing() pro estado do MOUSE ATUAL
     // deste frame. Na ordem antiga (picking primeiro, gizmo depois), o

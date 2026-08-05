@@ -1325,8 +1325,10 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
     glBindFramebuffer(GL_FRAMEBUFFER, s_HDRFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_HDRColorBuffer, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, s_HDRDepthTexture, 0);
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         KZ_CORE_ERROR("Framebuffer HDR incompleto.");
+        SetShaderDiagnostic("Framebuffer HDR INCOMPLETO");
+    }
 
     // --- Destino multisample (se MSAA>1): a cena renderiza aqui; o blit resolve ---
     // Fallback obrigatório: se a GPU não suportar o nº de amostras no FBO HDR
@@ -1358,6 +1360,7 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
             // GPU recusou o MSAA mesmo dentro do máximo reportado: desliga sem
             // renderizar no FBO quebrado (senão o viewport fica preto).
             KZ_CORE_ERROR("Framebuffer HDR MSAA incompleto — desabilitando MSAA (fallback).");
+            SetShaderDiagnostic("Framebuffer HDR MSAA INCOMPLETO — MSAA desligado");
             s_MSAARejected = requestedMsaa;
             glDeleteFramebuffers(1, &s_MSAAHDRFBO);   s_MSAAHDRFBO = 0;
             glDeleteTextures(1, &s_MSAAHDRColor);     s_MSAAHDRColor = 0;
@@ -1378,8 +1381,10 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glBindFramebuffer(GL_FRAMEBUFFER, s_BloomFBO[i]);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_BloomColorBuffer[i], 0);
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
             KZ_CORE_ERROR("Framebuffer de bloom {0} incompleto.", i);
+            SetShaderDiagnostic("Framebuffer de bloom incompleto");
+        }
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -1490,8 +1495,10 @@ void Renderer3D::EnsureSSAOBuffers(uint32_t width, uint32_t height) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glBindFramebuffer(GL_FRAMEBUFFER, *fbo);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *tex, 0);
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
             KZ_CORE_ERROR("Framebuffer SSAO {0} incompleto.", pass);
+            SetShaderDiagnostic("Framebuffer SSAO incompleto");
+        }
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -1517,8 +1524,10 @@ void Renderer3D::EnsureSSRBuffer(uint32_t width, uint32_t height) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glBindFramebuffer(GL_FRAMEBUFFER, s_SSRFBO);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_SSRColorBuffer, 0);
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         KZ_CORE_ERROR("Framebuffer SSR incompleto.");
+        SetShaderDiagnostic("Framebuffer SSR incompleto");
+    }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 // único, síncrono. A fonte do ambiente é o céu procedural OU uma imagem HDR
@@ -2252,8 +2261,12 @@ void Renderer3D::EndScene() {
 
     // Diagnóstico: qualquer erro de driver neste frame aparece no log (ex.:
     // GL_INVALID_FRAMEBUFFER_OPERATION = FBO incompleto, que é tela preta).
-    if (GLenum err = glGetError(); err != GL_NO_ERROR)
+    if (GLenum err = glGetError(); err != GL_NO_ERROR) {
         KZ_CORE_ERROR("OpenGL erro 0x{0:x} no frame (pós).", (unsigned)err);
+        char buf[64];
+        snprintf(buf, sizeof(buf), "OpenGL erro 0x%04x", (unsigned)err);
+        SetShaderDiagnostic(buf);
+    }
 
     s_DrawList.clear();
 }

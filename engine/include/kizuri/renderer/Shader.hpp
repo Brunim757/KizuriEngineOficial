@@ -22,6 +22,12 @@ void SetContextGLSLVersion(int glsl);
 
 std::string GetOpenGLVersionString();
 
+// Diagnóstico global de renderização: guarda a ÚLTIMA falha de driver/shader
+// (link, FBO incompleto, glGetError) pra o editor mostrar NA TELA — sem o
+// usuário precisar caçar o log. Vazio = sem erro.
+void SetShaderDiagnostic(const std::string& msg);
+const std::string& GetShaderDiagnostic();
+
 class Shader {
 public:
     Shader(const std::string& name, const std::string& vertexSrc, const std::string& fragmentSrc);

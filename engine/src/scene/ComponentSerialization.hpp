@@ -16,6 +16,21 @@ inline std::string ResolveSerializedPath(const std::string& path) {
     return Project::ResolvePath(path);
 }
 
+// Material de um .glb/.gltf com texturas EMBUTIDAS não tem caminho de
+// arquivo (veio de memória via CreateFromMemory) — na recarga (Play/cópia/
+// save) os mapas se perdem e o objeto fica cinza. Reextrai do arquivo fonte
+// só os mapas que ainda estão vazios (preserva overrides manuais).
+inline void RestoreGLTFTextureMaps(MeshRendererComponent& mr) {
+    const std::string& src = mr.MeshSource;
+    if (src.find(".glb") == std::string::npos && src.find(".gltf") == std::string::npos) return;
+    Material restored = Mesh::ExtractMaterialFromGLTF(ResolveSerializedPath(src));
+    auto& mat = mr.MeshMaterial;
+    if (!mat.AlbedoMap && restored.AlbedoMap) mat.AlbedoMap = restored.AlbedoMap;
+    if (!mat.NormalMap && restored.NormalMap) mat.NormalMap = restored.NormalMap;
+    if (!mat.MetallicRoughnessMap && restored.MetallicRoughnessMap) mat.MetallicRoughnessMap = restored.MetallicRoughnessMap;
+    if (!mat.EmissiveMap && restored.EmissiveMap) mat.EmissiveMap = restored.EmissiveMap;
+}
+
 inline nlohmann::json Vec3ToJson(const glm::vec3& v) { return { v.x, v.y, v.z }; }
 inline nlohmann::json Vec4ToJson(const glm::vec4& v) { return { v.x, v.y, v.z, v.w }; }
 inline glm::vec3 JsonToVec3(const nlohmann::json& j) { return { j[0].get<float>(), j[1].get<float>(), j[2].get<float>() }; }
@@ -332,6 +347,7 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         if (!mat.NormalMapPath.empty()) mat.NormalMap = Texture2D::Create(ResolveSerializedPath(mat.NormalMapPath));
         if (!mat.MetallicRoughnessMapPath.empty()) mat.MetallicRoughnessMap = Texture2D::Create(ResolveSerializedPath(mat.MetallicRoughnessMapPath));
         if (!mat.EmissiveMapPath.empty()) mat.EmissiveMap = Texture2D::Create(ResolveSerializedPath(mat.EmissiveMapPath));
+        RestoreGLTFTextureMaps(mr); // texturas embutidas no .glb voltam na recarga
     }
 
     if (je.contains("Camera")) {
@@ -572,6 +588,7 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.NormalMapPath));
         mat.MetallicRoughnessMap = mat.MetallicRoughnessMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.MetallicRoughnessMapPath));
         mat.EmissiveMap = mat.EmissiveMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.EmissiveMapPath));
+        RestoreGLTFTextureMaps(mr); // texturas embutidas no .glb voltam na recarga
     } else if (entity.HasComponent<MeshRendererComponent>()) {
         entity.RemoveComponent<MeshRendererComponent>();
     }

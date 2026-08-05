@@ -35,6 +35,14 @@ content/
 - **Texturas PBR** (`textures/<Material>_2K/`): albedo/normal/roughness pro
   material de qualquer MeshRenderer (slots do Inspetor aceitam drop).
 
+## Conteúdo embutido (`kzres://`)
+
+Uma seleção de assets vive DENTRO do executável/dll, sem arquivo no disco.
+Caminhos `kzres://<nome>` funcionam em qualquer slot de asset (mesh, textura,
+skin, HDRI). Atual: `models/Cube.glb` e `skies/sky_gradient.hdr`. O
+registro é gerado no build por `cmake/EmbedContent.cmake` a partir de
+`engine/resources/embedded_content/` — adicione arquivos lá pra embutir mais.
+
 ## Atual (gerado na última CI)
 
 - Modelos: Fox, BoxAnimated, BrainStem, CesiumMan, RiggedFigure,

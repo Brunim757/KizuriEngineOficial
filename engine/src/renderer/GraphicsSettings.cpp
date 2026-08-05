@@ -61,6 +61,7 @@ void GraphicsSettings::Clamp() {
     ChromaticAberration = std::clamp(ChromaticAberration, 0.0f, 0.02f);
     FilmGrain = std::clamp(FilmGrain, 0.0f, 0.2f);
     BloomIterations = std::clamp(BloomIterations, 1, 12);
+    ToneMapping = std::clamp(ToneMapping, 0, 2);
 }
 
 void GraphicsSettings::ApplyPreset(QualityPreset preset) {
@@ -139,6 +140,7 @@ bool SaveGraphicsSettings(const std::string& path, const GraphicsSettings& setti
     j["chromatic_aberration"] = settings.ChromaticAberration;
     j["film_grain"] = settings.FilmGrain;
     j["bloom_iterations"] = settings.BloomIterations;
+    j["tone_mapping"] = settings.ToneMapping;
     j["vsync"] = settings.VSync;
 
     std::ofstream out(path);
@@ -175,6 +177,7 @@ bool LoadGraphicsSettings(const std::string& path, GraphicsSettings& out) {
         out.ChromaticAberration = j.value("chromatic_aberration", out.ChromaticAberration);
         out.FilmGrain = j.value("film_grain", out.FilmGrain);
         out.BloomIterations = j.value("bloom_iterations", out.BloomIterations);
+        out.ToneMapping = j.value("tone_mapping", out.ToneMapping);
         out.VSync = j.value("vsync", out.VSync);
         out.Clamp();
         return true;

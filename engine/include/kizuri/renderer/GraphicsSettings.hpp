@@ -60,6 +60,10 @@ struct GraphicsSettings {
     // Qualidade do bloom (iterações do blur ping-pong; mais = glow mais largo).
     int BloomIterations = 4;
 
+    // Tonemapping: 0 = ACES (padrão, cinematográfico), 1 = Reinhard (suave),
+    // 2 = Filmic (Alchemy, contraste alto). Aplicado no composite.
+    int ToneMapping = 0;
+
     bool VSync = true;
 
     // Ajusta os padrões pelo HARDWARE (versão GLSL detectada): GL 3.3 fica

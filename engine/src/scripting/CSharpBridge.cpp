@@ -218,6 +218,16 @@ KZ_SCRIPT_API uint32_t kz_scene_instantiate_prefab(const char* path, float x, fl
     return kizuri::scripting::RegisterEntityHandle(entity);
 }
 
+KZ_SCRIPT_API uint32_t kz_scene_instantiate_prefab_rot(const char* path, float x, float y, float z,
+                                                       float rx, float ry, float rz) {
+    if (s_ActiveScene == nullptr || path == nullptr) return 0;
+    kizuri::Entity entity = s_ActiveScene->Instantiate(kizuri::Project::ResolvePath(path), glm::vec3(x, y, z));
+    if (!entity) return 0;
+    if (entity.HasComponent<kizuri::TransformComponent>())
+        entity.GetComponent<kizuri::TransformComponent>().Rotation = { rx, ry, rz };
+    return kizuri::scripting::RegisterEntityHandle(entity);
+}
+
 KZ_SCRIPT_API void kz_scene_request_load(const char* path) {
     if (s_ActiveScene == nullptr || path == nullptr) return;
     // Pedido diferido — o host troca a cena no fim do frame (PollPendingLoad).

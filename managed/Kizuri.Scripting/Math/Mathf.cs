@@ -39,6 +39,36 @@ public static class Mathf
 	public static float Repeat(float t, float length)
 		=> Clamp(t - System.MathF.Floor(t / length) * length, 0f, length);
 
+	// SmoothStep: interpola com suavização (S-curve, sem overshoot).
+	public static float SmoothStep(float a, float b, float t)
+	{
+		t = Clamp((t - a) / (b - a), 0f, 1f);
+		return t * t * (3f - 2f * t);
+	}
+
+	// Oscila entre 0 e length no sentido e na velocidade de t (0,5,10,0,5...).
+	public static float PingPong(float t, float length)
+	{
+		t = Repeat(t, length * 2f);
+		return length - System.MathF.Abs(t - length);
+	}
+
+	// Re-mapeia um valor de um intervalo pra outro (ex.: 0..1 -> -90..90).
+	public static float Remap(float value, float fromMin, float fromMax, float toMin, float toMax)
+		=> toMin + (value - fromMin) / (fromMax - fromMin) * (toMax - toMin);
+
+	// Interpolação de âNGULO que pega o caminho curto (ex.: 350° -> 10°).
+	public static float LerpAngle(float a, float b, float t)
+	{
+		float delta = Repeat(b - a, 360f);
+		if (delta > 180f) delta -= 360f;
+		return a + delta * Clamp(t, 0f, 1f);
+	}
+
+	// Angulo (graus) entre dois vetores 2D.
+	public static float Angle(Math.Vector2 a, Math.Vector2 b)
+		=> System.MathF.Atan2(a.X * b.Y - a.Y * b.X, a.X * b.X + a.Y * b.Y) * 180f / System.MathF.PI;
+
 	public static float Abs(float v) => System.MathF.Abs(v);
 	public static float Sign(float v) => System.MathF.Sign(v);
 	public static float Min(float a, float b) => System.MathF.Min(a, b);

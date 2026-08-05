@@ -1142,6 +1142,8 @@ void EditorLayer::DrawSettingsGraphics() {
         customTweak |= ImGui::DragFloat("Intensidade do bloom", &m_GraphicsSettings.BloomIntensity, 0.01f, 0.0f, 3.0f);
     }
     customTweak |= ImGui::SliderInt("Iterações do bloom (glow)", &m_GraphicsSettings.BloomIterations, 1, 12);
+    const char* tmNames[] = { "ACES (cinematográfico)", "Reinhard (suave)", "Filmic (contraste)" };
+    customTweak |= ImGui::Combo("Tonemapping", &m_GraphicsSettings.ToneMapping, tmNames, 3);
     ImGui::Separator();
     customTweak |= ImGui::Checkbox("SSAO", &m_GraphicsSettings.SSAOEnabled);
     if (m_GraphicsSettings.SSAOEnabled) {

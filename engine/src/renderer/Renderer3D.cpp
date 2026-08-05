@@ -741,10 +741,16 @@ uniform float u_Vignette;
 uniform float u_ChromaticAberration;
 uniform float u_FilmGrain;
 uniform float u_Time;
+uniform int u_ToneMapping; // 0=ACES, 1=Reinhard, 2=Filmic
 
 vec3 ACESFilm(vec3 x) {
     float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
     return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+}
+vec3 Reinhard(vec3 x) { return x / (1.0 + x); }
+vec3 Filmic(vec3 x) {
+    vec3 xx = max(x - vec3(0.004), vec3(0.0));
+    return (xx * (6.2 * xx + 0.5)) / (xx * (6.2 * xx + 1.7) + 0.06);
 }
 
 void main() {
@@ -761,7 +767,9 @@ void main() {
     vec3 color = hdr + bloom * u_BloomIntensity;
     if (u_HasAO) color *= texture(u_AOTexture, uv).r;
     color *= u_Exposure;
-    color = ACESFilm(color);
+    if (u_ToneMapping == 1) color = Reinhard(color);
+    else if (u_ToneMapping == 2) color = clamp(Filmic(color), 0.0, 1.0);
+    else color = ACESFilm(color);
     color = pow(color, vec3(1.0 / 2.2));
 
     float vig = 1.0 - u_Vignette * smoothstep(0.55, 1.35, length(dir * 2.0));
@@ -1998,6 +2006,7 @@ void Renderer3D::EndScene() {
     s_CompositeShader->SetFloat("u_Vignette", s_Settings.Vignette);
     s_CompositeShader->SetFloat("u_ChromaticAberration", s_Settings.ChromaticAberration);
     s_CompositeShader->SetFloat("u_FilmGrain", s_Settings.FilmGrain);
+    s_CompositeShader->SetInt("u_ToneMapping", s_Settings.ToneMapping);
     s_PostTime += 0.016f; // grão de filme animado (relógio de pós-processamento)
     s_CompositeShader->SetFloat("u_Time", s_PostTime);
     s_CompositeShader->SetInt("u_HasAO", hasAO ? 1 : 0);

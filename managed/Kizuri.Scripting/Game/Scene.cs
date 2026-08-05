@@ -16,6 +16,14 @@ public static class Scene
 		return new(Interop.KizuriNative.kz_scene_instantiate_prefab(prefabPath, p.X, p.Y, p.Z));
 	}
 
+	// Instancia com rotação (euler, radianos) na raiz da prefab.
+	public static Entity InstantiatePrefab(string prefabPath, Math.Vector3 position, Math.Vector3 rotation)
+	{
+		var p = position;
+		var r = rotation;
+		return new(Interop.KizuriNative.kz_scene_instantiate_prefab_rot(prefabPath, p.X, p.Y, p.Z, r.X, r.Y, r.Z));
+	}
+
 	// Pedido de troca de cena (o caminho é resolvido relativo ao projeto).
 	// A troca real acontece no fim do frame.
 	public static void Load(string scenePath)

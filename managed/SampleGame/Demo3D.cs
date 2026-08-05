@@ -55,7 +55,8 @@ using Kizuri.Math;
 		// Busca por nome (valida Scene.Find) + renomeia em runtime.
 		var found = Scene.Find("Cubo");
 		if (found.IsValid) found.Name = "Cubo Renomeado";
-		Log.Info($"Demo3D pronto: (Scene.Find='{found.Name}') time={Time.time:0.00}s");
+		_spinningBall.TryGetWorldPosition(out var ballPos);
+		Log.Info($"Demo3D pronto: (Scene.Find='{found.Name}') bola em ({ballPos.X:0.0},{ballPos.Y:0.0},{ballPos.Z:0.0}) time={Time.time:0.00}s");
 	}
 
 	public override void OnUpdate(float deltaSeconds)

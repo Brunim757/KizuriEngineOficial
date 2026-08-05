@@ -889,4 +889,26 @@ KZ_SCRIPT_API int kz_particle_set_texture(uint32_t entity, const char* path) {
     return 1;
 }
 
+// --- Controle 3D ---
+KZ_SCRIPT_API int kz_entity_get_world_position(uint32_t entity, float* outX, float* outY, float* outZ) {
+    auto e = Resolve(entity);
+    if (!e || s_ActiveScene == nullptr) return 0;
+    glm::vec3 p = glm::vec3(s_ActiveScene->GetWorldTransform(e)[3]);
+    if (outX) *outX = p.x;
+    if (outY) *outY = p.y;
+    if (outZ) *outZ = p.z;
+    return 1;
+}
+
+// Aponta a rotação da entidade (euler fps: pitch=x, yaw=y) pra encarar um ponto.
+KZ_SCRIPT_API void kz_entity_look_at(uint32_t entity, float tx, float ty, float tz) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TransformComponent>() || s_ActiveScene == nullptr) return;
+    glm::vec3 pos = glm::vec3(s_ActiveScene->GetWorldTransform(e)[3]);
+    glm::vec3 d = glm::normalize(glm::vec3(tx, ty, tz) - pos);
+    float yaw = glm::atan(d.z, d.x);
+    float pitch = glm::asin(glm::clamp(d.y, -1.0f, 1.0f));
+    e.GetComponent<kizuri::TransformComponent>().Rotation = { pitch, yaw, 0.0f };
+}
+
 } // extern "C"

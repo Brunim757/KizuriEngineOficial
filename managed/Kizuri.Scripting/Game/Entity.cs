@@ -74,6 +74,16 @@ public readonly struct Entity
 	public void SetScale(Math.Vector3 scale)
 		=> Interop.KizuriNative.kz_transform_set_scale(Handle, scale.X, scale.Y, scale.Z);
 
+	// Posição MUNDIAL (respeita hierarquia de pais) e LookAt (encara um ponto).
+	public bool TryGetWorldPosition(out Math.Vector3 position)
+	{
+		position = Math.Vector3.Zero;
+		return Interop.KizuriNative.kz_entity_get_world_position(Handle, out position.X, out position.Y, out position.Z) != 0;
+	}
+
+	public void LookAt(Math.Vector3 target)
+		=> Interop.KizuriNative.kz_entity_look_at(Handle, target.X, target.Y, target.Z);
+
 	// Parenta 'this' a 'parent' (ou destaca, com SetParent() sem argumento).
 	public void SetParent(Entity parent)
 		=> Interop.KizuriNative.kz_entity_set_parent(Handle, parent.Handle);

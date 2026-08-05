@@ -78,13 +78,8 @@
 <article>
 <h1 id="física-na-api-c">Física na API C#</h1>
 <p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D.</p>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D.</p>
 <h2 id="rigidbody2d">Rigidbody2D</h2>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D.</p>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D.</p>
 <table><thead><tr><th>Membro</th><th>Descrição</th></tr></thead><tbody><tr><td><code>Type</code></td><td><code>BodyType</code> (Static/Dynamic/Kinematic)</td></tr><tr><td><code>GetLinearVelocity()</code></td><td>Velocidade atual (<code>Vector2</code>)</td></tr><tr><td><code>SetLinearVelocity(Vector2)</code></td><td>Define a velocidade</td></tr><tr><td><code>ApplyLinearImpulse(Vector2, bool wake = true)</code></td><td>Impulso instantâneo</td></tr><tr><td><code>SetTransform(Vector2 pos, float angleRad)</code></td><td>Sincroniza/teleporta o corpo</td></tr></tbody></table>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D.</p>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D.</p>
 <pre><code class="language-csharp">public override void OnUpdate(float deltaSeconds)
 {
     var wish = Vector2.Zero;
@@ -97,23 +92,13 @@
         rb.SetLinearVelocity(new Vector2(wish.X * 5f, v.Y));  // controle lateral
     }
 }</code></pre>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D.</p>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D.</p>
 <h3 id="pulo">Pulo</h3>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D.</p>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D.</p>
 <pre><code class="language-csharp">if (Input.IsKeyDown(Key.Space))
     if (Entity.TryGetRigidbody2D(out var rb))
         rb.ApplyLinearImpulse(new Vector2(0f, 8f));</code></pre>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D.</p>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D.</p>
 <h2 id="queries-de-física">Queries de física</h2>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D.</p>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong></p>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong></p>
+<p>Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong></p>
 <table><thead><tr><th>Query</th><th>Assinatura</th></tr></thead><tbody><tr><td><code>Scene.Raycast2D</code></td><td><code>(Vector2 from, Vector2 to, out Entity hit, out Vector2 point)</code></td></tr><tr><td><code>Scene.Raycast3D</code></td><td><code>(Vector3 from, Vector3 to, out Entity hit, out Vector3 point, out float fraction)</code></td></tr><tr><td><code>Scene.OverlapCircle2D</code></td><td><code>(Vector2 center, float radius, out Entity hit)</code></td></tr><tr><td><code>Scene.OverlapSphere3D</code></td><td><code>(Vector3 center, float radius, out Entity hit)</code></td></tr></tbody></table>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong></p>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong></p>
 <pre><code class="language-csharp">// 2D — raio para baixo
 if (Scene.Raycast2D(pos2d, pos2d + new Vector2(0f, -20f), out var chao, out var ponto))
     if (chao.Name == "Chão") estaNoChao = true;
@@ -121,29 +106,18 @@ if (Scene.Raycast2D(pos2d, pos2d + new Vector2(0f, -20f), out var chao, out var 
 // 3D — área de explosão
 if (Scene.OverlapSphere3D(centro, 5f, out var alvo))
     alvo.Destroy();</code></pre>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong></p>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong></p>
 <h2 id="corpos-3d">Corpos 3D</h2>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong></p>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong> A física 3D (Bullet3) é controlada por métodos diretos da <code>Entity</code>:</p>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong> A física 3D (Bullet3) é controlada por métodos diretos da <code>Entity</code>:</p>
+<p>A física 3D (Bullet3) é controlada por métodos diretos da <code>Entity</code>:</p>
 <ul>
 <li><code>AddRigidbody3D(BodyType3D, mass)</code> + <code>AddBoxCollider3D</code> / <code>AddSphereCollider3D</code>;</li>
 <li><code>ApplyForce</code> / <code>ApplyImpulse</code> / <code>ApplyTorque</code>;</li>
 <li><code>SetVelocity</code> / <code>SetAngularVelocity</code> / <code>TryGetVelocity</code> / <code>TryGetAngularVelocity</code>.</li>
 </ul>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong> A física 3D (Bullet3) é controlada por métodos diretos da <code>Entity</code>:</p>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong> A física 3D (Bullet3) é controlada por métodos diretos da <code>Entity</code>: Ver <a href="fisica-3d.html">Física 3D</a>.</p>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong> A física 3D (Bullet3) é controlada por métodos diretos da <code>Entity</code>: Ver <a href="fisica-3d.html">Física 3D</a>.</p>
+<p>Ver <a href="fisica-3d.html">Física 3D</a>.</p>
 <h2 id="tipos-de-corpo">Tipos de corpo</h2>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong> A física 3D (Bullet3) é controlada por métodos diretos da <code>Entity</code>: Ver <a href="fisica-3d.html">Física 3D</a>.</p>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong> A física 3D (Bullet3) é controlada por métodos diretos da <code>Entity</code>: Ver <a href="fisica-3d.html">Física 3D</a>.</p>
 <pre><code class="language-csharp">enum BodyType   { Static = 0, Dynamic, Kinematic }   // 2D
 enum BodyType3D { Static = 0, Dynamic, Kinematic }   // 3D</code></pre>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong> A física 3D (Bullet3) é controlada por métodos diretos da <code>Entity</code>: Ver <a href="fisica-3d.html">Física 3D</a>.</p>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong> A física 3D (Bullet3) é controlada por métodos diretos da <code>Entity</code>: Ver <a href="fisica-3d.html">Física 3D</a>.</p>
 <table><thead><tr><th>Tipo</th><th>Responde a forças?</th><th>Move por script?</th></tr></thead><tbody><tr><td><strong>Static</strong></td><td>não</td><td>não (cena fixa)</td></tr><tr><td><strong>Dynamic</strong></td><td>sim</td><td>sim (mas a física manda)</td></tr><tr><td><strong>Kinematic</strong></td><td>não</td><td>sim (<code>SetTransform</code>/posição)</td></tr></tbody></table>
-<p>A struct <code>Rigidbody2D</code> é devolvida por <code>Entity.TryGetRigidbody2D</code> — controle direto do corpo 2D. Todas devolvem <code>false</code>/<code>Entity.Invalid</code> quando nada foi atingido. <strong>Só funcionam no Play.</strong> A física 3D (Bullet3) é controlada por métodos diretos da <code>Entity</code>: Ver <a href="fisica-3d.html">Física 3D</a>.</p>
 
 </article>
 <div class="pager">

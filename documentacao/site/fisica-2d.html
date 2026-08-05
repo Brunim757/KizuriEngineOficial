@@ -78,30 +78,15 @@
 <article>
 <h1 id="física-2d-box2d">Física 2D (Box2D)</h1>
 <p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
 <h2 id="rigidbody2dcomponent">Rigidbody2DComponent</h2>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
 <table><thead><tr><th>Campo</th><th>Descrição</th></tr></thead><tbody><tr><td><strong>Type</strong></td><td><code>Static</code> (não move), <code>Dynamic</code> (responde a forças), <code>Kinematic</code> (move via script)</td></tr><tr><td><strong>FixedRotation</strong></td><td>Trava a rotação do corpo</td></tr><tr><td><strong>GravityScale</strong></td><td>Multiplicador da gravidade: <strong><0 inverte</strong>, <strong>0 desliga</strong></td></tr></tbody></table>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
 <h3 id="gravityscale-a-chave-do-platformer">GravityScale — a chave do platformer</h3>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
 <pre><code class="language-csharp">Entity.SetGravityScale(0f);    // sem gravidade (personagem aéreo)
 Entity.SetGravityScale(-1f);   // gravidade INVERTIDA (teto!);
 Entity.SetGravityScale(0.5f);  // gravidade mais leve (lua)</code></pre>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
 <h2 id="colliders-2d">Colliders 2D</h2>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
 <table><thead><tr><th>Componente</th><th>Campos</th></tr></thead><tbody><tr><td><strong>BoxCollider2D</strong></td><td>Offset, Size, Density, Friction, Restitution, RestitutionThreshold</td></tr><tr><td><strong>CircleCollider2D</strong></td><td>Offset, Radius, Density, Friction, Restitution</td></tr></tbody></table>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
 <h2 id="controlando-o-corpo">Controlando o corpo</h2>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
 <pre><code class="language-csharp">if (Entity.TryGetRigidbody2D(out var rb))
 {
     var v = rb.GetLinearVelocity();
@@ -109,11 +94,7 @@ Entity.SetGravityScale(0.5f);  // gravidade mais leve (lua)</code></pre>
     rb.ApplyLinearImpulse(new Vector2(0f, 8f));      // pulo
     rb.SetTransform(new Vector2(x, y), angleRad);    // teleportar
 }</code></pre>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
 <h2 id="queries">Queries</h2>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
 <pre><code class="language-csharp">// raio de A até B — devolve entidade e ponto do impacto
 if (Scene.Raycast2D(from, to, out var hit, out var point))
     Log.Info($"Atingiu {hit.Id} em {point}");
@@ -121,35 +102,22 @@ if (Scene.Raycast2D(from, to, out var hit, out var point))
 // algum collider toca o círculo?
 if (Scene.OverlapCircle2D(center, radius, out var closest))
     Log.Info($"Círculo tocou {closest.Id}");</code></pre>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
 <h2 id="tilemap-sólido">Tilemap sólido</h2>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play.</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play. No <a href="tilemap.html">Tilemap</a>, os valores em <code>SolidTileValues</code> geram colliders estáticos automaticamente — níveis de platformer sem montar colisor a colisor.</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play. No <a href="tilemap.html">Tilemap</a>, os valores em <code>SolidTileValues</code> geram colliders estáticos automaticamente — níveis de platformer sem montar colisor a colisor.</p>
+<p>No <a href="tilemap.html">Tilemap</a>, os valores em <code>SolidTileValues</code> geram colliders estáticos automaticamente — níveis de platformer sem montar colisor a colisor.</p>
 <h2 id="callbacks-de-colisão">Callbacks de colisão</h2>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play. No <a href="tilemap.html">Tilemap</a>, os valores em <code>SolidTileValues</code> geram colliders estáticos automaticamente — níveis de platformer sem montar colisor a colisor.</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play. No <a href="tilemap.html">Tilemap</a>, os valores em <code>SolidTileValues</code> geram colliders estáticos automaticamente — níveis de platformer sem montar colisor a colisor. No script:</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play. No <a href="tilemap.html">Tilemap</a>, os valores em <code>SolidTileValues</code> geram colliders estáticos automaticamente — níveis de platformer sem montar colisor a colisor. No script:</p>
+<p>No script:</p>
 <pre><code class="language-csharp">public override void OnCollisionBegin(Entity other) { }
 public override void OnCollisionEnd(Entity other) { }</code></pre>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play. No <a href="tilemap.html">Tilemap</a>, os valores em <code>SolidTileValues</code> geram colliders estáticos automaticamente — níveis de platformer sem montar colisor a colisor. No script:</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play. No <a href="tilemap.html">Tilemap</a>, os valores em <code>SolidTileValues</code> geram colliders estáticos automaticamente — níveis de platformer sem montar colisor a colisor. No script:</p>
 <div class="callout warn">A física 2D <strong>só simula no Play</strong> — no modo de edição os corpos ficam parados no Transform.</div>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play. No <a href="tilemap.html">Tilemap</a>, os valores em <code>SolidTileValues</code> geram colliders estáticos automaticamente — níveis de platformer sem montar colisor a colisor. No script:</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play. No <a href="tilemap.html">Tilemap</a>, os valores em <code>SolidTileValues</code> geram colliders estáticos automaticamente — níveis de platformer sem montar colisor a colisor. No script:</p>
 <h2 id="dicas">Dicas</h2>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play. No <a href="tilemap.html">Tilemap</a>, os valores em <code>SolidTileValues</code> geram colliders estáticos automaticamente — níveis de platformer sem montar colisor a colisor. No script:</p>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play. No <a href="tilemap.html">Tilemap</a>, os valores em <code>SolidTileValues</code> geram colliders estáticos automaticamente — níveis de platformer sem montar colisor a colisor. No script:</p>
 <ul>
 <li><strong>Dynamic + Kinematic</strong>: use Kinematic para plataformas móveis; o</li>
 </ul>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play. No <a href="tilemap.html">Tilemap</a>, os valores em <code>SolidTileValues</code> geram colliders estáticos automaticamente — níveis de platformer sem montar colisor a colisor. No script:   <code>SetTransform</code> sincroniza o corpo com o Transform (teleporte limpo);</p>
+<p>  <code>SetTransform</code> sincroniza o corpo com o Transform (teleporte limpo);</p>
 <ul>
 <li><strong>Restitution > 0</strong> para objetos que quicam (bolas);</li>
 <li><strong>Friction baixa</strong> (0.1) para objetos que deslizam.</li>
 </ul>
-<p>Corpos rígidos e colliders em 2D, simulados pelo <strong>Box2D</strong> durante o Play. No <a href="tilemap.html">Tilemap</a>, os valores em <code>SolidTileValues</code> geram colliders estáticos automaticamente — níveis de platformer sem montar colisor a colisor. No script:   <code>SetTransform</code> sincroniza o corpo com o Transform (teleporte limpo);</p>
 
 </article>
 <div class="pager">

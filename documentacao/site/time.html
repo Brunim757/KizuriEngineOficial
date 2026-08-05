@@ -78,16 +78,9 @@
 <article>
 <h1 id="time">Time</h1>
 <p>Tempo de jogo e do mundo.</p>
-<p>Tempo de jogo e do mundo.</p>
 <h2 id="propriedades">Propriedades</h2>
-<p>Tempo de jogo e do mundo.</p>
-<p>Tempo de jogo e do mundo.</p>
 <table><thead><tr><th>Membro</th><th>Tipo</th><th>Descrição</th></tr></thead><tbody><tr><td><code>Time.DeltaSeconds</code></td><td><code>float</code></td><td>Delta deste frame (escalado pelo <code>TimeScale</code>)</td></tr><tr><td><code>Time.time</code></td><td><code>float</code></td><td>Tempo acumulado desde o início (escalado)</td></tr><tr><td><code>Time.unscaledTime</code></td><td><code>float</code></td><td>Tempo real acumulado (ignora <code>TimeScale</code>)</td></tr><tr><td><code>Time.unscaledDeltaTime</code></td><td><code>float</code></td><td>Delta real do frame</td></tr><tr><td><code>Time.TimeScale</code></td><td><code>float</code> (get/set)</td><td>Escala global do tempo</td></tr></tbody></table>
-<p>Tempo de jogo e do mundo.</p>
-<p>Tempo de jogo e do mundo.</p>
 <h2 id="uso">Uso</h2>
-<p>Tempo de jogo e do mundo.</p>
-<p>Tempo de jogo e do mundo.</p>
 <pre><code class="language-csharp">var dt = Time.DeltaSeconds;                 // para o movimento
 var t  = Time.time;                         // para animações que dependem do tempo
 
@@ -97,31 +90,19 @@ Time.TimeScale = 0.3f;
 Time.TimeScale = 0f;
 // volta ao normal
 Time.TimeScale = 1f;</code></pre>
-<p>Tempo de jogo e do mundo.</p>
-<p>Tempo de jogo e do mundo.</p>
 <h2 id="o-que-o-timescale-afeta">O que o TimeScale afeta</h2>
-<p>Tempo de jogo e do mundo.</p>
-<p>Tempo de jogo e do mundo.</p>
 <ul>
 <li><strong>Escala</strong> o <code>deltaSeconds</code> recebido pelos scripts (o <code>dt</code> do <code>OnUpdate</code>);</li>
 <li>Não trava a física/partículas (que usam dt próprio) — <code>TimeScale = 0</code></li>
 </ul>
-<p>Tempo de jogo e do mundo.   pausa os <strong>scripts</strong>, não o mundo inteiro.</p>
-<p>Tempo de jogo e do mundo.   pausa os <strong>scripts</strong>, não o mundo inteiro.</p>
+<p>  pausa os <strong>scripts</strong>, não o mundo inteiro.</p>
 <pre><code class="language-csharp">// movimento independente da câmera lenta (UI, contadores)
 var real = Time.unscaledDeltaTime;</code></pre>
-<p>Tempo de jogo e do mundo.   pausa os <strong>scripts</strong>, não o mundo inteiro.</p>
-<p>Tempo de jogo e do mundo.   pausa os <strong>scripts</strong>, não o mundo inteiro.</p>
 <h2 id="timestep">Timestep</h2>
-<p>Tempo de jogo e do mundo.   pausa os <strong>scripts</strong>, não o mundo inteiro.</p>
-<p>Tempo de jogo e do mundo.   pausa os <strong>scripts</strong>, não o mundo inteiro. O struct <code>Timestep</code> envolve o delta e <strong>converte implicitamente para float</strong>:</p>
-<p>Tempo de jogo e do mundo.   pausa os <strong>scripts</strong>, não o mundo inteiro. O struct <code>Timestep</code> envolve o delta e <strong>converte implicitamente para float</strong>:</p>
+<p>O struct <code>Timestep</code> envolve o delta e <strong>converte implicitamente para float</strong>:</p>
 <pre><code class="language-csharp">Timestep ts = new(0.016f);
 float seconds = ts.Seconds;   // ou simplesmente (float)ts</code></pre>
-<p>Tempo de jogo e do mundo.   pausa os <strong>scripts</strong>, não o mundo inteiro. O struct <code>Timestep</code> envolve o delta e <strong>converte implicitamente para float</strong>:</p>
-<p>Tempo de jogo e do mundo.   pausa os <strong>scripts</strong>, não o mundo inteiro. O struct <code>Timestep</code> envolve o delta e <strong>converte implicitamente para float</strong>:</p>
 <div class="callout info">No <code>OnUpdate(float deltaSeconds)</code> você já recebe o delta pronto — não precisa chamar <code>Time.DeltaSeconds</code> de novo para o movimento do frame.</div>
-<p>Tempo de jogo e do mundo.   pausa os <strong>scripts</strong>, não o mundo inteiro. O struct <code>Timestep</code> envolve o delta e <strong>converte implicitamente para float</strong>:</p>
 
 </article>
 <div class="pager">

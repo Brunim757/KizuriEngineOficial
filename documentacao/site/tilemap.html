@@ -78,47 +78,29 @@
 <article>
 <h1 id="tilemap">Tilemap</h1>
 <p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer.</p>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer.</p>
 <h2 id="tilemapcomponent">TilemapComponent</h2>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer.</p>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer.</p>
 <table><thead><tr><th>Campo</th><th>Descrição</th></tr></thead><tbody><tr><td><strong>AtlasPath</strong></td><td>Textura do atlas</td></tr><tr><td><strong>AtlasColumns / AtlasRows</strong></td><td>Tiles por linha/coluna no atlas</td></tr><tr><td><strong>MapWidth / MapHeight</strong></td><td>Dimensões da grade em tiles</td></tr><tr><td><strong>TileSize</strong></td><td>Tamanho de cada tile em unidades de mundo</td></tr><tr><td><strong>Tiles</strong></td><td>Índices row-major; <code>0</code> = vazio, <code>N</code> = tile N-1 do atlas</td></tr><tr><td><strong>SolidTileValues</strong></td><td>Valores de tile que geram <strong>collider estático Box2D</strong> no Play</td></tr><tr><td><strong>SortingLayer</strong></td><td>Ordenação 2D</td></tr></tbody></table>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer.</p>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer.</p>
 <h2 id="como-funciona-a-grade">Como funciona a grade</h2>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer.</p>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer. A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor:</p>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer. A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor:</p>
+<p>A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor:</p>
 <ul>
 <li><code>0</code> → célula vazia (não desenha);</li>
 <li><code>N</code> (1-based) → desenha o tile <code>N-1</code> da grade do atlas.</li>
 </ul>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer. A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor:</p>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer. A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor: Exemplo de mapa 4×4:</p>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer. A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor: Exemplo de mapa 4×4:</p>
+<p>Exemplo de mapa 4×4:</p>
 <pre><code class="language-text">1 1 1 1
 1 0 0 1
 1 0 0 1
 1 1 1 1</code></pre>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer. A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor: Exemplo de mapa 4×4:</p>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer. A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor: Exemplo de mapa 4×4: Vira a lista <code>[1,1,1,1, 1,0,0,1, 1,0,0,1, 1,1,1,1]</code> — uma caixa de paredes com buraco no meio.</p>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer. A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor: Exemplo de mapa 4×4: Vira a lista <code>[1,1,1,1, 1,0,0,1, 1,0,0,1, 1,1,1,1]</code> — uma caixa de paredes com buraco no meio.</p>
+<p>Vira a lista <code>[1,1,1,1, 1,0,0,1, 1,0,0,1, 1,1,1,1]</code> — uma caixa de paredes com buraco no meio.</p>
 <h2 id="colisão-sólida">Colisão sólida</h2>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer. A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor: Exemplo de mapa 4×4: Vira a lista <code>[1,1,1,1, 1,0,0,1, 1,0,0,1, 1,1,1,1]</code> — uma caixa de paredes com buraco no meio.</p>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer. A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor: Exemplo de mapa 4×4: Vira a lista <code>[1,1,1,1, 1,0,0,1, 1,0,0,1, 1,1,1,1]</code> — uma caixa de paredes com buraco no meio. Se <code>SolidTileValues</code> contém o valor <code>1</code>, todos os tiles <code>1</code> do mapa ganham um <strong>collider estático Box2D</strong> durante o Play. Resultado: chão e paredes de platformer sem adicionar colliders um a um.</p>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer. A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor: Exemplo de mapa 4×4: Vira a lista <code>[1,1,1,1, 1,0,0,1, 1,0,0,1, 1,1,1,1]</code> — uma caixa de paredes com buraco no meio. Se <code>SolidTileValues</code> contém o valor <code>1</code>, todos os tiles <code>1</code> do mapa ganham um <strong>collider estático Box2D</strong> durante o Play. Resultado: chão e paredes de platformer sem adicionar colliders um a um.</p>
+<p>Se <code>SolidTileValues</code> contém o valor <code>1</code>, todos os tiles <code>1</code> do mapa ganham um <strong>collider estático Box2D</strong> durante o Play. Resultado: chão e paredes de platformer sem adicionar colliders um a um.</p>
 <h2 id="no-editor">No editor</h2>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer. A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor: Exemplo de mapa 4×4: Vira a lista <code>[1,1,1,1, 1,0,0,1, 1,0,0,1, 1,1,1,1]</code> — uma caixa de paredes com buraco no meio. Se <code>SolidTileValues</code> contém o valor <code>1</code>, todos os tiles <code>1</code> do mapa ganham um <strong>collider estático Box2D</strong> durante o Play. Resultado: chão e paredes de platformer sem adicionar colliders um a um.</p>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer. A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor: Exemplo de mapa 4×4: Vira a lista <code>[1,1,1,1, 1,0,0,1, 1,0,0,1, 1,1,1,1]</code> — uma caixa de paredes com buraco no meio. Se <code>SolidTileValues</code> contém o valor <code>1</code>, todos os tiles <code>1</code> do mapa ganham um <strong>collider estático Box2D</strong> durante o Play. Resultado: chão e paredes de platformer sem adicionar colliders um a um.</p>
 <ul>
 <li>Use <strong>AtlasColumns/AtlasRows</strong> para descrever o atlas;</li>
 <li>Use o campo <strong>Tiles</strong> para desenhar a grade (valores separados por vírgula);</li>
 <li>Marque os valores sólidos em <strong>SolidTileValues</strong>.</li>
 </ul>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer. A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor: Exemplo de mapa 4×4: Vira a lista <code>[1,1,1,1, 1,0,0,1, 1,0,0,1, 1,1,1,1]</code> — uma caixa de paredes com buraco no meio. Se <code>SolidTileValues</code> contém o valor <code>1</code>, todos os tiles <code>1</code> do mapa ganham um <strong>collider estático Box2D</strong> durante o Play. Resultado: chão e paredes de platformer sem adicionar colliders um a um.</p>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer. A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor: Exemplo de mapa 4×4: Vira a lista <code>[1,1,1,1, 1,0,0,1, 1,0,0,1, 1,1,1,1]</code> — uma caixa de paredes com buraco no meio. Se <code>SolidTileValues</code> contém o valor <code>1</code>, todos os tiles <code>1</code> do mapa ganham um <strong>collider estático Box2D</strong> durante o Play. Resultado: chão e paredes de platformer sem adicionar colliders um a um.</p>
 <div class="callout info">O tilemap renderiza no <strong>Renderer 2D</strong>, respeitando <code>SortingLayer</code> como os demais elementos 2D. A colisão sólida só existe durante o <strong>Play</strong>.</div>
-<p>Grade de tiles apontando para um <strong>atlas de textura</strong> — a base de níveis de platformer. A grade é uma lista de índices (row-major). O índice na lista do tile <code>(linha, coluna)</code> é <code>linha * MapWidth + coluna</code>. Cada valor: Exemplo de mapa 4×4: Vira a lista <code>[1,1,1,1, 1,0,0,1, 1,0,0,1, 1,1,1,1]</code> — uma caixa de paredes com buraco no meio. Se <code>SolidTileValues</code> contém o valor <code>1</code>, todos os tiles <code>1</code> do mapa ganham um <strong>collider estático Box2D</strong> durante o Play. Resultado: chão e paredes de platformer sem adicionar colliders um a um.</p>
 
 </article>
 <div class="pager">

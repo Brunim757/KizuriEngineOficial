@@ -78,26 +78,17 @@
 <article>
 <h1 id="interface-de-usuário-ui">Interface de usuário (UI)</h1>
 <p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.</p>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.</p>
 <h2 id="o-que-há">O que há</h2>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.</p>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.</p>
 <table><thead><tr><th>Componente</th><th>Papel</th></tr></thead><tbody><tr><td><strong>UICanvas</strong></td><td>Raiz que renderiza os <strong>descendentes</strong> com UIRect em espaço de tela</td></tr><tr><td><strong>UIRect</strong></td><td>Retângulo colorido (fundo)</td></tr><tr><td><strong>UIButton</strong></td><td>UIRect que responde a hover/clique</td></tr><tr><td><strong>UIText</strong></td><td>Texto de UI</td></tr></tbody></table>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.</p>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.</p>
 <h2 id="como-montar">Como montar</h2>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.</p>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.</p>
 <ol>
 <li>Crie uma entidade e adicione <strong>UICanvas</strong> (<code>OrthoSize</code> = meia-altura; ex. 10);</li>
 <li>Crie filhos (entidades parentadas ao canvas) com **UIRect / UIButton /</li>
 </ol>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;</p>
+<p>   UIText**;</p>
 <ol>
 <li>Leia o estado dos botões no script.</li>
 </ol>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;</p>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;</p>
 <pre><code class="language-csharp">var canvas = Scene.CreateEntity("Canvas");
 canvas.AddUICanvas(10f);
 
@@ -109,11 +100,7 @@ botao.AddUIText("Jogar", 0.6f, 1f, 1f, 1f);
 var fundo = Scene.CreateEntity("Fundo");
 fundo.SetParent(canvas);
 fundo.AddUIRect(0f, 0f, 20f, 20f, 0.05f, 0.06f, 0.1f, 0.9f);</code></pre>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;</p>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;</p>
 <h2 id="detecção-de-clique">Detecção de clique</h2>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;</p>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;</p>
 <pre><code class="language-csharp">public override void OnUpdate(float deltaSeconds)
 {
     if (botao.UIButtonWasClicked())
@@ -125,30 +112,19 @@ fundo.AddUIRect(0f, 0f, 20f, 20f, 0.05f, 0.06f, 0.1f, 0.9f);</code></pre>
     else
         botao.SetUIColor(0.85f, 0.25f, 0.3f, 1f);
 }</code></pre>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;</p>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;</p>
 <h2 id="coordenadas">Coordenadas</h2>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;</p>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;</p>
 <ul>
 <li><strong>0,0</strong> = centro da tela; <strong>y para cima</strong>;</li>
 <li><strong>OrthoSize</strong> = meia-altura em unidades de UI (com <code>OrthoSize=10</code>, a tela</li>
 </ul>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;   vai de −10 a +10 na vertical; a largura acompanha o aspecto);</p>
+<p>  vai de −10 a +10 na vertical; a largura acompanha o aspecto);</p>
 <ul>
 <li><code>UIRect.Position</code> é o <strong>centro</strong> do elemento.</li>
 </ul>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;   vai de −10 a +10 na vertical; a largura acompanha o aspecto);</p>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;   vai de −10 a +10 na vertical; a largura acompanha o aspecto);</p>
 <h2 id="em-runtime">Em runtime</h2>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;   vai de −10 a +10 na vertical; a largura acompanha o aspecto);</p>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;   vai de −10 a +10 na vertical; a largura acompanha o aspecto);</p>
 <pre><code class="language-csharp">botao.SetUIRect(x, y, w, h);           // reposiciona/redimensiona
 botao.SetUIColor(r, g, b, a);          // muda a cor</code></pre>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;   vai de −10 a +10 na vertical; a largura acompanha o aspecto);</p>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;   vai de −10 a +10 na vertical; a largura acompanha o aspecto);</p>
 <div class="callout info"><strong>Alpha zero = só texto.</strong> <code>UIRect</code> com <code>a=0</code> não desenha o fundo — útil para rótulos de texto puro sobre a cena.</div>
-<p>UI desenhada por último, em <strong>espaço de tela</strong> (0,0 = centro, y para cima), sob um <strong>Canvas</strong>. A ordem de renderização da engine é <code>3D → 2D → UI</code>, então a UI fica por cima de tudo.    UIText**;   vai de −10 a +10 na vertical; a largura acompanha o aspecto);</p>
 
 </article>
 <div class="pager">

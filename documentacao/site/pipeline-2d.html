@@ -78,54 +78,33 @@
 <article>
 <h1 id="pipeline-2d">Pipeline 2D</h1>
 <p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI:</p>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI:</p>
 <pre><code class="language-">3D → 2D → UI</code></pre>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI:</p>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI:</p>
 <h2 id="o-que-ele-desenha">O que ele desenha</h2>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI:</p>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI:</p>
 <table><thead><tr><th>Elemento</th><th>Componente</th><th>Página</th></tr></thead><tbody><tr><td>Quad com textura / cor</td><td><code>SpriteRenderer</code></td><td><a href="sprites-2d.html">Sprites</a></td></tr><tr><td>Círculo (SDF, disco/anel)</td><td><code>CircleRenderer</code></td><td><a href="sprites-2d.html">Sprites</a></td></tr><tr><td>Texto com fonte embutida</td><td><code>TextComponent</code></td><td><a href="sprites-2d.html">Sprites</a></td></tr><tr><td>Animação por frames</td><td><code>SpriteAnimation</code></td><td><a href="animacao-2d.html">Animação 2D</a></td></tr><tr><td>Grade de tiles</td><td><code>Tilemap</code></td><td><a href="tilemap.html">Tilemap</a></td></tr><tr><td>Grid de referência</td><td>—</td><td>desenhado no viewport</td></tr></tbody></table>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI:</p>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI:</p>
 <h2 id="ordenação-sortinglayer">Ordenação (SortingLayer)</h2>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI:</p>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente:</p>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente:</p>
+<p>Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente:</p>
 <pre><code class="language-">-5  fundo
  0  mundo
  5  HUD</code></pre>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente:</p>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente:</p>
 <h2 id="modo-de-jogo-2d">Modo de jogo (2D)</h2>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente:</p>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente: Uma cena é "2D" quando tem <strong>câmera primária ortográfica</strong>. No Play, a ordem de passes é:</p>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente: Uma cena é "2D" quando tem <strong>câmera primária ortográfica</strong>. No Play, a ordem de passes é:</p>
+<p>Uma cena é "2D" quando tem <strong>câmera primária ortográfica</strong>. No Play, a ordem de passes é:</p>
 <ol>
 <li><strong>3D</strong> (se houver câmera de perspectiva primária) — fundo 2.5D;</li>
 <li><strong>2D</strong> — sprites/texto/tilemap na frente;</li>
 <li><strong>UI</strong> — canvas por cima de tudo.</li>
 </ol>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente: Uma cena é "2D" quando tem <strong>câmera primária ortográfica</strong>. No Play, a ordem de passes é:</p>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente: Uma cena é "2D" quando tem <strong>câmera primária ortográfica</strong>. No Play, a ordem de passes é:</p>
 <h2 id="câmera-2d">Câmera 2D</h2>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente: Uma cena é "2D" quando tem <strong>câmera primária ortográfica</strong>. No Play, a ordem de passes é:</p>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente: Uma cena é "2D" quando tem <strong>câmera primária ortográfica</strong>. No Play, a ordem de passes é: A câmera ortográfica define o que aparece: <code>OrthoSize</code> é a <strong>meia-altura</strong> em unidades de mundo. A largura visível acompanha a razão de aspecto da janela.</p>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente: Uma cena é "2D" quando tem <strong>câmera primária ortográfica</strong>. No Play, a ordem de passes é: A câmera ortográfica define o que aparece: <code>OrthoSize</code> é a <strong>meia-altura</strong> em unidades de mundo. A largura visível acompanha a razão de aspecto da janela.</p>
+<p>A câmera ortográfica define o que aparece: <code>OrthoSize</code> é a <strong>meia-altura</strong> em unidades de mundo. A largura visível acompanha a razão de aspecto da janela.</p>
 <ul>
 <li>Ver <a href="camera.html">Câmera</a>.</li>
 </ul>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente: Uma cena é "2D" quando tem <strong>câmera primária ortográfica</strong>. No Play, a ordem de passes é: A câmera ortográfica define o que aparece: <code>OrthoSize</code> é a <strong>meia-altura</strong> em unidades de mundo. A largura visível acompanha a razão de aspecto da janela.</p>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente: Uma cena é "2D" quando tem <strong>câmera primária ortográfica</strong>. No Play, a ordem de passes é: A câmera ortográfica define o que aparece: <code>OrthoSize</code> é a <strong>meia-altura</strong> em unidades de mundo. A largura visível acompanha a razão de aspecto da janela.</p>
 <h2 id="dicas">Dicas</h2>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente: Uma cena é "2D" quando tem <strong>câmera primária ortográfica</strong>. No Play, a ordem de passes é: A câmera ortográfica define o que aparece: <code>OrthoSize</code> é a <strong>meia-altura</strong> em unidades de mundo. A largura visível acompanha a razão de aspecto da janela.</p>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente: Uma cena é "2D" quando tem <strong>câmera primária ortográfica</strong>. No Play, a ordem de passes é: A câmera ortográfica define o que aparece: <code>OrthoSize</code> é a <strong>meia-altura</strong> em unidades de mundo. A largura visível acompanha a razão de aspecto da janela.</p>
 <ul>
 <li>Sprites com <strong>tiling</strong> (ex.: chão repetindo textura) — ajuste <code>TilingFactor</code>;</li>
 <li><strong>FlipX/FlipY</strong> inverte o sprite no espaço local (vira o personagem);</li>
 <li>Texto usa a <strong>fonte embutida JetBrains Mono</strong> — não precisa de arquivo de</li>
 </ul>
-<p>O renderer 2D é um pipeline <strong>dedicado em GLSL 330</strong>, desenhado depois do 3D e antes da UI: Camadas menores desenham <strong>atrás</strong>. Sirva-se de valores negativos para fundos e positivos para a frente: Uma cena é "2D" quando tem <strong>câmera primária ortográfica</strong>. No Play, a ordem de passes é: A câmera ortográfica define o que aparece: <code>OrthoSize</code> é a <strong>meia-altura</strong> em unidades de mundo. A largura visível acompanha a razão de aspecto da janela.   fonte externo.</p>
+<p>  fonte externo.</p>
 
 </article>
 <div class="pager">

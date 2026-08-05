@@ -78,20 +78,13 @@
 <article>
 <h1 id="input">Input</h1>
 <p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
 <h2 id="teclado">Teclado</h2>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
 <pre><code class="language-csharp">// pressionado AGORA (estado contínuo) — uso em movimento
 if (Input.IsKeyPressed(Key.A)) wish.X -= 1f;
 
 // verdadeiro SÓ no frame em que a tecla desceu (edge-detect, GetKeyDown)
 if (Input.IsKeyDown(Key.Space)) Pular();</code></pre>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
 <h3 id="enum-key">Enum Key</h3>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
 <pre><code class="language-csharp">Key.A .. Key.Z            // letras
 Key.D0 .. Key.D9          // números
 Key.Space, Key.Enter, Key.Tab, Key.Backspace, Key.Delete, Key.Escape
@@ -100,21 +93,13 @@ Key.F1 .. Key.F12
 Key.LeftShift, Key.RightShift, Key.LeftControl, Key.LeftAlt
 Key.LeftSuper, Key.RightSuper, …
 Key.Minus, Key.Equal, Key.Semicolon, Key.Comma, Key.Period, Key.Slash</code></pre>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
 <h2 id="mouse">Mouse</h2>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
 <pre><code class="language-csharp">if (Input.IsMouseButtonPressed(MouseButton.Left)) { }   // botão esquerdo
 if (Input.IsMouseButtonPressed(MouseButton.Right)) { }  // direito
 if (Input.IsMouseButtonPressed(MouseButton.Middle)) { } // meio
 
 var mouse = Input.GetMousePosition();  // Vector2</code></pre>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
 <h2 id="combinações-comuns">Combinações comuns</h2>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
 <pre><code class="language-csharp">// clicar SÓ uma vez (não repetido a cada frame segurando)
 if (Input.IsMouseButtonPressed(MouseButton.Left) &amp;&amp; !_mouseDown)
 {
@@ -122,15 +107,12 @@ if (Input.IsMouseButtonPressed(MouseButton.Left) &amp;&amp; !_mouseDown)
     Atirar();
 }
 if (!Input.IsMouseButtonPressed(MouseButton.Left)) _mouseDown = false;</code></pre>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
 <pre><code class="language-csharp">// movimento com WASD + setas
 var wish = Vector2.Zero;
 if (Input.IsKeyPressed(Key.A) || Input.IsKeyPressed(Key.Left))  wish.X -= 1f;
 if (Input.IsKeyPressed(Key.D) || Input.IsKeyPressed(Key.Right)) wish.X += 1f;
 if (Input.IsKeyPressed(Key.W) || Input.IsKeyPressed(Key.Up))    wish.Y += 1f;
 if (Input.IsKeyPressed(Key.S) || Input.IsKeyPressed(Key.Down))  wish.Y -= 1f;</code></pre>
-<p>Leitura de teclado e mouse. Os códigos de tecla são os do <strong>GLFW</strong> (os mesmos da engine), expostos como enum <code>Key</code>.</p>
 
 </article>
 <div class="pager">

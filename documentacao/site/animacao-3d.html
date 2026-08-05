@@ -78,27 +78,16 @@
 <article>
 <h1 id="animação-esquelética-skinning">Animação esquelética (skinning)</h1>
 <p>Toca **animações de um <code>.glb</code>/<code>.gltf</code>** em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto.</p>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code>** em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto.</p>
 <h2 id="animatorcomponent">AnimatorComponent</h2>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code>** em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto.</p>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code>** em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto.</p>
 <table><thead><tr><th>Campo</th><th>Descrição</th></tr></thead><tbody><tr><td><strong>MeshPath</strong></td><td>Fonte <code>.glb</code>/<code>.gltf</code> (o mesmo arquivo do MeshRenderer)</td></tr><tr><td><strong>ClipName</strong></td><td>Animação atual (nome da <code>animation</code> no arquivo)</td></tr><tr><td><strong>Playing</strong></td><td>Toca/pausa</td></tr><tr><td><strong>Loop</strong></td><td>Repete ao fim</td></tr><tr><td><strong>Speed</strong></td><td>Velocidade de reprodução</td></tr><tr><td><strong>Time</strong></td><td>Posição na animação (segundos)</td></tr></tbody></table>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code>** em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto.</p>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code>** em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto.</p>
 <h2 id="configurando">Configurando</h2>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code>** em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto.</p>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code>** em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto.</p>
 <ol>
 <li>Adicione <strong>MeshRenderer</strong> apontando para <code>Assets/Models/Personagem.glb</code>;</li>
 <li>Adicione <strong>Animator</strong> com o mesmo caminho;</li>
 <li>Escolha o <strong>ClipName</strong> (ex.: <code>"Run"</code>, <code>"Idle"</code> — os nomes vêm do arquivo).</li>
 </ol>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code>** em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto.</p>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code><strong> em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto. O renderer aplica a </strong>skin<strong> (matrizes de junta) no vertex shader — e também no </strong>shader de sombra**, então a sombra "anda" junto com o personagem.</p>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code><strong> em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto. O renderer aplica a </strong>skin<strong> (matrizes de junta) no vertex shader — e também no </strong>shader de sombra**, então a sombra "anda" junto com o personagem.</p>
+<p>O renderer aplica a <strong>skin</strong> (matrizes de junta) no vertex shader — e também no <strong>shader de sombra</strong>, então a sombra "anda" junto com o personagem.</p>
 <h2 id="em-c">Em C#</h2>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code><strong> em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto. O renderer aplica a </strong>skin<strong> (matrizes de junta) no vertex shader — e também no </strong>shader de sombra**, então a sombra "anda" junto com o personagem.</p>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code><strong> em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto. O renderer aplica a </strong>skin<strong> (matrizes de junta) no vertex shader — e também no </strong>shader de sombra**, então a sombra "anda" junto com o personagem.</p>
 <pre><code class="language-csharp">Entity.AddMeshRenderer("Assets/Models/Fox.glb");
 Entity.AddAnimator("Assets/Models/Fox.glb");
 if (Entity.PlayAnimation("Survey")) { }
@@ -107,20 +96,14 @@ Entity.SetAnimationLoop(true);
 Entity.SetAnimationPlaying(true);
 Entity.SetAnimationTime(2f);
 var t = Entity.AnimationTime;</code></pre>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code><strong> em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto. O renderer aplica a </strong>skin<strong> (matrizes de junta) no vertex shader — e também no </strong>shader de sombra**, então a sombra "anda" junto com o personagem.</p>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code><strong> em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto. O renderer aplica a </strong>skin<strong> (matrizes de junta) no vertex shader — e também no </strong>shader de sombra**, então a sombra "anda" junto com o personagem.</p>
 <h2 id="sobre-a-skin">Sobre a skin</h2>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code><strong> em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto. O renderer aplica a </strong>skin<strong> (matrizes de junta) no vertex shader — e também no </strong>shader de sombra**, então a sombra "anda" junto com o personagem.</p>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code><strong> em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto. O renderer aplica a </strong>skin<strong> (matrizes de junta) no vertex shader — e também no </strong>shader de sombra**, então a sombra "anda" junto com o personagem.</p>
 <ul>
 <li>A <strong>skin é reparseada</strong> ao abrir a cena (não é serializada);</li>
 <li><code>SkinData</code> suporta juntas, pesos por vértice e múltiplos <strong>clips</strong>;</li>
 <li>O Fox de demonstração tem 19 juntas e ~8 animações — experimente na</li>
 </ul>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code><strong> em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto. O renderer aplica a </strong>skin<strong> (matrizes de junta) no vertex shader — e também no </strong>shader de sombra<strong>, então a sombra "anda" junto com o personagem.   <a href="interface.html">demonstração 3D</a> (menu </strong>Cena**).</p>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code><strong> em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto. O renderer aplica a </strong>skin<strong> (matrizes de junta) no vertex shader — e também no </strong>shader de sombra<strong>, então a sombra "anda" junto com o personagem.   <a href="interface.html">demonstração 3D</a> (menu </strong>Cena**).</p>
+<p>  <a href="interface.html">demonstração 3D</a> (menu <strong>Cena</strong>).</p>
 <div class="callout info"><strong>Clip vazio = pose de repouso.</strong> Deixe <code>ClipName</code> vazio para mostrar a malha na pose do arquivo sem animar.</div>
-<p>Toca **animações de um <code>.glb</code>/<code>.gltf</code><strong> em uma malha com skeleton — personagens e criaturas modelados em Blender etc. funcionam direto. O renderer aplica a </strong>skin<strong> (matrizes de junta) no vertex shader — e também no </strong>shader de sombra<strong>, então a sombra "anda" junto com o personagem.   <a href="interface.html">demonstração 3D</a> (menu </strong>Cena**).</p>
 
 </article>
 <div class="pager">

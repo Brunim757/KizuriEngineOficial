@@ -78,14 +78,9 @@
 <article>
 <h1 id="rand-e-log">Rand e Log</h1>
 <p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI).</p>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI).</p>
 <h2 id="rand">Rand</h2>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI).</p>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI). Números aleatórios para o jogo. O nome é curto de propósito — "Random" colidiria com <code>System.Random</code>.</p>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI). Números aleatórios para o jogo. O nome é curto de propósito — "Random" colidiria com <code>System.Random</code>.</p>
+<p>Números aleatórios para o jogo. O nome é curto de propósito — "Random" colidiria com <code>System.Random</code>.</p>
 <table><thead><tr><th>Método</th><th>Descrição</th></tr></thead><tbody><tr><td><code>Rand.Float(min, max)</code></td><td>Float em <strong>[min, max]</strong></td></tr><tr><td><code>Rand.Int(min, max)</code></td><td>Int em <strong>[min, max)</strong> (min incluso, max excluso)</td></tr><tr><td><code>Rand.Chance(probability)</code></td><td><code>true</code> com probabilidade (0..1)</td></tr><tr><td><code>Rand.Vector2(minX, maxX, minY, maxY)</code></td><td>Vetor 2D aleatório</td></tr><tr><td><code>Rand.Vector3(minX, maxX, minY, maxY, minZ, maxZ)</code></td><td>Vetor 3D aleatório</td></tr></tbody></table>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI). Números aleatórios para o jogo. O nome é curto de propósito — "Random" colidiria com <code>System.Random</code>.</p>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI). Números aleatórios para o jogo. O nome é curto de propósito — "Random" colidiria com <code>System.Random</code>.</p>
 <pre><code class="language-csharp">var dano = Rand.Int(5, 11);            // 5,6,7,8,9,10
 var pos  = Rand.Vector3(-20, 20, 0, 10, -20, 20);
 if (Rand.Chance(0.3f)) DropItem();     // 30% de chance
@@ -95,22 +90,13 @@ var destroco = Scene.CreateEntity("Destroço");
 destroco.AddSprite();
 destroco.SetPosition(new Vector3(
     Rand.Float(-5f, 5f), Rand.Float(0f, 5f), Rand.Float(-5f, 5f)));</code></pre>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI). Números aleatórios para o jogo. O nome é curto de propósito — "Random" colidiria com <code>System.Random</code>.</p>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI). Números aleatórios para o jogo. O nome é curto de propósito — "Random" colidiria com <code>System.Random</code>.</p>
 <h2 id="log">Log</h2>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI). Números aleatórios para o jogo. O nome é curto de propósito — "Random" colidiria com <code>System.Random</code>.</p>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI). Números aleatórios para o jogo. O nome é curto de propósito — "Random" colidiria com <code>System.Random</code>. Registro de mensagens no <strong>Console</strong> do editor (a engine loga via spdlog interno).</p>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI). Números aleatórios para o jogo. O nome é curto de propósito — "Random" colidiria com <code>System.Random</code>. Registro de mensagens no <strong>Console</strong> do editor (a engine loga via spdlog interno).</p>
+<p>Registro de mensagens no <strong>Console</strong> do editor (a engine loga via spdlog interno).</p>
 <table><thead><tr><th>Método</th><th>Nível</th></tr></thead><tbody><tr><td><code>Log.Info(msg)</code></td><td>Informação</td></tr><tr><td><code>Log.Warn(msg)</code></td><td>Aviso (amarelo)</td></tr><tr><td><code>Log.Error(msg)</code></td><td>Erro (vermelho)</td></tr></tbody></table>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI). Números aleatórios para o jogo. O nome é curto de propósito — "Random" colidiria com <code>System.Random</code>. Registro de mensagens no <strong>Console</strong> do editor (a engine loga via spdlog interno).</p>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI). Números aleatórios para o jogo. O nome é curto de propósito — "Random" colidiria com <code>System.Random</code>. Registro de mensagens no <strong>Console</strong> do editor (a engine loga via spdlog interno).</p>
 <pre><code class="language-csharp">Log.Info($"Jogador {Entity.Id} pronto.");
 Log.Warn($"Vida baixa: {vida}");
 Log.Error("Falha ao carregar asset!");</code></pre>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI). Números aleatórios para o jogo. O nome é curto de propósito — "Random" colidiria com <code>System.Random</code>. Registro de mensagens no <strong>Console</strong> do editor (a engine loga via spdlog interno).</p>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI). Números aleatórios para o jogo. O nome é curto de propósito — "Random" colidiria com <code>System.Random</code>. Registro de mensagens no <strong>Console</strong> do editor (a engine loga via spdlog interno).</p>
 <div class="callout info">Use <code>Log</code> para depurar — as mensagens aparecem no painel <strong>Console</strong> com filtro por nível.</div>
-<p>Utilidades de aleatoriedade e registro de mensagens. Ambas <strong>managed</strong> (o Log escreve no console da engine via ABI). Números aleatórios para o jogo. O nome é curto de propósito — "Random" colidiria com <code>System.Random</code>. Registro de mensagens no <strong>Console</strong> do editor (a engine loga via spdlog interno).</p>
 
 </article>
 <div class="pager">

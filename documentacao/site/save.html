@@ -78,29 +78,18 @@
 <article>
 <h1 id="savesystem">SaveSystem</h1>
 <p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI.</p>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI.</p>
 <h2 id="guardar-valores">Guardar valores</h2>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI.</p>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI.</p>
 <pre><code class="language-csharp">SaveSystem.Set("score", 100);                      // int
 SaveSystem.Set("nome", "Kizuri");                  // string
 SaveSystem.Set("volume", 0.7f);                    // float
 SaveSystem.Set("som", true);                       // bool
 SaveSystem.Set("pos", new Vector3(1f, 2f, 3f));    // vetores
 SaveSystem.Set("ponto", new Vector2(5f, 0f));</code></pre>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI.</p>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI.</p>
 <h2 id="gravar-em-disco">Gravar em disco</h2>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI.</p>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI.</p>
 <pre><code class="language-csharp">SaveSystem.Save();   // escreve save.json</code></pre>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI.</p>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar.</p>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar.</p>
+<p>Chame ao passar de fase, no pause, ou ao fechar.</p>
 <h2 id="ler-auto-carrega">Ler (auto-carrega)</h2>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar.</p>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
+<p>Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
 <pre><code class="language-csharp">var score  = SaveSystem.GetFloat("score", 0f);        // fallback se não existir
 var nome   = SaveSystem.GetString("nome", "sem nome");
 var volume = SaveSystem.GetFloat("volume", 1f);
@@ -112,26 +101,12 @@ if (SaveSystem.Has("pos"))
     jogador.SetPosition(pos);
 }
 var ponto = SaveSystem.GetVector2("ponto");</code></pre>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
 <h2 id="outros-arquivos">Outros arquivos</h2>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
 <pre><code class="language-csharp">SaveSystem.SetPath("jogos/fase1.save");   // muda o arquivo (limpa o cache)</code></pre>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
 <h2 id="referência">Referência</h2>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
 <table><thead><tr><th>Método</th><th>Descrição</th></tr></thead><tbody><tr><td><code>Set(key, string/int/float/bool/Vector2/Vector3)</code></td><td>Guarda um valor</td></tr><tr><td><code>Has(key)</code></td><td>Existe a chave?</td></tr><tr><td><code>GetString(key, fallback)</code></td><td>Lê string</td></tr><tr><td><code>GetInt(key, fallback)</code></td><td>Lê int (aceita float salvo)</td></tr><tr><td><code>GetFloat(key, fallback)</code></td><td>Lê float (aceita int salvo)</td></tr><tr><td><code>GetBool(key, fallback)</code></td><td>Lê bool</td></tr><tr><td><code>GetVector2(key, fallback)</code> / <code>GetVector3(key, fallback)</code></td><td>Lê vetor</td></tr><tr><td><code>Save()</code></td><td>Grava em disco</td></tr><tr><td><code>Load()</code></td><td>Recarrega do disco</td></tr><tr><td><code>SetPath(path)</code></td><td>Muda o arquivo de save</td></tr><tr><td><code>FilePath</code></td><td>Caminho atual</td></tr></tbody></table>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
 <div class="callout warn"><code>Save()</code> grava o estado <strong>atual</strong> do cache. Depois de <code>Set</code>, lembre de chamar <code>Save()</code> — os valores não são persistidos sozinhos.</div>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
 <h2 id="exemplo-de-jogo">Exemplo de jogo</h2>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
 <pre><code class="language-csharp">// OnDestroy do jogador: salva a posição
 public override void OnDestroy()
 {
@@ -149,7 +124,6 @@ public override void OnCreate()
     if (SaveSystem.Has("pos"))
         Entity.SetPosition(SaveSystem.GetVector3("pos"));
 }</code></pre>
-<p>Persistência simples de jogo em um arquivo <strong>JSON</strong> (<code>save.json</code> no diretório de trabalho por padrão). <strong>Puramente managed</strong> (System.Text.Json) — nada de ABI. Chame ao passar de fase, no pause, ou ao fechar. Os <code>Get*</code> <strong>carregam do disco automaticamente</strong> na primeira consulta:</p>
 
 </article>
 <div class="pager">

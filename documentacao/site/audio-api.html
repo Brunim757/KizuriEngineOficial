@@ -78,42 +78,24 @@
 <article>
 <h1 id="audio-api-global">Audio — API global</h1>
 <p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>.</p>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>.</p>
 <h2 id="one-shot-avulso">One-shot avulso</h2>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>.</p>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>.</p>
 <pre><code class="language-csharp">Audio.PlayOneShot("Assets/Sounds/tiro.wav");
 Audio.PlayOneShot("Assets/Sounds/tiro.wav", volume: 0.8f);</code></pre>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>.</p>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>.</p>
 <h2 id="one-shot-posicional-3d">One-shot posicional (3D)</h2>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>.</p>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>.</p>
 <pre><code class="language-csharp">// toca no ponto do mundo, atenuado pela distância ao ouvinte (câmera)
 Audio.PlayOneShotAt("Assets/Sounds/impacto.wav", 1f, new Vector3(0f, 1f, 0f));</code></pre>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>.</p>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>. Perfeito para <strong>impactos, passos, tiros</strong> — som que "acontece no lugar".</p>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>. Perfeito para <strong>impactos, passos, tiros</strong> — som que "acontece no lugar".</p>
+<p>Perfeito para <strong>impactos, passos, tiros</strong> — som que "acontece no lugar".</p>
 <pre><code class="language-csharp">// impacto onde um tiro acertou
 if (Scene.Raycast3D(from, to, out var hit, out var point, out _))
     Audio.PlayOneShotAt("Assets/Sounds/impacto.wav", 1f, point);</code></pre>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>. Perfeito para <strong>impactos, passos, tiros</strong> — som que "acontece no lugar".</p>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>. Perfeito para <strong>impactos, passos, tiros</strong> — som que "acontece no lugar".</p>
 <h2 id="controles-globais">Controles globais</h2>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>. Perfeito para <strong>impactos, passos, tiros</strong> — som que "acontece no lugar".</p>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>. Perfeito para <strong>impactos, passos, tiros</strong> — som que "acontece no lugar".</p>
 <table><thead><tr><th>Método</th><th>Descrição</th></tr></thead><tbody><tr><td><code>Audio.StopAll()</code></td><td>Para todos os sons (usado em troca de cena)</td></tr><tr><td><code>Audio.SetMasterVolume(float)</code></td><td>Volume mestre global (0..1)</td></tr></tbody></table>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>. Perfeito para <strong>impactos, passos, tiros</strong> — som que "acontece no lugar".</p>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>. Perfeito para <strong>impactos, passos, tiros</strong> — som que "acontece no lugar".</p>
 <h2 id="áudio-de-entidade">Áudio de entidade</h2>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>. Perfeito para <strong>impactos, passos, tiros</strong> — som que "acontece no lugar".</p>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>. Perfeito para <strong>impactos, passos, tiros</strong> — som que "acontece no lugar".</p>
 <pre><code class="language-csharp">var som = Scene.CreateEntity("Motor");
 som.AddAudio("Assets/Sounds/motor.wav", loop: true, playOnStart: true);
 som.PlayAudio();
 som.StopAudio();</code></pre>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>. Perfeito para <strong>impactos, passos, tiros</strong> — som que "acontece no lugar".</p>
-<p>Áudio <strong>avulso</strong> (sem entidade) e controles globais. Áudio ligado a entidade (posicional) usa <code>Entity.AddAudio</code> / <code>Entity.PlayAudio</code>. Perfeito para <strong>impactos, passos, tiros</strong> — som que "acontece no lugar". Ver <a href="audio-source.html">AudioSource</a> para as propriedades (spatial, volume, distâncias).</p>
+<p>Ver <a href="audio-source.html">AudioSource</a> para as propriedades (spatial, volume, distâncias).</p>
 
 </article>
 <div class="pager">

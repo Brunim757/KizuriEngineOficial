@@ -85,6 +85,7 @@ def render_block(s: str) -> str:
     def flush_para(buf):
         if buf:
             out.append("<p>" + render_inline(" ".join(buf)) + "</p>\n")
+            buf.clear()  # SEM isso o parágrafo era re-escrito em todo flush seguinte (duplicação!)
     para = []
     while i < n:
         line = lines[i]

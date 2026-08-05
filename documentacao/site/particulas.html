@@ -78,39 +78,22 @@
 <article>
 <h1 id="partículas">Partículas</h1>
 <p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
 <h2 id="particlesystemcomponent">ParticleSystemComponent</h2>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
 <table><thead><tr><th>Campo</th><th>Descrição</th></tr></thead><tbody><tr><td><strong>Playing</strong></td><td>Emissor ligado?</td></tr><tr><td><strong>Additive</strong></td><td><code>true</code> = aditivo (fogo/faísca/magia); <code>false</code> = alpha normal (fumaça)</td></tr><tr><td><strong>EmissionRate</strong></td><td>Partículas por segundo</td></tr><tr><td><strong>MaxParticles</strong></td><td>Teto de partículas vivas</td></tr><tr><td><strong>LifetimeMin / LifetimeMax</strong></td><td>Vida das partículas (aleatória no intervalo)</td></tr><tr><td><strong>VelocityMin / VelocityMax</strong></td><td>Velocidade inicial (aleatória no intervalo)</td></tr><tr><td><strong>Gravity</strong></td><td>Aceleração aplicada às partículas</td></tr><tr><td><strong>StartColor / EndColor</strong></td><td>Cor interpolada ao longo da vida</td></tr><tr><td><strong>StartSize / EndSize</strong></td><td>Tamanho interpolado</td></tr><tr><td><strong>TexturePath</strong></td><td>Textura opcional (vazia = <strong>degradê radial procedural</strong>)</td></tr></tbody></table>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
 <h2 id="exemplos-de-receitas">Exemplos de receitas</h2>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
 <table><thead><tr><th>Efeito</th><th>Configuração</th></tr></thead><tbody><tr><td><strong>Fogo</strong></td><td>Additive on, cor 1.0,0.65,0.15 → 1.0,0.15,0.02, gravidade −2</td></tr><tr><td><strong>Fumaça</strong></td><td>Additive off, cinza claro, tamanho crescendo</td></tr><tr><td><strong>Faíscas</strong></td><td>Additive on, amarelo, gravidade −9</td></tr><tr><td><strong>Magia</strong></td><td>Additive on, StartColor azul/ciano, EndColor transparente</td></tr></tbody></table>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
 <h2 id="em-c">Em C#</h2>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
 <pre><code class="language-csharp">var fogo = Scene.CreateEntity("Fogo");
 fogo.AddMeshRenderer("builtin:cube"); // ainda não há AddParticles no C#
 fogo.SetParticleTexture("Assets/Textures/faisca.png"); // textura opcional</code></pre>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
 <div class="callout warn"><strong>Simula no Play.</strong> Partículas (como física e áudio) só emitem durante o <strong>Play</strong> — no modo de edição o emissor fica parado.</div>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
 <h2 id="no-editor">No editor</h2>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.</p>
 <ul>
 <li>Ajuste os campos no Inspetor e veja o efeito em tempo real durante o Play;</li>
 <li><strong>Modo aditivo</strong> é uma checkbox (fogo/faíscas = aditivo; fumaça = normal);</li>
 <li>Sem textura, o degradê radial procedural já dá um resultado bom para</li>
 </ul>
-<p>Emissor de partículas <strong>GPU-instanced</strong> com billboarding. Fogo, faíscas, magia, fumaça — tudo com o mesmo componente.   partículas suaves.</p>
+<p>  partículas suaves.</p>
 
 </article>
 <div class="pager">

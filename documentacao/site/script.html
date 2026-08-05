@@ -78,22 +78,11 @@
 <article>
 <h1 id="classe-script">Classe Script</h1>
 <p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks.</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks.</p>
 <h2 id="callbacks">Callbacks</h2>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks.</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks.</p>
 <table><thead><tr><th>Método</th><th>Quando roda</th></tr></thead><tbody><tr><td><code>OnCreate()</code></td><td>Ao instanciar o script (entrada no Play / instanciar prefab)</td></tr><tr><td><code>OnUpdate(float dt)</code></td><td>Todo frame, com o delta em segundos</td></tr><tr><td><code>OnCollisionBegin(Entity other)</code></td><td>Começou a colidir com outra entidade</td></tr><tr><td><code>OnCollisionEnd(Entity other)</code></td><td>Deixou de colidir</td></tr><tr><td><code>OnDestroy()</code></td><td>Ao destruir a entidade / sair do Play</td></tr></tbody></table>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks.</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks.</p>
 <h2 id="propriedades">Propriedades</h2>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks.</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks.</p>
 <table><thead><tr><th>Propriedade</th><th>Tipo</th><th>Descrição</th></tr></thead><tbody><tr><td><code>Entity</code></td><td><code>Entity</code></td><td>A entidade dona deste script</td></tr></tbody></table>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks.</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks.</p>
 <h2 id="estrutura-mínima">Estrutura mínima</h2>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks.</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks.</p>
 <pre><code class="language-csharp">using Kizuri;
 
 public sealed class MeuScript : Script
@@ -104,12 +93,8 @@ public sealed class MeuScript : Script
     public override void OnCollisionEnd(Entity other) { }
     public override void OnDestroy() { }
 }</code></pre>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks.</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks.</p>
 <h2 id="corrotinas">Corrotinas</h2>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks.</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>:</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>:</p>
+<p>Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>:</p>
 <pre><code class="language-csharp">using System.Collections;
 using Kizuri;
 
@@ -130,21 +115,11 @@ public sealed class Temporizador : Script
         Log.Info("mais 60 frames…");
     }
 }</code></pre>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>:</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>:</p>
 <h3 id="tipos-de-espera">Tipos de espera</h3>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>:</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>:</p>
 <table><thead><tr><th>Tipo</th><th>Espera</th></tr></thead><tbody><tr><td><code>new WaitForSeconds(s)</code></td><td><code>s</code> segundos de tempo de jogo</td></tr><tr><td><code>new WaitForFrames(n)</code></td><td><code>n</code> frames</td></tr></tbody></table>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>:</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>:</p>
 <div class="callout info">Corrotinas são atualizadas **depois de cada <code>OnUpdate</code>** — você não gerencia nada. Remova a corrotina destruindo o script/entidade.</div>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>:</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>:</p>
 <h2 id="estado-entre-frames">Estado entre frames</h2>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>:</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>: Guarde estado em campos da classe — o script vive enquanto a entidade existe:</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>: Guarde estado em campos da classe — o script vive enquanto a entidade existe:</p>
+<p>Guarde estado em campos da classe — o script vive enquanto a entidade existe:</p>
 <pre><code class="language-csharp">public sealed class Coletor : Script
 {
     private int _moedas;
@@ -159,11 +134,8 @@ public sealed class Temporizador : Script
         }
     }
 }</code></pre>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>: Guarde estado em campos da classe — o script vive enquanto a entidade existe:</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>: Guarde estado em campos da classe — o script vive enquanto a entidade existe:</p>
 <h2 id="scripts-e-o-editor">Scripts e o editor</h2>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>: Guarde estado em campos da classe — o script vive enquanto a entidade existe:</p>
-<p>A base de todo comportamento de jogo. Você herda de <code>Script</code> e sobrescreve os callbacks. Ações diferidas no tempo, no estilo Unity, usando <code>IEnumerator</code>: Guarde estado em campos da classe — o script vive enquanto a entidade existe: No Inspetor, o botão de adicionar script lista os scripts <strong>registrados no GameModule carregado</strong>. Adicione o componente, escolha o script, e ele roda no Play.</p>
+<p>No Inspetor, o botão de adicionar script lista os scripts <strong>registrados no GameModule carregado</strong>. Adicione o componente, escolha o script, e ele roda no Play.</p>
 
 </article>
 <div class="pager">

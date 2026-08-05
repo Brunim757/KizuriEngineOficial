@@ -7,18 +7,19 @@
 namespace kizuri {
 
 void GraphicsSettings::TuneToHardware() {
-    // Extrai o MÁXIMO de cada versão do OpenGL: 3.3 = mínimo sólido,
-    // 4.0/4.1 sobe, 4.3+ sobe mais, 4.5+ = teto.
+    // Conservador de propósito: MSAA 4x + shadow 2048 em TODAS as versões
+    // (MSAA 8x/4096 em GPU 4.x fraca podia deixar o FBO HDR incompleto ->
+    // viewport preto). Versões maiores sobem SSAO/bloom/PCF, não MSAA/shadow.
     int glsl = GetGLSLVersion();
     if (glsl >= 450) {
-        MSAA = 8; ShadowMapSize = 4096; ShadowPCFRadius = 3; SSAOSamples = 64;
-        BloomIterations = 8; ShadowSoftness = 0.7f; PointShadowMapSize = 1024;
+        MSAA = 4; ShadowMapSize = 2048; ShadowPCFRadius = 3; SSAOSamples = 64;
+        BloomIterations = 8; ShadowSoftness = 0.6f; PointShadowMapSize = 1024;
     } else if (glsl >= 430) {
-        MSAA = 8; ShadowMapSize = 4096; ShadowPCFRadius = 3; SSAOSamples = 48;
-        BloomIterations = 6; ShadowSoftness = 0.6f; PointShadowMapSize = 1024;
+        MSAA = 4; ShadowMapSize = 2048; ShadowPCFRadius = 3; SSAOSamples = 48;
+        BloomIterations = 6; ShadowSoftness = 0.55f; PointShadowMapSize = 1024;
     } else if (glsl >= 400) {
-        MSAA = 8; ShadowMapSize = 4096; ShadowPCFRadius = 3; SSAOSamples = 48;
-        BloomIterations = 5; ShadowSoftness = 0.55f; PointShadowMapSize = 1024;
+        MSAA = 4; ShadowMapSize = 2048; ShadowPCFRadius = 3; SSAOSamples = 48;
+        BloomIterations = 5; ShadowSoftness = 0.5f; PointShadowMapSize = 1024;
     } else {
         MSAA = 4; ShadowMapSize = 2048; ShadowPCFRadius = 2; SSAOSamples = 32;
         BloomIterations = 4; ShadowSoftness = 0.45f; PointShadowMapSize = 512;
@@ -64,14 +65,14 @@ void GraphicsSettings::Clamp() {
 void GraphicsSettings::ApplyPreset(QualityPreset preset) {
     switch (preset) {
         case QualityPreset::Ultra:
-            RenderScale = 1.0f; MSAA = 8; ShadowMapSize = 4096; ShadowPCFRadius = 3;
+            RenderScale = 1.0f; MSAA = 4; ShadowMapSize = 2048; ShadowPCFRadius = 3;
             ShadowSoftness = 0.6f; PointShadowMapSize = 1024;
             BloomEnabled = true;  BloomThreshold = 1.2f; BloomIntensity = 0.45f;
             SSAOEnabled = true;   SSAOSamples = 64;      SSAORadius = 0.5f;
             Exposure = 1.0f;      VSync = true;
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
-            Vignette = 0.25f; ChromaticAberration = 0.002f; FilmGrain = 0.02f;
+            Vignette = 0.0f; ChromaticAberration = 0.0f; FilmGrain = 0.0f;
             BloomIterations = 8;
             break;
         case QualityPreset::High:
@@ -82,7 +83,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             Exposure = 1.0f;      VSync = true;
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
-            Vignette = 0.22f; ChromaticAberration = 0.0015f; FilmGrain = 0.015f;
+            Vignette = 0.0f; ChromaticAberration = 0.0f; FilmGrain = 0.0f;
             BloomIterations = 5;
             break;
         case QualityPreset::Medium:
@@ -93,7 +94,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             Exposure = 1.0f;      VSync = true;
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
-            Vignette = 0.18f; ChromaticAberration = 0.001f; FilmGrain = 0.01f;
+            Vignette = 0.0f; ChromaticAberration = 0.0f; FilmGrain = 0.0f;
             BloomIterations = 3;
             break;
         case QualityPreset::Low:
@@ -104,7 +105,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             Exposure = 1.0f;      VSync = false;
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
-            Vignette = 0.1f; ChromaticAberration = 0.0f; FilmGrain = 0.0f;
+            Vignette = 0.0f; ChromaticAberration = 0.0f; FilmGrain = 0.0f;
             BloomIterations = 2;
             break;
         default:

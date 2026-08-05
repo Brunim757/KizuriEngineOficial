@@ -209,10 +209,9 @@ void EditorLayer::CreateDemoScene3D() {
     gm.MeshMaterial.Roughness = 0.9f;
     ground.GetComponent<TransformComponent>().Scale = { 12.0f, 1.0f, 12.0f };
 
-    // Céu HDRI: preferência pro Content Pack, senão o céu EMBUTIDO no
-    // executável (kzres://) — a demo sempre tem um céu bonito, sem depender
-    // de arquivo externo.
-    Renderer3D::SetEnvironmentHDRIPath("kzres://skies/sky_gradient.hdr");
+    // Céu: atmosférico procedural por padrão (estável). Se o Content Pack
+    // estiver presente, troca pro HDRI real dele.
+    Renderer3D::SetEnvironmentHDRIPath("");
     std::string hdri = contentDir + "/skies/qwantani_puresky_1k.hdr";
     if (std::filesystem::exists(hdri)) {
         Renderer3D::SetEnvironmentHDRIPath(hdri);

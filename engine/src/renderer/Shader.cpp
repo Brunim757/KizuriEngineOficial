@@ -2,6 +2,7 @@
 #include "kizuri/core/Log.hpp"
 #include <glad/gl.h>
 #include <glm/gtc/type_ptr.hpp>
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -9,10 +10,13 @@
 namespace kizuri {
 
 // Versão GLSL do CONTEXTO atual (parse de GL_SHADING_LANGUAGE_VERSION uma
-// vez, cacheado). Ex.: "3.30 NVIDIA", "4.50 Core Profile", "4.00".
-// IMPORTANTE: usa a GLSL DO CONTEXTO, não o GL_VERSION — alguns drivers
-// reportam GL_VERSION maior que o contexto real (ex.: "4.0" num contexto
-// 3.3), e compilar shader 400 num contexto 3.3 quebra (viewport preto).
+// vez, cacheado), TRAVADA no teto da versão que a janela criou de fato
+// (SetContextGLSLVersion) — alguns drivers reportam GLSL maior que o
+// contexto real (ex.: 4.60 num contexto 3.3) e compilar shader acima da GL
+// quebra ou renderiza errado.
+static int s_ContextGLSL = 0; // teto definido pela janela (0 = sem teto)
+void SetContextGLSLVersion(int glsl) { s_ContextGLSL = glsl; }
+
 int GetGLSLVersion() {
     static int s_glsl = 0;
     if (s_glsl == 0) {
@@ -29,11 +33,10 @@ int GetGLSLVersion() {
                 while (*p >= '0' && *p <= '9') { m = m * 10 + (*p - '0'); ++p; }
                 minor = m;
             }
-            if (major > 4) major = 4;
-            if (major == 4 && minor > 60) minor = 60;
         }
-        s_glsl = major * 100 + minor;
-        if (s_glsl < 330) s_glsl = 330;
+        int parsed = major * 100 + minor;
+        if (parsed < 330) parsed = 330;
+        s_glsl = (s_ContextGLSL > 0) ? std::min(parsed, s_ContextGLSL) : parsed;
         KZ_CORE_INFO("Contexto GLSL {0} core.", s_glsl);
     }
     return s_glsl;

@@ -9,7 +9,17 @@ namespace kizuri {
 // Versão GLSL core do contexto atual (330, 400, 410, 430, 450, ...) —
 // detectada do GL_VERSION em runtime. É o que faz os shaders escalarem:
 // PC 3.3 usa 330, PC 4.5 usa 450.
+// Versão GLSL core do contexto atual (330, 400, 410, 430, 450, ...) —
+// detectada do runtime. É o que faz os shaders escalarem: PC 3.3 usa 330,
+// PC 4.5 usa 450.
 int GetGLSLVersion();
+
+// Define a versão GLSL do CONTEXTO criado pela janela (usada como teto:
+// alguns drivers reportam GL_SHADING_LANGUAGE_VERSION maior que o contexto
+// real — ex.: 4.60 num contexto 3.3 — e compilar shader acima da GL real
+// quebra). Chamado pelo Window logo após criar o contexto.
+void SetContextGLSLVersion(int glsl);
+
 std::string GetOpenGLVersionString();
 
 class Shader {

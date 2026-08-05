@@ -1,5 +1,6 @@
 #include "kizuri/core/Window.hpp"
 #include "kizuri/core/Log.hpp"
+#include "kizuri/renderer/Shader.hpp"
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <cstdlib>
@@ -108,6 +109,10 @@ void Window::Init(const WindowProps& props) {
         if (m_Window) {
             m_GLVersionMajor = version[0];
             m_GLVersionMinor = version[1];
+            // Trava a GLSL no teto da versão pedida (3.3 -> 330, 4.0 -> 400,
+            // 4.5 -> 450, ...). Alguns drivers reportam GLSL maior que o
+            // contexto real; compilar acima da GL quebra os shaders.
+            kizuri::SetContextGLSLVersion(version[0] == 3 ? 330 : version[0] * 100 + version[1] * 10);
             KZ_CORE_INFO("Contexto OpenGL {0}.{1} core criado com sucesso.", version[0], version[1]);
             break;
         }

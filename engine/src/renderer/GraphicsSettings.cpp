@@ -7,24 +7,23 @@
 namespace kizuri {
 
 void GraphicsSettings::TuneToHardware() {
-    // MSAA = 1 (desligado) em TODAS as versões por padrão: com MSAA o depth
-    // passa por blit de FBO multisample, e algumas GPUs 4.0 resolvem o depth
-    // errado -> o SSAO lê profundidade lixo e escurece a cena ~10x. Sem MSAA
-    // a cena vai direto pro FBO simples (sem resolve) -> SSAO confiável. O
-    // usuário pode ligar MSAA manualmente nas Configurações se a GPU aguentar.
+    // Extrai o MÁXIMO de cada versão: 3.3 = MSAA 4x sólido; 4.0+ sobe pra 8x
+    // (o bug de depth-resolve do MSAA era do Wine, não de GPU real). O AO
+    // clampado em 0.35 garante que o SSAO nunca escureça a cena mesmo se a
+    // estimativa quebrar num driver estranho.
     int glsl = GetGLSLVersion();
     if (glsl >= 450) {
-        MSAA = 1; ShadowMapSize = 2048; ShadowPCFRadius = 3; SSAOSamples = 64;
-        BloomIterations = 8;
+        MSAA = 8; ShadowMapSize = 4096; ShadowPCFRadius = 3; SSAOSamples = 64;
+        BloomIterations = 8; ShadowSoftness = 0.7f; PointShadowMapSize = 1024;
     } else if (glsl >= 430) {
-        MSAA = 1; ShadowMapSize = 2048; ShadowPCFRadius = 3; SSAOSamples = 48;
-        BloomIterations = 6;
+        MSAA = 8; ShadowMapSize = 4096; ShadowPCFRadius = 3; SSAOSamples = 48;
+        BloomIterations = 6; ShadowSoftness = 0.6f; PointShadowMapSize = 1024;
     } else if (glsl >= 400) {
-        MSAA = 1; ShadowMapSize = 2048; ShadowPCFRadius = 3; SSAOSamples = 48;
-        BloomIterations = 5;
+        MSAA = 8; ShadowMapSize = 2048; ShadowPCFRadius = 3; SSAOSamples = 48;
+        BloomIterations = 5; ShadowSoftness = 0.55f; PointShadowMapSize = 1024;
     } else {
-        MSAA = 1; ShadowMapSize = 2048; ShadowPCFRadius = 2; SSAOSamples = 32;
-        BloomIterations = 4;
+        MSAA = 4; ShadowMapSize = 2048; ShadowPCFRadius = 2; SSAOSamples = 32;
+        BloomIterations = 4; ShadowSoftness = 0.45f; PointShadowMapSize = 512;
     }
 }
 static const char* PresetName(QualityPreset p) {
@@ -67,7 +66,7 @@ void GraphicsSettings::Clamp() {
 void GraphicsSettings::ApplyPreset(QualityPreset preset) {
     switch (preset) {
         case QualityPreset::Ultra:
-            RenderScale = 1.0f; MSAA = 1; ShadowMapSize = 2048; ShadowPCFRadius = 3;
+            RenderScale = 1.0f; MSAA = 8; ShadowMapSize = 4096; ShadowPCFRadius = 3;
             ShadowSoftness = 0.6f; PointShadowMapSize = 1024;
             BloomEnabled = true;  BloomThreshold = 1.2f; BloomIntensity = 0.45f;
             SSAOEnabled = true;   SSAOSamples = 64;      SSAORadius = 0.5f;
@@ -78,7 +77,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             BloomIterations = 8;
             break;
         case QualityPreset::High:
-            RenderScale = 1.0f; MSAA = 1; ShadowMapSize = 2048; ShadowPCFRadius = 2;
+            RenderScale = 1.0f; MSAA = 4; ShadowMapSize = 2048; ShadowPCFRadius = 2;
             ShadowSoftness = 0.5f; PointShadowMapSize = 1024;
             BloomEnabled = true;  BloomThreshold = 1.2f; BloomIntensity = 0.45f;
             SSAOEnabled = true;   SSAOSamples = 32;      SSAORadius = 0.5f;
@@ -89,7 +88,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             BloomIterations = 5;
             break;
         case QualityPreset::Medium:
-            RenderScale = 1.0f; MSAA = 1; ShadowMapSize = 1024; ShadowPCFRadius = 1;
+            RenderScale = 1.0f; MSAA = 2; ShadowMapSize = 1024; ShadowPCFRadius = 1;
             ShadowSoftness = 0.4f; PointShadowMapSize = 512;
             BloomEnabled = true;  BloomThreshold = 1.2f; BloomIntensity = 0.35f;
             SSAOEnabled = true;   SSAOSamples = 16;      SSAORadius = 0.5f;

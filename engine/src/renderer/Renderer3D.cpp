@@ -158,7 +158,14 @@ uniform sampler2D u_ShadowMap1;
 uniform sampler2D u_ShadowMap2;
 uniform mat4 u_LightSpaceMatrix[CASCADE_COUNT];
 uniform float u_CascadeSplits[CASCADE_COUNT]; // distância (view-space) onde cada cascata termina
-uniform int u_ShadowPCF; // raio da vizinhança do PCF (0 = amostra única, 3 = 7x7)
+uniform int u_ShadowPCF; // raio da busca de bloqueadores do PCSS
+uniform float u_ShadowSoftness; // suavidade da penumbra (PCSS)
+
+uniform samplerCube u_PointShadowMap;
+uniform bool u_HasPointShadow;
+uniform int u_PointShadowLightIndex;
+uniform vec3 u_PointLightPos;
+uniform float u_PointLightFar;
 
 #define MAX_LIGHTS 16
 uniform int u_LightCount;
@@ -177,22 +184,59 @@ uniform float u_MaxPrefilterLod;
 
 const float PI = 3.14159265359;
 
-// PCF num sampler já escolhido — média numa vizinhança de raio configurável
-// (u_ShadowPCF) em vez de um sample só. (PCSS fica desligado por ora — era
-// um dos suspeitos do 'objetos brancos'; reativo com fix depois.)
-float SampleShadowPCF(sampler2D map, vec3 projCoords, float bias) {
-    if (projCoords.z > 1.0) return 0.0;
-    float shadow = 0.0;
+// PCSS (Percentage-Closer Soft Shadows): busca os bloqueadores, estima a
+// penumbra pela distância deles e faz PCF com raio proporcional — sombra
+// suave de verdade. Só afeta sombras.
+float BlockerSearch(sampler2D map, vec3 p, float bias) {
     vec2 texelSize = 1.0 / textureSize(map, 0);
-    int r = max(u_ShadowPCF, 0);
+    int r = max(u_ShadowPCF, 1);
+    float avg = 0.0; int cnt = 0;
     for (int x = -r; x <= r; ++x) {
         for (int y = -r; y <= r; ++y) {
-            float pcfDepth = texture(map, projCoords.xy + vec2(x, y) * texelSize).r;
-            shadow += (projCoords.z - bias > pcfDepth) ? 1.0 : 0.0;
+            float d = texture(map, p.xy + vec2(x, y) * texelSize).r;
+            if (d < p.z - bias) { avg += d; ++cnt; }
         }
     }
-    float count = float((2 * r + 1) * (2 * r + 1));
-    return shadow / count;
+    return cnt == 0 ? -1.0 : avg / float(cnt);
+}
+
+float PCSS(sampler2D map, vec3 p, float bias) {
+    if (p.z > 1.0) return 0.0;
+    float avg = BlockerSearch(map, p, bias);
+    if (avg < 0.0) return 0.0; // sem bloqueadores -> totalmente iluminado
+    float penumbra = clamp((p.z - bias - avg) * u_ShadowSoftness * 140.0, 0.5, 3.0);
+    int r = int(ceil(float(max(u_ShadowPCF, 1)) * penumbra));
+    r = min(r, 6);
+    vec2 texelSize = 1.0 / textureSize(map, 0);
+    float shadow = 0.0; int cnt = 0;
+    for (int x = -r; x <= r; ++x) {
+        for (int y = -r; y <= r; ++y) {
+            if (p.z - bias > texture(map, p.xy + vec2(x, y) * texelSize).r) shadow += 1.0;
+            ++cnt;
+        }
+    }
+    return shadow / float(cnt);
+}
+
+// Sombra de luz PONTUAL: amostra o cubemap de profundidade LINEAR com um
+// pequeno PCF 3D (9 taps). Array com tamanho EXPLÍCITO (vec3[9]) — a forma
+// vec3[]() sem tamanho é rejeitada por alguns drivers e quebrava o shader.
+float PointShadow(vec3 fragToLight, float bias) {
+    if (!u_HasPointShadow) return 0.0;
+    float current = length(fragToLight) / max(u_PointLightFar, 0.001);
+    vec3 offsets[9] = vec3[9](
+        vec3(0.0),
+        vec3(0.02, 0.0, 0.0), vec3(-0.02, 0.0, 0.0),
+        vec3(0.0, 0.02, 0.0), vec3(0.0, -0.02, 0.0),
+        vec3(0.0, 0.0, 0.02), vec3(0.0, 0.0, -0.02),
+        vec3(0.014, 0.014, 0.0), vec3(-0.014, -0.014, 0.0)
+    );
+    float shadow = 0.0;
+    for (int i = 0; i < 9; ++i) {
+        float d = texture(u_PointShadowMap, fragToLight + offsets[i]).r;
+        if (current - bias > d) shadow += 1.0;
+    }
+    return shadow / 9.0;
 }
 
 // Escolhe a cascata pela profundidade view-space e amostra o shadow map certo — GLSL 330
@@ -204,13 +248,13 @@ float CalculateShadow(vec3 N, vec3 L) {
 
     if (idx == 0) {
         vec4 p = u_LightSpaceMatrix[0] * vec4(v_FragPos, 1.0);
-        return SampleShadowPCF(u_ShadowMap0, p.xyz / p.w * 0.5 + 0.5, bias);
+        return PCSS(u_ShadowMap0, p.xyz / p.w * 0.5 + 0.5, bias);
     } else if (idx == 1) {
         vec4 p = u_LightSpaceMatrix[1] * vec4(v_FragPos, 1.0);
-        return SampleShadowPCF(u_ShadowMap1, p.xyz / p.w * 0.5 + 0.5, bias);
+        return PCSS(u_ShadowMap1, p.xyz / p.w * 0.5 + 0.5, bias);
     } else {
         vec4 p = u_LightSpaceMatrix[2] * vec4(v_FragPos, 1.0);
-        return SampleShadowPCF(u_ShadowMap2, p.xyz / p.w * 0.5 + 0.5, bias);
+        return PCSS(u_ShadowMap2, p.xyz / p.w * 0.5 + 0.5, bias);
     }
 }
 
@@ -319,6 +363,12 @@ void main() {
 
         // Sombra só se aplica à luz 0 quando ela é a shadow caster (sempre a Directional, ver C++).
         if (i == 0 && u_HasShadow) contribution *= (1.0 - shadow);
+
+        // Sombra da luz PONTUAL (a marcada como castora no frame).
+        if (u_HasPointShadow && i == u_PointShadowLightIndex) {
+            float pbias = max(0.01 * (1.0 - dot(N, L)), 0.005);
+            contribution *= (1.0 - PointShadow(toLight, pbias));
+        }
         directLighting += contribution;
     }
 
@@ -1619,6 +1669,40 @@ void Renderer3D::EndScene() {
         glCullFace(GL_BACK);
     }
 
+    // --- Passe 0.5: shadow map da luz PONTUAL (depth cubemap, 6 faces,
+    // profundidade LINEAR = distância/far) — 1ª luz Point com CastsShadow ---
+    if (!s_DrawList.empty() && s_HasPointShadowCaster) {
+        EnsurePointShadowMaps((uint32_t)s_Settings.PointShadowMapSize);
+        uint32_t pointSize = (uint32_t)s_Settings.PointShadowMapSize;
+        glm::vec3 lp = s_PointShadowCaster.Position;
+        glm::mat4 pointProj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, s_PointShadowCaster.Range);
+        glm::mat4 pointViews[6] = {
+            glm::lookAt(lp, lp + glm::vec3( 1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+            glm::lookAt(lp, lp + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+            glm::lookAt(lp, lp + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+            glm::lookAt(lp, lp + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
+            glm::lookAt(lp, lp + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+            glm::lookAt(lp, lp + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+        };
+        glCullFace(GL_FRONT);
+        s_PointShadowShader->Bind();
+        s_PointShadowShader->SetFloat3("u_LightPos", lp);
+        s_PointShadowShader->SetFloat("u_FarPlane", s_PointShadowCaster.Range);
+        glBindFramebuffer(GL_FRAMEBUFFER, s_PointShadowFBO);
+        glViewport(0, 0, (GLsizei)pointSize, (GLsizei)pointSize);
+        for (int f = 0; f < 6; ++f) {
+            s_PointShadowShader->SetMat4("u_LightViewProjection", pointProj * pointViews[f]);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                    GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, s_PointShadowMap, 0);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            for (auto& cmd : s_DrawList) {
+                s_PointShadowShader->SetMat4("u_Model", cmd.Transform);
+                RenderCommand::DrawIndexed(cmd.MeshAsset->GetVertexArray(), cmd.MeshAsset->GetIndexCount());
+            }
+        }
+        glCullFace(GL_BACK);
+    }
+
     // --- Passe 1: cena inteira (mesh + skybox), pro framebuffer HDR interno ---
     uint32_t sceneFBO = (s_CurrentMSAA > 1) ? s_MSAAHDRFBO : s_HDRFBO;
     glBindFramebuffer(GL_FRAMEBUFFER, sceneFBO);
@@ -1638,6 +1722,16 @@ void Renderer3D::EndScene() {
         s_MeshShader->SetFloat3("u_ViewPos", s_CameraPos);
         s_MeshShader->SetInt("u_HasShadow", s_HasShadowCaster ? 1 : 0);
         s_MeshShader->SetInt("u_ShadowPCF", s_Settings.ShadowPCFRadius);
+        s_MeshShader->SetFloat("u_ShadowSoftness", s_Settings.ShadowSoftness);
+        s_MeshShader->SetInt("u_HasPointShadow", s_HasPointShadowCaster ? 1 : 0);
+        s_MeshShader->SetInt("u_PointShadowLightIndex", s_PointShadowLightIndex);
+        if (s_HasPointShadowCaster) {
+            glActiveTexture(GL_TEXTURE9);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, s_PointShadowMap);
+            s_MeshShader->SetInt("u_PointShadowMap", 9);
+            s_MeshShader->SetFloat3("u_PointLightPos", s_PointShadowCaster.Position);
+            s_MeshShader->SetFloat("u_PointLightFar", s_PointShadowCaster.Range);
+        }
         if (s_HasShadowCaster) {
             for (int c = 0; c < kCascadeCount; ++c) {
                 std::string idx = "[" + std::to_string(c) + "]";

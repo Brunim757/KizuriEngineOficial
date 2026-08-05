@@ -7,6 +7,12 @@
 > Repositório privado. O `docs/NOTAS_INTERNAS.md` registra o estado real, sem
 > filtro (o que funciona, o que é gambiarra e o que falta).
 
+> **Self-contained:** os assets que a engine usa como padrão (modelos da demo
+> 3D — Fox animado e DamagedHelmet PBR —, céu, primitivas) vêm **embutidos no
+> executável** via `kzres://`. Nenhuma função padrão quebra se um arquivo for
+> apagado; o Content Pack da distribuição só enriquece as demos, nunca é
+> requisito.
+
 ---
 
 ## ✨ Destaques

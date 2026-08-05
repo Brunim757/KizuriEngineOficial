@@ -1282,6 +1282,10 @@ void Renderer3D::Init() {
 // blit resolve cor+profundidade pro s_HDRFBO simples, que é o que os passes
 // de pós (SSAO, bright-pass, composite) amostram.
 void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
+    // Memória da última recusa: uma GPU que rejeitou 8x continua rejeitando —
+    // não pode recriar/refalhar o FBO todo frame (só loga uma vez e segue).
+    static int s_MSAARejected = 0;
+    if (s_MSAARejected > 0 && msaa >= s_MSAARejected) msaa = 1;
     msaa = (msaa > 1) ? msaa : 1;
     if (width == s_PostWidth && height == s_PostHeight && msaa == s_CurrentMSAA && s_HDRFBO != 0) return;
     s_PostWidth = width;
@@ -1325,6 +1329,18 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         KZ_CORE_ERROR("Framebuffer HDR incompleto.");
 
     // --- Destino multisample (se MSAA>1): a cena renderiza aqui; o blit resolve ---
+    // Fallback obrigatório: se a GPU não suportar o nº de amostras no FBO HDR
+    // (iGPU antiga, drivers limitados), o FBO fica INCOMPLETO e renderizar nele
+    // dá viewport preto. Nesse caso cai pra sem-MSAA em vez de quebrar a tela.
+    int requestedMsaa = msaa;
+    if (msaa > 1) {
+        GLint maxSamples = 1;
+        glGetIntegerv(GL_MAX_SAMPLES, &maxSamples);
+        if ((GLint)msaa > maxSamples) {
+            KZ_CORE_WARN("MSAA {0} não suportado (máximo {1}); usando sem MSAA.", msaa, maxSamples);
+            msaa = 1;
+        }
+    }
     if (msaa > 1) {
         glGenTextures(1, &s_MSAAHDRColor);
         glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, s_MSAAHDRColor);
@@ -1338,9 +1354,18 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         glBindFramebuffer(GL_FRAMEBUFFER, s_MSAAHDRFBO);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, s_MSAAHDRColor, 0);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, s_MSAAHDRDepthRBO);
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-            KZ_CORE_ERROR("Framebuffer HDR MSAA incompleto.");
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            // GPU recusou o MSAA mesmo dentro do máximo reportado: desliga sem
+            // renderizar no FBO quebrado (senão o viewport fica preto).
+            KZ_CORE_ERROR("Framebuffer HDR MSAA incompleto — desabilitando MSAA (fallback).");
+            s_MSAARejected = requestedMsaa;
+            glDeleteFramebuffers(1, &s_MSAAHDRFBO);   s_MSAAHDRFBO = 0;
+            glDeleteTextures(1, &s_MSAAHDRColor);     s_MSAAHDRColor = 0;
+            glDeleteRenderbuffers(1, &s_MSAAHDRDepthRBO); s_MSAAHDRDepthRBO = 0;
+            msaa = 1;
+        }
     }
+    s_CurrentMSAA = msaa; // reflete o que de fato ficou (pode ter caído pra 1)
 
     glGenFramebuffers(2, s_BloomFBO);
     glGenTextures(2, s_BloomColorBuffer);
@@ -2224,6 +2249,11 @@ void Renderer3D::EndScene() {
     }
     RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
     RenderCommand::SetDepthTest(true);
+
+    // Diagnóstico: qualquer erro de driver neste frame aparece no log (ex.:
+    // GL_INVALID_FRAMEBUFFER_OPERATION = FBO incompleto, que é tela preta).
+    if (GLenum err = glGetError(); err != GL_NO_ERROR)
+        KZ_CORE_ERROR("OpenGL erro 0x{0:x} no frame (pós).", (unsigned)err);
 
     s_DrawList.clear();
 }

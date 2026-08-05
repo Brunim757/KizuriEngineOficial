@@ -1026,8 +1026,13 @@ void Scene::OnUpdateRuntime(Timestep ts) {
     UpdateAnimators(ts);
     UpdateAudio(ts);
 
-    RenderScene2D(nullptr);
+    // 3D primeiro, depois 2D por cima, UI por último. O passe 3D termina num
+    // composite de tela cheia — se o 2D rodasse antes (ordem antiga), o
+    // composite pintava por cima e engolia o 2D. Com 3D→2D→UI, uma cena
+    // híbrida (câmera perspectiva + câmera ortográfica primárias) vira o
+    // clássico 2.5D: fundo/mundo 3D + camada de jogo 2D + HUD de UI.
     RenderScene3D(nullptr);
+    RenderScene2D(nullptr);
     RenderUI();
 }
 
@@ -1036,11 +1041,10 @@ void Scene::OnUpdateEditor3D(Timestep ts, PerspectiveCamera& editorCamera) {
     UpdateSpriteAnimations(ts); // preview de animação no viewport, mesmo em edição
     UpdateAnimators(ts);        // idem pros esqueletos
     // Modo 3D do viewport: malhas + grid via câmera livre do editor. O
-    // passe 2D continua rodando com a câmera primária da PRÓPRIA cena, se
-    // houver uma — é o que permite um HUD/overlay 2D aparecer sobre uma
-    // cena 3D sem precisar de nenhum tratamento especial.
-    RenderScene2D(nullptr);
+    // passe 2D roda depois (3D→2D→UI), com a câmera primária da PRÓPRIA
+    // cena — é o que permite um overlay/HUD 2D aparecer sobre uma cena 3D.
     RenderScene3D(&editorCamera);
+    RenderScene2D(nullptr);
     RenderUI();
 }
 

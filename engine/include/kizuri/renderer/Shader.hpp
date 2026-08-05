@@ -6,6 +6,12 @@
 
 namespace kizuri {
 
+// Versão GLSL core do contexto atual (330, 400, 410, 430, 450, ...) —
+// detectada do GL_VERSION em runtime. É o que faz os shaders escalarem:
+// PC 3.3 usa 330, PC 4.5 usa 450.
+int GetGLSLVersion();
+std::string GetOpenGLVersionString();
+
 class Shader {
 public:
     Shader(const std::string& name, const std::string& vertexSrc, const std::string& fragmentSrc);

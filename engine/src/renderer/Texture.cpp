@@ -2,6 +2,7 @@
 #include "kizuri/core/Log.hpp"
 #include "kizuri/core/EmbeddedContent.hpp"
 #include <glad/gl.h>
+#include <cstring>
 
 #define STB_IMAGE_IMPLEMENTATION_GUARD
 #ifdef STB_IMAGE_IMPLEMENTATION_GUARD
@@ -10,6 +11,32 @@
 #include <stb_image.h>
 
 namespace kizuri {
+
+// Filtragem anisotrópica (GL_TEXTURE_MAX_ANISOTROPY = 0x84FE): texturas
+// vistas em ângulo ficam nítidas em vez de borradas. Extensão ARB (presente
+// na prática em qualquer driver 3.3+) e núcleo no GL 4.6. Checado uma vez.
+static bool SupportsAnisotropy() {
+    static bool s_checked = false, s_supported = false;
+    if (!s_checked) {
+        s_checked = true;
+        const char* exts = (const char*)glGetString(GL_EXTENSIONS);
+        if (exts && strstr(exts, "GL_ARB_texture_filter_anisotropic")) s_supported = true;
+        if (!s_supported) {
+            const char* v = (const char*)glGetString(GL_VERSION);
+            int major = 0;
+            if (v) {
+                while (*v && !(*v >= '0' && *v <= '9')) ++v;
+                if (*v >= '0' && *v <= '9') major = *v - '0';
+            }
+            if (major >= 4) s_supported = true; // em 4.x todos os drivers práticos têm
+        }
+    }
+    return s_supported;
+}
+
+static void ApplyAnisotropy() {
+    if (SupportsAnisotropy()) glTexParameterf(GL_TEXTURE_2D, 0x84FE /*GL_TEXTURE_MAX_ANISOTROPY*/, 8.0f);
+}
 
 Texture2D::Texture2D(uint32_t width, uint32_t height)
     : m_Width(width), m_Height(height), m_InternalFormat(GL_RGBA8), m_DataFormat(GL_RGBA) {
@@ -45,6 +72,7 @@ Texture2D::Texture2D(const std::string& path) : m_Path(path) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    ApplyAnisotropy();
 
     stbi_image_free(data);
     KZ_CORE_INFO("Textura carregada: {0} ({1}x{2}).", path, width, height);
@@ -94,6 +122,7 @@ Ref<Texture2D> Texture2D::CreateFromMemory(const void* data, size_t size, const 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    ApplyAnisotropy();
     stbi_image_free(pixels);
     return tex;
 }

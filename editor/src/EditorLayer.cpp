@@ -317,6 +317,11 @@ void EditorLayer::CreateDemoScene2D() {
     m_ScenePath.clear();
     m_SelectedEntity = {};
     m_ViewportMode = ViewportMode::Mode2D;
+    // Reseta a câmera de edição 2D pra enquadrar a demo (sem isso o pan/zoom
+    // anterior deixa o viewport "fora da cena" e parece bugado).
+    m_Editor2DZoom = 10.0f;
+    m_Editor2DCamPos = { 0.0f, 0.0f };
+    m_Editor2DFirstMouseLook = true;
 
     Entity camera = m_ActiveScene->CreateEntity("Câmera 2D");
     auto& cc = camera.AddComponent<CameraComponent>();
@@ -324,11 +329,14 @@ void EditorLayer::CreateDemoScene2D() {
     cc.Primary = true;
     cc.OrthoSize = 10.0f;
 
+    // Fundo: z=0 (dentro do range ortográfico -1..1; z=-1 ficava no plano
+    // near e podia ser recortado) + camada de ordenação mais baixa.
     Entity bg = m_ActiveScene->CreateEntity("Fundo");
     auto& bs = bg.AddComponent<SpriteRendererComponent>();
     bs.Color = { 0.10f, 0.11f, 0.14f, 1.0f };
+    bs.SortingLayer = -5;
     auto& bt = bg.GetComponent<TransformComponent>();
-    bt.Translation = { 0.0f, 0.0f, -1.0f };
+    bt.Translation = { 0.0f, 0.0f, 0.0f };
     bt.Scale = { 40.0f, 25.0f, 1.0f };
 
     Entity ground = m_ActiveScene->CreateEntity("Chão");
@@ -349,34 +357,35 @@ void EditorLayer::CreateDemoScene2D() {
         bxs.Color = { 0.3f + t * 0.6f, 0.35f, 0.85f, 1.0f };
         auto& bxt = box.GetComponent<TransformComponent>();
         bxt.Translation = { -6.0f + i * 2.8f, 2.0f + i * 1.2f, 0.0f };
-        bxt.Rotation.z = glm::radians((float)(i * 25 - 50));
+        bxt.Rotation.z = glm::radians((float)(i * 18 - 36));
         box.AddComponent<Rigidbody2DComponent>().Type = Rigidbody2DComponent::BodyType::Dynamic;
         auto& bxc = box.AddComponent<BoxCollider2DComponent>();
         bxc.Size = { 1.0f, 1.0f };
     }
 
-    // Moedas (círculos).
+    // Moedas: círculos preenchidos (Thickness 1.0 = disco cheio; 0.9 era anel).
     for (int i = 0; i < 6; ++i) {
         Entity coin = m_ActiveScene->CreateEntity("Moeda " + std::to_string(i + 1));
         auto& cs = coin.AddComponent<CircleRendererComponent>();
         cs.Color = { 1.0f, 0.8f, 0.2f, 1.0f };
-        cs.Thickness = 0.9f;
+        cs.Thickness = 1.0f;
         coin.GetComponent<TransformComponent>().Translation = { -6.0f + i * 2.4f, 6.5f, 0.0f };
     }
 
     Entity title = m_ActiveScene->CreateEntity("Título");
     auto& tc = title.AddComponent<TextComponent>();
     tc.Text = "Demonstração 2D — aperte Play";
-    tc.FontSize = 42.0f;
+    tc.FontSize = 36.0f;
     tc.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
-    title.GetComponent<TransformComponent>().Translation = { -8.0f, 8.2f, 0.0f };
+    tc.SortingLayer = 5;
+    title.GetComponent<TransformComponent>().Translation = { -8.0f, 8.4f, 0.0f };
 
     // UI: canvas + botão com texto (espaço de tela, 0,0 = centro).
     Entity canvas = m_ActiveScene->CreateEntity("Canvas");
     canvas.AddComponent<UICanvasComponent>();
     Entity button = m_ActiveScene->CreateEntity("Botão");
     auto& ur = button.AddComponent<UIRectComponent>();
-    ur.Position = { 0.0f, -3.0f };
+    ur.Position = { 0.0f, -3.5f };
     ur.Size = { 4.5f, 1.2f };
     ur.Color = { 0.82f, 0.24f, 0.27f, 1.0f };
     button.AddComponent<UIButtonComponent>();
@@ -1071,6 +1080,14 @@ void EditorLayer::DrawSettingsGeneral() {
     ImGui::Text("Resolução da janela: %ux%u", app.GetWindow().GetWidth(), app.GetWindow().GetHeight());
     ImGui::Text("VSync: %s", m_GraphicsSettings.VSync ? "ligado" : "desligado");
     ImGui::Spacing();
+    ImGui::TextUnformatted("Renderização");
+    ImGui::Separator();
+    ImGui::Text("OpenGL: %s", kizuri::GetOpenGLVersionString().c_str());
+    ImGui::Text("GLSL core: %d", kizuri::GetGLSLVersion());
+    ImGui::TextWrapped("Os shaders compilam pra versão do seu hardware: 3.3 usa 330, 4.5 usa 450, etc. "
+                       "Features 4.x (compute, tessellation) entram conforme a versão detectada.");
+
+    ImGui::Spacing();
     ImGui::TextUnformatted("Persistência");
     ImGui::Separator();
     if (ImGui::Button("Salvar configurações (settings.json)")) SaveGraphicsSettingsToDisk();
@@ -1503,12 +1520,18 @@ void EditorLayer::DrawDockspace() {
     dl->AddRectFilled(menuMin, menuMax, ImGui::GetColorU32(ImVec4(0.08f, 0.08f, 0.09f, 1.0f)));
 
     ImGui::SetCursorScreenPos(ImVec2(menuMin.x + 6.0f, menuMin.y + 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8.0f, 4.0f));
-    if (ImGui::Button("Arquivo")) ImGui::OpenPopup("##menu_arquivo");
-    ImGui::PopStyleVar();
-    ImGui::PopStyleColor();
-    if (ImGui::BeginPopup("##menu_arquivo")) {
+    const char* menuNames[] = { "Arquivo", "Editar", "Cena", "Exibir", "Ajuda" };
+    for (int m = 0; m < 5; ++m) {
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8.0f, 4.0f));
+        if (ImGui::Button(menuNames[m])) ImGui::OpenPopup(("##menu_" + std::string(menuNames[m])).c_str());
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
+        if (m < 4) ImGui::SameLine(0.0f, 2.0f);
+    }
+
+    // ---- Arquivo ----
+    if (ImGui::BeginPopup("##menu_Arquivo")) {
         if (ImGui::MenuItem("Novo Projeto...")) {
             strncpy(m_NewProjectDirBuffer, "MeuJogo", sizeof(m_NewProjectDirBuffer));
             strncpy(m_NewProjectNameBuffer, "MeuJogo", sizeof(m_NewProjectNameBuffer));
@@ -1521,21 +1544,9 @@ void EditorLayer::DrawDockspace() {
             m_EditorState = EditorState::Hub;
         }
         ImGui::Separator();
-        // Fluxo normal é automático (abrir projeto carrega, Play compila). O
-        // "Carregar GameModule" só existe como fallback pra quem está sem
-        // projeto (cena solta / DLL de outro lugar) — fica no submenu Avançado.
-        if (ImGui::BeginMenu("Avançado")) {
-            if (ImGui::MenuItem("Carregar GameModule...", nullptr, false, m_SceneState == SceneState::Edit)) {
-                m_RequestOpenGameModulePopup = true;
-            }
-            ImGui::EndMenu();
-        }
         if (ImGui::MenuItem("Exportar Jogo...", nullptr, false,
                             m_SceneState == SceneState::Edit && !m_ScenePath.empty())) {
             m_RequestOpenExportPopup = true;
-        }
-        if (ImGui::MenuItem("Configurações...", "Ctrl+,", false, true)) {
-            m_ShowSettings = true;
         }
         if (ImGui::MenuItem("Definir cena como inicial", nullptr, false,
                             m_SceneState == SceneState::Edit && !m_ScenePath.empty() && (bool)Project::GetActive())) {
@@ -1545,24 +1556,87 @@ void EditorLayer::DrawDockspace() {
             KZ_CORE_INFO("Cena inicial do projeto: {0}", project->GetConfig().StartScenePath);
         }
         ImGui::Separator();
-        // Nova/Abrir Cena travados durante o Play (igual Salvar): trocar a
-        // m_ActiveScene no meio do runtime descartaria a cópia em execução
-        // por baixo e é comportamento de modo edição dentro do jogo.
-        if (ImGui::MenuItem("Nova Cena", nullptr, false, m_SceneState == SceneState::Edit)) NewScene();
-        if (ImGui::MenuItem("Cena de Demonstração 2D...", nullptr, false, m_SceneState == SceneState::Edit))
-            CreateDemoScene2D();
-        if (ImGui::MenuItem("Cena de Demonstração 3D...", nullptr, false, m_SceneState == SceneState::Edit))
-            CreateDemoScene3D();
+        if (ImGui::MenuItem("Salvar Cena", nullptr, false, (bool)m_ActiveScene)) SaveScene();
+        if (ImGui::MenuItem("Salvar Cena Como...")) SaveSceneAs();
         ImGui::Separator();
+        // Fluxo normal é automático (abrir projeto carrega, Play compila). O
+        // "Carregar GameModule" é fallback pra cena solta — fica em Avançado.
+        if (ImGui::BeginMenu("Avançado")) {
+            if (ImGui::MenuItem("Carregar GameModule...", nullptr, false, m_SceneState == SceneState::Edit)) {
+                m_RequestOpenGameModulePopup = true;
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::Separator();
+        if (ImGui::MenuItem("Sair")) Application::Get().Close();
+        ImGui::EndPopup();
+    }
+
+    // ---- Editar (undo/redo/duplicar/excluir) ----
+    if (ImGui::BeginPopup("##menu_Editar")) {
+        bool editing = m_SceneState == SceneState::Edit;
+        if (ImGui::MenuItem("Desfazer", "Ctrl+Z", false, editing && m_History.CanUndo()))
+            m_History.Undo(*m_ActiveScene);
+        if (ImGui::MenuItem("Refazer", "Ctrl+Y", false, editing && m_History.CanRedo()))
+            m_History.Redo(*m_ActiveScene);
+        ImGui::Separator();
+        if (ImGui::MenuItem("Duplicar entidade", "Ctrl+D", false, editing && m_SelectedEntity)) {
+            Entity copy = m_ActiveScene->DuplicateEntity(m_SelectedEntity);
+            if (copy) { m_SelectedEntity = copy; AutoSwitchViewportMode(); }
+        }
+        if (ImGui::MenuItem("Excluir entidade", "Del", false, editing && m_SelectedEntity)) {
+            Entity toDelete = m_SelectedEntity;
+            m_SelectedEntity = {};
+            m_History.Push(CreateRef<DeleteEntityCommand>(toDelete));
+            m_ActiveScene->DestroyEntity(toDelete);
+        }
+        ImGui::EndPopup();
+    }
+
+    // ---- Cena ----
+    if (ImGui::BeginPopup("##menu_Cena")) {
+        if (ImGui::MenuItem("Nova Cena", nullptr, false, m_SceneState == SceneState::Edit)) NewScene();
         if (ImGui::MenuItem("Abrir Cena...", nullptr, false, m_SceneState == SceneState::Edit)) {
             strncpy(m_ScenePathBuffer, m_ScenePath.empty() ? "cena.kzscene" : m_ScenePath.c_str(), sizeof(m_ScenePathBuffer));
             m_ScenePathBuffer[sizeof(m_ScenePathBuffer) - 1] = '\0';
             m_RequestOpenLoadPopup = true;
         }
-        if (ImGui::MenuItem("Salvar Cena", nullptr, false, (bool)m_ActiveScene)) SaveScene();
-        if (ImGui::MenuItem("Salvar Cena Como...")) SaveSceneAs();
         ImGui::Separator();
-        if (ImGui::MenuItem("Sair")) Application::Get().Close();
+        if (ImGui::MenuItem("Cena de Demonstração 2D...", nullptr, false, m_SceneState == SceneState::Edit))
+            CreateDemoScene2D();
+        if (ImGui::MenuItem("Cena de Demonstração 3D...", nullptr, false, m_SceneState == SceneState::Edit))
+            CreateDemoScene3D();
+        ImGui::EndPopup();
+    }
+
+    // ---- Exibir ----
+    if (ImGui::BeginPopup("##menu_Exibir")) {
+        if (ImGui::MenuItem("Viewport 2D", nullptr, m_ViewportMode == ViewportMode::Mode2D)) m_ViewportMode = ViewportMode::Mode2D;
+        if (ImGui::MenuItem("Viewport 3D", nullptr, m_ViewportMode == ViewportMode::Mode3D)) m_ViewportMode = ViewportMode::Mode3D;
+        ImGui::Separator();
+        if (ImGui::MenuItem("Fullscreen do viewport", "F11", m_ViewportMaximized)) m_ViewportMaximized = !m_ViewportMaximized;
+        ImGui::Separator();
+        if (ImGui::MenuItem("Configurações...", "Ctrl+,")) m_ShowSettings = true;
+        ImGui::EndPopup();
+    }
+
+    // ---- Ajuda ----
+    if (ImGui::BeginPopup("##menu_Ajuda")) {
+        ImGui::TextDisabled("Kizuri Engine v0.8.0");
+        ImGui::TextDisabled("C++20 · OpenGL %s · GLSL %d core",
+            kizuri::GetOpenGLVersionString().c_str(), kizuri::GetGLSLVersion());
+        ImGui::Separator();
+        if (ImGui::MenuItem("Atalhos do editor"))
+            ImGui::OpenPopup("##atalhos");
+        if (ImGui::BeginPopup("##atalhos")) {
+            ImGui::Text("F5 / Shift+F5  Play / Stop");
+            ImGui::Text("W / E / R       Gizmo mover/rotacionar/escalar");
+            ImGui::Text("Ctrl+Z / Ctrl+Y  Desfazer / Refazer");
+            ImGui::Text("Ctrl+D / Del     Duplicar / Excluir");
+            ImGui::Text("F11              Fullscreen do viewport");
+            ImGui::Text("Botão direito    Navegação da câmera do editor");
+            ImGui::EndPopup();
+        }
         ImGui::EndPopup();
     }
 

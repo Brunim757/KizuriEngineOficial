@@ -823,6 +823,18 @@ void main() {
 
 void Renderer3D::Init() {
     KZ_TRACE_SCOPE("Renderer3D::Init");
+
+    // Auto-tune por hardware: GL 4.x permite configuração mais agressiva
+    // (MSAA 8x + shadow 4096); em 3.3 fica mais conservador pra iGPU
+    // antiga não engasgar. O editor pode sobrescrever via settings.json.
+    if (GetGLSLVersion() >= 400) {
+        s_Settings.MSAA = 8;
+        s_Settings.ShadowMapSize = 4096;
+    } else {
+        s_Settings.MSAA = 4;
+        s_Settings.ShadowMapSize = 2048;
+    }
+
     s_MeshShader = CreateRef<Shader>("Renderer3D_Mesh", s_MeshVertexSrc, s_MeshFragmentSrc);
     s_LineShader = CreateRef<Shader>("Renderer3D_Line", s_LineVertexSrc, s_LineFragmentSrc);
 
@@ -1066,8 +1078,11 @@ void Renderer3D::EnsureShadowMaps(uint32_t size) {
         glBindTexture(GL_TEXTURE_2D, s_ShadowMap[i]);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, (GLsizei)size, (GLsizei)size,
                      0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        // GL_LINEAR na profundidade = PCF bilinear de hardware (borda de sombra
+        // mais suave que o sample único NEAREST; o loop manual do shader soma
+        // por cima). Filtragem de textura de profundidade é GL 3.0+.
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
         glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);

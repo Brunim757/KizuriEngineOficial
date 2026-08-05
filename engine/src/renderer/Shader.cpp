@@ -8,6 +8,55 @@
 
 namespace kizuri {
 
+// Versão GLSL do contexto atual (parse de GL_VERSION uma vez, cacheado).
+// GL 3.3 -> 330, 4.0 -> 400, 4.1 -> 410, 4.3 -> 430, 4.5 -> 450, etc. É o
+// que permite shaders escalarem: num PC 3.3 o mínimo é 330, mas num 4.5 o
+// mesmo shader compila como 450 (e pode usar #if KZ_GLSL_VERSION >= 430).
+int GetGLSLVersion() {
+    static int s_glsl = 0;
+    if (s_glsl == 0) {
+        const char* v = (const char*)glGetString(GL_VERSION); // ex.: "4.5.0 NVIDIA"
+        int major = 3, minor = 3;
+        if (v) {
+            while (*v && !(*v >= '0' && *v <= '9')) ++v;
+            if (*v >= '0' && *v <= '9') major = *v - '0';
+            while (*v && *v != '.') ++v;
+            if (*v == '.') { ++v; if (*v >= '0' && *v <= '9') minor = *v - '0'; }
+        }
+        if (major >= 4) s_glsl = major * 100 + minor * 10;   // 4.1 -> 410, 4.5 -> 450
+        else s_glsl = 330;                                   // 3.3 mínimo
+        if (s_glsl < 330) s_glsl = 330;
+        KZ_CORE_INFO("Contexto OpenGL {0}.{1} -> GLSL {2} core.", major, minor, s_glsl);
+    }
+    return s_glsl;
+}
+
+std::string GetOpenGLVersionString() {
+    const char* v = (const char*)glGetString(GL_VERSION);
+    return v ? std::string(v) : std::string("desconhecido");
+}
+
+namespace {
+
+// Troca a linha "#version ..." (se houver) pelo #version do contexto atual +
+// um #define KZ_GLSL_VERSION <n> que os shaders usam pra features condicionais.
+// Remove a diretiva de versão de QUALQUER lugar (e pré-adiciona a do contexto),
+// garantindo que o resultado sempre começa com "#version".
+std::string RewriteVersion(const std::string& src) {
+    std::string body = src;
+    size_t pos = body.find("#version");
+    if (pos != std::string::npos) {
+        size_t lineEnd = body.find('\n', pos);
+        if (lineEnd != std::string::npos) body.erase(pos, lineEnd - pos + 1);
+        else body.erase(pos);
+    }
+    int glsl = GetGLSLVersion();
+    return "#version " + std::to_string(glsl) + " core\n"
+           "#define KZ_GLSL_VERSION " + std::to_string(glsl) + "\n" + body;
+}
+
+} // namespace
+
 static uint32_t CompileStage(GLenum type, const std::string& source, const std::string& shaderName) {
     uint32_t shader = glCreateShader(type);
     const char* src = source.c_str();
@@ -31,8 +80,8 @@ static uint32_t CompileStage(GLenum type, const std::string& source, const std::
 Shader::Shader(const std::string& name, const std::string& vertexSrc, const std::string& fragmentSrc)
     : m_Name(name) {
     KZ_TRACE_SCOPE("Shader::Shader");
-    uint32_t vs = CompileStage(GL_VERTEX_SHADER, vertexSrc, name);
-    uint32_t fs = CompileStage(GL_FRAGMENT_SHADER, fragmentSrc, name);
+    uint32_t vs = CompileStage(GL_VERTEX_SHADER, RewriteVersion(vertexSrc), name);
+    uint32_t fs = CompileStage(GL_FRAGMENT_SHADER, RewriteVersion(fragmentSrc), name);
 
     m_RendererID = glCreateProgram();
     glAttachShader(m_RendererID, vs);

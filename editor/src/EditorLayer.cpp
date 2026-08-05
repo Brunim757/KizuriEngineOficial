@@ -225,6 +225,20 @@ void EditorLayer::CreateDemoScene3D() {
     gm.MeshMaterial.Roughness = 0.9f;
     ground.GetComponent<TransformComponent>().Scale = { 12.0f, 1.0f, 12.0f };
 
+    // Piso espelhado (metal polido) — mostra o reflexo por raio (SSR, GL 4.0+):
+    // as meshes acima aparecem refletidas no chão. Em GL 3.3 o SSR fica off e
+    // o piso apenas reflete o ambiente (IBL), sem quebrar nada.
+    Entity mirrorFloor = m_ActiveScene->CreateEntity("Piso Espelhado (SSR)");
+    auto& mm = mirrorFloor.AddComponent<MeshRendererComponent>();
+    mm.MeshSource = "builtin:plane";
+    mm.MeshAsset = Mesh::FromSource(mm.MeshSource);
+    mm.MeshMaterial.Albedo = { 0.02f, 0.02f, 0.025f };
+    mm.MeshMaterial.Metallic = 1.0f;
+    mm.MeshMaterial.Roughness = 0.04f;
+    auto& mt = mirrorFloor.GetComponent<TransformComponent>();
+    mt.Translation = { 0.0f, 0.012f, 0.0f };
+    mt.Scale = { 6.0f, 1.0f, 6.0f };
+
     // Céu: atmosférico procedural por padrão (estável). Prioridade:
     // Content Pack (HDRI rico) → EMBUTIDO (kzres://skies/sky_gradient.hdr,
     // sempre disponível) → procedural. Se apagarem o arquivo externo, o
@@ -637,9 +651,8 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
         glm::vec2 delta = mousePos - m_LastMousePos;
 
         constexpr float kLookSensitivity = 0.12f;
-        m_EditorCamYaw += delta.x * kLookSensitivity;
-        m_EditorCamPitch -= delta.y * kLookSensitivity;
-        m_EditorCamPitch = std::clamp(m_EditorCamPitch, -89.0f, 89.0f);
+        m_EditorCamYaw += delta.x * m_EditorCamSensitivity;
+        m_EditorCamPitch -= delta.y * m_EditorCamSensitivity;        m_EditorCamPitch = std::clamp(m_EditorCamPitch, -89.0f, 89.0f);
 
         // Mesma convenção de PerspectiveCamera::RecalculateViewMatrix
         // (Camera.cpp) — precisa bater pra WASD mover na direção que a
@@ -653,7 +666,7 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
         glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
         glm::vec3 up = glm::cross(right, forward);
 
-        float speed = (Input::IsKeyPressed(Key::LeftShift) ? 12.0f : 4.0f) * (float)ts;
+        float speed = (Input::IsKeyPressed(Key::LeftShift) ? m_EditorCamFlySpeed * 3.0f : m_EditorCamFlySpeed) * (float)ts;
         if (Input::IsKeyPressed(Key::W)) m_EditorCamPos += forward * speed;
         if (Input::IsKeyPressed(Key::S)) m_EditorCamPos -= forward * speed;
         if (Input::IsKeyPressed(Key::A)) m_EditorCamPos -= right * speed;
@@ -1174,6 +1187,24 @@ void EditorLayer::DrawSettingsGraphics() {
         customTweak |= ImGui::DragFloat("Raio SSAO", &m_GraphicsSettings.SSAORadius, 0.01f, 0.05f, 2.0f);
     }
     ImGui::Separator();
+    // SSR — "ray tracing" em espaço de tela (reflexos). Só funciona em GL 4.0+
+    // (o shader usa loop de comprimento variável); em 3.3 fica travado off.
+    bool ssrSupported = kizuri::GetGLSLVersion() >= 400;
+    if (!ssrSupported) m_GraphicsSettings.SSREnabled = false;
+    if (!ssrSupported) ImGui::BeginDisabled();
+    customTweak |= ImGui::Checkbox("Reflexos por raio (SSR)", &m_GraphicsSettings.SSREnabled);
+    if (!ssrSupported) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("[requer OpenGL 4.0+]");
+        ImGui::EndDisabled();
+    }
+    if (m_GraphicsSettings.SSREnabled) {
+        customTweak |= ImGui::SliderInt("Passos do raio", &m_GraphicsSettings.SSRMaxSteps, 8, 128);
+        customTweak |= ImGui::DragFloat("Intensidade da reflexão", &m_GraphicsSettings.SSRIntensity, 0.01f, 0.0f, 2.0f);
+        customTweak |= ImGui::DragFloat("Distância da marcha", &m_GraphicsSettings.SSRMarchDistance, 0.5f, 1.0f, 100.0f);
+        customTweak |= ImGui::DragFloat("Espessura do depth", &m_GraphicsSettings.SSRThickness, 0.005f, 0.01f, 1.0f);
+    }
+    ImGui::Separator();
     customTweak |= ImGui::DragFloat("Exposição", &m_GraphicsSettings.Exposure, 0.01f, 0.1f, 8.0f);
     customTweak |= ImGui::Checkbox("VSync", &m_GraphicsSettings.VSync);
     ImGui::Separator();
@@ -1240,15 +1271,38 @@ void EditorLayer::DrawSettingsGeneral() {
     ImGui::TextUnformatted("Janela");
     ImGui::Separator();
     Application& app = Application::Get();
-    ImGui::Text("Resolução da janela: %ux%u", app.GetWindow().GetWidth(), app.GetWindow().GetHeight());
-    ImGui::Text("VSync: %s", m_GraphicsSettings.VSync ? "ligado" : "desligado");
+    static int winW = (int)app.GetWindow().GetWidth();
+    static int winH = (int)app.GetWindow().GetHeight();
+    static bool s_winEdited = false;
+    // Mantém os campos sincronizados quando a janela muda por fora (ex.: o
+    // usuário redimensionou manualmente e reabriu as Configurações).
+    if (!s_winEdited) {
+        winW = (int)app.GetWindow().GetWidth();
+        winH = (int)app.GetWindow().GetHeight();
+    }
+    ImGui::SetNextItemWidth(110); ImGui::InputInt("Largura", &winW);
+    if (ImGui::IsItemEdited()) s_winEdited = true;
+    ImGui::SetNextItemWidth(110); ImGui::InputInt("Altura", &winH);
+    if (ImGui::IsItemEdited()) s_winEdited = true;
+    ImGui::SameLine();
+    if (ImGui::Button("Aplicar resolução")) {
+        winW = std::max(640, winW); winH = std::max(360, winH);
+        app.GetWindow().SetSize(winW, winH);
+        s_winEdited = false;
+    }
+    if (ImGui::Button("Maximizar")) app.GetWindow().ToggleMaximize();
+    ImGui::SameLine();
+    if (ImGui::Button("Minimizar")) app.GetWindow().Minimize();
+    if (ImGui::Checkbox("VSync", &m_GraphicsSettings.VSync))
+        app.GetWindow().SetVSync(m_GraphicsSettings.VSync);
     ImGui::Spacing();
     ImGui::TextUnformatted("Renderização");
     ImGui::Separator();
     ImGui::Text("OpenGL: %s", kizuri::GetOpenGLVersionString().c_str());
-    ImGui::Text("GLSL core: %d", kizuri::GetGLSLVersion());
-    ImGui::TextWrapped("Os shaders compilam pra versão do seu hardware: 3.3 usa 330, 4.5 usa 450, etc. "
-                       "Features 4.x (compute, tessellation) entram conforme a versão detectada.");
+    ImGui::TextDisabled("Qualidade automática pelo hardware; configurações avançadas em Gráficos.");
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("OpenGL %d.%d detectado. Quanto mais novo, mais efeitos ligam automaticamente.",
+                          kizuri::GetGLSLVersion() / 100, (kizuri::GetGLSLVersion() / 10) % 10);
 
     ImGui::Spacing();
     ImGui::TextUnformatted("Persistência");
@@ -1269,6 +1323,25 @@ void EditorLayer::DrawSettingsEditor() {
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Roda dotnet build no Source/*.csproj antes de entrar no Play.");
     ImGui::Spacing();
+
+    ImGui::TextUnformatted("Câmera do editor");
+    ImGui::Separator();
+    ImGui::DragFloat("Velocidade de voo", &m_EditorCamFlySpeed, 0.1f, 0.5f, 60.0f);
+    ImGui::SameLine();
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Botão direito + WASD no viewport 3D. Segurar Shift triplica a velocidade.");
+    ImGui::DragFloat("Sensibilidade do mouse", &m_EditorCamSensitivity, 0.005f, 0.01f, 1.0f);
+    ImGui::Spacing();
+
+    ImGui::TextUnformatted("Gizmos");
+    ImGui::Separator();
+    ImGui::DragFloat("Snap de translação", &m_GizmoSnapTranslation, 0.05f, 0.05f, 10.0f);
+    ImGui::SameLine();
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Segure Ctrl enquanto arrasta o gizmo de mover pra usar o snap.");
+    ImGui::DragFloat("Snap de rotação (graus)", &m_GizmoSnapRotation, 1.0f, 1.0f, 90.0f);
+    ImGui::Spacing();
+
     ImGui::TextUnformatted("Viewport");
     ImGui::Separator();
     ImGui::Checkbox("Maximizar viewport (botão fullscreen da toolbar)", &m_ViewportMaximized);
@@ -1278,6 +1351,8 @@ void EditorLayer::DrawSettingsEditor() {
     if (ImGui::Button("Criar demonstração 2D")) CreateDemoScene2D();
     ImGui::SameLine();
     if (ImGui::Button("Criar demonstração 3D")) CreateDemoScene3D();
+    ImGui::SameLine();
+    if (ImGui::Button("Criar demonstração 2.5D")) CreateDemoScene2_5D();
 }
 
 void EditorLayer::DrawGizmo() {
@@ -1305,7 +1380,7 @@ void EditorLayer::DrawGizmo() {
     glm::mat4 worldTransform = m_ActiveScene->GetWorldTransform(m_SelectedEntity);
 
     bool snap = Input::IsKeyPressed(Key::LeftControl);
-    float snapAmount = (m_GizmoOperation == ImGuizmo::OPERATION::ROTATE) ? 15.0f : 0.5f;
+    float snapAmount = (m_GizmoOperation == ImGuizmo::OPERATION::ROTATE) ? m_GizmoSnapRotation : m_GizmoSnapTranslation;
     float snapValues[3] = { snapAmount, snapAmount, snapAmount };
 
     ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj),

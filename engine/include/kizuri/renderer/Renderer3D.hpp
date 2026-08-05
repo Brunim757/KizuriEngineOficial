@@ -242,6 +242,13 @@ private:
     static std::vector<glm::vec3> s_SSAOKernel; // amostras do hemisfério (geradas em Init)
     static uint32_t s_SSAOWidth, s_SSAOHeight;
 
+    // SSR (ray tracing em espaço de tela): cor + depth -> marcha do raio refletido -> reflexo.
+    // Só existe/cria o shader em OpenGL 4.0+ (loop de comprimento variável).
+    static void EnsureSSRBuffer(uint32_t width, uint32_t height); // (re)cria se o tamanho mudou
+    static Ref<Shader> s_SSRShader;
+    static uint32_t s_SSRFBO, s_SSRColorBuffer;
+    static uint32_t s_SSRWidth, s_SSRHeight;
+
     // Partículas: 1 VAO reaproveitado por todos os lotes do frame — buffer de quad estático
     // (attribs 0/1) + buffer de instância dinâmico, reescrito via glBufferSubData a cada lote.
     struct ParticleBatch { std::vector<ParticleInstance> Instances; bool Additive; Ref<Texture2D> Texture; };

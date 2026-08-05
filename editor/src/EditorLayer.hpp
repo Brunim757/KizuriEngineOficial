@@ -149,6 +149,12 @@ private:
     bool m_ExportSelfContained = true; // embute o runtime .NET via dotnet publish
     bool m_AutoCompileOnPlay = true;   // compila o assembly C# antes do Play (estilo Unity)
 
+    // Preferências do editor (configuráveis em Configurações > Editor).
+    float m_EditorCamFlySpeed = 4.0f;      // velocidade da câmera livre (Shift = x3)
+    float m_EditorCamSensitivity = 0.12f;  // sensibilidade do mouse em graus/pixel
+    float m_GizmoSnapTranslation = 0.5f;   // snapping de translação (Ctrl)
+    float m_GizmoSnapRotation = 15.0f;     // snapping de rotação em graus (Ctrl)
+
     // Acha <Projeto>/Source/*.csproj (jogo) e a raiz do checkout da engine
     // (subindo da pasta bin/ até o marcador managed/Kizuri.Scripting). Usado
     // pelo Play (compilar) e pelo export (publish). Preenche vazio se não achar.

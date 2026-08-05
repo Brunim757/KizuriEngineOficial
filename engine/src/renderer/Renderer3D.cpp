@@ -68,6 +68,9 @@ uint32_t Renderer3D::s_NoiseTexture = 0;
 Ref<Shader> Renderer3D::s_SSAOShader;
 std::vector<glm::vec3> Renderer3D::s_SSAOKernel;
 uint32_t Renderer3D::s_SSAOWidth = 0, Renderer3D::s_SSAOHeight = 0;
+Ref<Shader> Renderer3D::s_SSRShader;
+uint32_t Renderer3D::s_SSRFBO = 0, Renderer3D::s_SSRColorBuffer = 0;
+uint32_t Renderer3D::s_SSRWidth = 0, Renderer3D::s_SSRHeight = 0;
 static float s_PostTime = 0.0f; // relógio do pós-processamento (grão de filme animado)
 
 std::vector<Renderer3D::ParticleBatch> Renderer3D::s_ParticleBatches;
@@ -733,10 +736,12 @@ in vec2 v_TexCoord;
 out vec4 o_Color;
 uniform sampler2D u_SceneColor;
 uniform sampler2D u_BloomBlur;
-uniform float u_BloomIntensity;
-uniform float u_Exposure;
 uniform sampler2D u_AOTexture;
 uniform bool u_HasAO;
+uniform sampler2D u_SSRTexture;
+uniform bool u_HasSSR;
+uniform float u_BloomIntensity;
+uniform float u_Exposure;
 uniform float u_Vignette;
 uniform float u_ChromaticAberration;
 uniform float u_FilmGrain;
@@ -765,6 +770,7 @@ void main() {
 
     vec3 bloom = texture(u_BloomBlur, uv).rgb;
     vec3 color = hdr + bloom * u_BloomIntensity;
+    if (u_HasSSR) color += texture(u_SSRTexture, uv).rgb; // reflexos (ray tracing em tela)
     if (u_HasAO) color *= texture(u_AOTexture, uv).r;
     color *= u_Exposure;
     if (u_ToneMapping == 1) color = Reinhard(color);
@@ -849,6 +855,93 @@ void main() {
     // e escurecia a cena ~10x), o AO nunca passa de 0.35 — o efeito fica
     // visível mas não deixa a cena escura.
     o_AO = clamp(pow(occlusion, u_Power), 0.35, 1.0);
+}
+)";
+
+// ---------------------------------------------------------------------
+// SSR — "ray tracing em espaço de tela" (reflexos): para cada pixel,
+// projeta o raio refletido (normal reconstruída do depth) no espaço de
+// tela e marcha contra o depth buffer até acertar geometria; a cor do
+// ponto de impacto vira a reflexão. Só roda em OpenGL 4.0+ (o loop tem
+// comprimento VARIÁVEL — em 3.3/Wine isso quebrava shaders), gated em
+// C++ por GetGLSLVersion() >= 400. A versão da linguagem é injetada pelo
+// Shader (RewriteVersion), então não tem "#version" aqui.
+// ---------------------------------------------------------------------
+static const char* s_SSRFragmentSrc = R"(
+in vec2 v_TexCoord;
+out vec4 o_Color;
+
+uniform sampler2D u_SceneColor;
+uniform sampler2D u_Depth;
+uniform mat4 u_Projection;
+uniform mat4 u_InverseProjection;
+uniform int u_MaxSteps;
+uniform float u_Thickness;
+uniform float u_Intensity;
+uniform float u_MarchDistance;
+uniform vec2 u_ViewportSize;
+
+// Reconstrução do ponto de vista (mesma técnica do SSAO: inversa da projeção).
+vec3 ReconstructViewPos(vec2 uv, float depth) {
+    vec4 clip = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+    vec4 view = u_InverseProjection * clip;
+    return view.xyz / view.w;
+}
+
+void main() {
+    o_Color = vec4(0.0);
+    float depth = texture(u_Depth, v_TexCoord).r;
+    if (depth >= 0.9999) return; // céu: já tem reflexo do IBL, não duplica
+
+    vec3 fragPos = ReconstructViewPos(v_TexCoord, depth);
+    vec3 normal = normalize(cross(dFdx(fragPos), dFdy(fragPos)));
+    if (dot(normal, -fragPos) < 0.001) return; // face voltada pra longe
+
+    vec3 viewDir = normalize(fragPos);
+    vec3 reflDir = reflect(viewDir, normal);
+
+    // Origem do raio levemente afastada da superfície pra evitar que o
+    // pixel de partida se "auto-acerta" na própria profundidade.
+    vec3 rayOrigin = fragPos + reflDir * 0.05;
+
+    vec4 startClip = u_Projection * vec4(rayOrigin, 1.0);
+    vec4 endClip   = u_Projection * vec4(rayOrigin + reflDir * u_MarchDistance, 1.0);
+    if (startClip.w <= 0.0 || endClip.w <= 0.0) return; // algum ponto atrás da câmera
+    vec2 startNDC = startClip.xy / startClip.w;
+    vec2 endNDC   = endClip.xy / endClip.w;
+    vec2 deltaNDC = endNDC - startNDC;
+
+    // Número de passos proporcional à distância em pixels do raio na tela.
+    float pixelDist = length(deltaNDC * 0.5 * u_ViewportSize);
+    int steps = clamp(int(pixelDist / 2.0), 8, u_MaxSteps);
+    if (steps < 2) return;
+
+    vec2 stepNDC = deltaNDC / float(steps);
+    float z0 = startClip.z / startClip.w;         // z linear de view (negativo)
+    float zStep = (endClip.z / endClip.w - z0) / float(steps);
+
+    vec2 uv = startNDC * 0.5 + 0.5;
+    float rayZ = z0;
+    for (int i = 0; i < steps; ++i) {
+        uv += stepNDC * 0.5;
+        rayZ += zStep;
+        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return;
+
+        float hitDepth = texture(u_Depth, uv).r;
+        if (hitDepth >= 0.9999) continue; // ainda voando sobre o céu
+
+        vec3 hitPos = ReconstructViewPos(uv, hitDepth);
+        float diff = hitPos.z - rayZ;
+        if (diff < 0.0 && abs(diff) < u_Thickness) {
+            // Atingiu: reflete a cor da cena naquele ponto. Fresnel de
+            // Schlick aproximado — ângulos rasantes refletem bem mais.
+            vec3 hitColor = texture(u_SceneColor, uv).rgb;
+            float fresnel = pow(1.0 - clamp(dot(normal, -viewDir), 0.0, 1.0), 5.0);
+            float strength = mix(0.04, 1.0, fresnel);
+            o_Color = vec4(hitColor * strength * u_Intensity, 1.0);
+            return;
+        }
+    }
 }
 )";
 
@@ -1096,6 +1189,11 @@ void Renderer3D::Init() {
     // SSAO: kernel de hemisfério (64 amostras) + textura de ruído 4x4 que
     // gira o kernel por pixel e esconde o padrão de amostragem.
     s_SSAOShader = CreateRef<Shader>("Renderer3D_SSAO", s_FullscreenVertexSrc, s_SSAOFragmentSrc);
+    // SSR (reflexos por raio) precisa de GL 4.0+: o shader usa um loop de
+    // comprimento VARIÁVEL, que em 3.3/Wine quebrava o shader (o motivo do
+    // caminho estável 3.3). Em 3.3 o shader nem é criado e a feature fica off.
+    if (GetGLSLVersion() >= 400)
+        s_SSRShader = CreateRef<Shader>("Renderer3D_SSR", s_FullscreenVertexSrc, s_SSRFragmentSrc);
     std::srand(2026u);
     s_SSAOKernel.resize(64);
     for (int i = 0; i < 64; ++i) {
@@ -1358,7 +1456,31 @@ void Renderer3D::EnsureSSAOBuffers(uint32_t width, uint32_t height) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-// Gera os três cubemaps de IBL (ver comentário em Renderer3D.hpp) num bake
+// Framebuffer da reflexão (SSR) em resolução interna — RGBA16F (cor HDR do
+// impacto do raio). Só é usado quando o shader SSR existe (GL 4.0+).
+void Renderer3D::EnsureSSRBuffer(uint32_t width, uint32_t height) {
+    if (s_SSRColorBuffer != 0 && width == s_SSRWidth && height == s_SSRHeight) return;
+    s_SSRWidth = width;
+    s_SSRHeight = height;
+
+    if (s_SSRColorBuffer != 0) {
+        glDeleteFramebuffers(1, &s_SSRFBO);
+        glDeleteTextures(1, &s_SSRColorBuffer);
+    }
+    glGenFramebuffers(1, &s_SSRFBO);
+    glGenTextures(1, &s_SSRColorBuffer);
+    glBindTexture(GL_TEXTURE_2D, s_SSRColorBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, (GLsizei)width, (GLsizei)height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindFramebuffer(GL_FRAMEBUFFER, s_SSRFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_SSRColorBuffer, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        KZ_CORE_ERROR("Framebuffer SSR incompleto.");
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
 // único, síncrono. A fonte do ambiente é o céu procedural OU uma imagem HDR
 // equirectangular (Renderer3D::SetEnvironmentHDRIPath) — pra HDRI a imagem é
 // carregada, convertida pra cubemap e a partir daí o restante do pipeline
@@ -1997,6 +2119,33 @@ void Renderer3D::EndScene() {
         hasAO = true;
     }
 
+    // --- Passe 1.6: SSR (ray tracing em espaço de tela) — reflexos em GL 4.0+ ---
+    // Marcha o raio refletido contra o depth e devolve a cor do impacto.
+    // O shader só existe em 4.0+ (loop de comprimento variável), então aqui
+    // basta conferir se ele foi criado — em 3.3 a feature fica desligada.
+    bool hasSSR = false;
+    if (s_SSRShader && s_Settings.SSREnabled) {
+        EnsureSSRBuffer(internalW, internalH);
+        glBindFramebuffer(GL_FRAMEBUFFER, s_SSRFBO);
+        glViewport(0, 0, (GLsizei)s_SSRWidth, (GLsizei)s_SSRHeight);
+        s_SSRShader->Bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, s_HDRColorBuffer);
+        s_SSRShader->SetInt("u_SceneColor", 0);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, s_HDRDepthTexture);
+        s_SSRShader->SetInt("u_Depth", 1);
+        s_SSRShader->SetMat4("u_Projection", s_Projection);
+        s_SSRShader->SetMat4("u_InverseProjection", glm::inverse(s_Projection));
+        s_SSRShader->SetInt("u_MaxSteps", s_Settings.SSRMaxSteps);
+        s_SSRShader->SetFloat("u_Thickness", s_Settings.SSRThickness);
+        s_SSRShader->SetFloat("u_Intensity", s_Settings.SSRIntensity);
+        s_SSRShader->SetFloat("u_MarchDistance", s_Settings.SSRMarchDistance);
+        s_SSRShader->SetFloat2("u_ViewportSize", glm::vec2((float)s_SSRWidth, (float)s_SSRHeight));
+        RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
+        hasSSR = true;
+    }
+
     // --- Passe 2: bright-pass (meia resolução) — extrai o glow, se bloom ligado ---
     uint32_t bloomW = glm::max(1u, internalW / 2), bloomH = glm::max(1u, internalH / 2);
     int bloomReadIdx = 0;
@@ -2050,6 +2199,12 @@ void Renderer3D::EndScene() {
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, s_SSAOColorBuffer); // borrada (passe 2 do blur volta pro s_SSAOFBO)
         s_CompositeShader->SetInt("u_AOTexture", 2);
+    }
+    s_CompositeShader->SetInt("u_HasSSR", hasSSR ? 1 : 0);
+    if (hasSSR) {
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, s_SSRColorBuffer); // reflexos (ray tracing em tela)
+        s_CompositeShader->SetInt("u_SSRTexture", 3);
     }
     RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
     RenderCommand::SetDepthTest(true);

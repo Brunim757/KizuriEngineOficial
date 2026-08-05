@@ -250,3 +250,22 @@
 - [x] Cenas padrão 2D/3D, demos 2D e 2.5D: 100% builtins (sem dependência externa)
 
 ---
+
+## ✅ v0.18 — Reflexos por raio (SSR) + Configurações cheias
+
+- [x] **SSR — "ray tracing" em espaço de tela** (GL 4.0+): marcha o raio
+  refletido contra o depth buffer e compõe a cor do impacto como reflexão —
+  piso espelhado na demo 3D. Em 3.3 fica off (o loop de comprimento variável
+  quebrava shader no Wine), gated por `GetGLSLVersion() >= 400`
+- [x] `GraphicsSettings`: SSR ligado/desligado, passos do raio, intensidade,
+  distância da marcha, espessura do depth — com presets, `TuneToHardware()`
+  e persistência em `settings.json`
+- [x] Passe SSR no pipeline (cor+depth → RGBA16F → composição HDR antes do
+  tonemap), com fresnel aproximado (ângulos rasantes refletem mais)
+- [x] **Configurações > Geral**: resolução editável + aplicar, maximizar/
+  minimizar, VSync, info de OpenGL resumida
+- [x] **Configurações > Editor**: velocidade da câmera livre, sensibilidade do
+  mouse, snap de translação e rotação dos gizmos, demo 2.5D
+- [x] **Configurações > Gráficos**: grupo de reflexos por raio (SSR)
+
+---

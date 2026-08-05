@@ -42,8 +42,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-kizuri-deps-
 
+      # Cache de compilação (ccache): guarda os .o por hash do arquivo-fonte,
+      # então cada run NÃO recompila a engine inteira do zero — só o que
+      # mudou. É o que corta a iteração de ~15-20min pra poucos minutos nas
+      # runs seguintes (o 1º build de cada OS ainda é completo).
+      - name: Cache de compilação (ccache)
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          max-size: "1G"
+          key: ${{ matrix.os }}
+
       - name: Configurar (CMake)
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       - name: Compilar
         run: cmake --build build --config Release --parallel

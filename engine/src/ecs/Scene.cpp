@@ -17,8 +17,8 @@
 
 #include <box2d/box2d.h>
 #include <btBulletDynamicsCommon.h>
-#include <btBulletCollision/GhostObject/btGhostObject.h>
-#include <btBulletCollision/GhostObject/btPairCachingGhostObject.h>
+#include <BulletCollision/GhostObject/btGhostObject.h>
+#include <BulletCollision/GhostObject/btPairCachingGhostObject.h>
 #include <glm/gtc/random.hpp>
 #include <algorithm>
 #include <limits>

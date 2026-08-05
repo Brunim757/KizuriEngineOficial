@@ -24,6 +24,15 @@ static std::unordered_map<SoundHandle, std::unique_ptr<LoadedSound>> s_Sounds;
 static std::unordered_map<std::string, SoundHandle> s_NameToHandle;
 static SoundHandle s_NextHandle = 1;
 
+// Pool de one-shots POSICIONAIS. O end-callback roda na thread de áudio e
+// só MARCA o slot livre; a desinicialização do ma_sound fica pro main thread
+// (na próxima reutilização do slot) — uninit na thread de áudio é proibido.
+struct OneShotSound {
+    ma_sound Sound;
+    bool InUse = false;
+};
+static std::vector<OneShotSound> s_OneShots;
+
 void AudioEngine::Init() {
     ma_result result = ma_engine_init(nullptr, &s_Engine);
     if (result != MA_SUCCESS) {
@@ -75,15 +84,6 @@ void AudioEngine::PlayOneShot(const std::string& path, float volume) {
     ma_engine_play_sound(&s_Engine, path.c_str(), nullptr);
     (void)volume; // miniaudio permite volume por grupo; simplificado aqui
 }
-
-// Pool de one-shots POSICIONAIS. O end-callback roda na thread de áudio e
-// só MARCA o slot livre; a desinicialização do ma_sound fica pro main thread
-// (na próxima reutilização do slot) — uninit na thread de áudio é proibido.
-struct OneShotSound {
-    ma_sound Sound;
-    bool InUse = false;
-};
-static std::vector<OneShotSound> s_OneShots;
 
 void AudioEngine::PlayOneShotAt(const std::string& path, float volume, const glm::vec3& position) {
     if (!s_Initialized) return;

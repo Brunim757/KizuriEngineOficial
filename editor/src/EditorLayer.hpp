@@ -164,6 +164,7 @@ private:
     bool m_ShowStats = true;           // overlay de estatísticas no viewport (FPS/draw calls/tris)
     float m_FpsSmoothed = 0.0f;        // FPS médio suavizado (Profiler do viewport)
     bool m_ShowColliders = true;       // overlay de física: desenha TODOS os colliders da cena
+    int m_ThumbBudget = 0;             // thumbnails novos permitidos neste frame (anti-trava)
 
     // Preferências do editor (configuráveis em Configurações > Editor).
     float m_EditorCamFlySpeed = 4.0f;      // velocidade da câmera livre (Shift = x3)

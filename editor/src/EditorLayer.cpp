@@ -1196,6 +1196,13 @@ void EditorLayer::DrawAllColliders() {
 kizuri::Ref<kizuri::Texture2D> EditorLayer::GetThumbnail(const std::string& path) {
     auto it = m_ThumbCache.find(path);
     if (it != m_ThumbCache.end()) return it->second;
+
+    // Pasta com milhares de imagens não pode travar o editor: só decodifica
+    // até o orçamento do frame (m_ThumbBudget); o resto ganha o placeholder e
+    // a miniatura real aparece nos frames seguintes.
+    if (m_ThumbBudget <= 0) return nullptr;
+    --m_ThumbBudget;
+
     auto tex = kizuri::Texture2D::Create(path);
     m_ThumbCache[path] = tex;
     return tex;
@@ -2920,6 +2927,11 @@ void EditorLayer::DrawContentBrowser() {
         return a.path().filename() < b.path().filename();
     });
 
+    // Orçamento de thumbnails novos por frame: 8 decodificações no máximo.
+    // Pasta com milhares de imagens preenche as miniaturas aos poucos (alguns
+    // frames) sem nunca congelar a janela.
+    m_ThumbBudget = 8;
+
     for (auto& entry : entries) {
         ImGui::TableNextColumn();
         std::string name = entry.path().filename().string();
@@ -2961,11 +2973,19 @@ void EditorLayer::DrawContentBrowser() {
             bool isImage = ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
                            ext == ".bmp" || ext == ".tga" || ext == ".hdr";
             if (isImage) {
-                // Preview real da imagem (cache por caminho — só carrega na 1ª vez).
+                // Preview real da imagem (cache por caminho — só carrega na 1ª
+                // vez, e limitado a um orçamento por frame pra pasta gigante
+                // não travar o editor; o resto vira placeholder até o frame
+                // seguinte).
                 auto thumb = GetThumbnail(entry.path().string());
-                ImGui::SetCursorScreenPos(cursor);
-                ImGui::Image((ImTextureID)(uint64_t)thumb->GetRendererID(),
-                             ImVec2(thumbSize, thumbSize), ImVec2(0, 1), ImVec2(1, 0));
+                if (thumb) {
+                    ImGui::SetCursorScreenPos(cursor);
+                    ImGui::Image((ImTextureID)(uint64_t)thumb->GetRendererID(),
+                                 ImVec2(thumbSize, thumbSize), ImVec2(0, 1), ImVec2(1, 0));
+                } else {
+                    dl->AddRect(ImVec2(cursor.x + thumbSize * 0.2f, cursor.y + thumbSize * 0.1f),
+                                ImVec2(cursor.x + thumbSize * 0.8f, cursor.y + thumbSize * 0.9f), iconColor, 2.0f, 0, 2.0f);
+                }
             } else {
                 dl->AddRect(ImVec2(cursor.x + thumbSize * 0.2f, cursor.y + thumbSize * 0.1f),
                             ImVec2(cursor.x + thumbSize * 0.8f, cursor.y + thumbSize * 0.9f), iconColor, 2.0f, 0, 2.0f);

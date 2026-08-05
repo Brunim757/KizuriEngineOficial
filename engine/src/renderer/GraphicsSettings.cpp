@@ -72,7 +72,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             Exposure = 1.0f;      VSync = true;
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
-            Vignette = 0.0f; ChromaticAberration = 0.0f; FilmGrain = 0.0f;
+            Vignette = 0.22f; ChromaticAberration = 0.0015f; FilmGrain = 0.015f;
             BloomIterations = 8;
             break;
         case QualityPreset::High:
@@ -83,7 +83,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             Exposure = 1.0f;      VSync = true;
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
-            Vignette = 0.0f; ChromaticAberration = 0.0f; FilmGrain = 0.0f;
+            Vignette = 0.2f; ChromaticAberration = 0.0012f; FilmGrain = 0.012f;
             BloomIterations = 5;
             break;
         case QualityPreset::Medium:
@@ -94,7 +94,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             Exposure = 1.0f;      VSync = true;
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
-            Vignette = 0.0f; ChromaticAberration = 0.0f; FilmGrain = 0.0f;
+            Vignette = 0.15f; ChromaticAberration = 0.0008f; FilmGrain = 0.008f;
             BloomIterations = 3;
             break;
         case QualityPreset::Low:

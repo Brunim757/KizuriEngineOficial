@@ -68,6 +68,7 @@ uint32_t Renderer3D::s_NoiseTexture = 0;
 Ref<Shader> Renderer3D::s_SSAOShader;
 std::vector<glm::vec3> Renderer3D::s_SSAOKernel;
 uint32_t Renderer3D::s_SSAOWidth = 0, Renderer3D::s_SSAOHeight = 0;
+static float s_PostTime = 0.0f; // relógio do pós-processamento (grão de filme animado)
 
 std::vector<Renderer3D::ParticleBatch> Renderer3D::s_ParticleBatches;
 uint32_t Renderer3D::s_ParticleVAO = 0, Renderer3D::s_ParticleQuadVBO = 0;
@@ -157,7 +158,14 @@ uniform sampler2D u_ShadowMap1;
 uniform sampler2D u_ShadowMap2;
 uniform mat4 u_LightSpaceMatrix[CASCADE_COUNT];
 uniform float u_CascadeSplits[CASCADE_COUNT]; // distância (view-space) onde cada cascata termina
-uniform int u_ShadowPCF; // raio da vizinhança do PCF (0 = amostra única, 3 = 7x7)
+uniform int u_ShadowPCF; // raio da busca de bloqueadores do PCSS
+uniform float u_ShadowSoftness; // suavidade da penumbra (PCSS)
+
+uniform samplerCube u_PointShadowMap;
+uniform bool u_HasPointShadow;
+uniform int u_PointShadowLightIndex;
+uniform vec3 u_PointLightPos;
+uniform float u_PointLightFar;
 
 #define MAX_LIGHTS 16
 uniform int u_LightCount;
@@ -176,21 +184,58 @@ uniform float u_MaxPrefilterLod;
 
 const float PI = 3.14159265359;
 
-// PCF num sampler já escolhido — média numa vizinhança de raio configurável
-// (u_ShadowPCF, do preset de qualidade) em vez de um sample só.
-float SampleShadowPCF(sampler2D map, vec3 projCoords, float bias) {
-    if (projCoords.z > 1.0) return 0.0;
-    float shadow = 0.0;
+// PCSS (Percentage-Closer Soft Shadows): busca os bloqueadores, estima a
+// penumbra pela distância deles e faz PCF com raio proporcional — sombra
+// suave de verdade. Só afeta sombras (não pode lavar a cena de branco).
+float BlockerSearch(sampler2D map, vec3 p, float bias) {
     vec2 texelSize = 1.0 / textureSize(map, 0);
-    int r = max(u_ShadowPCF, 0);
+    int r = max(u_ShadowPCF, 1);
+    float avg = 0.0; int cnt = 0;
     for (int x = -r; x <= r; ++x) {
         for (int y = -r; y <= r; ++y) {
-            float pcfDepth = texture(map, projCoords.xy + vec2(x, y) * texelSize).r;
-            shadow += (projCoords.z - bias > pcfDepth) ? 1.0 : 0.0;
+            float d = texture(map, p.xy + vec2(x, y) * texelSize).r;
+            if (d < p.z - bias) { avg += d; ++cnt; }
         }
     }
-    float count = float((2 * r + 1) * (2 * r + 1));
-    return shadow / count;
+    return cnt == 0 ? -1.0 : avg / float(cnt);
+}
+
+float PCSS(sampler2D map, vec3 p, float bias) {
+    if (p.z > 1.0) return 0.0;
+    float avg = BlockerSearch(map, p, bias);
+    if (avg < 0.0) return 0.0; // sem bloqueadores -> totalmente iluminado
+    float penumbra = clamp((p.z - bias - avg) * u_ShadowSoftness * 140.0, 0.5, 3.0);
+    int r = int(ceil(float(max(u_ShadowPCF, 1)) * penumbra));
+    r = min(r, 6);
+    vec2 texelSize = 1.0 / textureSize(map, 0);
+    float shadow = 0.0; int cnt = 0;
+    for (int x = -r; x <= r; ++x) {
+        for (int y = -r; y <= r; ++y) {
+            if (p.z - bias > texture(map, p.xy + vec2(x, y) * texelSize).r) shadow += 1.0;
+            ++cnt;
+        }
+    }
+    return shadow / float(cnt);
+}
+
+// Sombra de luz PONTUAL: amostra o cubemap de profundidade LINEAR com um
+// pequeno PCF 3D (9 taps) ao redor do vetor luz->fragmento.
+float PointShadow(vec3 fragToLight, float bias) {
+    if (!u_HasPointShadow) return 0.0;
+    float current = length(fragToLight) / max(u_PointLightFar, 0.001);
+    vec3 offsets[9] = vec3[](
+        vec3(0.0),
+        vec3(0.02, 0.0, 0.0), vec3(-0.02, 0.0, 0.0),
+        vec3(0.0, 0.02, 0.0), vec3(0.0, -0.02, 0.0),
+        vec3(0.0, 0.0, 0.02), vec3(0.0, 0.0, -0.02),
+        vec3(0.014, 0.014, 0.0), vec3(-0.014, -0.014, 0.0)
+    );
+    float shadow = 0.0;
+    for (int i = 0; i < 9; ++i) {
+        float d = texture(u_PointShadowMap, fragToLight + offsets[i]).r;
+        if (current - bias > d) shadow += 1.0;
+    }
+    return shadow / 9.0;
 }
 
 // Escolhe a cascata pela profundidade view-space e amostra o shadow map certo — GLSL 330
@@ -202,13 +247,13 @@ float CalculateShadow(vec3 N, vec3 L) {
 
     if (idx == 0) {
         vec4 p = u_LightSpaceMatrix[0] * vec4(v_FragPos, 1.0);
-        return SampleShadowPCF(u_ShadowMap0, p.xyz / p.w * 0.5 + 0.5, bias);
+        return PCSS(u_ShadowMap0, p.xyz / p.w * 0.5 + 0.5, bias);
     } else if (idx == 1) {
         vec4 p = u_LightSpaceMatrix[1] * vec4(v_FragPos, 1.0);
-        return SampleShadowPCF(u_ShadowMap1, p.xyz / p.w * 0.5 + 0.5, bias);
+        return PCSS(u_ShadowMap1, p.xyz / p.w * 0.5 + 0.5, bias);
     } else {
         vec4 p = u_LightSpaceMatrix[2] * vec4(v_FragPos, 1.0);
-        return SampleShadowPCF(u_ShadowMap2, p.xyz / p.w * 0.5 + 0.5, bias);
+        return PCSS(u_ShadowMap2, p.xyz / p.w * 0.5 + 0.5, bias);
     }
 }
 
@@ -317,6 +362,12 @@ void main() {
 
         // Sombra só se aplica à luz 0 quando ela é a shadow caster (sempre a Directional, ver C++).
         if (i == 0 && u_HasShadow) contribution *= (1.0 - shadow);
+
+        // Sombra da luz PONTUAL (a marcada como castora no frame).
+        if (u_HasPointShadow && i == u_PointShadowLightIndex) {
+            float pbias = max(0.01 * (1.0 - dot(N, L)), 0.005);
+            contribution *= (1.0 - PointShadow(toLight, pbias));
+        }
         directLighting += contribution;
     }
 
@@ -370,10 +421,10 @@ void main() {
 }
 )";
 
-// Céu procedural (o original, que funcionava): gradiente horizonte->zênite
-// escuro + disco/halo do sol. Voltei pra cá porque o céu atmosférico (Mie +
-// base clara) inflava o IBL e lavava os objetos de branco. Fica como base
-// estável; o atmosférico volta com calibração depois.
+// Céu atmosférico procedural (ESCURO de propósito): mantém o gradiente base
+// que funcionava (IBL estável) e adiciona tinta de pôr-do-sol no horizonte,
+// azul mais rico no zênite e estrelas à noite. O clamp em 4.0 garante que o
+// cubemap de ambiente nunca estoure o tonemap/lave os objetos de branco.
 static const char* s_SkyFragmentSrc = R"(
 #version 330 core
 in vec3 v_LocalPos;
@@ -382,21 +433,45 @@ out vec4 o_Color;
 uniform vec3 u_SunDir;   // aponta DA superfície PRA o sol (oposto de DirectionalLight::Direction)
 uniform vec3 u_SunColor;
 
+const vec3 HORIZON = vec3(0.14, 0.24, 0.44);
+const vec3 ZENITH  = vec3(0.05, 0.14, 0.42);
+const vec3 GROUND  = vec3(0.07, 0.08, 0.10);
+const vec3 SUNSET  = vec3(1.00, 0.42, 0.14);
+
 void main() {
     vec3 dir = normalize(v_LocalPos);
+    vec3 sun = normalize(u_SunDir);
+    float sunDot = max(dot(dir, sun), 0.0);
+    float sunLift = max(sun.y, 0.0);
+    float view = dir.y;
 
-    vec3 horizonColor = vec3(0.12, 0.22, 0.42);
-    vec3 zenithColor   = vec3(0.04, 0.13, 0.40);
-    vec3 groundColor   = vec3(0.07, 0.08, 0.10);
+    // Gradiente base (comprovado — não infla o IBL).
+    vec3 sky = (view >= 0.0)
+        ? mix(HORIZON, ZENITH, smoothstep(-0.05, 0.35, view))
+        : mix(HORIZON, GROUND, smoothstep(0.0, 0.6, -view));
 
-    vec3 sky = (dir.y >= 0.0)
-        ? mix(horizonColor, zenithColor, smoothstep(-0.05, 0.35, dir.y))
-        : mix(horizonColor, groundColor, smoothstep(0.0, 0.6, -dir.y));
+    // Atmosfera: brilho quente no horizonte quando o sol está baixo (pôr-do-sol)
+    // e um azul mais rico no zênite (Rayleigh).
+    float horizonGlow = pow(max(1.0 - abs(view), 0.0), 2.5);
+    float sunsetAmount = 1.0 - smoothstep(0.03, 0.55, sunLift);
+    sky += SUNSET * horizonGlow * sunsetAmount * 0.14;
+    sky += vec3(0.02, 0.05, 0.10) * smoothstep(0.3, 1.0, view) * (0.4 + sunLift);
 
-    float sunDot = max(dot(dir, normalize(u_SunDir)), 0.0);
-    sky += u_SunColor * pow(sunDot, 900.0) * 12.0; // disco do sol, pequeno e intenso
-    sky += u_SunColor * pow(sunDot, 16.0) * 0.10;  // halo suave ao redor
+    // Sol + halo (compactos, como o original).
+    sky += u_SunColor * pow(sunDot, 900.0) * 12.0;
+    sky += u_SunColor * pow(sunDot, 16.0) * 0.10;
 
+    // Estrelas quando o sol está abaixo do horizonte.
+    if (sunLift < 0.06) {
+        vec3 sp = dir * 600.0;
+        vec2 cell = floor(sp.xy);
+        vec2 f = fract(sp.xy) - 0.5;
+        float star = smoothstep(0.48, 0.5, 1.0 - length(f));
+        star *= step(0.997, fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453));
+        sky += vec3(0.85, 0.9, 1.0) * star * (1.0 - sunLift * 16.0) * 0.4;
+    }
+
+    sky = min(sky, vec3(4.0)); // nunca estoura o IBL
     o_Color = vec4(sky, 1.0);
 }
 )";
@@ -612,9 +687,9 @@ void main() {
 }
 )";
 
-// Soma cena HDR + bloom, aplica oclusão + exposição e tonemap ACES + gamma.
-// (O pós-cinema — vinheta/CA/grão — ficou off por padrão: era um dos
-// suspeitos do 'tudo branco'; reativo com calibração depois.)
+// Soma cena HDR + bloom, aplica oclusão + exposição, tonemap ACES, gamma e o
+// "pós-cinema" sutil: aberração cromática, vinheta e grão de filme animado
+// (pós-tonemap — não afeta o IBL, então não lava nada).
 static const char* s_CompositeFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
@@ -625,6 +700,10 @@ uniform float u_BloomIntensity;
 uniform float u_Exposure;
 uniform sampler2D u_AOTexture;
 uniform bool u_HasAO;
+uniform float u_Vignette;
+uniform float u_ChromaticAberration;
+uniform float u_FilmGrain;
+uniform float u_Time;
 
 vec3 ACESFilm(vec3 x) {
     float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
@@ -632,13 +711,30 @@ vec3 ACESFilm(vec3 x) {
 }
 
 void main() {
-    vec3 hdr = texture(u_SceneColor, v_TexCoord).rgb;
-    vec3 bloom = texture(u_BloomBlur, v_TexCoord).rgb;
+    vec2 uv = v_TexCoord;
+    vec2 dir = uv - 0.5;
+    vec2 caDir = length(dir) > 0.0001 ? normalize(dir) : vec2(0.0, 1.0);
+    float ca = u_ChromaticAberration * length(dir) * 4.0;
+    vec3 hdr;
+    hdr.r = texture(u_SceneColor, uv + caDir * ca).r;
+    hdr.g = texture(u_SceneColor, uv).g;
+    hdr.b = texture(u_SceneColor, uv - caDir * ca).b;
+
+    vec3 bloom = texture(u_BloomBlur, uv).rgb;
     vec3 color = hdr + bloom * u_BloomIntensity;
-    if (u_HasAO) color *= texture(u_AOTexture, v_TexCoord).r;
+    if (u_HasAO) color *= texture(u_AOTexture, uv).r;
     color *= u_Exposure;
     color = ACESFilm(color);
     color = pow(color, vec3(1.0 / 2.2));
+
+    float vig = 1.0 - u_Vignette * smoothstep(0.55, 1.35, length(dir * 2.0));
+    color *= clamp(vig, 0.0, 1.0);
+
+    if (u_FilmGrain > 0.0) {
+        float g = fract(sin(dot(uv * vec2(1920.0, 1080.0), vec2(12.9898, 78.233)) + u_Time * 60.0) * 43758.5453) - 0.5;
+        color += g * u_FilmGrain;
+    }
+
     o_Color = vec4(color, 1.0);
 }
 )";
@@ -1568,6 +1664,40 @@ void Renderer3D::EndScene() {
         glCullFace(GL_BACK);
     }
 
+    // --- Passe 0.5: shadow map da luz PONTUAL (depth cubemap, 6 faces,
+    // profundidade LINEAR = distância/far) — 1ª luz Point com CastsShadow ---
+    if (!s_DrawList.empty() && s_HasPointShadowCaster) {
+        EnsurePointShadowMaps((uint32_t)s_Settings.PointShadowMapSize);
+        uint32_t pointSize = (uint32_t)s_Settings.PointShadowMapSize;
+        glm::vec3 lp = s_PointShadowCaster.Position;
+        glm::mat4 pointProj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, s_PointShadowCaster.Range);
+        glm::mat4 pointViews[6] = {
+            glm::lookAt(lp, lp + glm::vec3( 1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+            glm::lookAt(lp, lp + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+            glm::lookAt(lp, lp + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+            glm::lookAt(lp, lp + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
+            glm::lookAt(lp, lp + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+            glm::lookAt(lp, lp + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
+        };
+        glCullFace(GL_FRONT);
+        s_PointShadowShader->Bind();
+        s_PointShadowShader->SetFloat3("u_LightPos", lp);
+        s_PointShadowShader->SetFloat("u_FarPlane", s_PointShadowCaster.Range);
+        glBindFramebuffer(GL_FRAMEBUFFER, s_PointShadowFBO);
+        glViewport(0, 0, (GLsizei)pointSize, (GLsizei)pointSize);
+        for (int f = 0; f < 6; ++f) {
+            s_PointShadowShader->SetMat4("u_LightViewProjection", pointProj * pointViews[f]);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                                    GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, s_PointShadowMap, 0);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            for (auto& cmd : s_DrawList) {
+                s_PointShadowShader->SetMat4("u_Model", cmd.Transform);
+                RenderCommand::DrawIndexed(cmd.MeshAsset->GetVertexArray(), cmd.MeshAsset->GetIndexCount());
+            }
+        }
+        glCullFace(GL_BACK);
+    }
+
     // --- Passe 1: cena inteira (mesh + skybox), pro framebuffer HDR interno ---
     uint32_t sceneFBO = (s_CurrentMSAA > 1) ? s_MSAAHDRFBO : s_HDRFBO;
     glBindFramebuffer(GL_FRAMEBUFFER, sceneFBO);
@@ -1587,6 +1717,16 @@ void Renderer3D::EndScene() {
         s_MeshShader->SetFloat3("u_ViewPos", s_CameraPos);
         s_MeshShader->SetInt("u_HasShadow", s_HasShadowCaster ? 1 : 0);
         s_MeshShader->SetInt("u_ShadowPCF", s_Settings.ShadowPCFRadius);
+        s_MeshShader->SetFloat("u_ShadowSoftness", s_Settings.ShadowSoftness);
+        s_MeshShader->SetInt("u_HasPointShadow", s_HasPointShadowCaster ? 1 : 0);
+        s_MeshShader->SetInt("u_PointShadowLightIndex", s_PointShadowLightIndex);
+        if (s_HasPointShadowCaster) {
+            glActiveTexture(GL_TEXTURE9);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, s_PointShadowMap);
+            s_MeshShader->SetInt("u_PointShadowMap", 9);
+            s_MeshShader->SetFloat3("u_PointLightPos", s_PointShadowCaster.Position);
+            s_MeshShader->SetFloat("u_PointLightFar", s_PointShadowCaster.Range);
+        }
         if (s_HasShadowCaster) {
             for (int c = 0; c < kCascadeCount; ++c) {
                 std::string idx = "[" + std::to_string(c) + "]";
@@ -1814,6 +1954,11 @@ void Renderer3D::EndScene() {
     s_CompositeShader->SetInt("u_BloomBlur", 1);
     s_CompositeShader->SetFloat("u_BloomIntensity", s_Settings.BloomEnabled ? s_Settings.BloomIntensity : 0.0f);
     s_CompositeShader->SetFloat("u_Exposure", s_Settings.Exposure);
+    s_CompositeShader->SetFloat("u_Vignette", s_Settings.Vignette);
+    s_CompositeShader->SetFloat("u_ChromaticAberration", s_Settings.ChromaticAberration);
+    s_CompositeShader->SetFloat("u_FilmGrain", s_Settings.FilmGrain);
+    s_PostTime += 0.016f; // grão de filme animado (relógio de pós-processamento)
+    s_CompositeShader->SetFloat("u_Time", s_PostTime);
     s_CompositeShader->SetInt("u_HasAO", hasAO ? 1 : 0);
     if (hasAO) {
         glActiveTexture(GL_TEXTURE2);

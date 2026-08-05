@@ -51,12 +51,11 @@ struct GraphicsSettings {
     float FogDensity = 0.012f;
     float FogColor[3] = { 0.55f, 0.6f, 0.66f };
 
-    // Pós-cinema: vinheta, aberração cromática e grão de filme (composite).
-    // OFF por padrão (0) — era um dos suspeitos do 'tudo branco'; reativo
-    // com calibração depois.
-    float Vignette = 0.0f;
-    float ChromaticAberration = 0.0f;
-    float FilmGrain = 0.0f;
+    // Pós-cinema (composite, pós-tonemap — não afeta o IBL): vinheta,
+    // aberração cromática e grão de filme animado.
+    float Vignette = 0.2f;
+    float ChromaticAberration = 0.0015f;
+    float FilmGrain = 0.012f;
 
     // Qualidade do bloom (iterações do blur ping-pong; mais = glow mais largo).
     int BloomIterations = 4;

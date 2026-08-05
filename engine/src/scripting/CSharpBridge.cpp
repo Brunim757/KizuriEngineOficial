@@ -483,6 +483,11 @@ KZ_SCRIPT_API void kz_audio_play_one_shot(const char* path, float volume) {
     kizuri::AudioEngine::PlayOneShot(kizuri::Project::ResolvePath(path), volume);
 }
 
+KZ_SCRIPT_API void kz_audio_play_one_shot_at(const char* path, float volume, float x, float y, float z) {
+    if (path == nullptr) return;
+    kizuri::AudioEngine::PlayOneShotAt(kizuri::Project::ResolvePath(path), volume, { x, y, z });
+}
+
 KZ_SCRIPT_API void kz_audio_stop_all() {
     kizuri::AudioEngine::StopAll();
 }

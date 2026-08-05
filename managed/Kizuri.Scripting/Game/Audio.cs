@@ -10,6 +10,11 @@ public static class Audio
 	public static void PlayOneShot(string clipPath, float volume = 1f)
 		=> Interop.KizuriNative.kz_audio_play_one_shot(clipPath, volume);
 
+	// One-shot POSICIONAL (3D): toca na posição do mundo, atenuado pela
+	// distância ao ouvinte (a câmera). Ótimo pra impactos, passos, tiros.
+	public static void PlayOneShotAt(string clipPath, float volume, Math.Vector3 position)
+		=> Interop.KizuriNative.kz_audio_play_one_shot_at(clipPath, volume, position.X, position.Y, position.Z);
+
 	// Para todos os sons em reprodução (usado por trocas de cena).
 	public static void StopAll() => Interop.KizuriNative.kz_audio_stop_all();
 

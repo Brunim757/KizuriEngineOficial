@@ -121,6 +121,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_audio_play(uint entity);
     [DllImport(Lib)] internal static extern int kz_audio_stop(uint entity);
     [DllImport(Lib)] internal static extern void kz_audio_play_one_shot([MarshalAs(UnmanagedType.LPUTF8Str)] string path, float volume);
+    [DllImport(Lib)] internal static extern void kz_audio_play_one_shot_at([MarshalAs(UnmanagedType.LPUTF8Str)] string path, float volume, float x, float y, float z);
     [DllImport(Lib)] internal static extern void kz_audio_stop_all();
     [DllImport(Lib)] internal static extern void kz_audio_set_master_volume(float volume);
 

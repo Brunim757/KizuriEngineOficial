@@ -5,6 +5,7 @@
 #include <miniaudio.h>
 
 #include <unordered_map>
+#include <vector>
 #include <memory>
 
 namespace kizuri {
@@ -36,6 +37,9 @@ void AudioEngine::Init() {
 void AudioEngine::Shutdown() {
     if (!s_Initialized) return;
     s_Sounds.clear();
+    for (auto& os : s_OneShots)
+        if (os.InUse) { ma_sound_uninit(&os.Sound); os.InUse = false; }
+    s_OneShots.clear();
     ma_engine_uninit(&s_Engine);
     s_Initialized = false;
 }
@@ -72,6 +76,44 @@ void AudioEngine::PlayOneShot(const std::string& path, float volume) {
     (void)volume; // miniaudio permite volume por grupo; simplificado aqui
 }
 
+// Pool de one-shots POSICIONAIS. O end-callback roda na thread de áudio e
+// só MARCA o slot livre; a desinicialização do ma_sound fica pro main thread
+// (na próxima reutilização do slot) — uninit na thread de áudio é proibido.
+struct OneShotSound {
+    ma_sound Sound;
+    bool InUse = false;
+};
+static std::vector<OneShotSound> s_OneShots;
+
+void AudioEngine::PlayOneShotAt(const std::string& path, float volume, const glm::vec3& position) {
+    if (!s_Initialized) return;
+
+    OneShotSound* slot = nullptr;
+    for (auto& s : s_OneShots) {
+        if (!s.InUse) {
+            slot = &s;
+            ma_sound_uninit(&slot->Sound); // libera o uso anterior (main thread)
+            break;
+        }
+    }
+    if (!slot) {
+        s_OneShots.emplace_back();
+        slot = &s_OneShots.back();
+    }
+
+    if (ma_sound_init_from_file(&s_Engine, path.c_str(), 0, nullptr, nullptr, &slot->Sound) != MA_SUCCESS) {
+        slot->InUse = false;
+        return;
+    }
+    slot->InUse = true;
+    ma_sound_set_position(&slot->Sound, position.x, position.y, position.z);
+    ma_sound_set_volume(&slot->Sound, volume);
+    ma_sound_set_end_callback(&slot->Sound, [](void* pUserData, ma_sound*) {
+        static_cast<OneShotSound*>(pUserData)->InUse = false;
+    }, slot);
+    ma_sound_start(&slot->Sound);
+}
+
 void AudioEngine::Stop(SoundHandle handle) {
     auto it = s_Sounds.find(handle);
     if (it == s_Sounds.end()) return;
@@ -79,8 +121,15 @@ void AudioEngine::Stop(SoundHandle handle) {
 }
 
 void AudioEngine::StopAll() {
-    // Limpar o mapa destrói cada LoadedSound, e o destrutor dele agora chama ma_sound_uninit
-    // (ver correção acima) — é assim que os sons realmente param e a memória nativa é liberada.
+    if (!s_Initialized) return;
+    // One-shots posicionais: para e libera o slot (o uninit fica pro main
+    // thread na reutilização do slot).
+    for (auto& os : s_OneShots) {
+        if (os.InUse) { ma_sound_stop(&os.Sound); os.InUse = false; }
+    }
+    // Sons carregados: limpar o mapa destrói cada LoadedSound, e o destrutor
+    // dele agora chama ma_sound_uninit — é assim que os sons realmente param
+    // e a memória nativa é liberada.
     s_Sounds.clear();
 }
 

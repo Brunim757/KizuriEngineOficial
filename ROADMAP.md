@@ -176,7 +176,38 @@
   DamagedHelmet PBR com texturas reais, primitivas (torus metálico + esfera
   emissiva → bloom), HDRI de céu, fog e 2 luzes — cai pros builtins sem o pack
 - [x] **Gizmos de colisor** no viewport (debug-draw verde): círculo/box 2D e
-  box/esfera 3D da entidade selecionada
+   box/esfera 3D da entidade selecionada
+
+---
+
+## ✅ v0.8 → v0.11 — Profissional & Jogo 3D (feito)
+
+### v0.8 — Usabilidade
+- [x] Fullscreen do viewport (botão + F11) · janela responsiva ao monitor
+- [x] Configurações com sidebar (Gráficos/Geral/Editor) · menubar organizada
+  (Arquivo/Editar/Cena/Exibir/Ajuda) · botões "..." de arquivo nativo em todos
+  os campos de asset · cena demo 2D · jogo 100% 2D/3D (conteúdo por modo)
+- [x] Versão 0.8.0 · GLSL por hardware (330/400/430/450) + `kzres://` embutido
+
+### v0.9 — Jogo 3D de verdade
+- [x] `Scene.Raycast3D` (Bullet) · `Scene.OverlapSphere3D` (sensor fantasma)
+- [x] `Rigidbody3D.ApplyTorque/TryGetAngularVelocity/SetAngularVelocity`
+- [x] `Entity.Name` (get/set) · `Time.time/unscaledTime/unscaledDeltaTime`
+
+### v0.10 — Ferramentas profissionais
+- [x] Busca na hierarquia (filtra por nome, lista plana)
+- [x] Cena de demonstração 2.5D (3D + 2D + UI com as duas câmeras)
+- [x] Content pack maior (SimpleSkin, ReciprocatingSaw, Character + 4 texturas PBR)
+
+### v0.11 — Acabamento & Controle
+- [x] Tonemapping selecionável (ACES/Reinhard/Filmic)
+- [x] `Mathf.SmoothStep/PingPong/Remap/LerpAngle/Angle`
+- [x] `Scene.InstantiatePrefab(path, pos, rotation)`
+
+### Render (todas as versões)
+- [x] Céu atmosférico escuro (pôr-do-sol + estrelas, IBL estável) · pós-cinema
+  (vinheta/CA/grão) · SSAO com teto de escurecimento · PCSS + sombra de luz
+  pontual **versão-gated** (GL 4.0+) — 3.3 mantém o PCF simples estável
 
 ---
 

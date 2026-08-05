@@ -17,8 +17,6 @@
 
 #include <box2d/box2d.h>
 #include <btBulletDynamicsCommon.h>
-#include <BulletCollision/GhostObject/btGhostObject.h>
-#include <BulletCollision/GhostObject/btPairCachingGhostObject.h>
 #include <glm/gtc/random.hpp>
 #include <algorithm>
 #include <limits>
@@ -308,19 +306,23 @@ struct OverlapSphereCallback : public btCollisionWorld::ContactResultCallback {
 bool Scene::OverlapSphere3D(const glm::vec3& center, float radius, Entity& outEntity) {
     if (m_PhysicsWorld3D == nullptr) return false;
 
+    // Esfera "fantasma" (btCollisionObject com a forma + sem resposta de
+    // contato) adicionada no mundo só pra fazer o contactTest e achar quem
+    // toca. btCollisionObject já vem via btBulletDynamicsCommon.h — nada de
+    // include extra de GhostObject (layout do Bullet varia entre versões).
     btSphereShape sphere(radius);
-    btPairCachingGhostObject ghost;
-    ghost.setCollisionShape(&sphere);
+    btCollisionObject obj;
+    obj.setCollisionShape(&sphere);
     btTransform tr;
     tr.setIdentity();
     tr.setOrigin(btVector3(center.x, center.y, center.z));
-    ghost.setWorldTransform(tr);
-    ghost.setCollisionFlags(btCollisionObject::CF_NO_CONTACT_RESPONSE);
-    m_PhysicsWorld3D->addCollisionObject(&ghost, btBroadphaseProxy::SensorTrigger);
+    obj.setWorldTransform(tr);
+    obj.setCollisionFlags(btCollisionObject::CF_NO_CONTACT_RESPONSE);
+    m_PhysicsWorld3D->addCollisionObject(&obj);
 
     OverlapSphereCallback cb;
-    m_PhysicsWorld3D->contactTest(&ghost, cb);
-    m_PhysicsWorld3D->removeCollisionObject(&ghost);
+    m_PhysicsWorld3D->contactTest(&obj, cb);
+    m_PhysicsWorld3D->removeCollisionObject(&obj);
 
     if (cb.Best == entt::null) return false;
     outEntity = Entity{ cb.Best, this };

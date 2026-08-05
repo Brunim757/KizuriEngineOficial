@@ -17,6 +17,7 @@
 #include <fstream>
 #include <cfloat>
 #include <cctype>
+#include <cstdio>
 #include <algorithm>
 #include <filesystem>
 #include <vector>
@@ -540,6 +541,12 @@ void EditorLayer::CreateDemoScene2_5D() {
 
 void EditorLayer::OnUpdate(Timestep ts) {
     KZ_CORE_TRACE("EditorLayer::OnUpdate — início (viewport {0}x{1})", m_ViewportSize.x, m_ViewportSize.y);
+
+    // FPS suavizado pro Profiler do viewport (média móvel exponencial).
+    if ((float)ts > 0.0f) {
+        float inst = 1.0f / (float)ts;
+        m_FpsSmoothed = m_FpsSmoothed > 0.0f ? m_FpsSmoothed * 0.95f + inst * 0.05f : inst;
+    }
 
     // Telinha de carregamento: avança o relógio e entra no editor quando o
     // tempo mínimo passa (o carregamento em si é quase instantâneo — o
@@ -1079,6 +1086,77 @@ void EditorLayer::DrawColliderGizmo() {
     }
 }
 
+// Overlay de física debug: desenha o wireframe de TODOS os colliders da cena
+// (2D: caixa/círculo; 3D: caixa/esfera), não só o da entidade selecionada.
+// Cor mais apagada pra não competir com o gizmo de seleção. Aproximação
+// axis-aligned (não rotaciona pelo corpo) — suficiente pra visualizar.
+void EditorLayer::DrawAllColliders() {
+    if (m_SceneState != SceneState::Edit || !m_ActiveScene) return;
+
+    glm::mat4 viewProj = (m_ViewportMode == ViewportMode::Mode2D)
+        ? m_Editor2DCamera.GetViewProjectionMatrix()
+        : m_EditorCamera.GetViewProjectionMatrix();
+    glm::vec2 vpPos = m_ViewportBounds[0], vpSize = m_ViewportBounds[1] - m_ViewportBounds[0];
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    const ImU32 color = IM_COL32(120, 220, 120, 90);
+
+    auto Project = [&](const glm::vec3& wp, ImVec2& out) {
+        return ProjectToViewport(viewProj, wp, vpPos, vpSize, out);
+    };
+    auto Line = [&](const glm::vec3& a, const glm::vec3& b) {
+        ImVec2 sa, sb;
+        if (Project(a, sa) && Project(b, sb)) dl->AddLine(sa, sb, color, 1.0f);
+    };
+
+    auto& registry = m_ActiveScene->GetRegistry();
+    registry.view<kizuri::TransformComponent>().each([&](auto entityHandle, const kizuri::TransformComponent& tc) {
+        kizuri::Entity e{ entityHandle, m_ActiveScene.get() };
+        glm::vec3 pos = glm::vec3(m_ActiveScene->GetWorldTransform(e)[3]);
+
+        if (const auto* c2 = m_ActiveScene->GetRegistry().try_get<kizuri::CircleCollider2DComponent>(entityHandle)) {
+            glm::vec3 c = pos + glm::vec3(c2->Offset.x, c2->Offset.y, 0.0f);
+            glm::vec3 ed = c + glm::vec3(c2->Radius, 0.0f, 0.0f);
+            ImVec2 center, edge;
+            if (Project(c, center) && Project(ed, edge)) {
+                float rpx = glm::length(glm::vec2(edge.x - center.x, edge.y - center.y));
+                dl->AddCircle(center, rpx, color, 32, 1.0f);
+            }
+        }
+        if (const auto* b2 = m_ActiveScene->GetRegistry().try_get<kizuri::BoxCollider2DComponent>(entityHandle)) {
+            glm::vec3 c = pos + glm::vec3(b2->Offset.x, b2->Offset.y, 0.0f);
+            glm::vec3 h(b2->Size.x * 0.5f, b2->Size.y * 0.5f, 0.0f);
+            glm::vec3 corners[4] = {
+                c + glm::vec3(-h.x, -h.y, 0), c + glm::vec3(h.x, -h.y, 0),
+                c + glm::vec3(h.x, h.y, 0), c + glm::vec3(-h.x, h.y, 0),
+            };
+            for (int i = 0; i < 4; ++i) Line(corners[i], corners[(i + 1) % 4]);
+        }
+        if (const auto* s3 = m_ActiveScene->GetRegistry().try_get<kizuri::SphereCollider3DComponent>(entityHandle)) {
+            float r = s3->Radius * tc.Scale.x;
+            ImVec2 center;
+            if (Project(pos, center)) {
+                glm::vec3 rx = pos + glm::vec3(r, 0, 0), ry = pos + glm::vec3(0, r, 0), rz = pos + glm::vec3(0, 0, r);
+                ImVec2 px, py, pz;
+                if (Project(rx, px) && Project(ry, py) && Project(rz, pz)) {
+                    dl->AddCircle(center, glm::length(glm::vec2(px.x - center.x, px.y - center.y)), color, 32, 1.0f);
+                    dl->AddCircle(center, glm::length(glm::vec2(py.x - center.x, py.y - center.y)), color, 32, 1.0f);
+                    dl->AddCircle(center, glm::length(glm::vec2(pz.x - center.x, pz.y - center.y)), color, 32, 1.0f);
+                }
+            }
+        }
+        if (const auto* b3 = m_ActiveScene->GetRegistry().try_get<kizuri::BoxCollider3DComponent>(entityHandle)) {
+            glm::vec3 h = b3->HalfExtents * tc.Scale;
+            glm::vec3 corners[8];
+            for (int i = 0; i < 8; ++i) {
+                glm::vec3 s((i & 1) ? h.x : -h.x, (i & 2) ? h.y : -h.y, (i & 4) ? h.z : -h.z);
+                corners[i] = pos + s;
+            }
+            const int edges[12][2] = { {0,1},{1,3},{3,2},{2,0}, {4,5},{5,7},{7,6},{6,4}, {0,4},{1,5},{2,6},{3,7} };
+            for (auto& e : edges) Line(corners[e[0]], corners[e[1]]);
+        }
+    });
+}
+
 kizuri::Ref<kizuri::Texture2D> EditorLayer::GetThumbnail(const std::string& path) {
     auto it = m_ThumbCache.find(path);
     if (it != m_ThumbCache.end()) return it->second;
@@ -1258,7 +1336,40 @@ void EditorLayer::DrawSettingsGeneral() {
     ImGui::TextUnformatted("Projeto");
     ImGui::Separator();
     if (project) {
-        ImGui::Text("Nome: %s", project->GetConfig().Name.c_str());
+        // Project Settings: nome, cena inicial e GameModule editáveis
+        // (persistem no .kzproj via Project::Save).
+        static char s_nameBuf[128] = { 0 };
+        static char s_startBuf[512] = { 0 };
+        static char s_moduleBuf[512] = { 0 };
+        static bool s_projInited = false;
+        if (!s_projInited) {
+            strncpy(s_nameBuf, project->GetConfig().Name.c_str(), sizeof(s_nameBuf) - 1);
+            strncpy(s_startBuf, project->GetConfig().StartScenePath.c_str(), sizeof(s_startBuf) - 1);
+            strncpy(s_moduleBuf, project->GetConfig().GameModulePath.c_str(), sizeof(s_moduleBuf) - 1);
+            s_projInited = true;
+        }
+        ImGui::InputText("Nome do projeto", s_nameBuf, sizeof(s_nameBuf));
+        ImGui::InputText("Cena inicial", s_startBuf, sizeof(s_startBuf));
+        std::string startPick;
+        if (FileBrowseButton("Cena inicial", "*.kzscene", startPick)) {
+            strncpy(s_startBuf, startPick.c_str(), sizeof(s_startBuf) - 1);
+            s_startBuf[sizeof(s_startBuf) - 1] = '\0';
+        }
+        ImGui::InputText("GameModule (DLL)", s_moduleBuf, sizeof(s_moduleBuf));
+        std::string modulePick;
+        if (FileBrowseButton("GameModule", "*.dll", modulePick)) {
+            strncpy(s_moduleBuf, modulePick.c_str(), sizeof(s_moduleBuf) - 1);
+            s_moduleBuf[sizeof(s_moduleBuf) - 1] = '\0';
+        }
+        if (ImGui::Button("Salvar configurações do projeto")) {
+            project->GetConfig().Name = s_nameBuf;
+            project->GetConfig().StartScenePath = s_startBuf;
+            project->GetConfig().GameModulePath = s_moduleBuf;
+            project->Save();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Voltar a carregar do disco")) s_projInited = false;
+        ImGui::Spacing();
         ImGui::TextWrapped("Caminho: %s", project->GetFilePath().c_str());
         ImGui::Text("Modo: %s",
             project->GetConfig().DefaultMode == ProjectMode::TwoD ? "2D" :
@@ -1344,6 +1455,8 @@ void EditorLayer::DrawSettingsEditor() {
 
     ImGui::TextUnformatted("Viewport");
     ImGui::Separator();
+    ImGui::Checkbox("Mostrar estatísticas (FPS / draw calls / triângulos)", &m_ShowStats);
+    ImGui::Checkbox("Mostrar colliders de todos os objetos (overlay de física)", &m_ShowColliders);
     ImGui::Checkbox("Maximizar viewport (botão fullscreen da toolbar)", &m_ViewportMaximized);
     ImGui::Spacing();
     ImGui::TextUnformatted("Cenas de demonstração");
@@ -3873,6 +3986,35 @@ void EditorLayer::OnImGuiRender() {
     ImGui::Image((ImTextureID)(uint64_t)textureID, panelSize, ImVec2(0, 1), ImVec2(1, 0));
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — ImGui::Image ok");
 
+    // Overlay de estatísticas (Profiler do viewport): FPS, tempo de frame,
+    // draw calls e triângulos do frame anterior. Desligável em
+    // Configurações > Editor.
+    if (m_ShowStats) {
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        ImVec2 pos = ImGui::GetCursorScreenPos();
+        float fps = m_FpsSmoothed;
+        float ms = fps > 0.0f ? 1000.0f / fps : 0.0f;
+        const kizuri::GraphicsSettings& gs = kizuri::Renderer3D::GetGraphicsSettings();
+        char buf[256];
+        snprintf(buf, sizeof(buf),
+                 "%.0f FPS  (%.1f ms)\nDraw calls: %u\nTriângulos: %u\nRes: %.0fx%.0f  ·  GLSL %d",
+                 fps, ms,
+                 kizuri::RenderCommand::GetFrameDrawCalls(),
+                 kizuri::RenderCommand::GetFrameTriangles(),
+                 panelSize.x, panelSize.y,
+                 kizuri::GetGLSLVersion());
+        // Fundo semi-transparente pra legibilidade sobre a cena.
+        ImVec2 textSize = ImGui::CalcTextSize(buf);
+        float pad = 6.0f;
+        dl->AddRectFilled(ImVec2(pos.x + pad, pos.y + pad),
+                          ImVec2(pos.x + pad + textSize.x + pad * 2.0f,
+                                 pos.y + pad + textSize.y + pad * 2.0f),
+                          IM_COL32(10, 14, 20, 150), 6.0f);
+        dl->AddText(ImVec2(pos.x + pad * 2.0f, pos.y + pad * 2.0f),
+                    IM_COL32(220, 230, 245, 235), buf);
+        (void)gs;
+    }
+
     // O gizmo precisa desenhar ANTES do teste de clique abaixo — é isso
     // que atualiza ImGuizmo::IsOver()/IsUsing() pro estado do MOUSE ATUAL
     // deste frame. Na ordem antiga (picking primeiro, gizmo depois), o
@@ -3894,6 +4036,7 @@ void EditorLayer::OnImGuiRender() {
         DrawCameraGizmo();
         DrawLightGizmo();
         DrawColliderGizmo();
+        if (m_ShowColliders) DrawAllColliders(); // overlay de física debug
     } else {
         KZ_CORE_TRACE("EditorLayer::OnImGuiRender — gizmo pulado (Play)");
     }

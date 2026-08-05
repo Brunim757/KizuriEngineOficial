@@ -2056,6 +2056,7 @@ void Renderer3D::EndScene() {
             glBindBuffer(GL_ARRAY_BUFFER, s_ParticleInstanceVBO);
             glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)(batch.Instances.size() * sizeof(ParticleInstance)), batch.Instances.data());
             glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, (GLsizei)batch.Instances.size());
+            RenderCommand::AddInstancedStats((uint32_t)batch.Instances.size()); // 1 draw + instâncias*2 tris
         }
         glBindVertexArray(0);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // volta pro padrão

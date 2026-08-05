@@ -3,6 +3,7 @@
 #include "kizuri/core/Input.hpp"
 #include "kizuri/core/ImGuiLayer.hpp"
 #include "kizuri/renderer/Renderer.hpp"
+#include "kizuri/renderer/RenderCommand.hpp"
 #include "kizuri/audio/AudioEngine.hpp"
 #include <GLFW/glfw3.h>
 
@@ -91,6 +92,7 @@ void Application::Run() {
         m_LastFrameTime = time;
 
         if (!m_Minimized) {
+            RenderCommand::ResetFrameStats(); // zera draw calls/triângulos do frame
             for (Layer* layer : m_LayerStack) {
                 KZ_CORE_TRACE("Application::Run — layer->OnUpdate ('{0}')", layer->GetName());
                 layer->OnUpdate(timestep);

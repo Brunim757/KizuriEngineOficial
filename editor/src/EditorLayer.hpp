@@ -49,6 +49,7 @@ private:
     void DrawCameraGizmo(); // pirâmide de frustum + seta de direção, só quando uma Camera tá selecionada
     void DrawLightGizmo();  // marcador de luz (ponto/spot/direcional) no viewport
     void DrawColliderGizmo(); // wireframe dos colisores 2D/3D da entidade selecionada
+    void DrawAllColliders();  // overlay de física debug: todos os colliders da cena
     void Reparent(kizuri::Entity child, kizuri::Entity newParent);
 
     // Configurações da engine (Arquivo > Configurações): seções em sidebar —
@@ -148,6 +149,9 @@ private:
     char m_ExportDirBuffer[512] = "export";
     bool m_ExportSelfContained = true; // embute o runtime .NET via dotnet publish
     bool m_AutoCompileOnPlay = true;   // compila o assembly C# antes do Play (estilo Unity)
+    bool m_ShowStats = true;           // overlay de estatísticas no viewport (FPS/draw calls/tris)
+    float m_FpsSmoothed = 0.0f;        // FPS médio suavizado (Profiler do viewport)
+    bool m_ShowColliders = true;       // overlay de física: desenha TODOS os colliders da cena
 
     // Preferências do editor (configuráveis em Configurações > Editor).
     float m_EditorCamFlySpeed = 4.0f;      // velocidade da câmera livre (Shift = x3)

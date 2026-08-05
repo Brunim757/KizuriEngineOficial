@@ -3010,6 +3010,9 @@ void EditorLayer::DrawInspector() {
                 }
                 ImGui::ColorEdit4("Cor", &sc.Color.x);
                 ImGui::DragFloat("Tiling", &sc.TilingFactor, 0.1f);
+                ImGui::Checkbox("Inverter X", &sc.FlipX);
+                ImGui::SameLine();
+                ImGui::Checkbox("Inverter Y", &sc.FlipY);
                 ImGui::DragInt("Camada de ordenação", &sc.SortingLayer, 1);
                 ImGui::TreePop();
             }
@@ -3464,6 +3467,7 @@ void EditorLayer::DrawInspector() {
                 if (ImGui::Combo("Tipo", &current, types, IM_ARRAYSIZE(types)))
                     rb.Type = (Rigidbody2DComponent::BodyType)current;
                 ImGui::Checkbox("Rotação fixa", &rb.FixedRotation);
+                ImGui::DragFloat("Escala de gravidade", &rb.GravityScale, 0.05f, -5.0f, 5.0f);
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<Rigidbody2DComponent>();

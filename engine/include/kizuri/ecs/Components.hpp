@@ -50,8 +50,10 @@ struct SpriteRendererComponent {
     glm::vec4 Color = { 1.0f, 1.0f, 1.0f, 1.0f };
     Ref<Texture2D> Texture;
     float TilingFactor = 1.0f;
-    std::string TexturePath; // serializável — caminho do arquivo de imagem (vazio = cor sólida)
-    int SortingLayer = 0;    // ordem de desenho 2D: menor desenha antes (atrás)
+    int SortingLayer = 0;
+    std::string TexturePath; // serializável
+    bool FlipX = false; // inverte horizontalmente no espaço local
+    bool FlipY = false;
 };
 
 struct CircleRendererComponent {
@@ -240,6 +242,7 @@ struct Rigidbody2DComponent {
     enum class BodyType { Static = 0, Dynamic, Kinematic };
     BodyType Type = BodyType::Dynamic;
     bool FixedRotation = false;
+    float GravityScale = 1.0f; // <0 = gravidade invertida, 0 = sem gravidade
     void* RuntimeBody = nullptr; // b2Body*
 
     // API de física pro script — só tem efeito durante o Play, quando

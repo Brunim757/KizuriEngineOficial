@@ -222,6 +222,14 @@ public readonly struct Entity
 	public void SetSpriteColor(float r, float g, float b, float a = 1f)
 		=> Interop.KizuriNative.kz_sprite_set_color(Handle, r, g, b, a);
 
+	// Inverte o sprite (flip) no espaço local.
+	public void SetSpriteFlip(bool flipX, bool flipY)
+		=> Interop.KizuriNative.kz_sprite_set_flip(Handle, flipX ? 1 : 0, flipY ? 1 : 0);
+
+	// Escala de gravidade do corpo 2D (<0 invertida, 0 sem gravidade).
+	public void SetGravityScale(float scale)
+		=> Interop.KizuriNative.kz_rigidbody2d_set_gravity_scale(Handle, scale);
+
 	public void SetText(string text) => Interop.KizuriNative.kz_text_set_content(Handle, text);
 	public void SetTextSize(float size) => Interop.KizuriNative.kz_text_set_size(Handle, size);
 	public void SetTextColor(float r, float g, float b, float a = 1f)

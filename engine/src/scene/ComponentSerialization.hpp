@@ -64,7 +64,8 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
             { "Color", Vec4ToJson(sc.Color) },
             { "TilingFactor", sc.TilingFactor },
             { "TexturePath", sc.TexturePath },
-            { "SortingLayer", sc.SortingLayer }
+            { "SortingLayer", sc.SortingLayer },
+            { "FlipX", sc.FlipX }, { "FlipY", sc.FlipY }
         };
     }
 
@@ -166,7 +167,7 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
 
     if (entity.HasComponent<Rigidbody2DComponent>()) {
         auto& rb = entity.GetComponent<Rigidbody2DComponent>();
-        je["Rigidbody2D"] = { { "Type", (int)rb.Type }, { "FixedRotation", rb.FixedRotation } };
+        je["Rigidbody2D"] = { { "Type", (int)rb.Type }, { "FixedRotation", rb.FixedRotation }, { "GravityScale", rb.GravityScale } };
     }
 
     if (entity.HasComponent<BoxCollider2DComponent>()) {
@@ -279,6 +280,8 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         sc.TilingFactor = js.value("TilingFactor", 1.0f);
         sc.TexturePath = js.value("TexturePath", "");
         sc.SortingLayer = js.value("SortingLayer", 0);
+        sc.FlipX = js.value("FlipX", false);
+        sc.FlipY = js.value("FlipY", false);
         if (!sc.TexturePath.empty()) sc.Texture = Texture2D::Create(ResolveSerializedPath(sc.TexturePath));
     }
 
@@ -386,6 +389,7 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         auto& rb = entity.AddComponent<Rigidbody2DComponent>();
         rb.Type = (Rigidbody2DComponent::BodyType)jr.value("Type", 1);
         rb.FixedRotation = jr.value("FixedRotation", false);
+        rb.GravityScale = jr.value("GravityScale", 1.0f);
     }
 
     if (je.contains("BoxCollider2D")) {
@@ -631,6 +635,7 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
             : entity.AddComponent<Rigidbody2DComponent>();
         rb.Type = (Rigidbody2DComponent::BodyType)jr.value("Type", 1);
         rb.FixedRotation = jr.value("FixedRotation", false);
+        rb.GravityScale = jr.value("GravityScale", 1.0f);
     } else if (entity.HasComponent<Rigidbody2DComponent>()) {
         entity.RemoveComponent<Rigidbody2DComponent>();
     }

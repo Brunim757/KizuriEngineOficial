@@ -736,7 +736,8 @@ void Scene::BuildTilemapColliders() {
                 b2BodyDef bodyDef;
                 bodyDef.type = b2_staticBody;
                 bodyDef.position.Set(cx, cy);
-                b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
+    b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
+    body->SetGravityScale(rb2d.GravityScale);
                 // Tilemap: userData=0 — scripts recebem Entity inválida no "other".
                 body->GetUserData().pointer = 0;
                 b2PolygonShape shape;
@@ -1201,6 +1202,11 @@ void Scene::Render2DEntities() {
         case 0: {
             auto& sprite = m_Registry.get<SpriteRendererComponent>(it.entity);
             glm::mat4 worldTransform = GetWorldTransform(e);
+            if (sprite.FlipX || sprite.FlipY) {
+                glm::mat4 flip = glm::scale(glm::mat4(1.0f),
+                    glm::vec3(sprite.FlipX ? -1.0f : 1.0f, sprite.FlipY ? -1.0f : 1.0f, 1.0f));
+                worldTransform = worldTransform * flip;
+            }
             if (sprite.Texture)
                 Renderer2D::DrawTransformedQuad(worldTransform, sprite.Texture, sprite.TilingFactor, sprite.Color);
             else

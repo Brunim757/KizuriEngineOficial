@@ -358,6 +358,22 @@ KZ_SCRIPT_API int kz_sprite_set_color(uint32_t entity, float r, float g, float b
     return 1;
 }
 
+KZ_SCRIPT_API void kz_sprite_set_flip(uint32_t entity, int flipX, int flipY) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::SpriteRendererComponent>()) return;
+    auto& sc = e.GetComponent<kizuri::SpriteRendererComponent>();
+    sc.FlipX = flipX != 0;
+    sc.FlipY = flipY != 0;
+}
+
+KZ_SCRIPT_API void kz_rigidbody2d_set_gravity_scale(uint32_t entity, float scale) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::Rigidbody2DComponent>()) return;
+    auto& rb = e.GetComponent<kizuri::Rigidbody2DComponent>();
+    rb.GravityScale = scale;
+    if (rb.RuntimeBody) static_cast<b2Body*>(rb.RuntimeBody)->SetGravityScale(scale);
+}
+
 KZ_SCRIPT_API int kz_text_set_content(uint32_t entity, const char* text) {
     auto e = Resolve(entity);
     if (!e || !e.HasComponent<kizuri::TextComponent>() || text == nullptr) return 0;

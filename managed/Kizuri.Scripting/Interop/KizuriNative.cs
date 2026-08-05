@@ -92,6 +92,8 @@ internal static class KizuriNative
     // ---- Mutação de componentes em runtime ------------------------------------
     [DllImport(Lib)] internal static extern int kz_sprite_set_texture(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern int kz_sprite_set_color(uint entity, float r, float g, float b, float a);
+    [DllImport(Lib)] internal static extern void kz_sprite_set_flip(uint entity, int flipX, int flipY);
+    [DllImport(Lib)] internal static extern void kz_rigidbody2d_set_gravity_scale(uint entity, float scale);
     [DllImport(Lib)] internal static extern int kz_text_set_content(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string text);
     [DllImport(Lib)] internal static extern int kz_text_set_size(uint entity, float size);
     [DllImport(Lib)] internal static extern int kz_text_set_color(uint entity, float r, float g, float b, float a);

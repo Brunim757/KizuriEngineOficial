@@ -369,7 +369,7 @@ static Ref<Mesh> BuildMeshFromGLTF(cgltf_data* data, const std::string& label) {
 
     if (vertices.empty()) {
         KZ_CORE_ERROR("O glTF '{0}' não contém malhas triangulares.", label);
-        return CreateCube();
+        return Mesh::CreateCube();
     }
     KZ_CORE_INFO("Malha glTF carregada: {0} ({1} vértices).", label, vertices.size());
     return CreateRef<Mesh>(vertices, indices);

@@ -13,6 +13,10 @@
 > apagado; o Content Pack da distribuição só enriquece as demos, nunca é
 > requisito.
 
+> 📖 **Manual do usuário:** abra [`docs/index.html`](docs/index.html) no navegador
+> (ou a pasta `docs/` dentro do pacote distribuído) — guia completo em HTML,
+> sem dependências externas.
+
 ---
 
 ## ✨ Destaques

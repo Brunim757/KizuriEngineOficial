@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kizuri Engine — Manual do Usuário</title>
+<style>
+:root{
+  --bg:#0b0e14; --bg2:#0f131c; --bg3:#151a26; --bg4:#1a2130;
+  --border:#232b3d; --border2:#2c3650;
+  --text:#dbe2ee; --text-dim:#9aa6bd; --text-faint:#6b7690;
+  --accent:#4fc3f7; --accent2:#38d9a9; --accent3:#ff6b81;
+  --gold:#f5c97b;
+  --code-bg:#0d1117;
+  --radius:10px;
+  --sidebar-w:264px;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html{scroll-behavior:smooth; scroll-padding-top:20px;}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Inter","Helvetica Neue",Arial,sans-serif;
+  font-size:15px; line-height:1.65;
+}
+/* ============ layout ============ */
+.wrap{display:flex; min-height:100vh;}
+/* ============ sidebar ============ */
+aside{
+  width:var(--sidebar-w); flex:0 0 var(--sidebar-w);
+  position:sticky; top:0; height:100vh; overflow-y:auto;
+  background:var(--bg2); border-right:1px solid var(--border);
+  padding:18px 12px 40px;
+}
+.brand{display:flex; align-items:center; gap:10px; padding:4px 8px 14px; border-bottom:1px solid var(--border); margin-bottom:12px;}
+.brand .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#4fc3f7,#2563eb);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#fff;}
+.brand b{font-size:15px; letter-spacing:.4px; display:block;}
+.brand small{color:var(--text-faint); font-size:11px; display:block;}
+.search{margin:0 0 12px; padding:0 4px;}
+.search input{
+  width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:8px;
+  color:var(--text); padding:8px 10px; font-size:13px; outline:none;
+}
+.search input:focus{border-color:var(--accent);}
+nav a{
+  display:block; color:var(--text-dim); text-decoration:none;
+  padding:6px 10px; border-radius:7px; font-size:13.5px; margin:1px 0;
+  border-left:2px solid transparent;
+}
+nav a:hover{background:var(--bg3); color:var(--text);}
+nav a.active{background:var(--bg4); color:var(--accent); border-left-color:var(--accent);}
+nav .group{font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--text-faint); margin:16px 8px 4px;}
+/* ============ main ============ */
+main{flex:1; max-width:920px; margin:0 auto; padding:34px 40px 120px;}
+header.top{display:flex; align-items:baseline; justify-content:space-between; border-bottom:1px solid var(--border); padding-bottom:18px; margin-bottom:8px;}
+header.top h1{font-size:26px;}
+header.top .ver{color:var(--accent2); font-weight:600;}
+h2{
+  font-size:22px; margin:56px 0 14px; padding-bottom:8px;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:10px;
+}
+h2 .num{
+  background:linear-gradient(135deg,#4fc3f7,#2563eb); color:#fff; font-size:14px;
+  width:28px;height:28px;border-radius:8px; display:inline-flex; align-items:center; justify-content:center; flex:0 0 28px;
+}
+h3{font-size:17px; margin:34px 0 10px; color:#eef2f9;}
+h4{font-size:15px; margin:24px 0 8px; color:#d7e0ee;}
+p{margin:10px 0;}
+ul,ol{margin:10px 0 10px 22px;}
+li{margin:4px 0;}
+a{color:var(--accent);}
+strong{color:#eef2f9;}
+code{
+  background:var(--code-bg); border:1px solid var(--border); border-radius:5px;
+  padding:1.5px 6px; font-family:"JetBrains Mono","Fira Code",ui-monospace,Consolas,monospace;
+  font-size:12.5px; color:#9fd3f5;
+}
+pre{
+  background:var(--code-bg); border:1px solid var(--border); border-radius:var(--radius);
+  padding:16px 18px; overflow-x:auto; margin:14px 0; line-height:1.55;
+}
+pre code{background:none; border:none; padding:0; font-size:13px; color:var(--text);}
+/* syntax */
+.tok-kw{color:#c792ea; font-weight:600;}
+.tok-str{color:#a5e075;}
+.tok-num{color:#f78c6c;}
+.tok-com{color:#5c6779; font-style:italic;}
+.tok-t{color:#82aaff;} /* type */
+.tok-fn{color:#82aaff;}
+.tok-cls{color:#ffcb6b;}
+/* ============ componentes ============ */
+.card{
+  background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius);
+  padding:18px 20px; margin:16px 0;
+}
+.card h4{margin-top:0; color:var(--accent);}
+.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; margin:18px 0;}
+.grid .card{margin:0;}
+.callout{border-radius:var(--radius); padding:13px 16px; margin:16px 0; border:1px solid; font-size:14px;}
+.callout.info{background:rgba(79,195,247,.08); border-color:rgba(79,195,247,.35);}
+.callout.info b{color:var(--accent);}
+.callout.warn{background:rgba(245,201,123,.08); border-color:rgba(245,201,123,.4);}
+.callout.warn b{color:var(--gold);}
+.callout.ok{background:rgba(56,217,169,.08); border-color:rgba(56,217,169,.4);}
+.callout.ok b{color:var(--accent2);}
+table{border-collapse:collapse; width:100%; margin:14px 0; font-size:13.5px;}
+th,td{border:1px solid var(--border); padding:8px 11px; text-align:left; vertical-align:top;}
+th{background:var(--bg3); color:#c9d6ea; font-weight:600;}
+tr:nth-child(even) td{background:rgba(255,255,255,.015);}
+kbd{
+  background:var(--bg4); border:1px solid var(--border2); border-bottom-width:2px;
+  border-radius:5px; padding:2px 7px; font-size:12px; font-family:inherit;
+}
+.badge{display:inline-block; padding:2px 9px; border-radius:99px; font-size:11.5px; font-weight:600;}
+.badge.v{background:rgba(56,217,169,.15); color:var(--accent2); border:1px solid rgba(56,217,169,.4);}
+.badge.gl{background:rgba(79,195,247,.12); color:var(--accent); border:1px solid rgba(79,195,247,.35);}
+.badge.glo{background:rgba(245,201,123,.12); color:var(--gold); border:1px solid rgba(245,201,123,.35);}
+.checks li{list-style:none;}
+.checks li::before{content:"✔ "; color:var(--accent2);}
+.footer{margin-top:60px; padding-top:16px; border-top:1px solid var(--border); color:var(--text-faint); font-size:13px;}
+@media (max-width:820px){
+  aside{display:none;}
+  main{padding:22px 18px 80px;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<aside>
+  <div class="brand">
+    <div class="logo">K</div>
+    <div><b>Kizuri Engine</b><small>Manual do Usuário</small></div>
+  </div>
+  <div class="search"><input id="filter" type="text" placeholder="Filtrar seções…"></div>
+  <nav id="toc">
+    <div class="group">Primeiros passos</div>
+    <a href="#sobre">Sobre</a>
+    <a href="#comecando">Começando</a>
+    <a href="#editor">O Editor</a>
+    <div class="group">Recursos</div>
+    <a href="#render3d">Renderer 3D</a>
+    <a href="#render2d">Renderer 2D</a>
+    <a href="#ui">Interface (UI)</a>
+    <a href="#fisica">Física</a>
+    <a href="#audio">Áudio</a>
+    <div class="group">Programação</div>
+    <a href="#scripting">Scripting C#</a>
+    <a href="#api">Referência da API C#</a>
+    <a href="#exemplo">Exemplo completo</a>
+    <div class="group">Distribuição</div>
+    <a href="#conteudo">Conteúdo &amp; kzres://</a>
+    <a href="#exportar">Exportar o jogo</a>
+    <div class="group">Anexos</div>
+    <a href="#historico">Histórico de versões</a>
+    <a href="#faq">Perguntas frequentes</a>
+  </nav>
+</aside>
+
+<main>
+<header class="top">
+  <h1>Manual da Kizuri Engine</h1>
+  <span class="ver">v0.17 · engine 0.8.x</span>
+</header>
+
+<!-- =============================================================== -->
+<h2 id="sobre"><span class="num">1</span>Sobre</h2>
+<p>
+A <strong>Kizuri Engine</strong> é uma engine de jogos <strong>2D + 3D</strong> escrita em
+C++20, com editor visual integrado e programação em <strong>C#</strong>. O objetivo é a simplicidade
+de uma engine pessoal com o espírito de ferramentas como Unity e Godot: você monta a cena no editor,
+escreve a lógica em C# e exporta um executável standalone.
+</p>
+<div class="grid">
+  <div class="card">
+    <h4>Renderer 3D</h4>
+    PBR completo, IBL, sombras em cascata, PCSS, bloom, tonemapping ACES,
+    SSAO, luzes dinâmicas, partículas, animação esquelética (skinning).
+  </div>
+  <div class="card">
+    <h4>Renderer 2D</h4>
+    Sprites, círculos, texto, tilemaps, animação por frames, UI interativa e
+    ordenação por camadas — em <strong>GLSL 330</strong> dedicado.
+  </div>
+  <div class="card">
+    <h4>Física</h4>
+    <strong>Box2D</strong> (2D) e <strong>Bullet3</strong> (3D) com raycasts,
+    overlaps, forças, torque e callbacks de colisão.
+  </div>
+  <div class="card">
+    <h4>Scripting C#</h4>
+    API única estilo Unity: <code>Script</code>, <code>Entity</code>,
+    <code>Scene</code>, <code>Input</code>, <code>Time</code>,
+    <code>Mathf</code>, corrotinas, save em JSON.
+  </div>
+  <div class="card">
+    <h4>Self-contained</h4>
+    Os assets padrão (demos, céu, modelos) vêm <strong>embutidos no
+    executável</strong> via <code>kzres://</code>. Apagar um arquivo não quebra nada.
+  </div>
+  <div class="card">
+    <h4>Exportação</h4>
+    Um clique para gerar um executável standalone com a cena inicial e o
+    assembly C# do seu jogo.
+  </div>
+</div>
+
+<div class="callout info">
+<b>Heavy de verdade.</b> A engine é "pesada" por <em>quantidade de recursos</em> — não por
+depender de um pacote de conteúdo solto. Os padrões das demonstrações (Fox animado,
+capacete PBR, céu) são compilados <em>dentro</em> do binário.
+</div>
+
+<p>
+Rode <strong>play/stop</strong>, monte cenas com drag &amp; drop, teste em runtime com
+física de verdade e depois exporte — tudo num único executável:
+<code>KizuriEditor</code>. O jogo final roda no <code>KizuriGame</code>, gerado pelo exportador.
+</p>
+
+<!-- =============================================================== -->
+<h2 id="comecando"><span class="num">2</span>Começando</h2>
+
+<h3>Requisitos</h3>
+<table>
+  <tr><th>Item</th><th>Requisito</th></tr>
+  <tr><td>CMake</td><td>≥ 3.24</td></tr>
+  <tr><td>Compilador C++</td><td>C++20 (MSVC / MinGW / GCC / Clang)</td></tr>
+  <tr><td>OpenGL</td><td>mínimo <strong>3.3 core</strong> (4.0+ libera o modo "ultra" — veja Renderer 3D)</td></tr>
+  <tr><td>Build</td><td>Ninja (opcional, usado nos presets)</td></tr>
+</table>
+
+<div class="callout info">
+<b>Dependências automáticas.</b> GLFW, glm, EnTT, spdlog, Bullet3, Box2D, miniaudio,
+stb, tinyobjloader, Dear ImGui, ImGuizmo e nlohmann/json são baixadas por
+<code>FetchContent</code>. O glad (GL 4.5) é comitado. Você não instala nada manualmente.
+</div>
+
+<h3>Compilando</h3>
+<pre><code class="language-bash"># Linux / Windows (configurar + compilar)
+cmake --preset linux-release      # ou windows-release / debug
+cmake --build --preset linux-release
+</code></pre>
+<p>Os binários vão para <code>build/bin/</code>:</p>
+<table>
+  <tr><th>Executável</th><th>O que é</th></tr>
+  <tr><td><code>KizuriEditor</code></td><td>O editor visual completo</td></tr>
+  <tr><td><code>KizuriGame</code></td><td>Executável de jogo standalone (cena inicial + assembly C#)</td></tr>
+  <tr><td><code>Sandbox</code></td><td>Exemplo mínimo de uso da engine via API</td></tr>
+</table>
+
+<h3>Seu primeiro projeto</h3>
+<ol>
+  <li>Abra o <code>KizuriEditor</code>.</li>
+  <li>No hub inicial, clique em <strong>Novo Projeto</strong> e escolha o modo:
+    <ul>
+      <li><strong>2D</strong> — cena já nasce com câmera ortográfica, chão com física e uma caixa que cai;</li>
+      <li><strong>3D</strong> — câmera de perspectiva, cubo de exemplo e sol direcional;</li>
+      <li><strong>Vazio</strong> — só uma câmera.</li>
+    </ul>
+  </li>
+  <li>Aperte <kbd>F5</kbd> (<strong>Play</strong>) para testar a cena — física, scripts, partículas e áudio rodam de verdade.</li>
+  <li><kbd>Shift+F5</kbd> para voltar à edição.</li>
+</ol>
+
+<div class="callout ok">
+<b>Dica:</b> use <strong>Arquivo → Criar demonstração…</strong> (menu Cena) para carregar
+uma cena de demonstração 3D completa (Fox animado + capacete PBR + céu) pronta para explorar.
+</div>
+
+<!-- =============================================================== -->
+<h2 id="editor"><span class="num">3</span>O Editor</h2>
+
+<h3>Layout padrão</h3>
+<p>
+O editor usa um dockspace com quatro painéis. Tudo é arrastável e redimensionável,
+e a ordem persiste durante a sessão:
+</p>
+<table>
+  <tr><th>Painel</th><th>O que faz</th></tr>
+  <tr><td><strong>Hierarquia</strong></td><td>Lista de entidades da cena (árvore com pais/filhos) + busca.</td></tr>
+  <tr><td><strong>Inspetor</strong></td><td>Propriedades da entidade selecionada: transform, componentes e scripts.</td></tr>
+  <tr><td><strong>Viewport</strong></td><td>Pré-visualização em tempo real (2D ou 3D), com gizmos de seleção.</td></tr>
+  <tr><td><strong>Content Browser</strong></td><td>Arquivos do projeto. Arraste assets para o viewport para usá-los.</td></tr>
+  <tr><td><strong>Console</strong></td><td>Logs da engine e dos seus scripts, com filtros por nível.</td></tr>
+</table>
+
+<h3>Barra de menus</h3>
+<table>
+  <tr><th>Menu</th><th>Ações</th></tr>
+  <tr><td><strong>Arquivo</strong></td><td>Novo/Abrir Projeto, Voltar ao Início, Exportar Jogo, Salvar Cena (Ctrl+S), Carregar GameModule, Sair</td></tr>
+  <tr><td><strong>Editar</strong></td><td>Desfazer/Refazer (Ctrl+Z / Ctrl+Y), Duplicar entidade (Ctrl+D), Excluir (Del)</td></tr>
+  <tr><td><strong>Cena</strong></td><td>Nova Cena, Abrir Cena, Cenas de demonstração 2D / 2.5D / 3D</td></tr>
+  <tr><td><strong>Exibir</strong></td><td>Viewport 2D/3D, Fullscreen do viewport (F11), Configurações (Ctrl+,)</td></tr>
+  <tr><td><strong>Ajuda</strong></td><td>Atalhos do editor</td></tr>
+</table>
+
+<h3>Viewport</h3>
+<ul>
+  <li>Alterna entre os modos <strong>2D</strong> e <strong>3D</strong> pela toolbar (ou menu Exibir).</li>
+  <li><strong>Clique</strong> em um objeto para selecionar (picking 3D por raycast, 2D por ponto).</li>
+  <li><strong>Botão direito arrastando</strong>: navega a câmera livre do editor.</li>
+  <li><kbd>F11</kbd> alterna o <strong>fullscreen</strong> do viewport.</li>
+  <li>Gizmos <strong>mover / rotacionar / escalar</strong> com <kbd>W</kbd> / <kbd>E</kbd> / <kbd>R</kbd>.</li>
+</ul>
+
+<h3>Content Browser</h3>
+<ul>
+  <li><strong>Drag &amp; drop</strong> de <code>.obj</code>, <code>.png</code>, <code>.glb</code> e <code>.hdr</code> direto para o viewport cria a entidade pronta.</li>
+  <li>Renomeie assets e entidades diretamente (duplo clique / campo de nome).</li>
+  <li>Ícones coloridos por tipo de arquivo para reconhecimento rápido.</li>
+  <li>Campos de arquivo com botão <strong>…</strong> abrem o diálogo nativo (Windows) para escolher pastas/arquivos.</li>
+</ul>
+
+<h3>Configurações (Ctrl+,)</h3>
+<p>Abrem em uma janela com três seções:</p>
+<table>
+  <tr><th>Seção</th><th>Itens</th></tr>
+  <tr><td><strong>Gráficos</strong></td><td>Qualidade (Ultra/High/Medium/Low), resolução interna, MSAA, shadow map, PCF/PCSS, bloom, tonemapping, SSAO, exposição, VSync, névoa, HDRI de céu.</td></tr>
+  <tr><td><strong>Geral</strong></td><td>Configurações do projeto e da janela.</td></tr>
+  <tr><td><strong>Editor</strong></td><td>Preferências de uso do editor.</td></tr>
+</table>
+
+<h3>Atalhos</h3>
+<table>
+  <tr><th>Atalho</th><th>Ação</th></tr>
+  <tr><td><kbd>F5</kbd> / <kbd>Shift+F5</kbd></td><td>Play / Stop</td></tr>
+  <tr><td><kbd>W</kbd> / <kbd>E</kbd> / <kbd>R</kbd></td><td>Gizmo mover / rotacionar / escalar</td></tr>
+  <tr><td><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd></td><td>Desfazer / Refazer</td></tr>
+  <tr><td><kbd>Ctrl+D</kbd> / <kbd>Del</kbd></td><td>Duplicar / Excluir entidade</td></tr>
+  <tr><td><kbd>F11</kbd></td><td>Fullscreen do viewport</td></tr>
+  <tr><td><kbd>Ctrl+,</kbd></td><td>Configurações</td></tr>
+</table>
+
+<!-- =============================================================== -->
+<h2 id="render3d"><span class="num">4</span>Renderer 3D</h2>
+<p>
+O pipeline 3D é PBR físico com pós-processamento em HDR. O nível de efeitos
+depende da versão do OpenGL detectada no <strong>contexto real</strong> da sua máquina:
+</p>
+
+<div class="callout info">
+<b>Versão-gated por hardware.</b> Em <strong>OpenGL 3.3</strong> o pipeline usa o caminho
+estável comprovado (PCF simples, sem sombras de ponto). Em <strong>GL 4.0+</strong> o renderer
+liga automaticamente o <strong>PCSS</strong> e <strong>sombras de luz pontual</strong>. O modo é
+decidido pela versão GLSL reportada pelo driver, não por um chute.
+</div>
+
+<table>
+  <tr><th>Recurso</th><th>3.3 (estável)</th><th>4.0+ (ultra)</th></tr>
+  <tr><td>Sombras em cascata (CSM)</td><td>✔</td><td>✔</td></tr>
+  <tr><td>Suavização de sombra</td><td>PCF</td><td>PCSS (área real)</td></tr>
+  <tr><td>Luz pontual</td><td>✔ (sem sombra)</td><td>✔ <strong>com cubemap de sombra</strong></td></tr>
+  <tr><td>MSAA</td><td>4x</td><td>8x</td></tr>
+</table>
+
+<h3>Recursos do pipeline</h3>
+<ul class="checks">
+  <li><strong>PBR Cook-Torrance</strong> — GGX + Smith + Fresnel-Schlick, com metallic/roughness.</li>
+  <li><strong>IBL</strong> — céu (procedural ou HDRI) → cubemap → irradiância difusa + pré-filtro especular GGX.</li>
+  <li><strong>Multi-luz</strong> — até 16 luzes por frame (Direcional / Ponto / Spot), com cones de spot em graus.</li>
+  <li><strong>Sombras em cascata</strong> em 3 faixas que acompanham a câmera (nitidez perto, cobertura longe).</li>
+  <li><strong>Normal mapping</strong> por derivada de tela (a mesh não precisa de tangentes).</li>
+  <li><strong>Partículas GPU-instanced</strong> com billboarding e textura opcional.</li>
+  <li><strong>Animação esquelética</strong> — skinning via glTF, inclusive no shader de sombra (a sombra "anda" junto).</li>
+  <li><strong>Bloom</strong> com bright-pass + blur gaussiano (iterações configuráveis).</li>
+  <li><strong>Tonemapping</strong> — ACES (cinematográfico), Reinhard (suave) ou Filmic (contraste).</li>
+  <li><strong>SSAO</strong> — oclusão ambiente por horizonte em espaço de tela (amostras e raio configuráveis).</li>
+  <li><strong>Névoa exponencial</strong> — atmosfera com densidade configurável.</li>
+</ul>
+
+<h3>Luzes</h3>
+<ul>
+  <li><strong>Direcional</strong> — como o sol; a primeira direcional da cena projeta sombra em cascata.</li>
+  <li><strong>Ponto</strong> — luz radial com alcance; projeta sombra (cubemap) apenas em GL 4.0+, se <code>castsShadow</code>.</li>
+  <li><strong>Spot</strong> — cone com ângulo interno/externo em graus.</li>
+</ul>
+<p>
+No editor, use o <strong>gizmo de luz</strong> para posicionar e apontar fontes de luz
+rapidamente. Em runtime, luzes são criadas com <code>Entity.AddLight(...)</code>.
+</p>
+
+<h3>Materiais</h3>
+<p>
+Materiais PBR aceitam cor base, <strong>metálico</strong>, <strong>rugosidade</strong>,
+<strong>emissão</strong> (alimenta o bloom) e mapas de textura:
+<code>AlbedoMap</code>, <code>NormalMap</code>, <code>MetallicRoughnessMap</code> (canal G = rugosidade, B = metálico) e
+<code>EmissiveMap</code>. Ao importar um <code>.glb</code>/<code>.gltf</code>, o material PBR é extraído
+automaticamente (fatores + texturas embutidas no arquivo).
+</p>
+
+<div class="callout ok">
+<b>Texturas embutidas nunca se perdem.</b> O extractor lida com imagens no buffer do
+.glb <em>e</em> com data-URIs base64 — e aceita <code>kzres://</code>. Objeto nunca volta a ficar cinza.
+</div>
+
+<h3>Primitivas</h3>
+<p>Além de importar <code>.obj</code>/<code>.glb</code>/<code>.gltf</code>, a engine gera
+meshes proceduralmente (todas funcionam sem nenhum arquivo):</p>
+<pre><code class="language-text">builtin:cube · builtin:plane · builtin:sphere · builtin:cylinder
+builtin:cone · builtin:capsule · builtin:torus</code></pre>
+
+<!-- =============================================================== -->
+<h2 id="render2d"><span class="num">5</span>Renderer 2D</h2>
+<p>
+O pipeline 2D é um renderer dedicado em GLSL 330, desenhado <em>depois</em> do 3D e
+<em>antes</em> da UI — é isso que permite cenas <strong>2.5D</strong> (fundo 3D, gameplay 2D, UI por cima).
+</p>
+<ul class="checks">
+  <li><strong>Sprites</strong> com textura (caminho serializável), tiling e <strong>flip X/Y</strong>.</li>
+  <li><strong>Círculos</strong> — disco cheio ou anel, com borda suavizada (SDF).</li>
+  <li><strong>Texto/HUD</strong> — <code>TextComponent</code> com fonte embutida (JetBrains Mono, atlas via stb_truetype).</li>
+  <li><strong>Tilemaps</strong> — grade de tiles com atlas de textura (colunas/linhas explícitas).</li>
+  <li><strong>Animação de sprite</strong> — sprite sheets por frames, com preview no viewport.</li>
+  <li><strong>Ordenação por camadas</strong> — <code>SortingLayer</code> (menor desenha atrás) em qualquer componente 2D.</li>
+  <li><strong>Grid de referência</strong> no plano XY com eixos destacados.</li>
+</ul>
+
+<!-- =============================================================== -->
+<h2 id="ui"><span class="num">6</span>Interface (UI)</h2>
+<p>
+A UI é desenhada por último, em espaço de tela (<code>0,0</code> = centro, y para cima).
+Ela vive sob um <strong>Canvas</strong>:
+</p>
+<ol>
+  <li>Crie uma entidade e adicione <code>UICanvas</code> (define a meia-altura, ex.: 10).</li>
+  <li>Adicione <code>UIRect</code> (retângulo colorido), <code>UIButton</code> (clicável/hover) e
+      <code>UIText</code> como filhos do Canvas.</li>
+  <li>Em C#, leia <code>UIButtonWasClicked()</code> / <code>UIButtonIsHovered()</code>.</li>
+</ol>
+<pre><code class="language-csharp">// UI criada 100% em runtime
+var canvas = Scene.CreateEntity("Canvas");
+canvas.AddUICanvas(10f);
+
+var btn = Scene.CreateEntity("Botão");
+btn.SetParent(canvas);
+btn.AddUIButton(0f, -3f, 5f, 1.2f, 0.85f, 0.25f, 0.3f); // x, y, w, h, cor
+btn.AddUIText("Jogar", 0.6f, 1f, 1f, 1f);
+</code></pre>
+
+<!-- =============================================================== -->
+<h2 id="fisica"><span class="num">7</span>Física</h2>
+
+<h3>2D — Box2D</h3>
+<ul>
+  <li><strong>Rigidbody2D</strong> — tipos <em>Static / Dynamic / Kinematic</em>.</li>
+  <li><strong>Colliders</strong> — caixa e círculo (densidade, atrito, restituição).</li>
+  <li><strong>GravityScale</strong> — valor <em>negativo</em> inverte a gravidade, <em>0</em> desliga (platformer!).</li>
+  <li><strong>Queries</strong> — <code>Scene.Raycast2D</code>, <code>Scene.OverlapCircle2D</code>.</li>
+  <li><strong>Controle</strong> — <code>SetLinearVelocity</code>, <code>ApplyLinearImpulse</code>, <code>SetTransform</code>.</li>
+</ul>
+
+<h3>3D — Bullet3</h3>
+<ul>
+  <li><strong>Rigidbody3D</strong> — <em>Static / Dynamic / Kinematic</em>, com massa.</li>
+  <li><strong>Colliders</strong> — caixa (meias-dimensões) e esfera (raio).</li>
+  <li><strong>Forças</strong> — <code>ApplyForce</code>, <code>ApplyImpulse</code>, torque, velocidade linear/angular.</li>
+  <li><strong>Queries</strong> — <code>Scene.Raycast3D</code> (devolve fração [0,1]) e <code>Scene.OverlapSphere3D</code>.</li>
+</ul>
+
+<h3>Colisões em scripts</h3>
+<pre><code class="language-csharp">public override void OnCollisionBegin(Entity other)
+{
+    Log.Info($"Colidiu com a entidade {other.Id} ({other.Name})");
+}
+public override void OnCollisionEnd(Entity other) { }</code></pre>
+
+<div class="callout warn">
+<b>Nota:</b> raycasts/overlaps e a simulação da física só rodam durante o <strong>Play</strong>
+(ou no executável exportado). No modo de edição os corpos não são simulados.
+</div>
+
+<!-- =============================================================== -->
+<h2 id="audio"><span class="num">8</span>Áudio</h2>
+<ul class="checks">
+  <li><strong>AudioSource</strong> — ligado a uma entidade, com <em>loop</em>, <em>play on start</em> e <strong>posicionamento 3D</strong> (atenua por distância ao ouvinte/câmera).</li>
+  <li><strong>One-shot avulso</strong> — <code>Audio.PlayOneShot(clip, volume)</code>, sem entidade (SFX).</li>
+  <li><strong>One-shot posicional</strong> — <code>Audio.PlayOneShotAt(clip, volume, position)</code> toca em uma posição do mundo, atenuado pela distância — ótimo para impactos, passos e tiros.</li>
+  <li><strong>Mestre</strong> — <code>Audio.SetMasterVolume</code> e <code>Audio.StopAll</code> (usado na troca de cena).</li>
+</ul>
+<p>Formatos: qualquer um que o <strong>miniaudio</strong> decodifica (wav, mp3, ogg, flac…).</p>
+
+<!-- =============================================================== -->
+<h2 id="scripting"><span class="num">9</span>Scripting C#</h2>
+<p>
+A única API pública de gameplay é o assembly <strong><code>Kizuri.Scripting</code></strong>.
+O motor C++ fica 100% privado: o seu jogo conversa com a engine apenas por um
+<strong>ABI C</strong> (<code>kz_*</code>), sem headers nem dependências internas expostas.
+</p>
+
+<h3>Estrutura de um script</h3>
+<pre><code class="language-csharp">using Kizuri;
+using Kizuri.Math;
+
+public sealed class MeuScript : Script
+{
+    public override void OnCreate() { }                 // ao instanciar
+    public override void OnUpdate(float dt) { }         // a cada frame
+    public override void OnCollisionBegin(Entity other) { }
+    public override void OnCollisionEnd(Entity other) { }
+    public override void OnDestroy() { }
+}</code></pre>
+
+<h3>Registrando scripts</h3>
+<pre><code class="language-csharp">public static class MeuGameModule
+{
+    [Kizuri.GameEntryPoint]
+    public static void RegisterAll()
+    {
+        Kizuri.GameModule.Register<MeuScript>("MeuScript");
+    }
+}</code></pre>
+<p>
+No editor: <strong>Arquivo → Carregar GameModule…</strong> aponta para a DLL do seu jogo.
+No Play, o C# é <strong>recompilado e recarregado automaticamente</strong> (estilo Unity) — se
+falhar, o Play é abortado com o erro no Console.
+</p>
+
+<h3>Corrotinas</h3>
+<pre><code class="language-csharp">public override void OnCreate()
+{
+    StartCoroutine(Rotina());
+}
+
+System.Collections.IEnumerator Rotina()
+{
+    yield return new WaitForSeconds(1f);
+    Log.Info("1 segundo depois…");
+    yield return new WaitForFrames(60);
+    Log.Info("mais 60 frames…");
+}</code></pre>
+
+<h3>Prefabs &amp; cenas</h3>
+<pre><code class="language-csharp">// Instancia uma .kzprefab (física + OnCreate rodam no Play)
+var inimigo = Scene.InstantiatePrefab("Assets/Inimigo.kzprefab", new Vector3(3f, 0f, 0f));
+
+// Com rotação (euler, radianos)
+Scene.InstantiatePrefab("Assets/Tiro.kzprefab", pos, rot);
+
+// Troca de cena no fim do frame
+Scene.Load("Assets/Fase2.kzscene");
+
+// Acha entidades
+var cam = Scene.GetPrimaryCamera();
+var jogador = Scene.Find("Jogador");
+var clone = Scene.Duplicate(jogador);</code></pre>
+
+<h3>Hierarquia &amp; transform mundial</h3>
+<pre><code class="language-csharp">filho.SetParent(pai);      // parenta
+filho.SetParent();         // destaca
+
+if (filho.TryGetWorldPosition(out var pos)) { }  // posição MUNDIAL (respeita pais)
+filho.LookAt(new Vector3(0f, 0f, 0f));           // encara um ponto
+
+Entity.Name = "NovoNome";                        // renomeia em runtime
+</code></pre>
+
+<h3>Input</h3>
+<pre><code class="language-csharp">if (Input.IsKeyPressed(Key.A)) { }
+if (Input.IsKeyDown(Key.Space)) { }                 // só no frame do clique
+if (Input.IsMouseButtonPressed(MouseButton.Left)) { }
+var mouse = Input.GetMousePosition();</code></pre>
+
+<h3>Tempo</h3>
+<pre><code class="language-csharp">var dt  = Time.DeltaSeconds;     // já escalado pelo TimeScale
+var t   = Time.time;             // tempo desde o início (escalado)
+var ut  = Time.unscaledTime;     // tempo real
+Time.TimeScale = 0.3f;           // câmera lenta (0 = pausa dos scripts)
+</code></pre>
+
+<!-- =============================================================== -->
+<h2 id="api"><span class="num">10</span>Referência da API C#</h2>
+
+<h3>Entity — componentes em runtime</h3>
+<table>
+  <tr><th>Método</th><th>Descrição</th></tr>
+  <tr><td><code>AddSprite(textura?)</code></td><td>Sprite (sem textura = cor sólida)</td></tr>
+  <tr><td><code>AddText(texto, tamanho?)</code></td><td>Texto world-space</td></tr>
+  <tr><td><code>AddAudio(clip, loop?, playOnStart?)</code></td><td>Áudio posicional</td></tr>
+  <tr><td><code>AddCamera(perspectiva?)</code></td><td>Câmera (2D ou 3D)</td></tr>
+  <tr><td><code>AddLight(tipo, cor…)</code></td><td>Luz dinâmica (Direcional/Ponto/Spot)</td></tr>
+  <tr><td><code>AddMeshRenderer(mesh?)</code></td><td>Mesh 3D (builtin ou .obj/.glb)</td></tr>
+  <tr><td><code>AddAnimator(meshPath)</code></td><td>Animação esquelética + <code>PlayAnimation(clip)</code></td></tr>
+  <tr><td><code>AddRigidbody3D / AddBoxCollider3D / AddSphereCollider3D</code></td><td>Física 3D</td></tr>
+  <tr><td><code>AddCircleCollider2D</code></td><td>Collider circular 2D</td></tr>
+  <tr><td><code>AddUICanvas / AddUIRect / AddUIButton / AddUIText</code></td><td>UI de tela</td></tr>
+  <tr><td><code>SetPosition / SetRotation / SetScale</code></td><td>Transform (radianos para rotação)</td></tr>
+  <tr><td><code>TryGetWorldPosition / LookAt</code></td><td>Transform mundial</td></tr>
+  <tr><td><code>SetSpriteColor / SetSpriteTexture / SetSpriteFlip</code></td><td>Sprite em runtime</td></tr>
+  <tr><td><code>SetMaterial / SetMaterialAlbedoMap / …</code></td><td>Material PBR em runtime</td></tr>
+  <tr><td><code>SetGravityScale</code></td><td>Gravidade do corpo 2D</td></tr>
+  <tr><td><code>SetSortingLayer</code></td><td>Ordenação 2D</td></tr>
+  <tr><td><code>Destroy / SetParent</code></td><td>Ciclo de vida e hierarquia</td></tr>
+</table>
+
+<h3>Scene — mundo</h3>
+<table>
+  <tr><th>Método</th><th>Descrição</th></tr>
+  <tr><td><code>CreateEntity(nome?)</code></td><td>Cria entidade vazia</td></tr>
+  <tr><td><code>InstantiatePrefab(caminho, pos?, rot?)</code></td><td>Instancia prefab</td></tr>
+  <tr><td><code>Load(caminho)</code></td><td>Troca de cena (fim do frame)</td></tr>
+  <tr><td><code>Find(nome) / Duplicate(entity)</code></td><td>Busca / duplica</td></tr>
+  <tr><td><code>GetPrimaryCamera()</code></td><td>Câmera primária</td></tr>
+  <tr><td><code>Raycast2D / Raycast3D</code></td><td>Queries de física</td></tr>
+  <tr><td><code>OverlapCircle2D / OverlapSphere3D</code></td><td>Queries de área</td></tr>
+</table>
+
+<h3>Mathf</h3>
+<p>
+<code>Clamp</code>, <code>Lerp</code>, <code>LerpUnclamped</code>, <code>MoveTowards</code>,
+<code>SmoothDamp</code>, <code>SmoothStep</code>, <code>Repeat</code>, <code>PingPong</code>,
+<code>Remap</code>, <code>LerpAngle</code> (caminho curto!), <code>Angle</code>, <code>Distance</code>,
+<code>Abs</code>, <code>Sign</code>, <code>Min</code>, <code>Max</code>, <code>Sqrt</code>, <code>Pow</code>, <code>Sin</code>, <code>Cos</code>.
+</p>
+
+<h3>Vetores</h3>
+<p>
+<code>Vector2</code> e <code>Vector3</code> (X, Y, Z; <code>Length</code>; operadores +, −, × escalar).
+</p>
+
+<h3>SaveSystem</h3>
+<pre><code class="language-csharp">SaveSystem.Set("score", 100);
+SaveSystem.Set("pos", new Vector3(1, 2, 3));
+SaveSystem.Save();                                  // grava save.json
+
+var s = SaveSystem.GetFloat("score", 0f);           // lê (auto-carrega)
+SaveSystem.SetPath("jogos/fase1.save");             // outro arquivo
+</code></pre>
+
+<h3>Rand &amp; Log</h3>
+<pre><code class="language-csharp">var f = Rand.Float(0f, 100f);      // float em [min, max]
+var i = Rand.Int(1, 7);            // int em [min, max)
+if (Rand.Chance(0.3f)) { }         // 30% de chance
+var v = Rand.Vector3(-1, 1, -1, 1, 0, 2);
+
+Log.Info("…"); Log.Warn("…"); Log.Error("…");</code></pre>
+
+<!-- =============================================================== -->
+<h2 id="exemplo"><span class="num">11</span>Exemplo completo</h2>
+<p>
+Um controlador 2D com movimento, projéteis, HUD dinâmico, save/load e raycast:
+</p>
+<pre><code class="language-csharp">using Kizuri;
+using Kizuri.Math;
+
+public sealed class PlayerController : Script
+{
+    private const float Speed = 5.0f;
+    private Entity _hud;
+    private float _score;
+
+    public override void OnCreate()
+    {
+        _hud = Scene.CreateEntity("HUD");
+        _hud.AddText("Pontos: 0", 32f);
+        _hud.SetPosition(new Vector3(-8f, 5f, 0f));
+        _score = SaveSystem.GetFloat("score", 0f);   // auto-carrega
+    }
+
+    public override void OnUpdate(float deltaSeconds)
+    {
+        var wish = Vector2.Zero;
+        if (Input.IsKeyPressed(Key.A) || Input.IsKeyPressed(Key.Left))  wish.X -= 1f;
+        if (Input.IsKeyPressed(Key.D) || Input.IsKeyPressed(Key.Right)) wish.X += 1f;
+        wish = wish.Length > 0.001f ? wish / wish.Length * Speed : wish;
+
+        if (Entity.TryGetRigidbody2D(out var rb))
+        {
+            var v = rb.GetLinearVelocity();
+            rb.SetLinearVelocity(new Vector2(wish.X, v.Y));
+        }
+        else if (Entity.TryGetTransform(out var t))
+        {
+            t.Translation.X += wish.X * deltaSeconds;
+            t.Translation.Y += wish.Y * deltaSeconds;
+            Entity.SetPosition(t.Translation);
+        }
+
+        // Tiro simples (entidade criada em runtime)
+        if (Input.IsMouseButtonPressed(MouseButton.Left))
+        {
+            var bullet = Scene.CreateEntity("Bullet");
+            bullet.AddSprite();
+            bullet.SetSpriteColor(1f, 0.85f, 0.2f);
+            if (Entity.TryGetTransform(out var tp)) bullet.SetPosition(tp.Translation);
+        }
+
+        _score += deltaSeconds * 10f;
+        _hud.SetText($"Pontos: {(int)_score}");
+
+        // Raycast 2D de exemplo
+        if (Entity.TryGetTransform(out var rt))
+        {
+            if (Scene.Raycast2D(new Vector2(rt.Translation.X, rt.Translation.Y),
+                                new Vector2(rt.Translation.X, rt.Translation.Y - 20f),
+                                out var hit, out var point))
+                Log.Info($"Atingiu {hit.Id} em ({point.X:0.0}, {point.Y:0.0})");
+        }
+    }
+
+    public override void OnCollisionBegin(Entity other) { }
+    public override void OnCollisionEnd(Entity other) { }
+    public override void OnDestroy() { }
+}</code></pre>
+
+<!-- =============================================================== -->
+<h2 id="conteudo"><span class="num">12</span>Conteúdo &amp; kzres://</h2>
+
+<h3>Recursos embutidos</h3>
+<p>
+A engine compila <strong>dentro do executável</strong> os assets que ela usa como padrão,
+acessíveis pelo pseudo-esquema <code>kzres://</code>:
+</p>
+<table>
+  <tr><th>Recurso</th><th>Uso</th></tr>
+  <tr><td><code>kzres://models/Cube.glb</code></td><td>Cubo (demonstração 3D)</td></tr>
+  <tr><td><code>kzres://models/Fox.glb</code></td><td>Fox animado (skinning, demonstração 3D)</td></tr>
+  <tr><td><code>kzres://models/DamagedHelmet.glb</code></td><td>Capacete PBR (demonstração 3D)</td></tr>
+  <tr><td><code>kzres://skies/sky_gradient.hdr</code></td><td>Céu HDRI padrão</td></tr>
+</table>
+<p>
+A prioridade ao carregar um asset de demonstração é sempre:
+<strong>embutido (<code>kzres://</code>) → Content Pack no disco → builtins procedurais</strong>.
+</p>
+
+<div class="callout ok">
+<b>Por que isso importa:</b> se o usuário apagar um arquivo do Content Pack, a
+demonstração e as funções padrão continuam funcionando — o binário já carrega tudo.
+</div>
+
+<h3>Content Pack (distribuição)</h3>
+<p>
+Os builds distribuídos acompanham um <strong>Content Pack</strong> com modelos glTF (Fox,
+DamagedHelmet, e outros), HDRIs de céu e texturas PBR (todos CC0). Ele <em>enriquece</em> as
+demos, mas <strong>nunca é requisito</strong> para o motor funcionar.
+</p>
+
+<h3>Formato dos projetos</h3>
+<ul>
+  <li><strong><code>.kzproj</code></strong> — projeto (modo 2D/3D/vazio, configurações).</li>
+  <li><strong><code>.kzscene</code></strong> — cena (JSON legível, com mesh/material/texturas).</li>
+  <li><strong><code>.kzprefab</code></strong> — entidade reutilizável.</li>
+</ul>
+
+<!-- =============================================================== -->
+<h2 id="exportar"><span class="num">13</span>Exportar o jogo</h2>
+<ol>
+  <li>Monte a cena inicial no editor.</li>
+  <li><strong>Arquivo → Exportar Jogo…</strong></li>
+  <li>Escolha a pasta de destino. O exportador gera um executável standalone
+      (<code>KizuriGame</code>) que abre a cena inicial e roda o assembly C#.</li>
+  <li>Distribua a pasta inteira (ou o binário + content, se quiser os assets ricos).</li>
+</ol>
+<p>
+O jogo standalone usa a <strong>câmera da própria cena</strong> no Play (não a câmera de
+navegação do editor) — o que você vê no Play é o que sai no build.
+</p>
+
+<!-- =============================================================== -->
+<h2 id="historico"><span class="num">14</span>Histórico de versões</h2>
+
+<table>
+  <tr><th>Versão</th><th>Destaques</th></tr>
+  <tr><td><span class="badge v">v0.2</span></td><td>Base "Profissional": GraphicsSettings + presets, MSAA/HDR/SSAO, HDRI/IBL, Renderer2D GLSL 330, glTF/cgltf, ABI C#, editor com configurações e gizmos.</td></tr>
+  <tr><td><span class="badge v">v0.3</span></td><td>Produção 3D: animação esquelética (skinning), física 3D em C#, primitivas (cilindro/cone/cápsula/torus), Content Pack na CI.</td></tr>
+  <tr><td><span class="badge v">v0.4</span></td><td>Materiais &amp; atmosfera: emissão, mapa MetallicRoughness, textura de memória, extração de material do glTF.</td></tr>
+  <tr><td><span class="badge v">v0.5</span></td><td>Showcase: demo 3D, gizmos de colisor.</td></tr>
+  <tr><td><span class="badge v">v0.6</span></td><td>Conteúdo embutido <code>kzres://</code> + correções (gimbal lock do Play, texturas cinza).</td></tr>
+  <tr><td><span class="badge v">v0.7</span></td><td>Usabilidade: fullscreen do viewport, responsividade, Configurações com sidebar, demo 2D, jogo 100% 2D/3D por modo de projeto.</td></tr>
+  <tr><td><span class="badge v">v0.8</span></td><td>GLSL por hardware (3.3–4.5), menubar organizada, campos de arquivo com "…".</td></tr>
+  <tr><td><span class="badge v">v0.9</span></td><td>Jogo 3D de verdade: <code>Raycast3D</code>/<code>OverlapSphere3D</code>, torque, <code>Entity.Name</code>, <code>Time</code>.</td></tr>
+  <tr><td><span class="badge v">v0.10</span></td><td>Busca na hierarquia, demo 2.5D, content pack maior.</td></tr>
+  <tr><td><span class="badge v">v0.11</span></td><td>Tonemapping ACES/Reinhard/Filmic, <code>Mathf</code> ampliado, prefab com rotação.</td></tr>
+  <tr><td><span class="badge v">v0.12</span></td><td>Partículas com textura, sombra animada (skinning no shadow shader).</td></tr>
+  <tr><td><span class="badge v">v0.13</span></td><td><code>TryGetWorldPosition</code>, <code>LookAt</code>.</td></tr>
+  <tr><td><span class="badge v">v0.14</span></td><td><code>Audio.PlayOneShotAt</code> — som 3D posicional.</td></tr>
+  <tr><td><span class="badge v">v0.15</span></td><td>Content Browser pro: renomear + ícones por tipo.</td></tr>
+  <tr><td><span class="badge v">v0.16</span></td><td>Física fina &amp; 2D: <code>GravityScale</code>, <code>Sprite.FlipX/FlipY</code>.</td></tr>
+  <tr><td><span class="badge v">v0.17</span></td><td>Self-contained: assets padrão (Fox, capacete, céu) EMBUTIDOS no binário; prioridade kzres:// → Content Pack → builtins.</td></tr>
+</table>
+
+<!-- =============================================================== -->
+<h2 id="faq"><span class="num">15</span>Perguntas frequentes</h2>
+
+<h4>A engine precisa do Content Pack para funcionar?</h4>
+<p>Não. Todos os padrões (modelos da demo, céu, primitivas) estão embutidos no
+executável via <code>kzres://</code>. O Content Pack apenas enriquece.</p>
+
+<h4>Meu PC tem OpenGL 3.3. Perco alguma coisa?</h4>
+<p>Só o que exige loop dinâmico no shader (PCSS e sombras de luz pontual), que é
+reservado para GL 4.0+. Todo o resto — PBR, IBL, CSM, bloom, SSAO, partículas,
+skinning — roda em 3.3 com o caminho estável comprovado.</p>
+
+<h4>Como a engine detecta a versão do GLSL?</h4>
+<p>Pela versão reportada pelo driver no contexto real da janela
+(<code>GL_SHADING_LANGUAGE_VERSION</code>), travada pelo teto da versão core criada. Sem
+chutes: se o driver diz 3.3, os shaders são 330.</p>
+
+<h4>Onde fica o código do jogo?</h4>
+<p>Em um projeto C# (assembly gerenciado). No editor, <strong>Arquivo → Carregar
+GameModule…</strong>. No Play ele recompila e recarrega automaticamente.</p>
+
+<h4>O que vejo no Play é o que sai no build?</h4>
+<p>Sim — o Play e o jogo exportado usam a câmera da própria cena, não a câmera
+livre de navegação do editor.</p>
+
+<h4>As cenas são salvas em quê?</h4>
+<p>JSON legível (<code>.kzscene</code>), incluindo mesh, material e texturas. Dá para editar
+no bloco de notas e versionar no git.</p>
+
+<div class="footer">
+  Kizuri Engine — manual do usuário · gerado a partir do estado atual do motor
+  (v0.17) · Documentação interna de desenvolvimento em <code>docs/NOTAS_INTERNAS.md</code>.
+</div>
+
+</main>
+</div>
+
+<script>
+// ---- filtro de seções da sidebar ----
+(function(){
+  var input = document.getElementById('filter');
+  var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+  input.addEventListener('input', function(){
+    var q = input.value.toLowerCase();
+    links.forEach(function(a){
+      a.style.display = (q === '' || a.textContent.toLowerCase().indexOf(q) !== -1) ? '' : 'none';
+    });
+  });
+})();
+
+// ---- destaque da seção ativa ----
+(function(){
+  var sections = Array.prototype.slice.call(document.querySelectorAll('h2[id]'));
+  var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+
+  function onScroll(){
+    var pos = window.scrollY + 90;
+    var current = sections[0] && sections[0].id;
+    sections.forEach(function(s){ if (s.offsetTop <= pos) current = s.id; });
+    links.forEach(function(a){ a.classList.toggle('active', a.getAttribute('href') === '#' + current); });
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+})();
+
+// ---- syntax highlight simples (escapa HTML e pinta keywords/strings/números/comentários) ----
+(function(){
+  var LANG = {
+    'csharp': [
+      [/\/\/.*|\/\*[\s\S]*?\*\//g, 'tok-com'],
+      [/"(?:[^"\\]|\\.)*"/g, 'tok-str'],
+      [/\b(?:public|private|protected|static|sealed|abstract|class|struct|interface|enum|namespace|using|new|return|if|else|for|foreach|while|var|out|ref|override|readonly|const|this|void|int|float|bool|string|yield|true|false|null)\b/g, 'tok-kw'],
+      [/\b[A-Z][A-Za-z0-9_]*\b/g, 'tok-cls'],
+      [/\b[0-9]+(?:\.[0-9]+)?f?\b/g, 'tok-num']
+    ],
+    'bash': [
+      [/[#][^\n]*/g, 'tok-com'],
+      [/"(?:[^"\\]|\\.)*"/g, 'tok-str'],
+      [/\b(?:cd|cmake|build|run|preset|ls|mkdir)\b/g, 'tok-kw']
+    ],
+    'text': []
+  };
+
+  function esc(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function highlight(code, lang){
+    var rules = LANG[lang] || [];
+    if (rules.length === 0) return esc(code);
+    // junta tudo numa regex de alternância para uma única passada
+    var re = new RegExp(rules.map(function(r){ return r[0].source; }).join('|'), 'g');
+    var map = rules.map(function(r){ return r[1]; });
+    var out = '', last = 0, m;
+    while ((m = re.exec(code)) !== null){
+      var cls = '';
+      for (var i = 0; i < rules.length; ++i){
+        if (m[i + 1] !== undefined){ cls = map[i]; break; }
+      }
+      out += esc(code.slice(last, m.index));
+      out += '<span class="' + cls + '">' + esc(m[0]) + '</span>';
+      last = re.lastIndex;
+    }
+    out += esc(code.slice(last));
+    return out;
+  }
+
+  document.querySelectorAll('pre code').forEach(function(el){
+    var lang = (el.className.match(/language-(\w+)/) || [])[1] || '';
+    el.innerHTML = highlight(el.textContent, lang);
+  });
+})();
+</script>
+</body>
+</html>

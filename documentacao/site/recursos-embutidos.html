@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recursos embutidos (kzres://) — Kizuri Engine</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<aside>
+  <div class="brand">
+    <div class="logo">K</div>
+    <div><b>Kizuri Engine</b><small>Documentação</small></div>
+  </div>
+  <div class="search"><input id="filter" type="text" placeholder="Filtrar páginas…"></div>
+  <nav id="toc">
+<div class="group">Introdução</div>
+<a href="index.html" class="">Visão geral</a>
+<a href="instalacao.html" class="">Instalação e build</a>
+<a href="primeiro-projeto.html" class="">Seu primeiro projeto</a>
+<div class="group">Conceitos</div>
+<a href="projeto.html" class="">Projetos, cenas e prefabs</a>
+<a href="hierarquia.html" class="">Hierarquia e transform</a>
+<a href="recursos-embutidos.html" class="active">Recursos embutidos (kzres://)</a>
+<div class="group">Editor</div>
+<a href="interface.html" class="">Interface do editor</a>
+<a href="viewport.html" class="">Viewport e câmera</a>
+<a href="hierarquia-inspetor.html" class="">Hierarquia e Inspetor</a>
+<a href="content-browser.html" class="">Content Browser</a>
+<a href="configuracoes.html" class="">Configurações</a>
+<a href="atalhos.html" class="">Atalhos de teclado</a>
+<div class="group">Componentes</div>
+<a href="transform.html" class="">Transform</a>
+<a href="sprites-2d.html" class="">Sprites, círculos e texto 2D</a>
+<a href="animacao-2d.html" class="">Animação de sprite 2D</a>
+<a href="tilemap.html" class="">Tilemap</a>
+<a href="meshes-3d.html" class="">MeshRenderer e materiais</a>
+<a href="luzes.html" class="">Luzes</a>
+<a href="particulas.html" class="">Partículas</a>
+<a href="animacao-3d.html" class="">Animação esquelética</a>
+<a href="audio-source.html" class="">AudioSource</a>
+<a href="camera.html" class="">Câmera</a>
+<a href="fisica-2d.html" class="">Física 2D (Box2D)</a>
+<a href="fisica-3d.html" class="">Física 3D (Bullet3)</a>
+<a href="ui.html" class="">UI (Canvas/Rect/Button/Text)</a>
+<div class="group">Renderização</div>
+<a href="pipeline-3d.html" class="">Pipeline 3D</a>
+<a href="pipeline-2d.html" class="">Pipeline 2D</a>
+<a href="qualidade.html" class="">Qualidade gráfica</a>
+<div class="group">Scripting C#</div>
+<a href="scripting.html" class="">Introdução ao C#</a>
+<a href="script.html" class="">Classe Script e corrotinas</a>
+<a href="entity.html" class="">Entity — referência</a>
+<a href="scene.html" class="">Scene — referência</a>
+<a href="input.html" class="">Input</a>
+<a href="time.html" class="">Time</a>
+<a href="mathf.html" class="">Mathf</a>
+<a href="vectors.html" class="">Vetores (Vector2/3/4)</a>
+<a href="audio-api.html" class="">Audio (API)</a>
+<a href="save.html" class="">SaveSystem</a>
+<a href="rand-log.html" class="">Rand e Log</a>
+<a href="fisica-api.html" class="">Rigidbody2D e queries</a>
+<a href="exemplos.html" class="">Exemplos completos</a>
+<div class="group">Distribuição</div>
+<a href="exportacao.html" class="">Exportar o jogo</a>
+<a href="faq.html" class="">Perguntas frequentes</a>
+  </nav>
+</aside>
+<main>
+<header class="top">
+  <div class="crumbs"><span class="crumb">Conceitos</span><span class="sep">/</span><span>Recursos embutidos (kzres://)</span></div>
+  <div class="toggles">
+    <a href="busca.html" class="btn">🔎 Buscar</a>
+    <a href="index.html" class="btn">Início</a>
+  </div>
+</header>
+<article>
+<h1 id="recursos-embutidos-kzres">Recursos embutidos (kzres://)</h1>
+<h2 id="o-problema-que-resolve">O problema que resolve</h2>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>.</p>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>.</p>
+<h2 id="o-esquema-kzres">O esquema <code>kzres://</code></h2>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>.</p>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin):</p>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin):</p>
+<table><thead><tr><th>Recurso</th><th>Uso</th></tr></thead><tbody><tr><td><code>kzres://models/Cube.glb</code></td><td>Cubo (demonstração 3D)</td></tr><tr><td><code>kzres://models/Fox.glb</code></td><td>Fox animado (skinning) — demo 3D</td></tr><tr><td><code>kzres://models/DamagedHelmet.glb</code></td><td>Capacete PBR — demo 3D</td></tr><tr><td><code>kzres://skies/sky_gradient.hdr</code></td><td>Céu HDRI padrão</td></tr></tbody></table>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin):</p>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin):</p>
+<h2 id="prioridade-ao-carregar">Prioridade ao carregar</h2>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin):</p>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin): Quando um asset de demonstração é usado, a ordem é sempre:</p>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin): Quando um asset de demonstração é usado, a ordem é sempre:</p>
+<pre><code class="language-">1. Embutido (kzres://)     → sempre disponível
+2. Content Pack no disco   → mais rico, se presente
+3. Builtins procedurais    → malhas geradas em código</code></pre>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin): Quando um asset de demonstração é usado, a ordem é sempre:</p>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin): Quando um asset de demonstração é usado, a ordem é sempre:</p>
+<div class="callout ok"><strong>Consequência prática:</strong> apague a pasta <code>content/</code> do lado do executável e a demonstração 3D continua funcionando — o Fox, o capacete e o céu já estão dentro do binário.</div>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin): Quando um asset de demonstração é usado, a ordem é sempre:</p>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin): Quando um asset de demonstração é usado, a ordem é sempre:</p>
+<h2 id="o-content-pack">O Content Pack</h2>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin): Quando um asset de demonstração é usado, a ordem é sempre:</p>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin): Quando um asset de demonstração é usado, a ordem é sempre: Os pacotes distribuídos acompanham um <strong>Content Pack</strong> (modelos glTF, HDRIs de céu e texturas PBR, todos CC0). Ele <strong>enriquece</strong> as demos — mas <strong>nunca é requisito</strong> para o motor funcionar.</p>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin): Quando um asset de demonstração é usado, a ordem é sempre: Os pacotes distribuídos acompanham um <strong>Content Pack</strong> (modelos glTF, HDRIs de céu e texturas PBR, todos CC0). Ele <strong>enriquece</strong> as demos — mas <strong>nunca é requisito</strong> para o motor funcionar.</p>
+<h2 id="na-prática">Na prática</h2>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin): Quando um asset de demonstração é usado, a ordem é sempre: Os pacotes distribuídos acompanham um <strong>Content Pack</strong> (modelos glTF, HDRIs de céu e texturas PBR, todos CC0). Ele <strong>enriquece</strong> as demos — mas <strong>nunca é requisito</strong> para o motor funcionar.</p>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin): Quando um asset de demonstração é usado, a ordem é sempre: Os pacotes distribuídos acompanham um <strong>Content Pack</strong> (modelos glTF, HDRIs de céu e texturas PBR, todos CC0). Ele <strong>enriquece</strong> as demos — mas <strong>nunca é requisito</strong> para o motor funcionar.</p>
+<pre><code class="language-csharp">// carrega um modelo embutido como qualquer outro asset
+Entity f = Scene.CreateEntity("Fox");
+f.AddMeshRenderer("kzres://models/Fox.glb");</code></pre>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin): Quando um asset de demonstração é usado, a ordem é sempre: Os pacotes distribuídos acompanham um <strong>Content Pack</strong> (modelos glTF, HDRIs de céu e texturas PBR, todos CC0). Ele <strong>enriquece</strong> as demos — mas <strong>nunca é requisito</strong> para o motor funcionar.</p>
+<p>Se uma função padrão da engine dependesse de um arquivo no disco, apagar esse arquivo (ou esquecer de copiá-lo) <strong>quebraria</strong> a função. A Kizuri resolve isso compilando os assets que usa como padrão <strong>dentro do executável</strong>. Um caminho <code>kzres://&lt;nome&gt;</code> referencia um recurso embutido no binário. Ele funciona em <strong>qualquer campo de asset</strong> (mesh, textura, HDRI, skin): Quando um asset de demonstração é usado, a ordem é sempre: Os pacotes distribuídos acompanham um <strong>Content Pack</strong> (modelos glTF, HDRIs de céu e texturas PBR, todos CC0). Ele <strong>enriquece</strong> as demos — mas <strong>nunca é requisito</strong> para o motor funcionar. No editor, basta digitar o caminho <code>kzres://…</code> no campo de mesh — ou usar a <strong>demonstração 3D</strong> (menu Cena), que já usa os embutidos automaticamente.</p>
+
+</article>
+<div class="pager">
+<a class="navbtn prev" href="hierarquia.html">← Hierarquia e transform</a>
+<a class="navbtn next" href="interface.html">Interface do editor →</a>
+</div>
+<footer class="footer">
+  Kizuri Engine — documentação (site estático). Fonte em <code>documentacao/src/</code>;
+  gerado por <code>documentacao/generate_site.py</code>.
+</footer>
+</main>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

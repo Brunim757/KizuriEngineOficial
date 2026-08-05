@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instalação e build — Kizuri Engine</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<aside>
+  <div class="brand">
+    <div class="logo">K</div>
+    <div><b>Kizuri Engine</b><small>Documentação</small></div>
+  </div>
+  <div class="search"><input id="filter" type="text" placeholder="Filtrar páginas…"></div>
+  <nav id="toc">
+<div class="group">Introdução</div>
+<a href="index.html" class="">Visão geral</a>
+<a href="instalacao.html" class="active">Instalação e build</a>
+<a href="primeiro-projeto.html" class="">Seu primeiro projeto</a>
+<div class="group">Conceitos</div>
+<a href="projeto.html" class="">Projetos, cenas e prefabs</a>
+<a href="hierarquia.html" class="">Hierarquia e transform</a>
+<a href="recursos-embutidos.html" class="">Recursos embutidos (kzres://)</a>
+<div class="group">Editor</div>
+<a href="interface.html" class="">Interface do editor</a>
+<a href="viewport.html" class="">Viewport e câmera</a>
+<a href="hierarquia-inspetor.html" class="">Hierarquia e Inspetor</a>
+<a href="content-browser.html" class="">Content Browser</a>
+<a href="configuracoes.html" class="">Configurações</a>
+<a href="atalhos.html" class="">Atalhos de teclado</a>
+<div class="group">Componentes</div>
+<a href="transform.html" class="">Transform</a>
+<a href="sprites-2d.html" class="">Sprites, círculos e texto 2D</a>
+<a href="animacao-2d.html" class="">Animação de sprite 2D</a>
+<a href="tilemap.html" class="">Tilemap</a>
+<a href="meshes-3d.html" class="">MeshRenderer e materiais</a>
+<a href="luzes.html" class="">Luzes</a>
+<a href="particulas.html" class="">Partículas</a>
+<a href="animacao-3d.html" class="">Animação esquelética</a>
+<a href="audio-source.html" class="">AudioSource</a>
+<a href="camera.html" class="">Câmera</a>
+<a href="fisica-2d.html" class="">Física 2D (Box2D)</a>
+<a href="fisica-3d.html" class="">Física 3D (Bullet3)</a>
+<a href="ui.html" class="">UI (Canvas/Rect/Button/Text)</a>
+<div class="group">Renderização</div>
+<a href="pipeline-3d.html" class="">Pipeline 3D</a>
+<a href="pipeline-2d.html" class="">Pipeline 2D</a>
+<a href="qualidade.html" class="">Qualidade gráfica</a>
+<div class="group">Scripting C#</div>
+<a href="scripting.html" class="">Introdução ao C#</a>
+<a href="script.html" class="">Classe Script e corrotinas</a>
+<a href="entity.html" class="">Entity — referência</a>
+<a href="scene.html" class="">Scene — referência</a>
+<a href="input.html" class="">Input</a>
+<a href="time.html" class="">Time</a>
+<a href="mathf.html" class="">Mathf</a>
+<a href="vectors.html" class="">Vetores (Vector2/3/4)</a>
+<a href="audio-api.html" class="">Audio (API)</a>
+<a href="save.html" class="">SaveSystem</a>
+<a href="rand-log.html" class="">Rand e Log</a>
+<a href="fisica-api.html" class="">Rigidbody2D e queries</a>
+<a href="exemplos.html" class="">Exemplos completos</a>
+<div class="group">Distribuição</div>
+<a href="exportacao.html" class="">Exportar o jogo</a>
+<a href="faq.html" class="">Perguntas frequentes</a>
+  </nav>
+</aside>
+<main>
+<header class="top">
+  <div class="crumbs"><span class="crumb">Introdução</span><span class="sep">/</span><span>Instalação e build</span></div>
+  <div class="toggles">
+    <a href="busca.html" class="btn">🔎 Buscar</a>
+    <a href="index.html" class="btn">Início</a>
+  </div>
+</header>
+<article>
+<h1 id="instalação-e-build">Instalação e build</h1>
+<h2 id="requisitos">Requisitos</h2>
+<table><thead><tr><th>Item</th><th>Requisito</th></tr></thead><tbody><tr><td><strong>CMake</strong></td><td>≥ 3.24</td></tr><tr><td><strong>Compilador</strong></td><td>C++20 (MSVC / MinGW / GCC / Clang)</td></tr><tr><td><strong>OpenGL</strong></td><td>mínimo <strong>3.3 core</strong> (4.0+ libera o modo "ultra")</td></tr><tr><td><strong>Build</strong></td><td>Ninja (opcional, usado nos presets)</td></tr><tr><td><strong>.NET SDK</strong></td><td>8+ (para compilar o assembly C# do jogo)</td></tr></tbody></table>
+<div class="callout info"><strong>Dependências automáticas.</strong> GLFW, glm, EnTT, spdlog, Bullet3, Box2D, miniaudio, stb, tinyobjloader, Dear ImGui, ImGuizmo e nlohmann/json são baixadas por <code>FetchContent</code>. O <code>glad</code> (GL 4.5 core) é pré-gerado e comitado. Você não instala nada manualmente.</div>
+<h2 id="compilando">Compilando</h2>
+<pre><code class="language-bash"># configurar + compilar (Release)
+cmake --preset linux-release      # ou windows-release / debug
+cmake --build --preset linux-release</code></pre>
+<p>Os binários vão para <code>build/bin/</code> (ou <code>build-debug/bin/</code>):</p>
+<p>Os binários vão para <code>build/bin/</code> (ou <code>build-debug/bin/</code>):</p>
+<table><thead><tr><th>Executável</th><th>O que é</th></tr></thead><tbody><tr><td><code>KizuriEditor</code></td><td>O editor visual completo</td></tr><tr><td><code>KizuriGame</code></td><td>Executável de jogo standalone (cena inicial + assembly C#)</td></tr><tr><td><code>Sandbox</code></td><td>Exemplo mínimo de uso da engine via API</td></tr></tbody></table>
+<p>Os binários vão para <code>build/bin/</code> (ou <code>build-debug/bin/</code>):</p>
+<p>Os binários vão para <code>build/bin/</code> (ou <code>build-debug/bin/</code>):</p>
+<h2 id="opções-do-cmake">Opções do CMake</h2>
+<p>Os binários vão para <code>build/bin/</code> (ou <code>build-debug/bin/</code>):</p>
+<p>Os binários vão para <code>build/bin/</code> (ou <code>build-debug/bin/</code>):</p>
+<table><thead><tr><th>Opção</th><th>Padrão</th><th>Descrição</th></tr></thead><tbody><tr><td><code>KZ_BUILD_EDITOR</code></td><td><code>ON</code></td><td>Compila o editor</td></tr><tr><td><code>KZ_BUILD_GAME</code></td><td><code>ON</code></td><td>Compila o jogo standalone</td></tr><tr><td><code>KZ_BUILD_SANDBOX</code></td><td><code>ON</code></td><td>Compila o exemplo sandbox</td></tr><tr><td><code>KZ_BUILD_TESTS</code></td><td><code>OFF</code></td><td>Testes unitários (não há suíte ainda)</td></tr><tr><td><code>KZ_EMBED_DEMO_DIR</code></td><td>—</td><td>Pasta com assets de demonstração a <strong>embutir</strong> no binário (<code>kzres://</code>)</td></tr></tbody></table>
+<p>Os binários vão para <code>build/bin/</code> (ou <code>build-debug/bin/</code>):</p>
+<p>Os binários vão para <code>build/bin/</code> (ou <code>build-debug/bin/</code>):</p>
+<div class="callout ok"><strong>Assets de demonstração embutidos.</strong> Na distribuição oficial, Fox animado e capacete PBR são baixados no build e <strong>compilados dentro do executável</strong>. Sem isso, a demo 3D cai para os builtins — nenhuma função padrão quebra.</div>
+<p>Os binários vão para <code>build/bin/</code> (ou <code>build-debug/bin/</code>):</p>
+<p>Os binários vão para <code>build/bin/</code> (ou <code>build-debug/bin/</code>):</p>
+<h2 id="primeira-execução">Primeira execução</h2>
+<p>Os binários vão para <code>build/bin/</code> (ou <code>build-debug/bin/</code>):</p>
+<p>Os binários vão para <code>build/bin/</code> (ou <code>build-debug/bin/</code>): Abra o <code>KizuriEditor</code>. A primeira tela é o <strong>hub</strong> de projetos:</p>
+<ul>
+<li><strong>Novo Projeto</strong> — escolha o modo <strong>2D</strong>, <strong>3D</strong> ou <strong>Vazio</strong>;</li>
+<li><strong>Abrir Projeto</strong> — carregue um <code>.kzproj</code> existente;</li>
+<li><strong>Voltar ao Início</strong> — retorna ao hub (menu Arquivo).</li>
+</ul>
+<p>Os binários vão para <code>build/bin/</code> (ou <code>build-debug/bin/</code>): Abra o <code>KizuriEditor</code>. A primeira tela é o <strong>hub</strong> de projetos:</p>
+<p>Os binários vão para <code>build/bin/</code> (ou <code>build-debug/bin/</code>): Abra o <code>KizuriEditor</code>. A primeira tela é o <strong>hub</strong> de projetos: Aperte <strong>F5</strong> para testar a cena com física e scripts reais.</p>
+
+</article>
+<div class="pager">
+<a class="navbtn prev" href="index.html">← Visão geral</a>
+<a class="navbtn next" href="primeiro-projeto.html">Seu primeiro projeto →</a>
+</div>
+<footer class="footer">
+  Kizuri Engine — documentação (site estático). Fonte em <code>documentacao/src/</code>;
+  gerado por <code>documentacao/generate_site.py</code>.
+</footer>
+</main>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

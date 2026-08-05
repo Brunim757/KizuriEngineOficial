@@ -13,9 +13,10 @@
 > apagado; o Content Pack da distribuição só enriquece as demos, nunca é
 > requisito.
 
-> 📖 **Manual do usuário:** abra [`docs/index.html`](docs/index.html) no navegador
-> (ou a pasta `docs/` dentro do pacote distribuído) — guia completo em HTML,
-> sem dependências externas.
+> 📖 **Documentação (site):** o site completo, multi-página e com busca, fica em
+> [`documentacao/`](documentacao/src/index.md) — fonte em Markdown
+> (`generate_site.py` gera `documentacao/site/`, um site estático pronto para
+> hospedar em qualquer lugar).
 
 ---
 

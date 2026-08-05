@@ -101,16 +101,18 @@ Shader::Shader(const std::string& name, const std::string& vertexSrc, const std:
 
     int isLinked;
     glGetProgramiv(m_RendererID, GL_LINK_STATUS, &isLinked);
-    if (!isLinked) {
+    m_IsValid = (isLinked == GL_TRUE);
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+    if (!m_IsValid) {
         int len;
         glGetProgramiv(m_RendererID, 0x8B84, &len);
         std::vector<char> info(len);
         glGetProgramInfoLog(m_RendererID, len, &len, info.data());
         KZ_CORE_ERROR("Falha ao vincular o programa de shader '{0}': {1}", name, info.data());
+        return; // m_RendererID continua alocado, mas o shader não é válido
     }
 
-    glDeleteShader(vs);
-    glDeleteShader(fs);
     KZ_CORE_INFO("Shader '{0}' compilado com sucesso (id={1}).", name, m_RendererID);
 }
 

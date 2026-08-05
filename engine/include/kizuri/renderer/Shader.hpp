@@ -41,12 +41,19 @@ public:
 
     const std::string& GetName() const { return m_Name; }
 
+    // true se o programa foi compilado E vinculado com sucesso. Um Shader
+    // cuja criação falhou ainda tem um m_RendererID não-zero (glCreateProgram
+    // devolve handle mesmo com link quebrado) — IsValid() distingue os dois,
+    // pra um driver que rejeite um shader não quebrar o frame inteiro.
+    bool IsValid() const { return m_IsValid; }
+
     static Ref<Shader> CreateFromFiles(const std::string& vertexPath, const std::string& fragmentPath);
 
 private:
     int GetUniformLocation(const std::string& name);
 
     uint32_t m_RendererID = 0;
+    bool m_IsValid = false;
     std::string m_Name;
     std::unordered_map<std::string, int> m_UniformLocationCache;
 };

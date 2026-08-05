@@ -287,3 +287,19 @@
   (Prefab e snapshot de Play/Stop não mudam)
 
 ---
+
+## ✅ v0.20 — Viewport preto em OpenGL 4.x (primeiro teste em GPU 4.6 real)
+
+- [x] Bug: tela preta no PC da escola (GL 4.6). Causa: o SSR (novo, só roda em
+  4.0+) reconstruía a normal por dFdx/dFdy — em silhuetas/bordas a derivada é
+  ~0, `normalize(0)` = NaN, e o NaN propagava pro composite (tela preta).
+  No 3.3 o SSR não roda, por isso nunca apareceu antes.
+- [x] SSR: descarta pixels de normal degenerada (dot(n,n)<1e-8), sanitiza a
+  cor do impacto e clampeia a saída — nunca mais emite NaN
+- [x] Composite: guarda anti-NaN no reflexo + guarda FINAL (nenhum passe de
+  pós pode apagar a tela com NaN/Inf)
+- [x] Bright-pass: guarda anti-NaN (bloom não propaga)
+- [x] Shader::IsValid(): shader que falha ao vincular não roda mais — SSR
+  desligado silenciosamente se o driver rejeitar (em vez de frame quebrado)
+
+---

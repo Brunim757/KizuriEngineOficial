@@ -696,6 +696,7 @@ uniform float u_Threshold;
 
 void main() {
     vec3 color = texture(u_SceneColor, v_TexCoord).rgb;
+    if (any(isnan(color)) || any(isinf(color))) color = vec3(0.0); // guarda anti-NaN
     float brightness = max(color.r, max(color.g, color.b));
     const float knee = 0.1; // faixa fixa e pequena, só pra suavizar a borda — não desloca o corte de verdade
     float soft = clamp(brightness - u_Threshold + knee, 0.0, 2.0 * knee);
@@ -770,8 +771,16 @@ void main() {
 
     vec3 bloom = texture(u_BloomBlur, uv).rgb;
     vec3 color = hdr + bloom * u_BloomIntensity;
-    if (u_HasSSR) color += texture(u_SSRTexture, uv).rgb; // reflexos (ray tracing em tela)
+    if (u_HasSSR) {
+        // Guarda anti-NaN: um reflexo degenerado (SSR) não pode envenenar
+        // o frame inteiro com NaN (tela preta).
+        vec3 ssr = texture(u_SSRTexture, uv).rgb;
+        if (any(isnan(ssr)) || any(isinf(ssr))) ssr = vec3(0.0);
+        color += ssr;
+    }
     if (u_HasAO) color *= texture(u_AOTexture, uv).r;
+    // Guarda final: NENHUM passe de pós pode produzir NaN/Inf e apagar a tela.
+    if (any(isnan(color)) || any(isinf(color))) color = vec3(0.0);
     color *= u_Exposure;
     if (u_ToneMapping == 1) color = Reinhard(color);
     else if (u_ToneMapping == 2) color = clamp(Filmic(color), 0.0, 1.0);
@@ -894,7 +903,12 @@ void main() {
     if (depth >= 0.9999) return; // céu: já tem reflexo do IBL, não duplica
 
     vec3 fragPos = ReconstructViewPos(v_TexCoord, depth);
-    vec3 normal = normalize(cross(dFdx(fragPos), dFdy(fragPos)));
+    vec3 n = cross(dFdx(fragPos), dFdy(fragPos));
+    // Silhuetas/bordas de objeto podem ter derivadas quase paralelas -> cross
+    // ~0 -> normalize() vira NaN. NaN aqui POISONA o composite (tela preta),
+    // então descarta esses pixels em vez de refletir neles.
+    if (dot(n, n) < 1e-8) return;
+    vec3 normal = normalize(n);
     if (dot(normal, -fragPos) < 0.001) return; // face voltada pra longe
 
     vec3 viewDir = normalize(fragPos);
@@ -936,9 +950,10 @@ void main() {
             // Atingiu: reflete a cor da cena naquele ponto. Fresnel de
             // Schlick aproximado — ângulos rasantes refletem bem mais.
             vec3 hitColor = texture(u_SceneColor, uv).rgb;
+            if (any(isnan(hitColor)) || any(isinf(hitColor))) hitColor = vec3(0.0);
             float fresnel = pow(1.0 - clamp(dot(normal, -viewDir), 0.0, 1.0), 5.0);
             float strength = mix(0.04, 1.0, fresnel);
-            o_Color = vec4(hitColor * strength * u_Intensity, 1.0);
+            o_Color = vec4(clamp(hitColor * strength * u_Intensity, 0.0, 32.0), 1.0);
             return;
         }
     }
@@ -2125,7 +2140,7 @@ void Renderer3D::EndScene() {
     // O shader só existe em 4.0+ (loop de comprimento variável), então aqui
     // basta conferir se ele foi criado — em 3.3 a feature fica desligada.
     bool hasSSR = false;
-    if (s_SSRShader && s_Settings.SSREnabled) {
+    if (s_SSRShader && s_SSRShader->IsValid() && s_Settings.SSREnabled) {
         EnsureSSRBuffer(internalW, internalH);
         glBindFramebuffer(GL_FRAMEBUFFER, s_SSRFBO);
         glViewport(0, 0, (GLsizei)s_SSRWidth, (GLsizei)s_SSRHeight);

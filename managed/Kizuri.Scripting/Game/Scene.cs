@@ -49,6 +49,35 @@ public static class Scene
 		return true;
 	}
 
+	// Raycast 3D contra o mundo Bullet (só durante o Play). Devolve a primeira
+	// entidade atingida, o ponto do impacto e a fração [0,1].
+	public static bool Raycast3D(Math.Vector3 from, Math.Vector3 to, out Entity hit, out Math.Vector3 point, out float fraction)
+	{
+		hit = Entity.Invalid;
+		point = default;
+		fraction = 1f;
+		uint handle = 0;
+		float hx = 0f, hy = 0f, hz = 0f;
+		if (Interop.KizuriNative.kz_physics3d_raycast(from.X, from.Y, from.Z, to.X, to.Y, to.Z,
+			out hx, out hy, out hz, out fraction, out handle) == 0)
+			return false;
+		hit = new Entity(handle);
+		point = new Math.Vector3(hx, hy, hz);
+		return true;
+	}
+
+	// OverlapSphere 3D (Bullet, só no Play): true se alguma entidade com
+	// collider tocar a esfera.
+	public static bool OverlapSphere3D(Math.Vector3 center, float radius, out Entity hit)
+	{
+		hit = Entity.Invalid;
+		uint handle = 0;
+		if (Interop.KizuriNative.kz_physics3d_overlap_sphere(center.X, center.Y, center.Z, radius, out handle) == 0)
+			return false;
+		hit = new Entity(handle);
+		return true;
+	}
+
 	// OverlapCircle 2D: true se algum collider tocar o círculo (só no Play).
 	// Devolve a entidade mais próxima.
 	public static bool OverlapCircle2D(Math.Vector2 center, float radius, out Entity hit)

@@ -5,12 +5,14 @@ using Kizuri.Math;
 // mesh renderer com material PBR, rotação/escala em runtime e parâmetros de
 // câmera. O cubo usa o primeiro asset real da engine (content/models/Cube.glb
 // importado via glTF) quando o path é apontado; por padrão usa o builtin.
-public sealed class Demo3D : Script
+	public sealed class Demo3D : Script
 {
 	private Entity _cube;
 	private Entity _physicsBox;
+	private Entity _spinningBall;
 	private float _t;
 	private float _impulseTimer = 1f;
+	private float _rayTimer = 1f;
 
 	public override void OnCreate()
 	{
@@ -38,13 +40,22 @@ public sealed class Demo3D : Script
 		_physicsBox.AddRigidbody3D(BodyType3D.Dynamic, 1f);
 		_physicsBox.AddBoxCollider3D(0.5f, 0.5f, 0.5f);
 
+		// Bola que gira com torque (valida ApplyTorque / angular velocity).
+		_spinningBall = Scene.CreateEntity("BolaGirando");
+		_spinningBall.AddMeshRenderer("builtin:sphere");
+		_spinningBall.SetMaterial(0.2f, 0.9f, 0.4f, metallic: 0.3f, roughness: 0.4f);
+		_spinningBall.SetPosition(new Vector3(-1.5f, 5f, 1f));
+		_spinningBall.AddRigidbody3D(BodyType3D.Dynamic, 1f);
+		_spinningBall.AddSphereCollider3D(0.5f);
+
 		// Ajusta a câmera de perspectiva da cena em runtime.
 		var cam = Scene.GetPrimaryCamera();
 		if (cam.IsValid) cam.SetCamera(60f, 0.05f, 500f);
 
-		// Busca por nome (valida Scene.Find).
+		// Busca por nome (valida Scene.Find) + renomeia em runtime.
 		var found = Scene.Find("Cubo");
-		Log.Info($"Demo3D pronto: sol + luz pontual + cubo PBR + física 3D. (Scene.Find('Cubo')={(found.IsValid ? "ok" : "falhou")})");
+		if (found.IsValid) found.Name = "Cubo Renomeado";
+		Log.Info($"Demo3D pronto: (Scene.Find='{found.Name}') time={Time.time:0.00}s");
 	}
 
 	public override void OnUpdate(float deltaSeconds)
@@ -74,6 +85,28 @@ public sealed class Demo3D : Script
 			{
 				Log.Info($"Caixa física vel. atual: ({v.X:0.00}, {v.Y:0.00}, {v.Z:0.00})");
 				_physicsBox.ApplyImpulse(new Vector3(0f, 6f, 0f));
+			}
+		}
+
+		// Bola gira com torque (ApplyTorque) — valida a física angular.
+		if (_spinningBall.IsValid)
+		{
+			_spinningBall.ApplyTorque(new Vector3(2f, 4f, 1f) * deltaSeconds);
+			if (_spinningBall.TryGetAngularVelocity(out var w))
+				_spinningBall.SetMaterial(0.2f, 0.9f, 0.4f, metallic: 0.3f, roughness: 0.4f);
+		}
+
+		// Raycast 3D de exemplo: raio pra baixo, loga o que acerta.
+		_rayTimer -= deltaSeconds;
+		if (_rayTimer <= 0f)
+		{
+			_rayTimer = 1f;
+			if (Entity.TryGetTransform(out var rt))
+			{
+				var from = new Vector3(rt.Translation.X, rt.Translation.Y, rt.Translation.Z);
+				var to = new Vector3(rt.Translation.X, rt.Translation.Y - 20f, rt.Translation.Z);
+				if (Scene.Raycast3D(from, to, out var hit, out var pt, out var frac))
+					Log.Info($"Raycast3D acertou '{hit.Name}' em ({pt.X:0.00},{pt.Y:0.00},{pt.Z:0.00}) f={frac:0.00}");
 			}
 		}
 	}

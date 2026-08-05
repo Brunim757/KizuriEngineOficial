@@ -55,6 +55,16 @@ public:
     // (só durante o Play). Devolve a entidade mais próxima.
     bool OverlapCircle2D(const glm::vec2& center, float radius, Entity& outEntity);
 
+    // Raycast 3D (Bullet): da origem até o destino (só durante o Play).
+    // Devolve a primeira entidade atingida (Rigidbody3D + collider), o ponto
+    // do impacto e a fração [0,1]. false = não acertou nada.
+    bool Raycast3D(const glm::vec3& from, const glm::vec3& to,
+                   Entity& outEntity, glm::vec3& outPoint, float& outFraction);
+
+    // OverlapSphere 3D: true se alguma entidade com collider tocar a esfera
+    // (só durante o Play). Devolve uma entidade atingida.
+    bool OverlapSphere3D(const glm::vec3& center, float radius, Entity& outEntity);
+
     // Duplica 'source' e toda a subárvore dela, com UUIDs novos (e um leve
     // deslocamento pra não nascer em cima do original). Devolve a raiz nova.
     Entity DuplicateEntity(Entity source);

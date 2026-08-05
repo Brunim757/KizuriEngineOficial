@@ -14,12 +14,15 @@
 #include <btBulletDynamicsCommon.h>
 
 #include <unordered_map>
+#include <cstring>
 
 namespace {
 
 kizuri::Scene* s_ActiveScene = nullptr;
 double s_DeltaSeconds = 0.0;
 float s_TimeScale = 1.0f;
+double s_Elapsed = 0.0;        // tempo acumulado (escalado por TimeScale)
+double s_UnscaledElapsed = 0.0;
 
 // handle opaco (uint32) -> UUID estável da entidade. Evita expor entt::entity
 // ao C#; o UUID também sobrevive se a entidade for recriada.
@@ -70,7 +73,12 @@ KZ_SCRIPT_API void kz_set_active_scene(void* scene) {
 
 KZ_SCRIPT_API void kz_set_time_delta(double seconds) {
     s_DeltaSeconds = seconds;
+    s_Elapsed += seconds * s_TimeScale;
+    s_UnscaledElapsed += seconds;
 }
+
+KZ_SCRIPT_API double kz_time_get_time() { return s_Elapsed; }
+KZ_SCRIPT_API double kz_time_get_unscaled_time() { return s_UnscaledElapsed; }
 
 // ---------------------------------------------------------------------------
 // Log — level spdlog (0=trace..5=critical); canal 0 = Core, 1 = App.
@@ -785,6 +793,81 @@ KZ_SCRIPT_API void kz_rigidbody3d_set_linear_velocity(uint32_t entity, float vx,
     if (!body) return;
     body->setLinearVelocity(btVector3(vx, vy, vz));
     body->activate();
+}
+
+KZ_SCRIPT_API int kz_rigidbody3d_apply_torque(uint32_t entity, float tx, float ty, float tz) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::Rigidbody3DComponent>()) return 0;
+    auto* body = static_cast<btRigidBody*>(e.GetComponent<kizuri::Rigidbody3DComponent>().RuntimeBody);
+    if (!body) return 0;
+    body->applyTorque(btVector3(tx, ty, tz));
+    body->activate();
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_rigidbody3d_get_angular_velocity(uint32_t entity, float* outWX, float* outWY, float* outWZ) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::Rigidbody3DComponent>()) return 0;
+    auto* body = static_cast<btRigidBody*>(e.GetComponent<kizuri::Rigidbody3DComponent>().RuntimeBody);
+    if (!body) return 0;
+    const btVector3& w = body->getAngularVelocity();
+    if (outWX) *outWX = w.x();
+    if (outWY) *outWY = w.y();
+    if (outWZ) *outWZ = w.z();
+    return 1;
+}
+
+KZ_SCRIPT_API void kz_rigidbody3d_set_angular_velocity(uint32_t entity, float wx, float wy, float wz) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::Rigidbody3DComponent>()) return;
+    auto* body = static_cast<btRigidBody*>(e.GetComponent<kizuri::Rigidbody3DComponent>().RuntimeBody);
+    if (!body) return;
+    body->setAngularVelocity(btVector3(wx, wy, wz));
+    body->activate();
+}
+
+// --- Queries 3D (Bullet) — só durante o Play, como as de 2D ---
+KZ_SCRIPT_API int kz_physics3d_raycast(float x0, float y0, float z0,
+                                       float x1, float y1, float z1,
+                                       float* outX, float* outY, float* outZ,
+                                       float* outFraction, uint32_t* outHitEntity) {
+    if (s_ActiveScene == nullptr) return 0;
+    kizuri::Entity hit;
+    glm::vec3 point;
+    float fraction = 1.0f;
+    if (!s_ActiveScene->Raycast3D({ x0, y0, z0 }, { x1, y1, z1 }, hit, point, fraction)) return 0;
+    if (outX) *outX = point.x;
+    if (outY) *outY = point.y;
+    if (outZ) *outZ = point.z;
+    if (outFraction) *outFraction = fraction;
+    if (outHitEntity) *outHitEntity = kizuri::scripting::RegisterEntityHandle(hit);
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_physics3d_overlap_sphere(float x, float y, float z, float radius,
+                                              uint32_t* outHitEntity) {
+    if (s_ActiveScene == nullptr) return 0;
+    kizuri::Entity hit;
+    if (!s_ActiveScene->OverlapSphere3D({ x, y, z }, radius, hit)) return 0;
+    if (outHitEntity) *outHitEntity = kizuri::scripting::RegisterEntityHandle(hit);
+    return 1;
+}
+
+// --- Nome da entidade (Tag) ---
+KZ_SCRIPT_API int kz_entity_get_name(uint32_t entity, char* outBuffer, int bufferSize) {
+    auto e = Resolve(entity);
+    if (!e || outBuffer == nullptr || bufferSize <= 0) return 0;
+    std::string name;
+    if (e.HasComponent<kizuri::TagComponent>()) name = e.GetComponent<kizuri::TagComponent>().Tag;
+    strncpy(outBuffer, name.c_str(), (size_t)bufferSize - 1);
+    outBuffer[bufferSize - 1] = '\0';
+    return 1;
+}
+
+KZ_SCRIPT_API void kz_entity_set_name(uint32_t entity, const char* name) {
+    auto e = Resolve(entity);
+    if (!e || name == nullptr || !e.HasComponent<kizuri::TagComponent>()) return;
+    e.GetComponent<kizuri::TagComponent>().Tag = name;
 }
 
 } // extern "C"

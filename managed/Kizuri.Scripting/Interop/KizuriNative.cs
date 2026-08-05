@@ -21,6 +21,8 @@ internal static class KizuriNative
     // ---- Time ---------------------------------------------------------------
     [DllImport(Lib)] internal static extern void kz_set_time_delta(double seconds);
     [DllImport(Lib)] internal static extern double kz_time_delta_seconds();
+    [DllImport(Lib)] internal static extern double kz_time_get_time();
+    [DllImport(Lib)] internal static extern double kz_time_get_unscaled_time();
     [DllImport(Lib)] internal static extern void kz_set_time_scale(float scale);
     [DllImport(Lib)] internal static extern float kz_get_time_scale();
 
@@ -45,6 +47,8 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_scene_request_load([MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern uint kz_scene_get_primary_camera();
     [DllImport(Lib)] internal static extern uint kz_scene_find_entity([MarshalAs(UnmanagedType.LPUTF8Str)] string name);
+    [DllImport(Lib)] internal static extern int kz_entity_get_name(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] System.Text.StringBuilder buffer, int bufferSize);
+    [DllImport(Lib)] internal static extern void kz_entity_set_name(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string name);
     [DllImport(Lib)] internal static extern uint kz_scene_duplicate_entity(uint entity);
 
     // ---- Adicionar componentes em runtime -------------------------------------
@@ -75,6 +79,11 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_rigidbody3d_apply_impulse(uint entity, float ix, float iy, float iz);
     [DllImport(Lib)] internal static extern int kz_rigidbody3d_get_linear_velocity(uint entity, out float vx, out float vy, out float vz);
     [DllImport(Lib)] internal static extern void kz_rigidbody3d_set_linear_velocity(uint entity, float vx, float vy, float vz);
+    [DllImport(Lib)] internal static extern int kz_rigidbody3d_apply_torque(uint entity, float tx, float ty, float tz);
+    [DllImport(Lib)] internal static extern int kz_rigidbody3d_get_angular_velocity(uint entity, out float wx, out float wy, out float wz);
+    [DllImport(Lib)] internal static extern void kz_rigidbody3d_set_angular_velocity(uint entity, float wx, float wy, float wz);
+    [DllImport(Lib)] internal static extern int kz_physics3d_raycast(float x0, float y0, float z0, float x1, float y1, float z1, out float hitX, out float hitY, out float hitZ, out float fraction, out uint hitEntity);
+    [DllImport(Lib)] internal static extern int kz_physics3d_overlap_sphere(float x, float y, float z, float radius, out uint hitEntity);
 
     // ---- Mutação de componentes em runtime ------------------------------------
     [DllImport(Lib)] internal static extern int kz_sprite_set_texture(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);

@@ -25,6 +25,18 @@ public readonly struct Entity
 	public bool IsValid => Handle != 0;
 	public uint Id => Handle;
 
+	// Nome (Tag) da entidade — lê e renomeia em runtime.
+	public string Name
+	{
+		get
+		{
+			var sb = new System.Text.StringBuilder(128);
+			Interop.KizuriNative.kz_entity_get_name(Handle, sb, sb.Capacity);
+			return sb.ToString();
+		}
+		set => Interop.KizuriNative.kz_entity_set_name(Handle, value);
+	}
+
 	public bool HasComponent(ComponentType type)
 		=> Interop.KizuriNative.kz_entity_has_component(Handle, (int)type) != 0;
 
@@ -167,6 +179,18 @@ public readonly struct Entity
 
 	public void SetVelocity(Math.Vector3 velocity)
 		=> Interop.KizuriNative.kz_rigidbody3d_set_linear_velocity(Handle, velocity.X, velocity.Y, velocity.Z);
+
+	public bool ApplyTorque(Math.Vector3 torque)
+		=> Interop.KizuriNative.kz_rigidbody3d_apply_torque(Handle, torque.X, torque.Y, torque.Z) != 0;
+
+	public bool TryGetAngularVelocity(out Math.Vector3 angular)
+	{
+		angular = Math.Vector3.Zero;
+		return Interop.KizuriNative.kz_rigidbody3d_get_angular_velocity(Handle, out angular.X, out angular.Y, out angular.Z) != 0;
+	}
+
+	public void SetAngularVelocity(Math.Vector3 angular)
+		=> Interop.KizuriNative.kz_rigidbody3d_set_angular_velocity(Handle, angular.X, angular.Y, angular.Z);
 
 	public bool AddCircleCollider2D(float radius = 0.5f, float density = 1f, float friction = 0.5f, float restitution = 0f)
 		=> Interop.KizuriNative.kz_entity_add_circle_collider2d(Handle, radius, density, friction, restitution) != 0;

@@ -274,6 +274,57 @@ bool Scene::OverlapCircle2D(const glm::vec2& center, float radius, Entity& outEn
     return true;
 }
 
+bool Scene::Raycast3D(const glm::vec3& from, const glm::vec3& to,
+                      Entity& outEntity, glm::vec3& outPoint, float& outFraction) {
+    if (m_PhysicsWorld3D == nullptr) return false;
+    btVector3 bfrom(from.x, from.y, from.z);
+    btVector3 bto(to.x, to.y, to.z);
+    btCollisionWorld::ClosestRayResultCallback cb(bfrom, bto);
+    m_PhysicsWorld3D->rayTest(bfrom, bto, cb);
+    if (!cb.hasHit()) return false;
+
+    outPoint = { cb.m_hitPointWorld.x(), cb.m_hitPointWorld.y(), cb.m_hitPointWorld.z() };
+    outFraction = cb.m_closestHitFraction;
+    void* up = cb.m_collisionObject->getUserPointer();
+    if (!up) return false;
+    outEntity = Entity{ static_cast<entt::entity>(reinterpret_cast<uintptr_t>(up)), this };
+    return true;
+}
+
+// Coleta a primeira entidade que toca a esfera fantasma (Bullet).
+struct OverlapSphereCallback : public btCollisionWorld::ContactResultCallback {
+    entt::entity Best = entt::null;
+
+    btScalar addSingleResult(btManifoldPoint&, const btCollisionObjectWrapper*,
+                             int, int, const btCollisionObjectWrapper* otherWrap, int, int) override {
+        void* up = otherWrap->getCollisionObject()->getUserPointer();
+        if (up) Best = static_cast<entt::entity>(reinterpret_cast<uintptr_t>(up));
+        return 0.0f; // para na primeira
+    }
+};
+
+bool Scene::OverlapSphere3D(const glm::vec3& center, float radius, Entity& outEntity) {
+    if (m_PhysicsWorld3D == nullptr) return false;
+
+    btSphereShape sphere(radius);
+    btPairCachingGhostObject ghost;
+    ghost.setCollisionShape(&sphere);
+    btTransform tr;
+    tr.setIdentity();
+    tr.setOrigin(btVector3(center.x, center.y, center.z));
+    ghost.setWorldTransform(tr);
+    ghost.setCollisionFlags(btCollisionObject::CF_NO_CONTACT_RESPONSE);
+    m_PhysicsWorld3D->addCollisionObject(&ghost, btBroadphaseProxy::SensorTrigger);
+
+    OverlapSphereCallback cb;
+    m_PhysicsWorld3D->contactTest(&ghost, cb);
+    m_PhysicsWorld3D->removeCollisionObject(&ghost);
+
+    if (cb.Best == entt::null) return false;
+    outEntity = Entity{ cb.Best, this };
+    return true;
+}
+
 Entity Scene::DuplicateEntity(Entity source) {
     if (!source) return {};
 

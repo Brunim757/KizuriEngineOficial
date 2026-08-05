@@ -12,6 +12,7 @@
 #include "kizuri/audio/AudioEngine.hpp"
 #include "kizuri/project/Project.hpp"
 #include <btBulletDynamicsCommon.h>
+#include <box2d/box2d.h>
 
 #include <unordered_map>
 #include <cstring>

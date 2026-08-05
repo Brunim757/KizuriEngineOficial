@@ -737,7 +737,7 @@ void Scene::BuildTilemapColliders() {
                 bodyDef.type = b2_staticBody;
                 bodyDef.position.Set(cx, cy);
     b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
-    body->SetGravityScale(rb.GravityScale);
+    body->SetGravityScale(rb2d.GravityScale);
                 // Tilemap: userData=0 — scripts recebem Entity inválida no "other".
                 body->GetUserData().pointer = 0;
                 b2PolygonShape shape;

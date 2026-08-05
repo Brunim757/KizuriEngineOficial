@@ -121,6 +121,7 @@ struct LightComponent {
     float Range = 10.0f;
     float InnerConeDeg = 20.0f;
     float OuterConeDeg = 30.0f;
+    bool CastsShadow = false; // Point/Spot: projeta sombra (depth cubemap)
 };
 
 // Estado runtime de uma partícula viva — não serializado, some ao fechar/recarregar a cena.

@@ -1262,6 +1262,7 @@ void Scene::SubmitLights() {
         l.Range = lc.Range;
         l.InnerConeDeg = lc.InnerConeDeg;
         l.OuterConeDeg = lc.OuterConeDeg;
+        l.CastsShadow = lc.CastsShadow;
         Renderer3D::SubmitLight(l);
     }
 }

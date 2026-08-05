@@ -91,11 +91,13 @@ public readonly struct Entity
 		=> Interop.KizuriNative.kz_camera_set_params(Handle, fovDeg, nearClip, farClip);
 
 	// Luz dinâmica: type 0=Direcional (direção = rotação da entidade),
-	// 1=Ponto, 2=Spot (cones em graus). A 1ª direcional da cena projeta sombra.
+	// 1=Ponto, 2=Spot (cones em graus). A 1ª direcional da cena projeta sombra;
+	// pontos/spot projetam se castsShadow=true.
 	public bool AddLight(LightType type, float r = 1f, float g = 1f, float b = 1f,
 	                     float intensity = 1f, float range = 10f,
-	                     float innerConeDeg = 20f, float outerConeDeg = 30f)
-		=> Interop.KizuriNative.kz_entity_add_light(Handle, (int)type, r, g, b, intensity, range, innerConeDeg, outerConeDeg) != 0;
+	                     float innerConeDeg = 20f, float outerConeDeg = 30f,
+	                     bool castsShadow = false)
+		=> Interop.KizuriNative.kz_entity_add_light(Handle, (int)type, r, g, b, intensity, range, innerConeDeg, outerConeDeg, castsShadow ? 1 : 0) != 0;
 
 	// Mesh 3D: "builtin:cube" | "builtin:plane" | "builtin:sphere" ou caminho
 	// relativo de .obj/.glb/.gltf (ex.: "Assets/Models/Cube.glb").

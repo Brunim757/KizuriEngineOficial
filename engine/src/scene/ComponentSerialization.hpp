@@ -206,7 +206,8 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
         auto& lc = entity.GetComponent<LightComponent>();
         je["Light"] = {
             { "Type", (int)lc.Type }, { "Color", Vec3ToJson(lc.Color) }, { "Intensity", lc.Intensity },
-            { "Range", lc.Range }, { "InnerConeDeg", lc.InnerConeDeg }, { "OuterConeDeg", lc.OuterConeDeg }
+            { "Range", lc.Range }, { "InnerConeDeg", lc.InnerConeDeg }, { "OuterConeDeg", lc.OuterConeDeg },
+            { "CastsShadow", lc.CastsShadow }
         };
     }
 
@@ -687,6 +688,7 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         lc.Range = jl.value("Range", 10.0f);
         lc.InnerConeDeg = jl.value("InnerConeDeg", 20.0f);
         lc.OuterConeDeg = jl.value("OuterConeDeg", 30.0f);
+        lc.CastsShadow = jl.value("CastsShadow", false);
     } else if (entity.HasComponent<LightComponent>()) {
         entity.RemoveComponent<LightComponent>();
     }

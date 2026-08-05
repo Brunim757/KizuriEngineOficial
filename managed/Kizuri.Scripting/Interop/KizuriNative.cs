@@ -55,7 +55,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_camera_set_params(uint entity, float fovDeg, float nearClip, float farClip);
     [DllImport(Lib)] internal static extern int kz_entity_add_circle_collider2d(uint entity, float radius, float density, float friction, float restitution);
     [DllImport(Lib)] internal static extern void kz_entity_set_sorting_layer(uint entity, int layer);
-    [DllImport(Lib)] internal static extern int kz_entity_add_light(uint entity, int type, float r, float g, float b, float intensity, float range, float innerConeDeg, float outerConeDeg);
+    [DllImport(Lib)] internal static extern int kz_entity_add_light(uint entity, int type, float r, float g, float b, float intensity, float range, float innerConeDeg, float outerConeDeg, int castsShadow);
     [DllImport(Lib)] internal static extern int kz_entity_add_mesh_renderer(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string meshSource);
 
     // ---- Animação esquelética (skinning) -------------------------------------

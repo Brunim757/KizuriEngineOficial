@@ -19,9 +19,9 @@ public sealed class Demo3D : Script
 		sun.AddLight(LightType.Directional, 1f, 0.95f, 0.85f, intensity: 2f);
 		sun.SetRotation(new Vector3(0.8f, 0.4f, 0f));
 
-		// Luz pontual colorida (efeito de fogo/magia).
+		// Luz pontual colorida com sombra (efeito de fogo/magia).
 		var point = Scene.CreateEntity("LuzPonto");
-		point.AddLight(LightType.Point, 1f, 0.3f, 0.1f, intensity: 5f, range: 8f);
+		point.AddLight(LightType.Point, 1f, 0.3f, 0.1f, intensity: 5f, range: 8f, castsShadow: true);
 		point.SetPosition(new Vector3(2f, 1.5f, 0f));
 
 		// Cubo PBR que gira e pulsa.

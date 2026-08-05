@@ -558,7 +558,8 @@ KZ_SCRIPT_API void kz_transform_set_scale(uint32_t entity, float x, float y, flo
 // spot é derivada da rotação do Transform, igual ao editor)
 // ---------------------------------------------------------------------------
 KZ_SCRIPT_API int kz_entity_add_light(uint32_t entity, int type, float r, float g, float b,
-                                      float intensity, float range, float innerConeDeg, float outerConeDeg) {
+                                      float intensity, float range, float innerConeDeg, float outerConeDeg,
+                                      int castsShadow) {
     auto e = Resolve(entity);
     if (!e) return 0;
     auto& lc = e.AddOrReplaceComponent<kizuri::LightComponent>();
@@ -568,6 +569,7 @@ KZ_SCRIPT_API int kz_entity_add_light(uint32_t entity, int type, float r, float 
     lc.Range = range;
     lc.InnerConeDeg = innerConeDeg;
     lc.OuterConeDeg = outerConeDeg;
+    lc.CastsShadow = castsShadow != 0;
     return 1;
 }
 

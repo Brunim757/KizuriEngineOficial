@@ -1025,6 +1025,13 @@ void EditorLayer::DrawSettingsGraphics() {
     if (ImGui::Combo("Shadow map (CSM)", &shadowIdx, shadowNames, 4)) m_GraphicsSettings.ShadowMapSize = shadowValues[shadowIdx];
     customTweak |= (ImGui::IsItemActive() || ImGui::IsItemActivated());
     customTweak |= ImGui::SliderInt("Suavização de sombra (PCF)", &m_GraphicsSettings.ShadowPCFRadius, 0, 3);
+    customTweak |= ImGui::DragFloat("Suavidade da sombra (PCSS)", &m_GraphicsSettings.ShadowSoftness, 0.01f, 0.0f, 1.0f);
+    const char* pointShadowNames[] = { "256", "512", "1024", "2048" };
+    int pointShadowValues[] = { 256, 512, 1024, 2048 };
+    int pointShadowIdx = 0;
+    for (int i = 0; i < 4; ++i) if (m_GraphicsSettings.PointShadowMapSize == pointShadowValues[i]) pointShadowIdx = i;
+    if (ImGui::Combo("Shadow map da luz pontual", &pointShadowIdx, pointShadowNames, 4)) m_GraphicsSettings.PointShadowMapSize = pointShadowValues[pointShadowIdx];
+    customTweak |= (ImGui::IsItemActive() || ImGui::IsItemActivated());
     ImGui::Separator();
     customTweak |= ImGui::Checkbox("Bloom", &m_GraphicsSettings.BloomEnabled);
     if (m_GraphicsSettings.BloomEnabled) {
@@ -3201,8 +3208,10 @@ void EditorLayer::DrawInspector() {
                     lc.Type = (LightType)current;
                 ImGui::ColorEdit3("Cor", &lc.Color.x);
                 ImGui::DragFloat("Intensidade", &lc.Intensity, 0.05f, 0.0f, FLT_MAX);
-                if (lc.Type != LightType::Directional)
+                if (lc.Type != LightType::Directional) {
                     ImGui::DragFloat("Alcance", &lc.Range, 0.1f, 0.1f, FLT_MAX);
+                    ImGui::Checkbox("Projeta sombra", &lc.CastsShadow);
+                }
                 if (lc.Type == LightType::Spot) {
                     ImGui::DragFloat("Cone Interno (°)", &lc.InnerConeDeg, 0.5f, 0.0f, lc.OuterConeDeg);
                     ImGui::DragFloat("Cone Externo (°)", &lc.OuterConeDeg, 0.5f, lc.InnerConeDeg, 89.0f);

@@ -423,9 +423,10 @@ void main() {
 )";
 
 // Céu atmosférico procedural: espalhamento Rayleigh (céu azul, avermelhado no
-// pôr-do-sol) + Mie (halo do sol) + estrelas à noite. É uma aproximação
-// artística de 1 termo (não o traçado físico completo), mas roda 100% em GLSL
-// 330 e escala pra qualquer versão. Saída HDR linear (tonemap no composite).
+// pôr-do-sol) + Mie suave (halo do sol) + estrelas à noite. Valores calibrados
+// PRA BAIXO de propósito: o céu vira IBL (irradiância + pré-filtro) e um Mie
+// forte demais lava tudo de branco (objetos coloridos viram branco). Clampado
+// em 4.0 pro cubemap de ambiente nunca estourar o tonemap.
 static const char* s_SkyFragmentSrc = R"(
 #version 330 core
 in vec3 v_LocalPos;
@@ -435,10 +436,9 @@ uniform vec3 u_SunDir;   // aponta DA superfície PRA o sol
 uniform vec3 u_SunColor;
 
 const float PI = 3.14159265359;
-// Coeficientes de espalhamento (escala artística, não física — calibrados
-// pra sair bonito depois do ACES).
-const vec3 BETA_R = vec3(0.18, 0.38, 0.70);  // Rayleigh (azul)
-const vec3 BETA_M = vec3(0.55, 0.50, 0.42);  // Mie (acinzentado/quente)
+const vec3 BETA_R = vec3(0.30, 0.55, 0.95);   // Rayleigh (azul)
+const float MIE_FACTOR = 0.05;                // Mie — sutil, não estoura o IBL
+const vec3 MIE_COLOR = vec3(0.85, 0.75, 0.6); // halo quente
 
 float phaseRayleigh(float mu) { return 3.0 / (16.0 * PI) * (1.0 + mu * mu); }
 float phaseMie(float mu) {
@@ -454,32 +454,28 @@ void main() {
     float sunLift = max(sun.y, 0.0);
     float view = dir.y;
 
-    // Comprimento óptico: espesso na horizontal, fino no zênite (abaixo do
-    // horizonte inverte pro chão). Valores calibrados pra NÃO estourar no
-    // ACES (horizonte claro é real, mas não pode virar branco).
+    // Comprimento óptico: espesso na horizontal, fino no zênite.
     float optical = 1.0 / max(abs(view) * 2.5 + 0.35, 0.35);
 
-    // Scattering integrado (Rayleigh + Mie) escalado pela elevação do sol.
-    vec3 sky = (BETA_R * phaseRayleigh(mu) + BETA_M * phaseMie(mu)) * optical;
-    sky *= u_SunColor * (0.4 + sunLift * 1.2);
+    // Scattering: Rayleigh azul + um toque de Mie perto do sol.
+    vec3 sky = BETA_R * phaseRayleigh(mu) * optical * 0.12;
+    sky += MIE_COLOR * phaseMie(mu) * MIE_FACTOR * optical;
+    sky *= u_SunColor * (0.5 + sunLift);
 
     // Base de dia (azul) que some à noite; tom quente no pôr-do-sol.
-    vec3 dayBase = mix(vec3(0.10, 0.17, 0.40), vec3(0.38, 0.52, 0.85), smoothstep(0.0, 0.6, sunLift));
-    vec3 sunsetTint = vec3(0.85, 0.35, 0.12);
-    float sunsetFade = smoothstep(0.08, 0.45, sunLift);
-    vec3 base = mix(sunsetTint, dayBase, sunsetFade);
-    sky = mix(base, sky, 0.9);
+    vec3 dayBase = mix(vec3(0.08, 0.14, 0.34), vec3(0.34, 0.48, 0.82), smoothstep(0.0, 0.6, sunLift));
+    vec3 sunsetTint = vec3(0.80, 0.32, 0.10);
+    vec3 base = mix(sunsetTint, dayBase, smoothstep(0.08, 0.45, sunLift));
+    sky = mix(base, sky, 0.5);
 
-    // Chão: escurece e espelha um pouco do tom do céu no horizonte.
+    // Chão: escurece.
     if (view < 0.0) {
-        float g = smoothstep(0.0, -0.5, view);
-        sky = mix(sky, vec3(0.035, 0.04, 0.05) * (0.5 + sunLift), g);
+        sky = mix(sky, vec3(0.03, 0.035, 0.045) * (0.5 + sunLift), smoothstep(0.0, -0.5, view));
     }
 
-    // Disco do sol + halo Mie.
-    sky += u_SunColor * pow(max(mu, 0.0), 4000.0) * 16.0;
-    sky += u_SunColor * pow(max(mu, 0.0), 160.0) * 1.2;
-    sky += u_SunColor * pow(max(mu, 0.0), 12.0) * 0.10;
+    // Disco do sol + halo compacto.
+    sky += u_SunColor * pow(max(mu, 0.0), 3000.0) * 10.0;
+    sky += u_SunColor * pow(max(mu, 0.0), 120.0) * 0.3;
 
     // Estrelas quando o sol está abaixo do horizonte.
     if (sunLift < 0.06) {
@@ -488,9 +484,10 @@ void main() {
         vec2 f = fract(sp.xy) - 0.5;
         float star = smoothstep(0.48, 0.5, 1.0 - length(f));
         star *= step(0.997, fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453));
-        sky += vec3(0.85, 0.9, 1.0) * star * (1.0 - sunLift * 16.0) * 0.5;
+        sky += vec3(0.85, 0.9, 1.0) * star * (1.0 - sunLift * 16.0) * 0.4;
     }
 
+    sky = min(sky, vec3(4.0)); // nunca estoura o IBL
     o_Color = vec4(sky, 1.0);
 }
 )";

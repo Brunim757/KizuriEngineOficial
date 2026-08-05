@@ -8,25 +8,33 @@
 
 namespace kizuri {
 
-// Versão GLSL do contexto atual (parse de GL_VERSION uma vez, cacheado).
-// GL 3.3 -> 330, 4.0 -> 400, 4.1 -> 410, 4.3 -> 430, 4.5 -> 450, etc. É o
-// que permite shaders escalarem: num PC 3.3 o mínimo é 330, mas num 4.5 o
-// mesmo shader compila como 450 (e pode usar #if KZ_GLSL_VERSION >= 430).
+// Versão GLSL do CONTEXTO atual (parse de GL_SHADING_LANGUAGE_VERSION uma
+// vez, cacheado). Ex.: "3.30 NVIDIA", "4.50 Core Profile", "4.00".
+// IMPORTANTE: usa a GLSL DO CONTEXTO, não o GL_VERSION — alguns drivers
+// reportam GL_VERSION maior que o contexto real (ex.: "4.0" num contexto
+// 3.3), e compilar shader 400 num contexto 3.3 quebra (viewport preto).
 int GetGLSLVersion() {
     static int s_glsl = 0;
     if (s_glsl == 0) {
-        const char* v = (const char*)glGetString(GL_VERSION); // ex.: "4.5.0 NVIDIA"
-        int major = 3, minor = 3;
+        const char* v = (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+        int major = 3, minor = 30;
         if (v) {
-            while (*v && !(*v >= '0' && *v <= '9')) ++v;
-            if (*v >= '0' && *v <= '9') major = *v - '0';
-            while (*v && *v != '.') ++v;
-            if (*v == '.') { ++v; if (*v >= '0' && *v <= '9') minor = *v - '0'; }
+            const char* p = v;
+            while (*p && !(*p >= '0' && *p <= '9')) ++p;
+            if (*p >= '0' && *p <= '9') major = *p - '0';
+            while (*p && *p != '.') ++p;
+            if (*p == '.') {
+                ++p;
+                int m = 0;
+                while (*p >= '0' && *p <= '9') { m = m * 10 + (*p - '0'); ++p; }
+                minor = m;
+            }
+            if (major > 4) major = 4;
+            if (major == 4 && minor > 60) minor = 60;
         }
-        if (major >= 4) s_glsl = major * 100 + minor * 10;   // 4.1 -> 410, 4.5 -> 450
-        else s_glsl = 330;                                   // 3.3 mínimo
+        s_glsl = major * 100 + minor;
         if (s_glsl < 330) s_glsl = 330;
-        KZ_CORE_INFO("Contexto OpenGL {0}.{1} -> GLSL {2} core.", major, minor, s_glsl);
+        KZ_CORE_INFO("Contexto GLSL {0} core.", s_glsl);
     }
     return s_glsl;
 }

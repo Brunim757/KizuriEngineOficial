@@ -94,10 +94,13 @@ void Window::Init(const WindowProps& props) {
     m_Data.Width = (uint32_t)winW;
     m_Data.Height = (uint32_t)winH;
 
-    // Tenta 4.5 core primeiro; em GPUs/drivers mais antigos (comum em
-    // notebooks com iGPU desatualizada ou sessões de área de trabalho
-    // remota) isso pode falhar, então caímos para 4.1 e depois 3.3 core.
-    const int contextVersions[][2] = { {4, 5}, {4, 1}, {3, 3} };
+    // Tenta a versão mais alta primeiro e desce até 3.3 core (mínimo). A
+    // cadeia inclui 4.6/4.5/4.3/4.1/4.0 — assim uma máquina que só chega a
+    // 4.0 (ou 4.3, etc) usa a versão MÁXIMA dela, não cai pro 3.3 à toa.
+    // Os shaders escalam via GetGLSLVersion (GL_SHADING_LANGUAGE_VERSION).
+    const int contextVersions[][2] = {
+        {4, 6}, {4, 5}, {4, 3}, {4, 1}, {4, 0}, {3, 3}
+    };
     for (auto& version : contextVersions) {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, version[0]);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, version[1]);

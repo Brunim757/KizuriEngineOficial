@@ -550,7 +550,7 @@ void EditorLayer::OnUpdate(Timestep ts) {
 
     // Carregamento assíncrono de cena: processa um lote por orçamento de
     // tempo (~4ms) a cada frame. A janela continua viva (eventos processados,
-    // overlay de progresso desenhado) — nada de travar com projeto grande.
+    // tela de carregamento com progresso desenhada) — nada de travar.
     if (m_SceneLoading) {
         float progress = m_PendingLoadProgress;
         bool done = false;
@@ -576,6 +576,11 @@ void EditorLayer::OnUpdate(Timestep ts) {
         } else {
             m_PendingLoadProgress = progress;
         }
+
+        // Durante a transição Hub -> Editor a Tela de Carregamento também
+        // avança o relógio (o mínimo de tempo só conta depois que o load
+        // termina; a tela cobre o carregamento inteiro).
+        if (m_EditorState == EditorState::Loading) m_LoadingElapsed += (float)ts;
         return; // nada de atualizar a cena enquanto o load roda
     }
 
@@ -2530,7 +2535,10 @@ void EditorLayer::DrawLoadingScreen() {
     ImVec2 ns = boldFont->CalcTextSizeA(boldFont->FontSize, FLT_MAX, 0.0f, m_LoadingProjectName.c_str());
     dl->AddText(boldFont, boldFont->FontSize, ImVec2(center.x - ns.x * 0.5f, center.y - 22.0f), IM_COL32(150, 150, 160, 255), m_LoadingProjectName.c_str());
 
+    // Barra de progresso: se há um carregamento assíncrono em andamento,
+    // mostra o progresso REAL da cena; senão, o tempo mínimo da tela.
     float t = m_LoadingElapsed / kHubLoadingMinSeconds;
+    if (m_SceneLoading) t = m_PendingLoadProgress;
     if (t > 1.0f) t = 1.0f;
     float barW = 320.0f, barH = 6.0f;
     ImVec2 barMin(center.x - barW * 0.5f, center.y + 24.0f);

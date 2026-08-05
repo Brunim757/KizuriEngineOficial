@@ -2687,6 +2687,16 @@ void EditorLayer::DrawContentBrowser() {
         }
 
         ImU32 iconColor = isDir ? IM_COL32(217, 180, 100, 255) : IM_COL32(150, 150, 156, 255);
+        if (!isDir) {
+            std::string ext = entry.path().extension().string();
+            for (auto& c : ext) c = (char)tolower((unsigned char)c);
+            if (ext == ".kzscene")       iconColor = IM_COL32(217, 180, 100, 255);
+            else if (ext == ".glb" || ext == ".gltf" || ext == ".obj") iconColor = IM_COL32(110, 210, 120, 255);
+            else if (ext == ".hdr")      iconColor = IM_COL32(90, 170, 230, 255);
+            else if (ext == ".kzprefab") iconColor = IM_COL32(100, 200, 190, 255);
+            else if (ext == ".wav" || ext == ".mp3" || ext == ".ogg" || ext == ".flac") iconColor = IM_COL32(190, 130, 220, 255);
+            else if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".tga") iconColor = IM_COL32(230, 120, 120, 255);
+        }
         if (isDir) {
             kizuri::editor::icons::Folder(dl, ImVec2(cursor.x + thumbSize * 0.15f, cursor.y + thumbSize * 0.15f), thumbSize * 0.7f, iconColor);
         } else {
@@ -2731,6 +2741,12 @@ void EditorLayer::DrawContentBrowser() {
         (void)clicked;
 
         if (ImGui::BeginPopupContextItem()) {
+            if (!isDir && ImGui::MenuItem("Renomear")) {
+                m_RenameTarget = entry.path();
+                strncpy(m_RenameBuffer, name.c_str(), sizeof(m_RenameBuffer) - 1);
+                m_RenameBuffer[sizeof(m_RenameBuffer) - 1] = '\0';
+                m_RequestRenamePopup = true;
+            }
             if (ImGui::MenuItem("Excluir")) {
                 std::error_code delEc;
                 std::filesystem::remove_all(entry.path(), delEc);
@@ -2742,6 +2758,31 @@ void EditorLayer::DrawContentBrowser() {
     }
 
     ImGui::EndTable();
+
+    // Modal de renomear (Arquivo > Content Browser).
+    if (m_RequestRenamePopup) {
+        m_RequestRenamePopup = false;
+        ImGui::OpenPopup("Renomear");
+    }
+    if (ImGui::BeginPopupModal("Renomear", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Novo nome do arquivo:");
+        ImGui::SetNextItemWidth(320.0f);
+        ImGui::InputText("##rename", m_RenameBuffer, sizeof(m_RenameBuffer));
+        bool ok = ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::Button("OK", ImVec2(80.0f, 0.0f));
+        if (ok) {
+            std::string newName = m_RenameBuffer;
+            if (!newName.empty() && !m_RenameTarget.empty()) {
+                std::error_code re;
+                std::filesystem::rename(m_RenameTarget, m_RenameTarget.parent_path() / newName, re);
+                if (re) KZ_CORE_ERROR("Falha ao renomear: {0}", re.message());
+            }
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancelar", ImVec2(80.0f, 0.0f))) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
+
     ImGui::End();
 }
 

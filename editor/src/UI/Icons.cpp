@@ -183,7 +183,6 @@ void PanelHeader(const char* label, IconFn icon) {
 void Maximize(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
     // Retângulo de fullscreen com 4 setas apontando pros cantos.
     dl->AddRect(ImVec2(p.x + s * 0.16f, p.y + s * 0.16f), ImVec2(p.x + s * 0.84f, p.y + s * 0.84f), color, 0, 0, s * 0.09f);
-    const float arrow = s * 0.18f;
     const ImU32 c = color;
     // cantos: cima-esq, cima-dir, baixo-esq, baixo-dir
     dl->AddLine(ImVec2(p.x + s * 0.30f, p.y + s * 0.16f), ImVec2(p.x + s * 0.16f, p.y + s * 0.30f), c, s * 0.09f);

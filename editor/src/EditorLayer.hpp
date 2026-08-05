@@ -181,6 +181,11 @@ private:
     // Busca de entidade na Hierarquia (filtra por nome; lista plana).
     char m_HierarchySearchBuffer[64] = "";
 
+    // Renomear arquivo no Content Browser (menu de contexto).
+    bool m_RequestRenamePopup = false;
+    std::filesystem::path m_RenameTarget;
+    char m_RenameBuffer[256] = "";
+
     // Janela de configurações (Arquivo > Configurações).
     bool m_ShowSettings = false;
     kizuri::GraphicsSettings m_GraphicsSettings;

@@ -661,6 +661,7 @@ void Scene::RegisterPhysics2DEntity(Entity entity) {
     bodyDef.angle = transform.Rotation.z;
 
     b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
+    body->SetGravityScale(rb2d.GravityScale); // gravidade custom (platformers)
     body->GetUserData().pointer = static_cast<uintptr_t>(static_cast<uint32_t>(entity.GetHandle()));
     body->SetFixedRotation(rb2d.FixedRotation);
     rb2d.RuntimeBody = body;
@@ -736,8 +737,7 @@ void Scene::BuildTilemapColliders() {
                 b2BodyDef bodyDef;
                 bodyDef.type = b2_staticBody;
                 bodyDef.position.Set(cx, cy);
-    b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
-    body->SetGravityScale(rb2d.GravityScale);
+                b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
                 // Tilemap: userData=0 — scripts recebem Entity inválida no "other".
                 body->GetUserData().pointer = 0;
                 b2PolygonShape shape;

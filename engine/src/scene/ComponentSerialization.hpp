@@ -220,7 +220,8 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
             { "VelocityMin", Vec3ToJson(pc.VelocityMin) }, { "VelocityMax", Vec3ToJson(pc.VelocityMax) },
             { "Gravity", Vec3ToJson(pc.Gravity) },
             { "StartColor", Vec4ToJson(pc.StartColor) }, { "EndColor", Vec4ToJson(pc.EndColor) },
-            { "StartSize", pc.StartSize }, { "EndSize", pc.EndSize }
+            { "StartSize", pc.StartSize }, { "EndSize", pc.EndSize },
+            { "TexturePath", pc.TexturePath }
         };
     }
 
@@ -453,6 +454,8 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         pc.EndColor = JsonToVec4(jp["EndColor"]);
         pc.StartSize = jp.value("StartSize", 0.15f);
         pc.EndSize = jp.value("EndSize", 0.4f);
+        pc.TexturePath = jp.value("TexturePath", "");
+        if (!pc.TexturePath.empty()) pc.Texture = Texture2D::Create(ResolveSerializedPath(pc.TexturePath));
     }
 
     if (je.contains("AudioSource")) {
@@ -711,6 +714,8 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         pc.EndColor = JsonToVec4(jp["EndColor"]);
         pc.StartSize = jp.value("StartSize", 0.15f);
         pc.EndSize = jp.value("EndSize", 0.4f);
+        pc.TexturePath = jp.value("TexturePath", "");
+        pc.Texture = pc.TexturePath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(pc.TexturePath));
     } else if (entity.HasComponent<ParticleSystemComponent>()) {
         entity.RemoveComponent<ParticleSystemComponent>();
     }

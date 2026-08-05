@@ -1366,7 +1366,7 @@ void Scene::SubmitParticleSystems() {
             float t = glm::clamp(p.Age / p.Lifetime, 0.0f, 1.0f);
             instances.push_back({ p.Position, glm::mix(pc.StartSize, pc.EndSize, t), glm::mix(pc.StartColor, pc.EndColor, t) });
         }
-        Renderer3D::SubmitParticles(instances, pc.Additive);
+        Renderer3D::SubmitParticles(instances, pc.Additive, pc.Texture);
     }
 }
 

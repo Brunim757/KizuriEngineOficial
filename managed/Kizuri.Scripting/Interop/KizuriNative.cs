@@ -50,6 +50,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern uint kz_scene_find_entity([MarshalAs(UnmanagedType.LPUTF8Str)] string name);
     [DllImport(Lib)] internal static extern int kz_entity_get_name(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] System.Text.StringBuilder buffer, int bufferSize);
     [DllImport(Lib)] internal static extern void kz_entity_set_name(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string name);
+    [DllImport(Lib)] internal static extern int kz_particle_set_texture(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern uint kz_scene_duplicate_entity(uint entity);
 
     // ---- Adicionar componentes em runtime -------------------------------------

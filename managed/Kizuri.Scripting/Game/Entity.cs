@@ -195,6 +195,10 @@ public readonly struct Entity
 	public bool AddCircleCollider2D(float radius = 0.5f, float density = 1f, float friction = 0.5f, float restitution = 0f)
 		=> Interop.KizuriNative.kz_entity_add_circle_collider2d(Handle, radius, density, friction, restitution) != 0;
 
+	// Textura da partícula (vazio = degradê radial procedural).
+	public bool SetParticleTexture(string path)
+		=> Interop.KizuriNative.kz_particle_set_texture(Handle, path) != 0;
+
 	// Camada de ordenação 2D (menor desenha atrás). Aplica a qualquer
 	// componente 2D da entidade (sprite/círculo/texto/animação/tilemap).
 	public void SetSortingLayer(int layer)

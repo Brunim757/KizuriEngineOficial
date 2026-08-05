@@ -3369,6 +3369,18 @@ void EditorLayer::DrawInspector() {
                 ImGui::ColorEdit4("Cor final", &pc.EndColor.x);
                 ImGui::DragFloat("Tamanho inicial", &pc.StartSize, 0.01f, 0.0f, FLT_MAX);
                 ImGui::DragFloat("Tamanho final", &pc.EndSize, 0.01f, 0.0f, FLT_MAX);
+                char pTexBuf[512];
+                strncpy(pTexBuf, pc.TexturePath.c_str(), sizeof(pTexBuf) - 1);
+                pTexBuf[sizeof(pTexBuf) - 1] = '\0';
+                if (ImGui::InputText("Textura (vazio = degradê)", pTexBuf, sizeof(pTexBuf))) {
+                    pc.TexturePath = pTexBuf;
+                    pc.Texture = pc.TexturePath.empty() ? nullptr : kizuri::Texture2D::Create(pc.TexturePath);
+                }
+                std::string browsedParticleTex;
+                if (FileBrowseButton("Textura de partícula", "*.png;*.jpg;*.jpeg;*.bmp;*.tga", browsedParticleTex)) {
+                    pc.TexturePath = browsedParticleTex;
+                    pc.Texture = pc.TexturePath.empty() ? nullptr : kizuri::Texture2D::Create(pc.TexturePath);
+                }
                 ImGui::TextDisabled("%d partículas ativas.", (int)pc.ActiveParticles.size());
                 ImGui::TextDisabled("A simulação ocorre apenas durante o Play, assim como a física.");
                 ImGui::TreePop();

@@ -880,4 +880,13 @@ KZ_SCRIPT_API void kz_entity_set_name(uint32_t entity, const char* name) {
     e.GetComponent<kizuri::TagComponent>().Tag = name;
 }
 
+KZ_SCRIPT_API int kz_particle_set_texture(uint32_t entity, const char* path) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::ParticleSystemComponent>() || path == nullptr) return 0;
+    auto& pc = e.GetComponent<kizuri::ParticleSystemComponent>();
+    pc.TexturePath = path;
+    pc.Texture = pc.TexturePath.empty() ? nullptr : kizuri::Texture2D::Create(kizuri::Project::ResolvePath(path));
+    return 1;
+}
+
 } // extern "C"

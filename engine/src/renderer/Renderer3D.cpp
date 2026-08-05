@@ -905,32 +905,51 @@ void main() {
 
 // Sem textura de propósito (v1): um degradê radial suave já dá uma partícula redonda
 // decente sem precisar de nenhum asset — mesma filosofia do céu procedural.
+// Textura opcional de partícula (uniform): sem textura usa o degradê radial
+// procedural (v1); com textura, a cor vem dela (alpha = intensidade).
 static const char* s_ParticleFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
 in vec4 v_Color;
 out vec4 o_Color;
 
+uniform sampler2D u_ParticleTexture;
+uniform bool u_HasTexture;
+
 void main() {
+    vec4 tex = vec4(1.0);
+    if (u_HasTexture) tex = texture(u_ParticleTexture, v_TexCoord);
     float dist = length(v_TexCoord - vec2(0.5)) * 2.0;
     float falloff = 1.0 - smoothstep(0.0, 1.0, dist);
     falloff *= falloff;
-    o_Color = vec4(v_Color.rgb, v_Color.a * falloff);
+    o_Color = vec4(v_Color.rgb * tex.rgb, v_Color.a * tex.a * falloff);
 }
 )";
 
 // Shader do passe de sombra: só precisa escrever profundidade, não tem
-// saída de cor nenhuma — gl_Position já é suficiente, o resto o hardware
-// resolve sozinho gravando no depth buffer do framebuffer de sombra.
+// saída de cor nenhuma. Com skinning (u_Animated) a pose animada do
+// personagem projeta a sombra certa — antes ficava na pose de repouso.
 static const char* s_ShadowVertexSrc = R"(
 #version 330 core
 layout(location = 0) in vec3 a_Position;
+layout(location = 3) in vec4 a_JointIndices;
+layout(location = 4) in vec4 a_JointWeights;
 
 uniform mat4 u_LightSpaceMatrix;
 uniform mat4 u_Model;
+uniform bool u_Animated;
+uniform mat4 u_JointMatrices[64];
 
 void main() {
-    gl_Position = u_LightSpaceMatrix * u_Model * vec4(a_Position, 1.0);
+    vec3 pos = a_Position;
+    if (u_Animated) {
+        mat4 skin = u_JointMatrices[int(a_JointIndices.x)] * a_JointWeights.x
+                  + u_JointMatrices[int(a_JointIndices.y)] * a_JointWeights.y
+                  + u_JointMatrices[int(a_JointIndices.z)] * a_JointWeights.z
+                  + u_JointMatrices[int(a_JointIndices.w)] * a_JointWeights.w;
+        pos = vec3(skin * vec4(a_Position, 1.0));
+    }
+    gl_Position = u_LightSpaceMatrix * u_Model * vec4(pos, 1.0);
 }
 )";
 
@@ -1654,12 +1673,13 @@ void Renderer3D::BeginScene(const PerspectiveCamera& camera) {
     s_ParticleBatches.clear();
 }
 
-void Renderer3D::SubmitParticles(const std::vector<ParticleInstance>& instances, bool additive) {
+void Renderer3D::SubmitParticles(const std::vector<ParticleInstance>& instances, bool additive,
+                                 const Ref<Texture2D>& texture) {
     if (instances.empty()) return;
     if (instances.size() <= kMaxParticlesPerBatch) {
-        s_ParticleBatches.push_back({ instances, additive });
+        s_ParticleBatches.push_back({ instances, additive, texture });
     } else {
-        s_ParticleBatches.push_back({ std::vector<ParticleInstance>(instances.begin(), instances.begin() + kMaxParticlesPerBatch), additive });
+        s_ParticleBatches.push_back({ std::vector<ParticleInstance>(instances.begin(), instances.begin() + kMaxParticlesPerBatch), additive, texture });
     }
 }
 
@@ -1707,6 +1727,17 @@ void Renderer3D::EndScene() {
             s_ShadowShader->SetMat4("u_LightSpaceMatrix", s_LightSpaceMatrix[c]);
             for (auto& cmd : s_DrawList) {
                 s_ShadowShader->SetMat4("u_Model", cmd.Transform);
+                // Malha esquelética: sobe as juntas e liga o skinning pra a
+                // sombra seguir a pose animada (não a de repouso).
+                if (cmd.Joints.empty()) {
+                    s_ShadowShader->SetInt("u_Animated", 0);
+                } else {
+                    s_ShadowShader->SetInt("u_Animated", 1);
+                    for (uint32_t j = 0; j < kMaxSkinJoints; ++j) {
+                        glm::mat4 m = (j < cmd.Joints.size()) ? cmd.Joints[j] : glm::mat4(1.0f);
+                        s_ShadowShader->SetMat4("u_JointMatrices[" + std::to_string(j) + "]", m);
+                    }
+                }
                 RenderCommand::DrawIndexed(cmd.MeshAsset->GetVertexArray(), cmd.MeshAsset->GetIndexCount());
             }
         }
@@ -1895,6 +1926,11 @@ void Renderer3D::EndScene() {
         glBindVertexArray(s_ParticleVAO);
         for (auto& batch : s_ParticleBatches) {
             glBlendFunc(GL_SRC_ALPHA, batch.Additive ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA);
+            s_ParticleShader->SetInt("u_HasTexture", (batch.Texture) ? 1 : 0);
+            if (batch.Texture) {
+                batch.Texture->Bind(0);
+                s_ParticleShader->SetInt("u_ParticleTexture", 0);
+            }
             glBindBuffer(GL_ARRAY_BUFFER, s_ParticleInstanceVBO);
             glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)(batch.Instances.size() * sizeof(ParticleInstance)), batch.Instances.data());
             glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, (GLsizei)batch.Instances.size());

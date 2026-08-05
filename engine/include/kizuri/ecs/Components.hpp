@@ -147,6 +147,10 @@ struct ParticleSystemComponent {
     glm::vec4 EndColor = { 1.0f, 0.15f, 0.02f, 0.0f };
     float StartSize = 0.15f, EndSize = 0.4f;
 
+    // Textura opcional da partícula (vazio = degradê radial procedural).
+    std::string TexturePath;
+    Ref<Texture2D> Texture;
+
     std::vector<Particle> ActiveParticles; // estado runtime — não serializado
     float EmissionAccumulator = 0.0f;
 };

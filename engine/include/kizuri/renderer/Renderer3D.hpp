@@ -147,7 +147,8 @@ public:
     // Empilha um lote de partículas (billboards sempre de frente pra câmera, GPU-instanced —
     // um glDrawElementsInstanced por lote, não um draw call por partícula). Sem textura (nullptr)
     // usa um degradê radial procedural; recorta pra kMaxParticlesPerBatch se vier maior que isso.
-    static void SubmitParticles(const std::vector<ParticleInstance>& instances, bool additive);
+    static void SubmitParticles(const std::vector<ParticleInstance>& instances, bool additive,
+                                const Ref<Texture2D>& texture = nullptr);
 
     // Grid de referência do editor (plano XZ) — não entra no jogo exportado nem no shadow map.
     static void DrawGrid();
@@ -241,7 +242,7 @@ private:
 
     // Partículas: 1 VAO reaproveitado por todos os lotes do frame — buffer de quad estático
     // (attribs 0/1) + buffer de instância dinâmico, reescrito via glBufferSubData a cada lote.
-    struct ParticleBatch { std::vector<ParticleInstance> Instances; bool Additive; };
+    struct ParticleBatch { std::vector<ParticleInstance> Instances; bool Additive; Ref<Texture2D> Texture; };
     static std::vector<ParticleBatch> s_ParticleBatches;
     static uint32_t s_ParticleVAO, s_ParticleQuadVBO, s_ParticleEBO, s_ParticleInstanceVBO;
     static Ref<Shader> s_ParticleShader;

@@ -53,22 +53,27 @@ add_custom_target(KizuriEmbeddedFonts DEPENDS ${KZ_FONT_REGULAR_HPP} ${KZ_FONT_B
 # ---- Conteúdo embutido (kzres://) ------------------------------------------
 # Pequeno conjunto de assets compilado DENTRO do executável/dll — modelos,
 # HDRIs e texturas que a engine carrega mesmo sem nenhum arquivo no disco.
-# O registrador (cmake/EmbedContent.cmake) gera EmbeddedContent.gen.hpp com
-# a tabela name->bytes; os carregadores (Texture2D/Mesh/SkinData/HDRI)
-# aceitam caminhos "kzres://<nome>" e resolvem aqui.
+# O registrador (cmake/EmbedContent.cmake) lê um MANIFEST (nome<TAB>caminho,
+# uma entrada por linha — sem meta-caractere de shell no -D do custom command)
+# e gera EmbeddedContent.gen.hpp com a tabela name->bytes. Os carregadores
+# (Texture2D/Mesh/SkinData/HDRI) aceitam caminhos "kzres://<nome>".
 set(KZ_EMBEDDED_CONTENT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/resources/embedded_content)
 set(KZ_EMBEDDED_CONTENT_HPP ${CMAKE_CURRENT_BINARY_DIR}/generated/kizuri/EmbeddedContent.gen.hpp)
-set(KZ_EMBED_CONTENT_ENTRIES
-    "models/Cube.glb|${KZ_EMBEDDED_CONTENT_DIR}/models/Cube.glb"
-    "skies/sky_gradient.hdr|${KZ_EMBEDDED_CONTENT_DIR}/skies/sky_gradient.hdr"
+set(KZ_EMBED_CONTENT_MANIFEST ${CMAKE_CURRENT_BINARY_DIR}/generated/kizuri/embedded_content.manifest)
+file(WRITE ${KZ_EMBED_CONTENT_MANIFEST}
+    "models/Cube.glb\t${KZ_EMBEDDED_CONTENT_DIR}/models/Cube.glb\n"
+)
+file(APPEND ${KZ_EMBED_CONTENT_MANIFEST}
+    "skies/sky_gradient.hdr\t${KZ_EMBEDDED_CONTENT_DIR}/skies/sky_gradient.hdr\n"
 )
 add_custom_command(
     OUTPUT ${KZ_EMBEDDED_CONTENT_HPP}
     COMMAND ${CMAKE_COMMAND}
         -DOUTPUT_FILE=${KZ_EMBEDDED_CONTENT_HPP}
-        "-DENTRIES=${KZ_EMBED_CONTENT_ENTRIES}"
+        -DMANIFEST_FILE=${KZ_EMBED_CONTENT_MANIFEST}
         -P ${KIZURI_REPO_ROOT}/cmake/EmbedContent.cmake
     DEPENDS
+        ${KZ_EMBED_CONTENT_MANIFEST}
         ${KZ_EMBEDDED_CONTENT_DIR}/models/Cube.glb
         ${KZ_EMBEDDED_CONTENT_DIR}/skies/sky_gradient.hdr
         ${KIZURI_REPO_ROOT}/cmake/EmbedContent.cmake

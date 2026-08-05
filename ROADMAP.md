@@ -103,7 +103,23 @@
   arquivo) se perdiam ao desserializar (Play/cópia/save/undo) → material
   cinza. `RestoreGLTFTextureMaps()` reextrai do próprio .glb só os mapas
   vazios na recarga
-- [x] Diagnóstico: RenderScene3D loga erro quando não há câmera primária 3D
+
+---
+
+## ✅ v0.7 — Usabilidade (feito)
+
+- [x] **Fullscreen do viewport**: botão de ícone na toolbar + F11 — esconde
+  os painéis laterais e o viewport ocupa a janela inteira
+- [x] **Responsividade**: a janela é limitada à área de trabalho do monitor
+  primário e centralizada (não fica cortada em telas pequenas)
+- [x] **Configurações** (Arquivo > Configurações): janela com sidebar e
+  seções Gráficos / Geral / Editor — no lugar da aba padrão do ImGui
+- [x] **Cena de Demonstração 2D**: sprites, física Box2D (chão + caixas
+  caindo), moedas, texto e UI (canvas + botão) — roda 100% no Play
+- [x] **Jogo 100% 2D ou 100% 3D**: o conteúdo padrão de cena respeita o modo
+  do projeto (2D = câmera ortográfica; 3D = perspectiva). O Play renderiza o
+  passe 2D só se há câmera primária ortográfica e o 3D só se há câmera de
+  perspectiva; abrir projeto recria a cena por modo (ou carrega a inicial)
 
 ---
 

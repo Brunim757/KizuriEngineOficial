@@ -7,6 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <stb_image.h>
 #include <string>
+#include <fstream>
 #include <cstddef>
 #include <cstdlib>
 #include <cmath>
@@ -2266,6 +2267,68 @@ void Renderer3D::EndScene() {
         char buf[64];
         snprintf(buf, sizeof(buf), "OpenGL erro 0x%04x", (unsigned)err);
         SetShaderDiagnostic(buf);
+    }
+
+    // Detecção de VIEWPORT PRETO no 1º frame: a cena padrão nunca é preta de
+    // verdade — se o readback do centro do HDR buffer vier ~0, algo do pipeline
+    // 4.x falhou silenciosamente (sem erro de GL). Nesse caso degrada pro
+    // caminho mais simples (MSAA/SSR/SSAO/bloom off) no próximo frame E grava
+    // render_info.txt com o estado — o editor mostra o motivo na tela.
+    static bool s_BlackChecked = false;
+    if (!s_BlackChecked) {
+        s_BlackChecked = true;
+
+        // Sempre grava um dossiê de render (render_info.txt ao lado do exe):
+        // versões, MSAA, validade dos shaders/FBOs. É o que o usuário manda
+        // quando o viewport fica preto.
+        {
+            std::ofstream dump("render_info.txt");
+            dump << "Kizuri Engine — diagnostico de render\n";
+            dump << "OpenGL: " << GetOpenGLVersionString() << "\n";
+            dump << "GLSL core: " << GetGLSLVersion() << "\n";
+            GLint maxS = 0; glGetIntegerv(GL_MAX_SAMPLES, &maxS);
+            dump << "MSAA: config " << s_Settings.MSAA << " / ativo " << s_CurrentMSAA << " (max samples " << maxS << ")\n";
+            dump << "SSR: " << (s_Settings.SSREnabled ? "on" : "off")
+                 << " shader " << (s_SSRShader ? (s_SSRShader->IsValid() ? "ok" : "INVALIDO") : "nao criado") << "\n";
+            dump << "SSAO: " << (s_Settings.SSAOEnabled ? "on" : "off") << "\n";
+            dump << "Bloom: " << (s_Settings.BloomEnabled ? "on" : "off") << "\n";
+            auto fbStatus = [](GLuint fbo) {
+                if (fbo == 0) return 0; // sem FBO = desligado (ex.: sem MSAA)
+                glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+                GLenum s = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                return (int)s;
+            };
+            auto ShaderOk = [](const Ref<Shader>& sh) { return sh ? (sh->IsValid() ? "ok" : "INVALIDO") : "nao criado"; };
+            dump << "FBO HDR: 0x" << std::hex << fbStatus(s_HDRFBO) << std::dec << "\n";
+            dump << "FBO MSAA: 0x" << std::hex << fbStatus(s_MSAAHDRFBO) << std::dec << "\n";
+            dump << "FBO SSAO: 0x" << std::hex << fbStatus(s_SSAOFBO) << std::dec << "\n";
+            dump << "FBO SSR: 0x" << std::hex << fbStatus(s_SSRFBO) << std::dec << "\n";
+            dump << "Shader mesh: " << ShaderOk(s_MeshShader) << "\n";
+            dump << "Shader skybox: " << ShaderOk(s_SkyboxShader) << "\n";
+            dump << "Shader composite: " << ShaderOk(s_CompositeShader) << "\n";
+            dump << "Shader shadow: " << ShaderOk(s_ShadowShader) << "\n";
+            if (s_PointShadowShader) dump << "Shader point shadow: " << ShaderOk(s_PointShadowShader) << "\n";
+        }
+
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, s_HDRFBO);
+        float px[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        glReadPixels((GLint)(internalW / 2), (GLint)(internalH / 2),
+                     1, 1, GL_RGBA, GL_FLOAT, px);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        float lum = px[0] + px[1] + px[2];
+        KZ_CORE_INFO("Verificação de 1º frame: centro do HDR = ({0:.3f}, {1:.3f}, {2:.3f}).", px[0], px[1], px[2]);
+        if (lum < 0.001f) {
+            KZ_CORE_ERROR("VIEWPORT PRETO no 1º frame — degradando pro caminho simples e gravando render_info.txt.");
+            SetShaderDiagnostic("VIEWPORT PRETO — modo compatibilidade aplicado (MSAA/SSR/SSAO/bloom desligados)");
+            GraphicsSettings basic = s_Settings;
+            basic.MSAA = 1;
+            basic.SSREnabled = false;
+            basic.SSAOEnabled = false;
+            basic.BloomEnabled = false;
+            basic.Preset = QualityPreset::Custom;
+            s_Settings = basic;
+        }
     }
 
     s_DrawList.clear();

@@ -35,6 +35,8 @@ void Stop(ImDrawList* dl, ImVec2 topLeft, float size, ImU32 color);   // quadrad
 void Move(ImDrawList* dl, ImVec2 topLeft, float size, ImU32 color);   // setas nas 4 direções
 void Rotate(ImDrawList* dl, ImVec2 topLeft, float size, ImU32 color); // círculo com ponta
 void Scale(ImDrawList* dl, ImVec2 topLeft, float size, ImU32 color);  // quadrado com diagonal
+void Maximize(ImDrawList* dl, ImVec2 topLeft, float size, ImU32 color); // fullscreen (cantos)
+void Settings(ImDrawList* dl, ImVec2 topLeft, float size, ImU32 color); // engrenagem
 
 using IconFn = void(*)(ImDrawList*, ImVec2, float, ImU32);
 

@@ -1403,9 +1403,16 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
         Renderer3D::EndScene();
         return;
     }
-    // Sem nenhuma câmera primária de perspectiva, o Play não renderiza nada —
-    // loga uma vez pra não deixar o "tudo some" sem explicação.
-    KZ_CORE_ERROR("RenderScene3D: nenhuma câmera primária (Perspective3D) na cena — Play sem render 3D.");
+    // Sem câmera primária de perspectiva é NORMAL em cena 2D (só ortho).
+    // Só reclama se a cena tem meshes 3D de verdade e mesmo assim nenhuma
+    // câmera — aí o Play não renderiza nada (uma vez por cena).
+    if (m_Registry.view<MeshRendererComponent>().begin() != m_Registry.view<MeshRendererComponent>().end()) {
+        static Scene* s_WarnedFor = nullptr;
+        if (s_WarnedFor != this) {
+            s_WarnedFor = this;
+            KZ_CORE_WARN("RenderScene3D: há meshes 3D mas nenhuma câmera primária (Perspective3D) — render 3D vazio.");
+        }
+    }
 }
 
 } // namespace kizuri

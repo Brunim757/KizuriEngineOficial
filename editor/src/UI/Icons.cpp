@@ -180,4 +180,42 @@ void PanelHeader(const char* label, IconFn icon) {
     ImGui::Spacing();
 }
 
+void Maximize(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
+    // Retângulo de fullscreen com 4 setas apontando pros cantos.
+    dl->AddRect(ImVec2(p.x + s * 0.16f, p.y + s * 0.16f), ImVec2(p.x + s * 0.84f, p.y + s * 0.84f), color, 0, 0, s * 0.09f);
+    const float arrow = s * 0.18f;
+    const ImU32 c = color;
+    // cantos: cima-esq, cima-dir, baixo-esq, baixo-dir
+    dl->AddLine(ImVec2(p.x + s * 0.30f, p.y + s * 0.16f), ImVec2(p.x + s * 0.16f, p.y + s * 0.30f), c, s * 0.09f);
+    dl->AddLine(ImVec2(p.x + s * 0.16f, p.y + s * 0.16f), ImVec2(p.x + s * 0.30f, p.y + s * 0.16f), c, s * 0.06f);
+    dl->AddLine(ImVec2(p.x + s * 0.16f, p.y + s * 0.16f), ImVec2(p.x + s * 0.16f, p.y + s * 0.30f), c, s * 0.06f);
+    dl->AddLine(ImVec2(p.x + s * 0.70f, p.y + s * 0.16f), ImVec2(p.x + s * 0.84f, p.y + s * 0.30f), c, s * 0.09f);
+    dl->AddLine(ImVec2(p.x + s * 0.84f, p.y + s * 0.16f), ImVec2(p.x + s * 0.70f, p.y + s * 0.16f), c, s * 0.06f);
+    dl->AddLine(ImVec2(p.x + s * 0.84f, p.y + s * 0.16f), ImVec2(p.x + s * 0.84f, p.y + s * 0.30f), c, s * 0.06f);
+    dl->AddLine(ImVec2(p.x + s * 0.30f, p.y + s * 0.84f), ImVec2(p.x + s * 0.16f, p.y + s * 0.70f), c, s * 0.09f);
+    dl->AddLine(ImVec2(p.x + s * 0.16f, p.y + s * 0.84f), ImVec2(p.x + s * 0.16f, p.y + s * 0.70f), c, s * 0.06f);
+    dl->AddLine(ImVec2(p.x + s * 0.16f, p.y + s * 0.84f), ImVec2(p.x + s * 0.30f, p.y + s * 0.84f), c, s * 0.06f);
+    dl->AddLine(ImVec2(p.x + s * 0.70f, p.y + s * 0.84f), ImVec2(p.x + s * 0.84f, p.y + s * 0.70f), c, s * 0.09f);
+    dl->AddLine(ImVec2(p.x + s * 0.84f, p.y + s * 0.84f), ImVec2(p.x + s * 0.70f, p.y + s * 0.84f), c, s * 0.06f);
+    dl->AddLine(ImVec2(p.x + s * 0.84f, p.y + s * 0.84f), ImVec2(p.x + s * 0.84f, p.y + s * 0.70f), c, s * 0.06f);
+}
+
+void Settings(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
+    // Engrenagem: anel com 8 dentes.
+    ImVec2 c(p.x + s * 0.5f, p.y + s * 0.5f);
+    const float r = s * 0.22f;
+    const int teeth = 8;
+    for (int i = 0; i < teeth; ++i) {
+        float a0 = (float)i / teeth * 6.2831853f;
+        float a1 = a0 + 6.2831853f / teeth;
+        ImVec2 in0(c.x + cosf(a0) * r, c.y + sinf(a0) * r);
+        ImVec2 in1(c.x + cosf(a1) * r, c.y + sinf(a1) * r);
+        ImVec2 out0(c.x + cosf(a0) * (r + s * 0.08f), c.y + sinf(a0) * (r + s * 0.08f));
+        ImVec2 out1(c.x + cosf(a1) * (r + s * 0.08f), c.y + sinf(a1) * (r + s * 0.08f));
+        dl->AddQuadFilled(in0, in1, out1, out0, color);
+    }
+    dl->AddCircle(c, r + s * 0.08f, color, teeth * 2, s * 0.06f);
+    dl->AddCircleFilled(c, s * 0.10f, color);
+}
+
 } // namespace kizuri::editor::icons

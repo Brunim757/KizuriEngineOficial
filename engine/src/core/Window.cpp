@@ -70,6 +70,30 @@ void Window::Init(const WindowProps& props) {
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 #endif
 
+    // Responsividade: uma janela maior que a área de trabalho do monitor
+    // primário fica cortada/sem acesso às bordas ("a engine só funciona em
+    // resolução grande"). Limita o tamanho pedido ao work area e centraliza.
+    int winW = (int)props.Width, winH = (int)props.Height;
+    {
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        if (monitor) {
+            int waX = 0, waY = 0, waW = 0, waH = 0;
+            glfwGetMonitorWorkarea(monitor, &waX, &waY, &waW, &waH);
+            if (waW > 0 && waH > 0) {
+                if (winW > waW || winH > waH) {
+                    winW = (winW > waW) ? waW : winW;
+                    winH = (winH > waH) ? waH : winH;
+                    if (winW < 800) winW = 800;
+                    if (winH < 600) winH = 600;
+                }
+                glfwWindowHint(GLFW_POSITION_X, waX + (waW - winW) / 2);
+                glfwWindowHint(GLFW_POSITION_Y, waY + (waH - winH) / 2);
+            }
+        }
+    }
+    m_Data.Width = (uint32_t)winW;
+    m_Data.Height = (uint32_t)winH;
+
     // Tenta 4.5 core primeiro; em GPUs/drivers mais antigos (comum em
     // notebooks com iGPU desatualizada ou sessões de área de trabalho
     // remota) isso pode falhar, então caímos para 4.1 e depois 3.3 core.
@@ -77,7 +101,7 @@ void Window::Init(const WindowProps& props) {
     for (auto& version : contextVersions) {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, version[0]);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, version[1]);
-        m_Window = glfwCreateWindow((int)props.Width, (int)props.Height, m_Data.Title.c_str(), nullptr, nullptr);
+        m_Window = glfwCreateWindow(winW, winH, m_Data.Title.c_str(), nullptr, nullptr);
         if (m_Window) {
             m_GLVersionMajor = version[0];
             m_GLVersionMinor = version[1];

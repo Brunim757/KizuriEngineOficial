@@ -108,36 +108,63 @@ void EditorLayer::AutoSwitchViewportMode() {
 
 void EditorLayer::CreateDefaultSceneContent() {
     KZ_TRACE_SCOPE("EditorLayer::CreateDefaultSceneContent");
+
+    // O conteúdo padrão respeita o MODO do projeto ativo — 2D ganha câmera
+    // ortográfica + sprites + física; 3D ganha câmera de perspectiva + cubo.
+    // Isso é o que faz um jogo 100% 2D (ou 100% 3D) rodar de verdade no Play:
+    // o Play renderiza o passe 2D só se a cena tem câmera primária ortográfica
+    // e o passe 3D só se tem câmera de perspectiva.
+    ProjectMode mode = ProjectMode::ThreeD;
+    auto& project = Project::GetActive();
+    if (project) mode = project->GetConfig().DefaultMode;
+
     Entity camera = m_ActiveScene->CreateEntity("Câmera Principal");
     auto& cc = camera.AddComponent<CameraComponent>();
     cc.Primary = true;
-    // Perspective3D explícito: o default do componente é Orthographic2D (pensado pra HUD/UI),
-    // e Play usa a Camera da PRÓPRIA cena — sem isso, o cubo 3D abaixo nunca aparecia no Play,
-    // só o quad 2D (ou nem isso, se ele também não estivesse enquadrado). Posição/rotação
-    // também setadas: o default de TransformComponent é a origem sem rotação, mesmo ponto do
-    // cubo — a câmera nascia "dentro" dele, olhando pra lugar nenhum.
-    cc.Type = CameraComponent::ProjectionType::Perspective3D;
-    auto& camTransform = camera.GetComponent<TransformComponent>();
-    camTransform.Translation = { 0.0f, 2.0f, 6.0f };
-    camTransform.Rotation = { glm::radians(-15.0f), glm::radians(-90.0f), 0.0f }; // pitch, yaw
 
-    Entity quad = m_ActiveScene->CreateEntity("Quad de Exemplo");
-    auto& sprite = quad.AddComponent<SpriteRendererComponent>();
-    sprite.Color = { 0.85f, 0.25f, 0.3f, 1.0f };
+    if (mode == ProjectMode::TwoD) {
+        cc.Type = CameraComponent::ProjectionType::Orthographic2D;
+        cc.OrthoSize = 10.0f;
+        camera.GetComponent<TransformComponent>().Translation = { 0.0f, 0.0f, 0.0f };
 
-    // A engine é híbrida 2D/3D por design — o quad acima mostra o lado 2D
-    // (visível pela câmera ortográfica da própria cena), esse cubo mostra
-    // o lado 3D (visível pela câmera livre do editor). Sem ele, olhar pro
-    // viewport em modo 3D era só o grid e o vazio.
-    Entity cube = m_ActiveScene->CreateEntity("Cubo de Exemplo");
-    auto& mr = cube.AddComponent<MeshRendererComponent>();
-    mr.MeshAsset = Mesh::CreateCube();
-    mr.MeshMaterial.Albedo = { 0.3f, 0.55f, 0.85f };
+        // Chão 2D com física (Box2D) pra começar.
+        Entity ground = m_ActiveScene->CreateEntity("Chão");
+        auto& gs = ground.AddComponent<SpriteRendererComponent>();
+        gs.Color = { 0.16f, 0.17f, 0.2f, 1.0f };
+        auto& gt = ground.GetComponent<TransformComponent>();
+        gt.Translation = { 0.0f, -4.0f, 0.0f };
+        gt.Scale = { 12.0f, 1.0f, 1.0f };
+        ground.AddComponent<Rigidbody2DComponent>().Type = Rigidbody2DComponent::BodyType::Static;
+        ground.AddComponent<BoxCollider2DComponent>().Size = { 12.0f, 1.0f };
 
-    Entity sun = m_ActiveScene->CreateEntity("Sol");
-    sun.AddComponent<LightComponent>().Type = LightType::Directional;
+        // Caixa que cai (dinâmica).
+        Entity box = m_ActiveScene->CreateEntity("Caixa");
+        auto& bs = box.AddComponent<SpriteRendererComponent>();
+        bs.Color = { 0.85f, 0.25f, 0.3f, 1.0f };
+        auto& bt = box.GetComponent<TransformComponent>();
+        bt.Translation = { 0.0f, 3.0f, 0.0f };
+        bt.Scale = { 1.0f, 1.0f, 1.0f };
+        box.AddComponent<Rigidbody2DComponent>().Type = Rigidbody2DComponent::BodyType::Dynamic;
+        auto& bcol = box.AddComponent<BoxCollider2DComponent>();
+        bcol.Size = { 1.0f, 1.0f };
 
-    m_SelectedEntity = quad;
+        m_SelectedEntity = box;
+    } else {
+        cc.Type = CameraComponent::ProjectionType::Perspective3D;
+        auto& camTransform = camera.GetComponent<TransformComponent>();
+        camTransform.Translation = { 0.0f, 2.0f, 6.0f };
+        camTransform.Rotation = { glm::radians(-15.0f), glm::radians(-90.0f), 0.0f }; // pitch, yaw
+
+        Entity cube = m_ActiveScene->CreateEntity("Cubo de Exemplo");
+        auto& mr = cube.AddComponent<MeshRendererComponent>();
+        mr.MeshAsset = Mesh::CreateCube();
+        mr.MeshMaterial.Albedo = { 0.3f, 0.55f, 0.85f };
+
+        Entity sun = m_ActiveScene->CreateEntity("Sol");
+        sun.AddComponent<LightComponent>().Type = LightType::Directional;
+
+        m_SelectedEntity = cube;
+    }
 }
 
 // Cena de demonstração 3D — monta um showcase com o Content Pack (quando
@@ -280,6 +307,87 @@ void EditorLayer::CreateDemoScene3D() {
 }
 
 void EditorLayer::OnDetach() {}
+
+// Cena de demonstração 2D — showcase do pipeline 2D: sprites, física Box2D
+// (chão + caixas caindo), círculos, texto e UI (canvas + botão). Roda 100%
+// no Play com a câmera ortográfica.
+void EditorLayer::CreateDemoScene2D() {
+    if (m_SceneState != SceneState::Edit) return;
+    m_ActiveScene = CreateRef<Scene>("Demonstração 2D");
+    m_ScenePath.clear();
+    m_SelectedEntity = {};
+    m_ViewportMode = ViewportMode::Mode2D;
+
+    Entity camera = m_ActiveScene->CreateEntity("Câmera 2D");
+    auto& cc = camera.AddComponent<CameraComponent>();
+    cc.Type = CameraComponent::ProjectionType::Orthographic2D;
+    cc.Primary = true;
+    cc.OrthoSize = 10.0f;
+
+    Entity bg = m_ActiveScene->CreateEntity("Fundo");
+    auto& bs = bg.AddComponent<SpriteRendererComponent>();
+    bs.Color = { 0.10f, 0.11f, 0.14f, 1.0f };
+    auto& bt = bg.GetComponent<TransformComponent>();
+    bt.Translation = { 0.0f, 0.0f, -1.0f };
+    bt.Scale = { 40.0f, 25.0f, 1.0f };
+
+    Entity ground = m_ActiveScene->CreateEntity("Chão");
+    auto& gs = ground.AddComponent<SpriteRendererComponent>();
+    gs.Color = { 0.28f, 0.32f, 0.38f, 1.0f };
+    auto& gt = ground.GetComponent<TransformComponent>();
+    gt.Translation = { 0.0f, -8.0f, 0.0f };
+    gt.Scale = { 20.0f, 1.0f, 1.0f };
+    ground.AddComponent<Rigidbody2DComponent>().Type = Rigidbody2DComponent::BodyType::Static;
+    auto& gcol = ground.AddComponent<BoxCollider2DComponent>();
+    gcol.Size = { 20.0f, 1.0f };
+
+    // Caixas que caem (física Box2D de verdade no Play).
+    for (int i = 0; i < 5; ++i) {
+        Entity box = m_ActiveScene->CreateEntity("Caixa " + std::to_string(i + 1));
+        auto& bxs = box.AddComponent<SpriteRendererComponent>();
+        float t = (float)i / 4.0f;
+        bxs.Color = { 0.3f + t * 0.6f, 0.35f, 0.85f, 1.0f };
+        auto& bxt = box.GetComponent<TransformComponent>();
+        bxt.Translation = { -6.0f + i * 2.8f, 2.0f + i * 1.2f, 0.0f };
+        bxt.Rotation.z = glm::radians((float)(i * 25 - 50));
+        box.AddComponent<Rigidbody2DComponent>().Type = Rigidbody2DComponent::BodyType::Dynamic;
+        auto& bxc = box.AddComponent<BoxCollider2DComponent>();
+        bxc.Size = { 1.0f, 1.0f };
+    }
+
+    // Moedas (círculos).
+    for (int i = 0; i < 6; ++i) {
+        Entity coin = m_ActiveScene->CreateEntity("Moeda " + std::to_string(i + 1));
+        auto& cs = coin.AddComponent<CircleRendererComponent>();
+        cs.Color = { 1.0f, 0.8f, 0.2f, 1.0f };
+        cs.Thickness = 0.9f;
+        coin.GetComponent<TransformComponent>().Translation = { -6.0f + i * 2.4f, 6.5f, 0.0f };
+    }
+
+    Entity title = m_ActiveScene->CreateEntity("Título");
+    auto& tc = title.AddComponent<TextComponent>();
+    tc.Text = "Demonstração 2D — aperte Play";
+    tc.FontSize = 42.0f;
+    tc.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    title.GetComponent<TransformComponent>().Translation = { -8.0f, 8.2f, 0.0f };
+
+    // UI: canvas + botão com texto (espaço de tela, 0,0 = centro).
+    Entity canvas = m_ActiveScene->CreateEntity("Canvas");
+    canvas.AddComponent<UICanvasComponent>();
+    Entity button = m_ActiveScene->CreateEntity("Botão");
+    auto& ur = button.AddComponent<UIRectComponent>();
+    ur.Position = { 0.0f, -3.0f };
+    ur.Size = { 4.5f, 1.2f };
+    ur.Color = { 0.82f, 0.24f, 0.27f, 1.0f };
+    button.AddComponent<UIButtonComponent>();
+    auto& btext = button.AddComponent<TextComponent>();
+    btext.Text = "Kizuri 2D!";
+    btext.FontSize = 0.5f;
+    btext.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    button.SetParent(canvas);
+
+    KZ_CORE_INFO("Cena de demonstração 2D criada.");
+}
 
 void EditorLayer::OnUpdate(Timestep ts) {
     KZ_CORE_TRACE("EditorLayer::OnUpdate — início (viewport {0}x{1})", m_ViewportSize.x, m_ViewportSize.y);
@@ -542,7 +650,7 @@ void EditorLayer::DrawViewportToolbar() {
     // áudio só rodam de verdade numa cópia isolada da cena (Scene::Copy) —
     // editar durante o Play é seguro e o Stop nunca "perde" nada. ---
     bool isPlaying = m_SceneState == SceneState::Play;
-    ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 40.0f);
+    ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 84.0f);
     ImGui::PushStyleColor(ImGuiCol_Button, isPlaying ? accent : inactive);
     if (ToolbarIconButton(isPlaying ? kizuri::editor::icons::Stop : kizuri::editor::icons::Play,
                           "##play_stop", ImVec2(32.0f, 30.0f),
@@ -553,6 +661,25 @@ void EditorLayer::DrawViewportToolbar() {
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip(isPlaying ? "Parar o Play e voltar pra cena de edição (Shift+F5)"
                                     : "Testar a cena — física, scripts, partículas e áudio (F5)");
+
+    // --- Fullscreen do viewport: esconde os painéis laterais e o viewport
+    // ocupa o espaço todo (aperte de novo pra voltar). ---
+    ImGui::SameLine(0.0f, 4.0f);
+    ImGui::PushStyleColor(ImGuiCol_Button, m_ViewportMaximized ? accent : inactive);
+    if (ToolbarIconButton(kizuri::editor::icons::Maximize, "##viewport_maximize", ImVec2(34.0f, 30.0f),
+                          ImGui::GetColorU32(m_ViewportMaximized ? activeText : idleText)))
+        m_ViewportMaximized = !m_ViewportMaximized;
+    ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip(m_ViewportMaximized ? "Sair do fullscreen (mostra os painéis)"
+                                              : "Fullscreen do viewport (F11)");
+
+    // F11 também alterna o fullscreen do viewport (edge-detect).
+    bool f11Down = kizuri::Input::IsKeyPressed(kizuri::Key::F11);
+    bool f11JustPressed = f11Down && !m_PrevF11KeyDown;
+    m_PrevF11KeyDown = f11Down;
+    if (m_ViewportHovered && f11JustPressed)
+        m_ViewportMaximized = !m_ViewportMaximized;
 
     ImGui::PopStyleVar();
 
@@ -817,88 +944,160 @@ void EditorLayer::SaveGraphicsSettingsToDisk() {
         KZ_CORE_ERROR("Falha ao salvar settings.json.");
 }
 
-void EditorLayer::DrawGraphicsSettings() {
-    if (!m_ShowGraphicsSettings) return;
-    if (ImGui::Begin("Configurações Gráficas", &m_ShowGraphicsSettings, ImGuiWindowFlags_NoResize)) {
-        const char* presets[] = { "Ultra", "High", "Medium", "Low" };
-        int presetIdx = (int)m_GraphicsSettings.Preset;
-        bool presetApplied = false;
-        if (presetIdx <= 3) {
-            if (ImGui::Combo("Qualidade", &presetIdx, presets, 4)) {
-                m_GraphicsSettings.ApplyPreset((kizuri::QualityPreset)presetIdx);
-                presetApplied = true;
-            }
-        } else {
-            ImGui::TextDisabled("Qualidade: Custom (ajustada manualmente)");
-        }
+void EditorLayer::DrawSettings() {
+    if (!m_ShowSettings) return;
+    ImGui::SetNextWindowSize(ImVec2(780.0f, 560.0f), ImGuiCond_FirstUseEver);
+    ImGui::Begin("Configurações", &m_ShowSettings);
+    kizuri::editor::icons::PanelHeader("CONFIGURAÇÕES", kizuri::editor::icons::Settings);
 
-        bool customTweak = false;
-        customTweak |= ImGui::DragFloat("Resolução interna", &m_GraphicsSettings.RenderScale, 0.01f, 0.25f, 2.0f);
-        const char* msaaNames[] = { "Desligado", "1x", "2x", "4x", "8x" };
-        int msaaValues[] = { 0, 1, 2, 4, 8 };
-        int msaaIdx = 0;
-        for (int i = 0; i < 5; ++i) if (m_GraphicsSettings.MSAA == msaaValues[i]) msaaIdx = i;
-        if (ImGui::Combo("MSAA", &msaaIdx, msaaNames, 5)) m_GraphicsSettings.MSAA = msaaValues[msaaIdx];
-        customTweak |= (ImGui::IsItemActive() || ImGui::IsItemActivated());
-
-        const char* shadowNames[] = { "512", "1024", "2048", "4096" };
-        int shadowValues[] = { 512, 1024, 2048, 4096 };
-        int shadowIdx = 0;
-        for (int i = 0; i < 4; ++i) if (m_GraphicsSettings.ShadowMapSize == shadowValues[i]) shadowIdx = i;
-        if (ImGui::Combo("Shadow map (CSM)", &shadowIdx, shadowNames, 4)) m_GraphicsSettings.ShadowMapSize = shadowValues[shadowIdx];
-        customTweak |= (ImGui::IsItemActive() || ImGui::IsItemActivated());
-        customTweak |= ImGui::SliderInt("Suavização de sombra (PCF)", &m_GraphicsSettings.ShadowPCFRadius, 0, 3);
-        ImGui::Separator();
-        customTweak |= ImGui::Checkbox("Bloom", &m_GraphicsSettings.BloomEnabled);
-        if (m_GraphicsSettings.BloomEnabled) {
-            customTweak |= ImGui::DragFloat("Limiar do bloom", &m_GraphicsSettings.BloomThreshold, 0.01f, 0.1f, 10.0f);
-            customTweak |= ImGui::DragFloat("Intensidade do bloom", &m_GraphicsSettings.BloomIntensity, 0.01f, 0.0f, 3.0f);
-        }
-        ImGui::Separator();
-        customTweak |= ImGui::Checkbox("SSAO", &m_GraphicsSettings.SSAOEnabled);
-        if (m_GraphicsSettings.SSAOEnabled) {
-            customTweak |= ImGui::SliderInt("Amostras SSAO", &m_GraphicsSettings.SSAOSamples, 8, 64);
-            customTweak |= ImGui::DragFloat("Raio SSAO", &m_GraphicsSettings.SSAORadius, 0.01f, 0.05f, 2.0f);
-        }
-        ImGui::Separator();
-        customTweak |= ImGui::DragFloat("Exposição", &m_GraphicsSettings.Exposure, 0.01f, 0.1f, 8.0f);
-        customTweak |= ImGui::Checkbox("VSync", &m_GraphicsSettings.VSync);
-        ImGui::Separator();
-        customTweak |= ImGui::Checkbox("Névoa (fog exponencial)", &m_GraphicsSettings.FogEnabled);
-        if (m_GraphicsSettings.FogEnabled) {
-            customTweak |= ImGui::DragFloat("Densidade da névoa", &m_GraphicsSettings.FogDensity, 0.001f, 0.0f, 0.2f);
-            customTweak |= ImGui::ColorEdit3("Cor da névoa", m_GraphicsSettings.FogColor);
-        }
-
-        ImGui::Separator();
-        ImGui::TextDisabled("Ambiente (céu) — vazio = procedural, ou um .hdr equirectangular:");
-        ImGui::InputText("HDRI do céu", m_EnvironmentHDRIPathBuffer, sizeof(m_EnvironmentHDRIPathBuffer));
-        ImGui::SameLine();
-        bool applyHDRI = ImGui::Button("Aplicar");
-        if (ImGui::Button("Voltar ao céu procedural")) {
-            m_EnvironmentHDRIPathBuffer[0] = '\0';
-            applyHDRI = true;
-        }
-
-        ImGui::Separator();
-        if (ImGui::Button("Salvar")) SaveGraphicsSettingsToDisk();
-        ImGui::SameLine();
-        if (ImGui::Button("Restaurar padrão (Ultra)")) m_GraphicsSettings.ApplyPreset(kizuri::QualityPreset::Ultra);
-
-        // Qualquer ajuste manual derruba o preset pra "Custom" (que é
-        // automático no struct — aqui só garantimos que o combo reflita).
-        if (customTweak && !presetApplied) m_GraphicsSettings.Preset = kizuri::QualityPreset::Custom;
-        m_GraphicsSettings.Clamp();
-
-        // Aplica em runtime (os recursos que dependem de tamanho/MSAA são
-        // recriados lazy no próximo frame pelo Renderer3D).
-        kizuri::Renderer3D::SetGraphicsSettings(m_GraphicsSettings);
-        Application& app = Application::Get();
-        if (app.GetWindow().IsVSync() != m_GraphicsSettings.VSync)
-            app.GetWindow().SetVSync(m_GraphicsSettings.VSync);
-        if (applyHDRI) kizuri::Renderer3D::SetEnvironmentHDRIPath(m_EnvironmentHDRIPathBuffer);
+    ImGui::BeginChild("##settings_sidebar", ImVec2(150.0f, 0.0f), true);
+    const char* sections[] = { "Gráficos", "Geral", "Editor" };
+    for (int i = 0; i < 3; ++i) {
+        if (ImGui::Selectable(sections[i], m_SettingsSection == i)) m_SettingsSection = i;
     }
+    ImGui::EndChild();
+    ImGui::SameLine();
+    ImGui::BeginChild("##settings_body");
+    if (m_SettingsSection == 1) {
+        DrawSettingsGeneral();
+    } else if (m_SettingsSection == 2) {
+        DrawSettingsEditor();
+    } else {
+        DrawSettingsGraphics();
+    }
+    ImGui::EndChild();
+
     ImGui::End();
+}
+
+// Seção Gráficos das Configurações: qualidade, MSAA/SSAO/bloom/fog/HDRI.
+void EditorLayer::DrawSettingsGraphics() {
+    const char* presets[] = { "Ultra", "High", "Medium", "Low" };
+    int presetIdx = (int)m_GraphicsSettings.Preset;
+    bool presetApplied = false;
+    if (presetIdx <= 3) {
+        if (ImGui::Combo("Qualidade", &presetIdx, presets, 4)) {
+            m_GraphicsSettings.ApplyPreset((kizuri::QualityPreset)presetIdx);
+            presetApplied = true;
+        }
+    } else {
+        ImGui::TextDisabled("Qualidade: Custom (ajustada manualmente)");
+    }
+
+    bool customTweak = false;
+    customTweak |= ImGui::DragFloat("Resolução interna", &m_GraphicsSettings.RenderScale, 0.01f, 0.25f, 2.0f);
+    const char* msaaNames[] = { "Desligado", "1x", "2x", "4x", "8x" };
+    int msaaValues[] = { 0, 1, 2, 4, 8 };
+    int msaaIdx = 0;
+    for (int i = 0; i < 5; ++i) if (m_GraphicsSettings.MSAA == msaaValues[i]) msaaIdx = i;
+    if (ImGui::Combo("MSAA", &msaaIdx, msaaNames, 5)) m_GraphicsSettings.MSAA = msaaValues[msaaIdx];
+    customTweak |= (ImGui::IsItemActive() || ImGui::IsItemActivated());
+
+    const char* shadowNames[] = { "512", "1024", "2048", "4096" };
+    int shadowValues[] = { 512, 1024, 2048, 4096 };
+    int shadowIdx = 0;
+    for (int i = 0; i < 4; ++i) if (m_GraphicsSettings.ShadowMapSize == shadowValues[i]) shadowIdx = i;
+    if (ImGui::Combo("Shadow map (CSM)", &shadowIdx, shadowNames, 4)) m_GraphicsSettings.ShadowMapSize = shadowValues[shadowIdx];
+    customTweak |= (ImGui::IsItemActive() || ImGui::IsItemActivated());
+    customTweak |= ImGui::SliderInt("Suavização de sombra (PCF)", &m_GraphicsSettings.ShadowPCFRadius, 0, 3);
+    ImGui::Separator();
+    customTweak |= ImGui::Checkbox("Bloom", &m_GraphicsSettings.BloomEnabled);
+    if (m_GraphicsSettings.BloomEnabled) {
+        customTweak |= ImGui::DragFloat("Limiar do bloom", &m_GraphicsSettings.BloomThreshold, 0.01f, 0.1f, 10.0f);
+        customTweak |= ImGui::DragFloat("Intensidade do bloom", &m_GraphicsSettings.BloomIntensity, 0.01f, 0.0f, 3.0f);
+    }
+    ImGui::Separator();
+    customTweak |= ImGui::Checkbox("SSAO", &m_GraphicsSettings.SSAOEnabled);
+    if (m_GraphicsSettings.SSAOEnabled) {
+        customTweak |= ImGui::SliderInt("Amostras SSAO", &m_GraphicsSettings.SSAOSamples, 8, 64);
+        customTweak |= ImGui::DragFloat("Raio SSAO", &m_GraphicsSettings.SSAORadius, 0.01f, 0.05f, 2.0f);
+    }
+    ImGui::Separator();
+    customTweak |= ImGui::DragFloat("Exposição", &m_GraphicsSettings.Exposure, 0.01f, 0.1f, 8.0f);
+    customTweak |= ImGui::Checkbox("VSync", &m_GraphicsSettings.VSync);
+    ImGui::Separator();
+    customTweak |= ImGui::Checkbox("Névoa (fog exponencial)", &m_GraphicsSettings.FogEnabled);
+    if (m_GraphicsSettings.FogEnabled) {
+        customTweak |= ImGui::DragFloat("Densidade da névoa", &m_GraphicsSettings.FogDensity, 0.001f, 0.0f, 0.2f);
+        customTweak |= ImGui::ColorEdit3("Cor da névoa", m_GraphicsSettings.FogColor);
+    }
+
+    ImGui::Separator();
+    ImGui::TextDisabled("Ambiente (céu) — vazio = procedural, ou um .hdr equirectangular:");
+    ImGui::InputText("HDRI do céu", m_EnvironmentHDRIPathBuffer, sizeof(m_EnvironmentHDRIPathBuffer));
+    ImGui::SameLine();
+    bool applyHDRI = ImGui::Button("Aplicar");
+    if (ImGui::Button("Voltar ao céu procedural")) {
+        m_EnvironmentHDRIPathBuffer[0] = '\0';
+        applyHDRI = true;
+    }
+
+    ImGui::Separator();
+    if (ImGui::Button("Salvar")) SaveGraphicsSettingsToDisk();
+    ImGui::SameLine();
+    if (ImGui::Button("Restaurar padrão (Ultra)")) m_GraphicsSettings.ApplyPreset(kizuri::QualityPreset::Ultra);
+
+    if (customTweak && !presetApplied) m_GraphicsSettings.Preset = kizuri::QualityPreset::Custom;
+    m_GraphicsSettings.Clamp();
+
+    // Aplica em runtime (recursos que dependem de tamanho/MSAA recriados
+    // lazy no próximo frame pelo Renderer3D).
+    kizuri::Renderer3D::SetGraphicsSettings(m_GraphicsSettings);
+    Application& app = Application::Get();
+    if (app.GetWindow().IsVSync() != m_GraphicsSettings.VSync)
+        app.GetWindow().SetVSync(m_GraphicsSettings.VSync);
+    if (applyHDRI) kizuri::Renderer3D::SetEnvironmentHDRIPath(m_EnvironmentHDRIPathBuffer);
+}
+
+// Seção Geral: projeto, janela e persistência.
+void EditorLayer::DrawSettingsGeneral() {
+    auto& project = Project::GetActive();
+    ImGui::TextUnformatted("Projeto");
+    ImGui::Separator();
+    if (project) {
+        ImGui::Text("Nome: %s", project->GetConfig().Name.c_str());
+        ImGui::TextWrapped("Caminho: %s", project->GetFilePath().c_str());
+        ImGui::Text("Modo: %s",
+            project->GetConfig().DefaultMode == ProjectMode::TwoD ? "2D" :
+            project->GetConfig().DefaultMode == ProjectMode::ThreeD ? "3D" : "Vazio");
+        ImGui::TextWrapped("Pasta de assets: %s", project->GetAssetDirectory().c_str());
+    } else {
+        ImGui::TextDisabled("Nenhum projeto aberto.");
+    }
+    ImGui::Spacing();
+    ImGui::TextUnformatted("Janela");
+    ImGui::Separator();
+    Application& app = Application::Get();
+    ImGui::Text("Resolução da janela: %ux%u", app.GetWindow().GetWidth(), app.GetWindow().GetHeight());
+    ImGui::Text("VSync: %s", m_GraphicsSettings.VSync ? "ligado" : "desligado");
+    ImGui::Spacing();
+    ImGui::TextUnformatted("Persistência");
+    ImGui::Separator();
+    if (ImGui::Button("Salvar configurações (settings.json)")) SaveGraphicsSettingsToDisk();
+    ImGui::SameLine();
+    if (ImGui::Button("Carregar do disco")) LoadGraphicsSettingsFromDisk();
+    ImGui::Spacing();
+    ImGui::TextDisabled("settings.json fica no diretório de trabalho (bin/).");
+}
+
+// Seção Editor: comportamento do editor.
+void EditorLayer::DrawSettingsEditor() {
+    ImGui::TextUnformatted("Play");
+    ImGui::Separator();
+    ImGui::Checkbox("Compilar C# no Play (estilo Unity)", &m_AutoCompileOnPlay);
+    ImGui::SameLine();
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Roda dotnet build no Source/*.csproj antes de entrar no Play.");
+    ImGui::Spacing();
+    ImGui::TextUnformatted("Viewport");
+    ImGui::Separator();
+    ImGui::Checkbox("Maximizar viewport (botão fullscreen da toolbar)", &m_ViewportMaximized);
+    ImGui::Spacing();
+    ImGui::TextUnformatted("Cenas de demonstração");
+    ImGui::Separator();
+    if (ImGui::Button("Criar demonstração 2D")) CreateDemoScene2D();
+    ImGui::SameLine();
+    if (ImGui::Button("Criar demonstração 3D")) CreateDemoScene3D();
 }
 
 void EditorLayer::DrawGizmo() {
@@ -1335,8 +1534,8 @@ void EditorLayer::DrawDockspace() {
                             m_SceneState == SceneState::Edit && !m_ScenePath.empty())) {
             m_RequestOpenExportPopup = true;
         }
-        if (ImGui::MenuItem("Configurações Gráficas...")) {
-            m_ShowGraphicsSettings = true;
+        if (ImGui::MenuItem("Configurações...", "Ctrl+,", false, true)) {
+            m_ShowSettings = true;
         }
         if (ImGui::MenuItem("Definir cena como inicial", nullptr, false,
                             m_SceneState == SceneState::Edit && !m_ScenePath.empty() && (bool)Project::GetActive())) {
@@ -1350,6 +1549,8 @@ void EditorLayer::DrawDockspace() {
         // m_ActiveScene no meio do runtime descartaria a cópia em execução
         // por baixo e é comportamento de modo edição dentro do jogo.
         if (ImGui::MenuItem("Nova Cena", nullptr, false, m_SceneState == SceneState::Edit)) NewScene();
+        if (ImGui::MenuItem("Cena de Demonstração 2D...", nullptr, false, m_SceneState == SceneState::Edit))
+            CreateDemoScene2D();
         if (ImGui::MenuItem("Cena de Demonstração 3D...", nullptr, false, m_SceneState == SceneState::Edit))
             CreateDemoScene3D();
         ImGui::Separator();
@@ -1667,6 +1868,28 @@ void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
     ProjectMode mode = project->GetConfig().DefaultMode;
     if (mode == ProjectMode::TwoD) m_ViewportMode = ViewportMode::Mode2D;
     else if (mode == ProjectMode::ThreeD) m_ViewportMode = ViewportMode::Mode3D;
+
+    // Recria a cena com o conteúdo padrão do MODO do projeto (2D = câmera
+    // ortográfica + sprites, 3D = perspectiva + cubo) — ou carrega a cena
+    // inicial configurada, se houver.
+    m_SelectedEntity = {};
+    m_History.Clear();
+    std::string startScene = project->GetConfig().StartScenePath;
+    if (!startScene.empty()) {
+        m_ActiveScene = CreateRef<Scene>("Cena");
+        if (SceneSerializer(m_ActiveScene).Deserialize(Project::ResolvePath(startScene))) {
+            m_ScenePath = Project::ResolvePath(startScene);
+        } else {
+            KZ_CORE_ERROR("Falha ao carregar a cena inicial do projeto: {0}", startScene);
+            m_ActiveScene = CreateRef<Scene>("Nova Cena");
+            m_ScenePath.clear();
+            CreateDefaultSceneContent();
+        }
+    } else {
+        m_ActiveScene = CreateRef<Scene>("Nova Cena");
+        m_ScenePath.clear();
+        CreateDefaultSceneContent();
+    }
 
     RememberProject(project);
 
@@ -3169,14 +3392,14 @@ void EditorLayer::OnImGuiRender() {
     DrawExportModal();
     DrawSavePrefabModal();
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — modais ok");
-    DrawSceneHierarchy();
-    KZ_CORE_TRACE("EditorLayer::OnImGuiRender — DrawSceneHierarchy ok");
-    DrawInspector();
-    KZ_CORE_TRACE("EditorLayer::OnImGuiRender — DrawInspector ok");
-    DrawConsole();
-    KZ_CORE_TRACE("EditorLayer::OnImGuiRender — DrawConsole ok");
-    DrawContentBrowser();
-    KZ_CORE_TRACE("EditorLayer::OnImGuiRender — DrawContentBrowser ok");
+    if (!m_ViewportMaximized) {
+        DrawSceneHierarchy();
+        DrawInspector();
+        DrawConsole();
+        DrawContentBrowser();
+    } else {
+        KZ_CORE_TRACE("EditorLayer::OnImGuiRender — painéis ocultos (viewport maximizado)");
+    }
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     BeginPanelNoMenuButton();
@@ -3351,8 +3574,8 @@ void EditorLayer::OnImGuiRender() {
         }
     }
 
-    // Janela de configurações gráficas (Arquivo > Configurações Gráficas).
-    DrawGraphicsSettings();
+    // Janela de configurações (Arquivo > Configurações).
+    DrawSettings();
 
     ImGui::End();
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — fim");

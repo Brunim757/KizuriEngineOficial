@@ -51,8 +51,12 @@ private:
     void DrawColliderGizmo(); // wireframe dos colisores 2D/3D da entidade selecionada
     void Reparent(kizuri::Entity child, kizuri::Entity newParent);
 
-    // Configurações gráficas (qualidade, MSAA, SSAO, bloom, HDRI do céu).
-    void DrawGraphicsSettings();
+    // Configurações da engine (Arquivo > Configurações): seções em sidebar —
+    // Gráficos, Geral e Editor. Não é mais só a aba padrão do ImGui.
+    void DrawSettings();
+    void DrawSettingsGraphics();
+    void DrawSettingsGeneral();
+    void DrawSettingsEditor();
     void LoadGraphicsSettingsFromDisk();
     void SaveGraphicsSettingsToDisk();
 
@@ -69,6 +73,8 @@ private:
     // presente) — Fox esquelético animado, DamagedHelmet PBR, primitivas,
     // HDRI de céu, fog — pra mostrar a engine trabalhando junta.
     void CreateDemoScene3D();
+    // Cena de demonstração 2D: sprites, física Box2D, partículas, texto e UI.
+    void CreateDemoScene2D();
 
     // Cria uma entidade a partir de um arquivo de asset (soltado do Content
     // Browser no viewport): .obj -> MeshRenderer, imagem -> SpriteRenderer.
@@ -169,10 +175,12 @@ private:
     std::filesystem::path m_ContentBrowserCurrentDir;
     std::unordered_map<std::string, kizuri::Ref<kizuri::Texture2D>> m_ThumbCache;
 
-    // Janela de configurações gráficas (Arquivo > Configurações Gráficas).
-    bool m_ShowGraphicsSettings = false;
+    // Janela de configurações (Arquivo > Configurações).
+    bool m_ShowSettings = false;
     kizuri::GraphicsSettings m_GraphicsSettings;
     char m_EnvironmentHDRIPathBuffer[512] = "";
+    int m_SettingsSection = 0; // 0 = Gráficos, 1 = Geral, 2 = Editor
+    bool m_ViewportMaximized = false; // botão fullscreen do viewport (esconde os painéis laterais)
 
     glm::vec2 m_ViewportSize = { 0.0f, 0.0f };
     bool m_ViewportFocused = false;
@@ -191,6 +199,7 @@ private:
     bool m_PrevYKeyDown = false;
     bool m_PrevF5KeyDown = false;
     bool m_PrevDKeyDown = false;
+    bool m_PrevF11KeyDown = false;
 
     // Alternância 2D/3D do viewport (botão na toolbar — ver
     // DrawViewportToolbar). Troca só o COMPORTAMENTO DO EDITOR (qual

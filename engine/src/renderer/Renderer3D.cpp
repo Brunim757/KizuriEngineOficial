@@ -750,7 +750,11 @@ void main() {
         occlusion += (sampleDepth >= offset.z + 0.03 ? 1.0 : 0.0) * rangeCheck;
     }
     occlusion = 1.0 - occlusion / float(u_SampleCount);
-    o_AO = pow(occlusion, u_Power);
+    // Teto de escurecimento: mesmo que a estimativa de oclusão quebre (ex.:
+    // reconstrução de profundidade imprecisa em algumas GPUs, que dava ~0.1
+    // e escurecia a cena ~10x), o AO nunca passa de 0.35 — o efeito fica
+    // visível mas não deixa a cena escura.
+    o_AO = clamp(pow(occlusion, u_Power), 0.35, 1.0);
 }
 )";
 

@@ -729,6 +729,22 @@ static bool AcceptAssetDrop(std::string& outPath) {
     return accepted;
 }
 
+// Botão "..." que abre o diálogo NATIVO de arquivos do sistema (Windows:
+// IFileDialog, a mesma janela do Explorer) e preenche 'outPath' com o caminho
+// RELATIVO ao projeto. Em plataformas sem backend o diálogo volta vazio e o
+// campo de texto manual continua sendo a alternativa (nunca travar nisso).
+static bool FileBrowseButton(const char* filterName, const char* filterPattern, std::string& outPath) {
+    ImGui::SameLine();
+    if (ImGui::Button("...")) {
+        std::string picked = kizuri::FileDialog::OpenFile(filterName, filterPattern);
+        if (!picked.empty()) {
+            outPath = kizuri::Project::MakeRelativePath(picked);
+            return true;
+        }
+    }
+    return false;
+}
+
 // Sem isso, uma Camera na cena era um ponto totalmente invisível — nenhuma pista de onde ela
 // tá nem pra onde aponta. Desenha uma pirâmide de frustum (tamanho fixo, só visualização —
 // não é o far clip real) + uma seta curta de "frente", projetadas manualmente pra tela via
@@ -1033,9 +1049,16 @@ void EditorLayer::DrawSettingsGraphics() {
 
     ImGui::Separator();
     ImGui::TextDisabled("Ambiente (céu) — vazio = procedural, ou um .hdr equirectangular:");
+    bool applyHDRI = false;
     ImGui::InputText("HDRI do céu", m_EnvironmentHDRIPathBuffer, sizeof(m_EnvironmentHDRIPathBuffer));
+    std::string hdriPick;
+    if (FileBrowseButton("HDRI (céu)", "*.hdr;*.exr", hdriPick)) {
+        strncpy(m_EnvironmentHDRIPathBuffer, hdriPick.c_str(), sizeof(m_EnvironmentHDRIPathBuffer) - 1);
+        m_EnvironmentHDRIPathBuffer[sizeof(m_EnvironmentHDRIPathBuffer) - 1] = '\0';
+        applyHDRI = true;
+    }
     ImGui::SameLine();
-    bool applyHDRI = ImGui::Button("Aplicar");
+    applyHDRI |= ImGui::Button("Aplicar");
     if (ImGui::Button("Voltar ao céu procedural")) {
         m_EnvironmentHDRIPathBuffer[0] = '\0';
         applyHDRI = true;
@@ -2793,6 +2816,11 @@ void EditorLayer::DrawInspector() {
                     sc.TexturePath = texBuf;
                     sc.Texture = sc.TexturePath.empty() ? nullptr : kizuri::Texture2D::Create(sc.TexturePath);
                 }
+                std::string browsedTexture;
+                if (FileBrowseButton("Textura (sprite)", "*.png;*.jpg;*.jpeg;*.bmp;*.tga", browsedTexture)) {
+                    sc.TexturePath = browsedTexture;
+                    sc.Texture = sc.TexturePath.empty() ? nullptr : kizuri::Texture2D::Create(sc.TexturePath);
+                }
                 if (sc.Texture) {
                     uint32_t texID = sc.Texture->GetRendererID();
                     ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(96.0f, 96.0f), ImVec2(0, 1), ImVec2(1, 0));
@@ -2898,6 +2926,13 @@ void EditorLayer::DrawInspector() {
                     if (mr.MeshSource.find(".glb") != std::string::npos || mr.MeshSource.find(".gltf") != std::string::npos)
                         mr.MeshMaterial = kizuri::Mesh::ExtractMaterialFromGLTF(Project::ResolvePath(mr.MeshSource));
                 }
+                std::string browsedMesh;
+                if (FileBrowseButton("Malha 3D", "*.glb;*.gltf;*.obj", browsedMesh)) {
+                    mr.MeshSource = browsedMesh;
+                    mr.MeshAsset = kizuri::Mesh::FromSource(mr.MeshSource);
+                    if (mr.MeshSource.find(".glb") != std::string::npos || mr.MeshSource.find(".gltf") != std::string::npos)
+                        mr.MeshMaterial = kizuri::Mesh::ExtractMaterialFromGLTF(Project::ResolvePath(mr.MeshSource));
+                }
                 ImGui::ColorEdit3("Albedo", &mat.Albedo.x);
                 ImGui::DragFloat("Metallic", &mat.Metallic, 0.01f, 0.0f, 1.0f);
                 ImGui::DragFloat("Roughness", &mat.Roughness, 0.01f, 0.02f, 1.0f);
@@ -2918,6 +2953,11 @@ void EditorLayer::DrawInspector() {
                     mat.AlbedoMapPath = kizuri::Project::MakeRelativePath(droppedAlbedo);
                     mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.AlbedoMapPath);
                 }
+                std::string browsedAlbedo;
+                if (FileBrowseButton("Mapa de Albedo", "*.png;*.jpg;*.jpeg;*.bmp;*.tga", browsedAlbedo)) {
+                    mat.AlbedoMapPath = browsedAlbedo;
+                    mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.AlbedoMapPath);
+                }
                 if (mat.AlbedoMap) {
                     uint32_t texID = mat.AlbedoMap->GetRendererID();
                     ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(64.0f, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
@@ -2931,6 +2971,11 @@ void EditorLayer::DrawInspector() {
                     mat.NormalMapPath = kizuri::Project::MakeRelativePath(droppedNormal);
                     mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.NormalMapPath);
                 }
+                std::string browsedNormal;
+                if (FileBrowseButton("Mapa de Normais", "*.png;*.jpg;*.jpeg;*.bmp;*.tga", browsedNormal)) {
+                    mat.NormalMapPath = browsedNormal;
+                    mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.NormalMapPath);
+                }
                 if (ImGui::InputText("Mapa Metallic/Roughness", mrBuf, sizeof(mrBuf))) {
                     mat.MetallicRoughnessMapPath = mrBuf;
                     mat.MetallicRoughnessMap = mat.MetallicRoughnessMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.MetallicRoughnessMapPath);
@@ -2940,6 +2985,11 @@ void EditorLayer::DrawInspector() {
                     mat.MetallicRoughnessMapPath = kizuri::Project::MakeRelativePath(droppedMR);
                     mat.MetallicRoughnessMap = mat.MetallicRoughnessMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.MetallicRoughnessMapPath);
                 }
+                std::string browsedMR;
+                if (FileBrowseButton("Mapa Metallic/Roughness", "*.png;*.jpg;*.jpeg;*.bmp;*.tga", browsedMR)) {
+                    mat.MetallicRoughnessMapPath = browsedMR;
+                    mat.MetallicRoughnessMap = mat.MetallicRoughnessMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.MetallicRoughnessMapPath);
+                }
                 if (ImGui::InputText("Mapa Emissivo", emBuf, sizeof(emBuf))) {
                     mat.EmissiveMapPath = emBuf;
                     mat.EmissiveMap = mat.EmissiveMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.EmissiveMapPath);
@@ -2947,6 +2997,11 @@ void EditorLayer::DrawInspector() {
                 std::string droppedEmissive;
                 if (AcceptAssetDrop(droppedEmissive)) {
                     mat.EmissiveMapPath = kizuri::Project::MakeRelativePath(droppedEmissive);
+                    mat.EmissiveMap = mat.EmissiveMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.EmissiveMapPath);
+                }
+                std::string browsedEmissive;
+                if (FileBrowseButton("Mapa Emissivo", "*.png;*.jpg;*.jpeg;*.bmp;*.tga", browsedEmissive)) {
+                    mat.EmissiveMapPath = browsedEmissive;
                     mat.EmissiveMap = mat.EmissiveMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.EmissiveMapPath);
                 }
                 if (mat.NormalMap) {
@@ -3035,6 +3090,11 @@ void EditorLayer::DrawInspector() {
                     sac.SheetPath = sheetBuf;
                     sac.SheetTexture = sac.SheetPath.empty() ? nullptr : kizuri::Texture2D::Create(sac.SheetPath);
                 }
+                std::string browsedSheet;
+                if (FileBrowseButton("Sprite Sheet", "*.png;*.jpg;*.jpeg;*.bmp;*.tga", browsedSheet)) {
+                    sac.SheetPath = browsedSheet;
+                    sac.SheetTexture = sac.SheetPath.empty() ? nullptr : kizuri::Texture2D::Create(sac.SheetPath);
+                }
                 if (sac.SheetTexture) {
                     uint32_t texID = sac.SheetTexture->GetRendererID();
                     ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(96.0f, 96.0f), ImVec2(0, 1), ImVec2(1, 0));
@@ -3062,6 +3122,11 @@ void EditorLayer::DrawInspector() {
                 atlasBuf[sizeof(atlasBuf) - 1] = '\0';
                 if (ImGui::InputText("Atlas de Tiles", atlasBuf, sizeof(atlasBuf))) {
                     tmc.AtlasPath = atlasBuf;
+                    tmc.AtlasTexture = tmc.AtlasPath.empty() ? nullptr : kizuri::Texture2D::Create(tmc.AtlasPath);
+                }
+                std::string browsedAtlas;
+                if (FileBrowseButton("Atlas de Tiles", "*.png;*.jpg;*.jpeg;*.bmp;*.tga", browsedAtlas)) {
+                    tmc.AtlasPath = browsedAtlas;
                     tmc.AtlasTexture = tmc.AtlasPath.empty() ? nullptr : kizuri::Texture2D::Create(tmc.AtlasPath);
                 }
                 if (tmc.AtlasTexture) {
@@ -3177,6 +3242,9 @@ void EditorLayer::DrawInspector() {
                 pathBuf[sizeof(pathBuf) - 1] = '\0';
                 if (ImGui::InputText("Arquivo de áudio (.wav/.mp3/.ogg/.flac)", pathBuf, sizeof(pathBuf)))
                     ac.ClipPath = pathBuf;
+                std::string browsedClip;
+                if (FileBrowseButton("Áudio", "*.wav;*.mp3;*.ogg;*.flac", browsedClip))
+                    ac.ClipPath = browsedClip;
                 ImGui::Checkbox("Em loop", &ac.Loop);
                 ImGui::SameLine();
                 ImGui::Checkbox("Reproduzir ao iniciar", &ac.PlayOnStart);

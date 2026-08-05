@@ -2271,17 +2271,22 @@ void Renderer3D::EndScene() {
 
     // Detecção de VIEWPORT PRETO no 1º frame: a cena padrão nunca é preta de
     // verdade — se o readback do centro do HDR buffer vier ~0, algo do pipeline
-    // 4.x falhou silenciosamente (sem erro de GL). Nesse caso degrada pro
-    // caminho mais simples (MSAA/SSR/SSAO/bloom off) no próximo frame E grava
-    // render_info.txt com o estado — o editor mostra o motivo na tela.
-    static bool s_BlackChecked = false;
-    if (!s_BlackChecked) {
-        s_BlackChecked = true;
+    // falhou silenciosamente. Loga nos 3 primeiros frames (a progressão mostra
+    // se a degradação automática resolveu), degrada no 1º e grava render_info.
+    static int s_BlackFrames = 0;
+    if (s_BlackFrames < 3) {
+        ++s_BlackFrames;
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, s_HDRFBO);
+        float px[3] = { 1.0f, 1.0f, 1.0f };
+        glReadPixels((GLint)(internalW / 2), (GLint)(internalH / 2),
+                     1, 1, GL_RGB, GL_FLOAT, px); // RGB combina com o RGB16F
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        float lum = px[0] + px[1] + px[2];
+        KZ_CORE_INFO("Verificação de frame {0}: centro do HDR = ({1:.3f}, {2:.3f}, {3:.3f}).",
+                     s_BlackFrames, px[0], px[1], px[2]);
 
-        // Sempre grava um dossiê de render (render_info.txt ao lado do exe):
-        // versões, MSAA, validade dos shaders/FBOs. É o que o usuário manda
-        // quando o viewport fica preto.
-        {
+        if (s_BlackFrames == 1) {
+            // Sempre grava um dossiê de render (render_info.txt ao lado do exe).
             std::ofstream dump("render_info.txt");
             dump << "Kizuri Engine — diagnostico de render\n";
             dump << "OpenGL: " << GetOpenGLVersionString() << "\n";
@@ -2293,7 +2298,7 @@ void Renderer3D::EndScene() {
             dump << "SSAO: " << (s_Settings.SSAOEnabled ? "on" : "off") << "\n";
             dump << "Bloom: " << (s_Settings.BloomEnabled ? "on" : "off") << "\n";
             auto fbStatus = [](GLuint fbo) {
-                if (fbo == 0) return 0; // sem FBO = desligado (ex.: sem MSAA)
+                if (fbo == 0) return 0;
                 glBindFramebuffer(GL_FRAMEBUFFER, fbo);
                 GLenum s = glCheckFramebufferStatus(GL_FRAMEBUFFER);
                 glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -2309,18 +2314,16 @@ void Renderer3D::EndScene() {
             dump << "Shader composite: " << ShaderOk(s_CompositeShader) << "\n";
             dump << "Shader shadow: " << ShaderOk(s_ShadowShader) << "\n";
             if (s_PointShadowShader) dump << "Shader point shadow: " << ShaderOk(s_PointShadowShader) << "\n";
+            dump.close();
         }
 
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, s_HDRFBO);
-        float px[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-        glReadPixels((GLint)(internalW / 2), (GLint)(internalH / 2),
-                     1, 1, GL_RGBA, GL_FLOAT, px);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        float lum = px[0] + px[1] + px[2];
-        KZ_CORE_INFO("Verificação de 1º frame: centro do HDR = ({0:.3f}, {1:.3f}, {2:.3f}).", px[0], px[1], px[2]);
         if (lum < 0.001f) {
-            KZ_CORE_ERROR("VIEWPORT PRETO no 1º frame — degradando pro caminho simples e gravando render_info.txt.");
-            SetShaderDiagnostic("VIEWPORT PRETO — modo compatibilidade aplicado (MSAA/SSR/SSAO/bloom desligados)");
+            char msg[256];
+            snprintf(msg, sizeof(msg),
+                     "VIEWPORT PRETO — HDR centro (%.3f, %.3f, %.3f) — compatibilidade aplicada",
+                     px[0], px[1], px[2]);
+            KZ_CORE_ERROR("{0}", msg);
+            SetShaderDiagnostic(msg);
             GraphicsSettings basic = s_Settings;
             basic.MSAA = 1;
             basic.SSREnabled = false;

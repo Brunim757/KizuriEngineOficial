@@ -302,8 +302,7 @@ def page_template(pages, fm, body, groups):
 {pn}
 </div>
 <footer class="footer">
-  Kizuri Engine — documentação (site estático). Fonte em <code>documentacao/src/</code>;
-  gerado por <code>documentacao/generate_site.py</code>.
+  © Kizuri Engine. Todos os direitos reservados.
 </footer>
 </main>
 </div>
@@ -354,7 +353,7 @@ def search_page(pages):
 <div id="results"></div>
 </article>
 <footer class="footer">
-  Kizuri Engine — busca (client-side, sem servidor).
+  © Kizuri Engine. Todos os direitos reservados.
 </footer>
 </main>
 </div>

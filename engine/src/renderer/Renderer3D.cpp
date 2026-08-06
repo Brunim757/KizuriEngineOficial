@@ -822,11 +822,14 @@ vec3 ComputeAtmosphere(vec3 rd) {
     color += vec3(1.0, 0.92, 0.75) * pow(max(mu, 0.0), 1800.0) * 40.0;
     color += vec3(1.0, 0.62, 0.30) * pow(max(mu, 0.0), 28.0) * 0.6;
 
-    // Estrelas celulares fracas no lado noturno (estáveis, sem shimmer).
+    // Estrelas celulares — só BEM acima do horizonte (a faixa perto do horizonte
+    // com hash aleatório + jitter do TAA parecia estática de TV). Células
+    // maiores e mais espaçadas pra não "piscar".
     float nightFactor = smoothstep(-0.03, -0.5, mu);
-    vec3 cell = floor(rd * 90.0);
+    float horizonFade = smoothstep(0.02, 0.12, rd.y); // some suavemente na direção do horizonte
+    vec3 cell = floor(rd * 40.0);
     float starHash = fract(sin(dot(cell, vec3(127.1, 311.7, 74.7))) * 43758.5453);
-    color += vec3(step(0.996, starHash)) * nightFactor * 1.2;
+    color += vec3(step(0.995, starHash)) * nightFactor * horizonFade * 1.2;
 
     return color;
 }
@@ -867,7 +870,9 @@ float CloudFBM(vec3 p) {
     return v;
 }
 vec3 ComputeClouds(vec3 rd) {
-    if (rd.y <= 0.02) return vec3(0.0);
+    // Nuvens só BEM acima do horizonte: no ângulo rasante o raio corta a casca
+    // de nuvem em 1-2 pontos e o fbm vira grão/estática (relato do usuário).
+    if (rd.y <= 0.06) return vec3(0.0);
     vec3 origin = vec3(0.0, kPlanetRadius, 0.0);
     // Camada de nuvens entre ~1.0015 e ~1.0025 (≈10km em escala).
     float cloudBottom = kPlanetRadius + 0.0015;
@@ -886,14 +891,14 @@ vec3 ComputeClouds(vec3 rd) {
     float t = t0 + dt * 0.5;
     for (int i = 0; i < CLOUD_STEPS; ++i) {
         vec3 p = origin + rd * t;
-        vec3 wp = p * 14.0;
+        vec3 wp = p * 12.0;
         wp.z += u_CloudTime * 0.002; // deriva lenta
         float d = CloudFBM(wp);
-        d = smoothstep(0.52, 0.78, d);
+        d = smoothstep(0.55, 0.8, d);
         if (d > 0.002) {
             float sunAmt = clamp(dot(rd, u_SunDirection), 0.0, 1.0);
             vec3 col = mix(vec3(0.62, 0.66, 0.74), vec3(1.0, 0.96, 0.88), sunAmt);
-            acc += col * d * trans * dt * 14.0;
+            acc += col * d * trans * dt * 10.0;
             trans *= 1.0 - d * 0.45;
             if (trans < 0.02) break;
         }

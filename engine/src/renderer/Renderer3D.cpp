@@ -775,15 +775,20 @@ vec3 ComputeAtmosphere(vec3 rd) {
 
     float b = dot(rd, origin);
     // Saída da atmosfera (raiz positiva; sempre existe, |origin| < R_atm).
-    float tAtm = -b + sqrt(b * b + (kAtmosphereRadius * kAtmosphereRadius - kPlanetRadius * kPlanetRadius));
+    // max(...,0) dentro do sqrt por segurança de precisão float.
+    float tAtm = -b + sqrt(max(b * b + (kAtmosphereRadius * kAtmosphereRadius - kPlanetRadius * kPlanetRadius), 0.0));
     // Interseção com o planeta opaco: -b - |b| é 0 quando o raio desce e
     // negativo quando sobe (aí o raio não atinge o planeta).
     float tPlanet = -b - sqrt(max(b * b, 0.0));
     float tMax = (tPlanet >= 0.0) ? tPlanet : tAtm;
     if (tMax < 0.0001) return vec3(0.0); // abaixo do chão do planeta (opaco)
 
-    const int kSteps = 20;      // era 16 — mais passos = gradiente suave (menos banding perto do horizonte)
-    const int kLightSteps = 10; // era 8
+    // Passos ALTOS perto do horizonte: a densidade cai exponencialmente
+    // (scale height ~0.00125) e, com passos grossos, cada pixel amostra o
+    // gradiente num ponto diferente -> "ruído de TV colorido" na faixa baixa
+    // (some quando o céu vira HDRI porque aí não há raymarch). 32/12 suavizam.
+    const int kSteps = 32;
+    const int kLightSteps = 12;
     float dt = tMax / float(kSteps);
     float t = dt * 0.5;
 
@@ -795,8 +800,10 @@ vec3 ComputeAtmosphere(vec3 rd) {
 
         // Transmitância da luz do sol até este ponto: marcha de `pos` na
         // direção DO sol até sair da casca de atmosfera (raiz positiva).
+        // max(...,0) evita sqrt(negativo) -> NaN por precisão float (speckle).
         float bSun = dot(sun, pos);
-        float tSun = -bSun + sqrt(bSun * bSun + (kAtmosphereRadius * kAtmosphereRadius - dot(pos, pos)));
+        float tSun = -bSun + sqrt(max(bSun * bSun + (kAtmosphereRadius * kAtmosphereRadius - dot(pos, pos)), 0.0));
+        tSun = max(tSun, 0.0001);
         float dtSun = tSun / float(kLightSteps);
         float ts = dtSun * 0.5;
         vec3 sunDepth = vec3(0.0);

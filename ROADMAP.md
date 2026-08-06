@@ -319,3 +319,16 @@
   tela + fallback de MSAA (clampa no driver e desliga se falhar)
 
 ---
+
+## ✅ v0.22 — Engine 100% OpenGL 3.3 (fim da saga do viewport preto)
+
+- [x] Decisão: a engine usa SEMPRE OpenGL 3.3 core, em qualquer máquina —
+  o caminho comprovado e estável (Wine, iGPU, VM, driver novo) — acabou o
+  viewport preto de drivers que anunciam GLSL 4.x
+- [x] Contexto: cadeia agora pede só {3,3}; teto GLSL 330
+- [x] Features gated por GLSL>=400 (SSR/PCSS/sombra de luz pontual) ficam
+  sempre desligadas (compiladas fora no #if, shader SSR não é criado)
+- [x] MSAA 4x, shadow 2048, PCF 2, SSAO 32, bloom 4 — os valores 3.3 provados
+- [x] Os gráficos "ultra" futuros virão do backend VULKAN (em andamento)
+
+---

@@ -95,16 +95,15 @@ void Window::Init(const WindowProps& props) {
     m_Data.Width = (uint32_t)winW;
     m_Data.Height = (uint32_t)winH;
 
-    // Tenta a versão mais alta primeiro e desce até 3.3 core (mínimo). O teto
-    // é 4.5 de propósito: o glad é GL 4.5 core (nada além disso é usado) e
-    // vários drivers/softrasters (ex.: Mesa llvmpipe, VMs) anunciam GLSL 4.60
-    // mas só compilam #version 450 — pedir 4.6 faz os shaders falharem (tela
-    // preta). A cadeia inclui 4.5/4.3/4.1/4.0 — assim uma máquina que só
-    // chega a 4.0 (ou 4.3, etc) usa a versão MÁXIMA dela, não cai pro 3.3.
-    // Os shaders escalam via GetGLSLVersion (GL_SHADING_LANGUAGE_VERSION) e,
-    // se um driver mentir, o Shader desce sozinho até 330 (fallback).
+    // A engine roda SEMPRE em OpenGL 3.3 core: é o caminho comprovado e
+    // estável em QUALQUER máquina (Wine, iGPU, VM, driver novo) — sem a saga
+    // de viewport preto de drivers que anunciam GLSL 4.x e rejeitam os
+    // shaders. As features avançadas (reflexos por raio, PCSS, sombra de luz
+    // pontual) ficaram gated por GLSL>=400 e, com o teto fixo em 330, ficam
+    // sempre desligadas — o "ultra" dos gráficos vem do backend Vulkan (em
+    // andamento), não de versões de OpenGL.
     const int contextVersions[][2] = {
-        {4, 5}, {4, 3}, {4, 1}, {4, 0}, {3, 3}
+        {3, 3}
     };
     for (auto& version : contextVersions) {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, version[0]);

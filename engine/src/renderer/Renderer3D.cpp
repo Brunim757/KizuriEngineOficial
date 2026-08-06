@@ -782,8 +782,8 @@ vec3 ComputeAtmosphere(vec3 rd) {
     float tMax = (tPlanet >= 0.0) ? tPlanet : tAtm;
     if (tMax < 0.0001) return vec3(0.0); // abaixo do chão do planeta (opaco)
 
-    const int kSteps = 16;
-    const int kLightSteps = 8;
+    const int kSteps = 20;      // era 16 — mais passos = gradiente suave (menos banding perto do horizonte)
+    const int kLightSteps = 10; // era 8
     float dt = tMax / float(kSteps);
     float t = dt * 0.5;
 
@@ -822,14 +822,16 @@ vec3 ComputeAtmosphere(vec3 rd) {
     color += vec3(1.0, 0.92, 0.75) * pow(max(mu, 0.0), 1800.0) * 40.0;
     color += vec3(1.0, 0.62, 0.30) * pow(max(mu, 0.0), 28.0) * 0.6;
 
-    // Estrelas celulares — só BEM acima do horizonte (a faixa perto do horizonte
-    // com hash aleatório + jitter do TAA parecia estática de TV). Células
-    // maiores e mais espaçadas pra não "piscar".
-    float nightFactor = smoothstep(-0.03, -0.5, mu);
-    float horizonFade = smoothstep(0.02, 0.12, rd.y); // some suavemente na direção do horizonte
-    vec3 cell = floor(rd * 40.0);
+    // Estrelas — só no CÉU ALTO (acima de ~20° de elevação) e no lado noturno
+    // profundo. A faixa baixa do céu com hash aleatório (mesmo com fade) era o
+    // "ruído de TV antiga" — o speckle piscava com o jitter do TAA e sumia só
+    // quando o céu virava HDRI (a demo 3D). Aqui elas ficam raras, discretas
+    // e bem acima do horizonte.
+    float nightFactor = smoothstep(-0.15, -0.55, mu);
+    float elevationFade = smoothstep(0.35, 0.6, rd.y);
+    vec3 cell = floor(rd * 30.0);
     float starHash = fract(sin(dot(cell, vec3(127.1, 311.7, 74.7))) * 43758.5453);
-    color += vec3(step(0.995, starHash)) * nightFactor * horizonFade * 1.2;
+    color += vec3(step(0.996, starHash)) * nightFactor * elevationFade * 0.7;
 
     return color;
 }
@@ -862,7 +864,9 @@ float CloudNoise(vec3 p) {
 float CloudFBM(vec3 p) {
     float v = 0.0;
     float a = 0.5;
-    for (int i = 0; i < 4; ++i) {
+    // 3 oitavas (era 4): menos detalhe em alta frequência — o 4º octave era
+    // o que dava o aspecto de "grão/TV" na camada de nuvens.
+    for (int i = 0; i < 3; ++i) {
         v += a * CloudNoise(p);
         p = p * 2.03 + vec3(11.3, 7.7, 3.9);
         a *= 0.5;
@@ -870,9 +874,9 @@ float CloudFBM(vec3 p) {
     return v;
 }
 vec3 ComputeClouds(vec3 rd) {
-    // Nuvens só BEM acima do horizonte: no ângulo rasante o raio corta a casca
-    // de nuvem em 1-2 pontos e o fbm vira grão/estática (relato do usuário).
-    if (rd.y <= 0.06) return vec3(0.0);
+    // Nuvens só bem acima do horizonte: no ângulo rasante o raio corta a
+    // casca em poucos pontos e o fbm vira grão/estática.
+    if (rd.y <= 0.1) return vec3(0.0);
     vec3 origin = vec3(0.0, kPlanetRadius, 0.0);
     // Camada de nuvens entre ~1.0015 e ~1.0025 (≈10km em escala).
     float cloudBottom = kPlanetRadius + 0.0015;
@@ -884,22 +888,22 @@ vec3 ComputeClouds(vec3 rd) {
     t0 = max(t0, 0.0);
     float thickness = max(t1 - t0, 0.0001);
 
-    const int CLOUD_STEPS = 12;
+    const int CLOUD_STEPS = 14;
     float dt = thickness / float(CLOUD_STEPS);
     vec3 acc = vec3(0.0);
     float trans = 1.0;
     float t = t0 + dt * 0.5;
     for (int i = 0; i < CLOUD_STEPS; ++i) {
         vec3 p = origin + rd * t;
-        vec3 wp = p * 12.0;
-        wp.z += u_CloudTime * 0.002; // deriva lenta
+        vec3 wp = p * 9.0;            // escala maior = nuvens mais "aveludadas"
+        wp.z += u_CloudTime * 0.002;  // deriva lenta
         float d = CloudFBM(wp);
-        d = smoothstep(0.55, 0.8, d);
+        d = smoothstep(0.58, 0.82, d); // limiar mais alto e mais suave
         if (d > 0.002) {
             float sunAmt = clamp(dot(rd, u_SunDirection), 0.0, 1.0);
             vec3 col = mix(vec3(0.62, 0.66, 0.74), vec3(1.0, 0.96, 0.88), sunAmt);
-            acc += col * d * trans * dt * 10.0;
-            trans *= 1.0 - d * 0.45;
+            acc += col * d * trans * dt * 9.0;
+            trans *= 1.0 - d * 0.4;
             if (trans < 0.02) break;
         }
         t += dt;

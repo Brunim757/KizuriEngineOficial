@@ -22,8 +22,11 @@ void ProfilerPanel::OnImGuiRender() {
     ImGui::Text("Frame: %.2f ms", frameMs);
     ImGui::Text("Draw calls: %u", kizuri::RenderCommand::GetFrameDrawCalls());
     ImGui::Text("Triângulos: %u", kizuri::RenderCommand::GetFrameTriangles());
-    if (m_Ctx.ActiveScene)
-        ImGui::Text("Entidades: %u", (uint32_t)m_Ctx.ActiveScene->GetRegistry().alive());
+    if (m_Ctx.ActiveScene) {
+        uint32_t entityCount = 0;
+        m_Ctx.ActiveScene->GetRegistry().each([&](auto) { ++entityCount; });
+        ImGui::Text("Entidades: %u", entityCount);
+    }
 
     ImGui::Separator();
     ImGui::TextDisabled("Tempo de frame (últimos %d frames)", kHistory);

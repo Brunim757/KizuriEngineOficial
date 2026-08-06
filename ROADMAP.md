@@ -486,3 +486,26 @@
   `GraphicsSettings` completo (presets + `settings.json` + UI do editor)
 
 ---
+## ✅ v0.26 — Editor completo: painéis dockáveis (em andamento, local)
+
+> Este update fica LOCAL até o GitHub Actions voltar — nada de push ainda.
+
+- [x] **Framework de painéis** (`editor/src/UI/Panels/`): classe base
+  `EditorPanel` + `EditorContext` (contexto compartilhado preenchido pelo
+  EditorLayer todo frame). Cada painel é um arquivo próprio — o EditorLayer
+  só cria, preenche contexto e chama render/update (edits ADITIVOS, sem
+  reescrever as 4400 linhas existentes)
+- [x] Menu **Janelas** na menubar: liga/desliga cada painel
+- [x] **Profiler** — painel dockável com FPS, tempo de frame (gráfico
+  rolante), draw calls, triângulos e contagem de entidades
+- [x] **Game View** — aba que mostra o JOGO rodando no Play (2º framebuffer
+  via `Scene::RenderRuntimeView()`, sem rodar lógica duas vezes)
+- [x] **Material Editor** — janela de material com preview ao vivo em esfera
+  (renderizado num FBO próprio) + edição de cores/PBR/emissivo/POM/espelho
+- [x] **Animator** — painel dedicado: clips, play/pause, loop, velocidade e
+  time scrubber (substitui a UI espremida no Inspetor)
+- [x] **Project Settings** — painel dockável com sidebar (Gráficos, Geral,
+  Editor, Sobre): presets, MSAA/sombras/PBR/pós, HDRI do céu, janela,
+  preferências do editor
+
+---EOF

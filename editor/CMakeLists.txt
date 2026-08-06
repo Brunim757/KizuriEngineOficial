@@ -1,4 +1,13 @@
-add_executable(KizuriEditor src/EditorApp.cpp src/EditorLayer.cpp src/UI/Icons.cpp)
+add_executable(KizuriEditor
+    src/EditorApp.cpp
+    src/EditorLayer.cpp
+    src/UI/Icons.cpp
+    src/UI/Panels/ProfilerPanel.cpp
+    src/UI/Panels/GameViewPanel.cpp
+    src/UI/Panels/MaterialEditorPanel.cpp
+    src/UI/Panels/AnimatorPanel.cpp
+    src/UI/Panels/ProjectSettingsPanel.cpp
+)
 target_link_libraries(KizuriEditor PRIVATE KizuriEngine)
 target_include_directories(KizuriEditor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 

@@ -1092,6 +1092,16 @@ void Scene::OnUpdateRuntime(Timestep ts) {
     RenderUI();
 }
 
+void Scene::RenderRuntimeView() {
+    KZ_TRACE_SCOPE("Scene::RenderRuntimeView");
+    // Sem rodar update nenhum: só redesenha o estado atual da cena no FBO
+    // que estiver vinculado (a "Game View" do editor). Aspecto segue o
+    // m_ViewportWidth/Height setado pelo OnViewportResize do editor.
+    RenderScene3D(nullptr);
+    RenderScene2D(nullptr);
+    RenderUI();
+}
+
 void Scene::OnUpdateEditor3D(Timestep ts, PerspectiveCamera& editorCamera) {
     KZ_TRACE_SCOPE("Scene::OnUpdateEditor3D");
     UpdateSpriteAnimations(ts); // preview de animação no viewport, mesmo em edição

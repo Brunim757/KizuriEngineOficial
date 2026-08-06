@@ -11,6 +11,12 @@
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "UI/Icons.hpp"
+#include "UI/Panels/EditorPanel.hpp"
+#include "UI/Panels/ProfilerPanel.hpp"
+#include "UI/Panels/GameViewPanel.hpp"
+#include "UI/Panels/MaterialEditorPanel.hpp"
+#include "UI/Panels/AnimatorPanel.hpp"
+#include "UI/Panels/ProjectSettingsPanel.hpp"
 #include <kizuri/project/GameExporter.hpp>
 #include <kizuri/scripting/ScriptEngine.hpp>
 #include <kizuri/core/CommandLineArgs.hpp>
@@ -67,6 +73,8 @@ static void BeginPanelNoMenuButton() {
 
 EditorLayer::EditorLayer() : Layer("EditorLayer") {}
 
+EditorLayer::~EditorLayer() = default;
+
 void EditorLayer::OnAttach() {
     KZ_TRACE_SCOPE("EditorLayer::OnAttach");
 
@@ -92,6 +100,31 @@ void EditorLayer::OnAttach() {
     // Configurações gráficas (settings.json no diretório de trabalho) —
     // carrega antes de qualquer render e aplica VSync pra janela.
     LoadGraphicsSettingsFromDisk();
+
+    // ---- Painéis dockáveis (Profiler, Game View, Material, Animator, Settings) ----
+    // Cada painel é uma classe própria em UI/Panels; aqui só os criamos e
+    // ligamos o contexto compartilhado. Nenhuma lógica de cena entra neles.
+    m_PanelContext = std::make_unique<EditorContext>();
+    m_PanelContext->Graphics = &m_GraphicsSettings;
+    m_PanelContext->EditorCamFlySpeed = &m_EditorCamFlySpeed;
+    m_PanelContext->EditorCamSensitivity = &m_EditorCamSensitivity;
+    m_PanelContext->GizmoSnapTranslation = &m_GizmoSnapTranslation;
+    m_PanelContext->GizmoSnapRotation = &m_GizmoSnapRotation;
+    m_PanelContext->AutoCompileOnPlay = &m_AutoCompileOnPlay;
+    m_PanelContext->ShowColliders = &m_ShowColliders;
+    m_PanelContext->SelectEntity = [this](Entity e) { m_SelectedEntity = e; AutoSwitchViewportMode(); };
+    m_PanelContext->TogglePlay = [this]() { (m_SceneState == SceneState::Edit) ? OnScenePlay() : OnSceneStop(); };
+
+    auto makePanel = [&](std::unique_ptr<EditorPanel> p) { m_Panels.push_back(std::move(p)); };
+    makePanel(std::make_unique<ProfilerPanel>(*m_PanelContext));
+    makePanel(std::make_unique<GameViewPanel>(*m_PanelContext));
+    makePanel(std::make_unique<MaterialEditorPanel>(*m_PanelContext));
+    makePanel(std::make_unique<AnimatorPanel>(*m_PanelContext));
+    makePanel(std::make_unique<ProjectSettingsPanel>(*m_PanelContext));
+
+    // Painéis que fazem sentido já abertos no layout padrão.
+    m_Panels[0]->SetVisible(true);  // Profiler
+    m_Panels[1]->SetVisible(true);  // Game View
 }
 
 void EditorLayer::AutoSwitchViewportMode() {
@@ -554,6 +587,19 @@ void EditorLayer::OnUpdate(Timestep ts) {
         m_FpsSmoothed = m_FpsSmoothed > 0.0f ? m_FpsSmoothed * 0.95f + inst * 0.05f : inst;
     }
 
+    // Contexto compartilhado dos painéis dockáveis (preenchido todo frame).
+    if (m_PanelContext) {
+        m_PanelContext->ActiveScene = m_ActiveScene;
+        m_PanelContext->EditorScene = m_EditorScene;
+        m_PanelContext->SelectedEntity = m_SelectedEntity;
+        m_PanelContext->IsPlay = (m_SceneState == SceneState::Play);
+        m_PanelContext->DeltaTime = (float)ts;
+        m_PanelContext->FpsSmoothed = m_FpsSmoothed;
+        m_PanelContext->ViewportSize = m_ViewportSize;
+        m_PanelContext->ViewportFocused = m_ViewportFocused;
+        m_PanelContext->ViewportHovered = m_ViewportHovered;
+    }
+
     // Carregamento assíncrono de cena: processa um lote por orçamento de
     // tempo (~4ms) a cada frame. A janela continua viva (eventos processados,
     // tela de carregamento com progresso desenhada) — nada de travar.
@@ -704,6 +750,13 @@ void EditorLayer::OnUpdate(Timestep ts) {
     KZ_CORE_TRACE("EditorLayer::OnUpdate — {0}x{1}, chamando SetViewport", w, h);
     RenderCommand::SetViewport(0, 0, w, h);
     KZ_CORE_TRACE("EditorLayer::OnUpdate — SetViewport ok, retornando");
+
+    // Render dos painéis com FBO próprio (Game View, Material Editor...):
+    // DEPOIS do viewport, pra pegar o estado atualizado da cena.
+    if (m_PanelContext) {
+        for (auto& panel : m_Panels)
+            if (panel->IsVisible()) panel->OnUpdate(ts);
+    }
 }
 
 void EditorLayer::OnEvent(Event& e) {
@@ -1993,14 +2046,14 @@ void EditorLayer::DrawDockspace() {
     dl->AddRectFilled(menuMin, menuMax, ImGui::GetColorU32(ImVec4(0.08f, 0.08f, 0.09f, 1.0f)));
 
     ImGui::SetCursorScreenPos(ImVec2(menuMin.x + 6.0f, menuMin.y + 1.0f));
-    const char* menuNames[] = { "Arquivo", "Editar", "Cena", "Exibir", "Ajuda" };
-    for (int m = 0; m < 5; ++m) {
+    const char* menuNames[] = { "Arquivo", "Editar", "Cena", "Exibir", "Janelas", "Ajuda" };
+    for (int m = 0; m < 6; ++m) {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8.0f, 4.0f));
         if (ImGui::Button(menuNames[m])) ImGui::OpenPopup(("##menu_" + std::string(menuNames[m])).c_str());
         ImGui::PopStyleVar();
         ImGui::PopStyleColor();
-        if (m < 4) ImGui::SameLine(0.0f, 2.0f);
+        if (m < 5) ImGui::SameLine(0.0f, 2.0f);
     }
 
     // ---- Arquivo ----
@@ -2090,6 +2143,19 @@ void EditorLayer::DrawDockspace() {
         if (ImGui::MenuItem("Viewport 3D", nullptr, m_ViewportMode == ViewportMode::Mode3D)) m_ViewportMode = ViewportMode::Mode3D;
         ImGui::Separator();
         if (ImGui::MenuItem("Fullscreen do viewport", "F11", m_ViewportMaximized)) m_ViewportMaximized = !m_ViewportMaximized;
+        ImGui::Separator();
+        if (ImGui::MenuItem("Configurações...", "Ctrl+,")) m_ShowSettings = true;
+        ImGui::EndPopup();
+    }
+
+    // ---- Janelas ----
+    if (ImGui::BeginPopup("##menu_Janelas")) {
+        ImGui::TextDisabled("Painéis (mostrar/ocultar)");
+        ImGui::Separator();
+        for (auto& panel : m_Panels) {
+            bool visible = panel->IsVisible();
+            if (ImGui::MenuItem(panel->GetTitle(), nullptr, visible)) panel->SetVisible(!visible);
+        }
         ImGui::Separator();
         if (ImGui::MenuItem("Configurações...", "Ctrl+,")) m_ShowSettings = true;
         ImGui::EndPopup();
@@ -4110,6 +4176,13 @@ void EditorLayer::OnImGuiRender() {
         DrawInspector();
         DrawConsole();
         DrawContentBrowser();
+        // Painéis dockáveis (Profiler, Game View, Material Editor, Animator,
+        // Project Settings) — cada um é uma janela ImGui própria que entra no
+        // mesmo dockspace; só os visíveis (menu Janelas) são desenhados.
+        if (m_PanelContext) {
+            for (auto& panel : m_Panels)
+                if (panel->IsVisible()) panel->OnImGuiRender();
+        }
     } else {
         KZ_CORE_TRACE("EditorLayer::OnImGuiRender — painéis ocultos (viewport maximizado)");
     }

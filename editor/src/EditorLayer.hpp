@@ -11,6 +11,9 @@
 #include <thread>
 #include <atomic>
 
+class EditorPanel; // base dos painéis (Profiler, Game View, Material Editor...)
+struct EditorContext;
+
 // EditorLayer implementa o esqueleto do Kizuri Editor: dockspace ImGui,
 // painel de hierarquia de entidades e inspetor de componentes básico.
 // É a base para evoluir num editor visual completo (viewport renderizado
@@ -18,6 +21,7 @@
 class EditorLayer : public kizuri::Layer {
 public:
     EditorLayer();
+    ~EditorLayer() override; // definido no .cpp (m_Panels usa tipos incompletos)
 
     void OnAttach() override;
     void OnDetach() override;
@@ -305,6 +309,12 @@ private:
     bool m_InspectorWasActive = false;
     kizuri::UUID m_InspectorEditEntity = kizuri::UUID::Invalid();
     kizuri::EntitySnapshot m_InspectorEditBefore;
+
+    // Painéis dockáveis (Profiler, Game View, Material Editor, Animator,
+    // Project Settings). Cada um é uma classe própria em UI/Panels — o
+    // EditorLayer só os cria, preenche o contexto e chama render/update.
+    std::vector<std::unique_ptr<EditorPanel>> m_Panels;
+    std::unique_ptr<EditorContext> m_PanelContext;
 
     // Estado da barra de título customizada (ver DrawTitlebar/DrawResizeBorders).
     bool m_DraggingWindow = false;

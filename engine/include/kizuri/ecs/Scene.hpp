@@ -93,6 +93,12 @@ public:
 
     void OnUpdateRuntime(Timestep ts);
 
+    // Renderiza a cena do runtime (3D → 2D → UI) no framebuffer ATUALMENTE
+    // VINCULADO, sem rodar lógica (física/scripts/partículas). Usado pelo
+    // painel "Game View" do editor: o Play roda o update uma vez (no
+    // viewport) e a aba do jogo só RE-renderiza a mesma cena pro FBO dela.
+    void RenderRuntimeView();
+
     void OnUpdateEditor3D(Timestep ts, class PerspectiveCamera& editorCamera);
     void OnUpdateEditor2D(Timestep ts, class OrthographicCamera& editorCamera);
     void OnViewportResize(uint32_t width, uint32_t height);

@@ -81,6 +81,12 @@ uint32_t Renderer3D::s_PlanarFBO = 0, Renderer3D::s_PlanarColor = 0, Renderer3D:
 uint32_t Renderer3D::s_PlanarWidth = 0, Renderer3D::s_PlanarHeight = 0;
 glm::mat4 Renderer3D::s_ReflectionViewProjection = glm::mat4(1.0f);
 bool Renderer3D::s_HasPlanarReflection = false;
+
+Ref<Shader> Renderer3D::s_DOFShader, Renderer3D::s_MotionBlurShader;
+uint32_t Renderer3D::s_DOFFBO = 0, Renderer3D::s_DOFTex = 0;
+uint32_t Renderer3D::s_MotionFBO = 0, Renderer3D::s_MotionTex = 0;
+glm::mat4 Renderer3D::s_MotionPrevVP = glm::mat4(1.0f);
+glm::mat4 Renderer3D::s_MotionCurrVP = glm::mat4(1.0f);
 static float s_PostTime = 0.0f; // relógio do pós-processamento (grão de filme animado)
 
 std::vector<Renderer3D::ParticleBatch> Renderer3D::s_ParticleBatches;
@@ -1004,6 +1010,114 @@ void main() {
 )";
 
 // ---------------------------------------------------------------------
+// DOF — depth of field (bokeh) em UM passe (gather). Para cada pixel calcula o
+// círculo de confusão pela distância ao plano focal (reconstruída do depth) e
+// amostra um disco de Poisson FIXO (20 taps, teto constante — GLSL 330-safe);
+// as amostras fora de foco contribuem menos (o próprio CoC delas pondera),
+// então frente/fundo desfocam naturalmente com bokeh.
+// ---------------------------------------------------------------------
+static const char* s_DOFFragmentSrc = R"(
+#version 330 core
+in vec2 v_TexCoord;
+out vec4 o_Color;
+
+uniform sampler2D u_SceneColor;
+uniform sampler2D u_Depth;
+uniform mat4 u_InverseProjection;
+uniform float u_FocusDistance; // distância do plano em foco (view-space)
+uniform float u_FocusRange;    // metade da faixa em foco
+uniform float u_Strength;      // raio máximo do bokeh em pixels
+uniform vec2 u_Texel;
+
+vec3 ReconstructViewPos(vec2 uv, float depth) {
+    vec4 clip = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+    vec4 view = u_InverseProjection * clip;
+    return view.xyz / view.w;
+}
+
+void main() {
+    vec2 uv = v_TexCoord;
+    float depth = texture(u_Depth, uv).r;
+    if (depth >= 0.9999) { o_Color = texture(u_SceneColor, uv); return; } // céu em foco
+
+    vec3 viewPos = ReconstructViewPos(uv, depth);
+    float dist = length(viewPos);
+    float coc = clamp((dist - u_FocusDistance) / max(u_FocusRange, 0.001), -1.0, 1.0);
+    float radius = abs(coc) * u_Strength;
+
+    // Disco de Poisson (20 taps) — tabela FIXA, sem loop dinâmico.
+    const int TAPS = 20;
+    const vec2 DISC[TAPS] = vec2[TAPS](
+        vec2(0.0), vec2(0.25, 0.0), vec2(-0.25, 0.0), vec2(0.0, 0.25), vec2(0.0, -0.25),
+        vec2(0.18, 0.18), vec2(-0.18, 0.18), vec2(0.18, -0.18), vec2(-0.18, -0.18),
+        vec2(0.5, 0.0), vec2(-0.5, 0.0), vec2(0.0, 0.5), vec2(0.0, -0.5),
+        vec2(0.35, 0.35), vec2(-0.35, 0.35), vec2(0.35, -0.35), vec2(-0.35, -0.35),
+        vec2(0.62, 0.0), vec2(0.0, 0.62), vec2(0.45, 0.45));
+
+    vec3 sum = vec3(0.0);
+    float total = 0.0;
+    for (int i = 0; i < TAPS; ++i) {
+        vec2 tuv = uv + DISC[i] * radius * u_Texel * 4.0;
+        float td = texture(u_Depth, tuv).r;
+        float tdist = length(ReconstructViewPos(tuv, td));
+        float tcoc = clamp((tdist - u_FocusDistance) / max(u_FocusRange, 0.001), -1.0, 1.0);
+        float w = (1.0 - abs(tcoc)) * (1.0 - abs(tcoc)); // amostras em foco pesam mais
+        vec3 c = texture(u_SceneColor, tuv).rgb;
+        if (any(isnan(c)) || any(isinf(c))) c = vec3(0.0);
+        sum += c * w;
+        total += w;
+    }
+    vec3 color = sum / max(total, 0.0001);
+    o_Color = vec4(color, 1.0);
+}
+)";
+
+// ---------------------------------------------------------------------
+// Motion blur por REPROJEÇÃO (sem velocity buffer): reconstrói o ponto do
+// mundo pelo depth, projeta com a VP do frame ANTERIOR e do atual, e desloca
+// a amostragem ao longo do vetor de movimento (taps FIXOS, GLSL 330-safe).
+// ---------------------------------------------------------------------
+static const char* s_MotionBlurFragmentSrc = R"(
+#version 330 core
+in vec2 v_TexCoord;
+out vec4 o_Color;
+
+uniform sampler2D u_SceneColor;
+uniform sampler2D u_Depth;
+uniform mat4 u_InverseViewProjection; // VP atual (sem jitter) invertida
+uniform mat4 u_PreviousViewProjection;
+uniform float u_Intensity;
+
+void main() {
+    vec2 uv = v_TexCoord;
+    float depth = texture(u_Depth, uv).r;
+    if (depth >= 0.9999) { o_Color = texture(u_SceneColor, uv); return; } // céu
+
+    vec4 ndc = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+    vec4 world = u_InverseViewProjection * ndc;
+    world.xyz /= world.w;
+
+    vec4 prev = u_PreviousViewProjection * world;
+    vec2 prevNDC = prev.xy / max(prev.w, 0.0001);
+    vec2 vel = (ndc.xy - prevNDC) * 0.5; // delta em NDC
+    vel = clamp(vel, vec2(-0.15), vec2(0.15));
+    if (length(vel) < 0.0006) { o_Color = texture(u_SceneColor, uv); return; }
+
+    // Blur linear ao longo do movimento (taps fixos, teto constante).
+    const int TAPS = 16;
+    vec2 dir = vel * u_Intensity / float(TAPS - 1);
+    vec3 sum = vec3(0.0);
+    for (int i = 0; i < TAPS; ++i) {
+        vec2 tuv = uv - dir * float(i - TAPS / 2);
+        vec3 c = texture(u_SceneColor, tuv).rgb;
+        if (any(isnan(c)) || any(isinf(c))) c = vec3(0.0);
+        sum += c;
+    }
+    o_Color = vec4(sum / float(TAPS), 1.0);
+}
+)";
+
+// ---------------------------------------------------------------------
 // SSAO (oclusão de ambiente em espaço de tela) — amostra a vizinhança de
 // cada pixel num hemisfério orientado pela normal reconstruída do depth e
 // mede quanta geometria oculta ele. A saída é um valor de oclusão em
@@ -1442,6 +1556,9 @@ void Renderer3D::Init() {
     s_TAAShader = CreateRef<Shader>("Renderer3D_TAA", s_FullscreenVertexSrc, s_TAAFragmentSrc);
     // God rays — luz volumétrica em espaço de tela (marcha radial fixa).
     s_GodRaysShader = CreateRef<Shader>("Renderer3D_GodRays", s_FullscreenVertexSrc, s_GodRaysFragmentSrc);
+    // DOF (bokeh) + Motion blur (por reprojeção) — passes fullscreen 3.3-safe.
+    s_DOFShader = CreateRef<Shader>("Renderer3D_DOF", s_FullscreenVertexSrc, s_DOFFragmentSrc);
+    s_MotionBlurShader = CreateRef<Shader>("Renderer3D_MotionBlur", s_FullscreenVertexSrc, s_MotionBlurFragmentSrc);
     std::srand(2026u);
     s_SSAOKernel.resize(64);
     for (int i = 0; i < 64; ++i) {
@@ -1543,6 +1660,10 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         glDeleteTextures(2, s_TAAHistoryTex);
         glDeleteFramebuffers(1, &s_GodRaysFBO);
         glDeleteTextures(1, &s_GodRaysColorBuffer);
+        glDeleteFramebuffers(1, &s_DOFFBO);
+        glDeleteTextures(1, &s_DOFTex);
+        glDeleteFramebuffers(1, &s_MotionFBO);
+        glDeleteTextures(1, &s_MotionTex);
     }
 
     // --- Destino simples (o que os passes de pós amostram): cor HDR + depth textura ---
@@ -1689,6 +1810,30 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_GodRaysColorBuffer, 0);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         SetShaderDiagnostic("Framebuffer God rays INCOMPLETO");
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // --- DOF (bokeh) + Motion blur: alvos RGBA16F em resolução interna ---
+    auto makeColorTex = [](uint32_t& tex, uint32_t w, uint32_t h) {
+        glGenTextures(1, &tex);
+        glBindTexture(GL_TEXTURE_2D, tex);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, (GLsizei)w, (GLsizei)h, 0, GL_RGBA, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    };
+    glGenFramebuffers(1, &s_DOFFBO);
+    makeColorTex(s_DOFTex, width, height);
+    glBindFramebuffer(GL_FRAMEBUFFER, s_DOFFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_DOFTex, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        SetShaderDiagnostic("Framebuffer DOF INCOMPLETO");
+    glGenFramebuffers(1, &s_MotionFBO);
+    makeColorTex(s_MotionTex, width, height);
+    glBindFramebuffer(GL_FRAMEBUFFER, s_MotionFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_MotionTex, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        SetShaderDiagnostic("Framebuffer Motion blur INCOMPLETO");
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -2237,6 +2382,8 @@ void Renderer3D::BeginScene(const PerspectiveCamera& camera) {
     s_View = camera.GetViewMatrix();
     s_Projection = camera.GetProjectionMatrix();
     s_CameraPos = camera.GetPosition();
+    // VP SEM jitter (o TAA muda a projeção depois) — base do motion blur.
+    s_MotionCurrVP = camera.GetViewProjectionMatrix();
     s_CamFOV = camera.GetFOV();
     s_CamAspect = camera.GetAspect();
     s_CamNear = camera.GetNearClip();
@@ -2680,6 +2827,45 @@ void Renderer3D::EndScene() {
         }
     }
 
+    // --- Passe 1.9: DOF (bokeh) + Motion blur (reprojeção) — a "fonte" da
+    // cena pros passes seguintes (bright + composite) vira a saída borrada.
+    // Ordem: HDR → (DOF) → (Motion blur) → bright/composite. ---
+    uint32_t sceneTex = s_HDRColorBuffer;
+    if (s_Settings.DOFEnabled && s_Settings.DOFStrength > 0.001f) {
+        glBindFramebuffer(GL_FRAMEBUFFER, s_DOFFBO);
+        glViewport(0, 0, (GLsizei)internalW, (GLsizei)internalH);
+        s_DOFShader->Bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, s_HDRColorBuffer);
+        s_DOFShader->SetInt("u_SceneColor", 0);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, s_HDRDepthTexture);
+        s_DOFShader->SetInt("u_Depth", 1);
+        s_DOFShader->SetMat4("u_InverseProjection", glm::inverse(s_Projection));
+        s_DOFShader->SetFloat("u_FocusDistance", s_Settings.DOFFocusDistance);
+        s_DOFShader->SetFloat("u_FocusRange", s_Settings.DOFFocusRange);
+        s_DOFShader->SetFloat("u_Strength", s_Settings.DOFStrength);
+        s_DOFShader->SetFloat2("u_Texel", glm::vec2(1.0f / (float)internalW, 1.0f / (float)internalH));
+        RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
+        sceneTex = s_DOFTex;
+    }
+    if (s_Settings.MotionBlurEnabled && s_Settings.MotionBlurIntensity > 0.001f) {
+        glBindFramebuffer(GL_FRAMEBUFFER, s_MotionFBO);
+        glViewport(0, 0, (GLsizei)internalW, (GLsizei)internalH);
+        s_MotionBlurShader->Bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, sceneTex);
+        s_MotionBlurShader->SetInt("u_SceneColor", 0);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, s_HDRDepthTexture);
+        s_MotionBlurShader->SetInt("u_Depth", 1);
+        s_MotionBlurShader->SetMat4("u_InverseViewProjection", glm::inverse(s_MotionCurrVP));
+        s_MotionBlurShader->SetMat4("u_PreviousViewProjection", s_MotionPrevVP);
+        s_MotionBlurShader->SetFloat("u_Intensity", s_Settings.MotionBlurIntensity);
+        RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
+        sceneTex = s_MotionTex;
+    }
+
     // --- Passe 2: bright-pass (meia resolução) — extrai o glow, se bloom ligado ---
     uint32_t bloomW = glm::max(1u, internalW / 2), bloomH = glm::max(1u, internalH / 2);
     int bloomReadIdx = 0;
@@ -2688,7 +2874,7 @@ void Renderer3D::EndScene() {
         glViewport(0, 0, (GLsizei)bloomW, (GLsizei)bloomH);
         s_BrightPassShader->Bind();
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, s_HDRColorBuffer);
+        glBindTexture(GL_TEXTURE_2D, sceneTex);
         s_BrightPassShader->SetInt("u_SceneColor", 0);
         s_BrightPassShader->SetFloat("u_Threshold", s_Settings.BloomThreshold);
         RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
@@ -2724,7 +2910,7 @@ void Renderer3D::EndScene() {
     glViewport(0, 0, (GLsizei)compositeW, (GLsizei)compositeH);
     s_CompositeShader->Bind();
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, s_HDRColorBuffer);
+    glBindTexture(GL_TEXTURE_2D, sceneTex); // pode ser o HDR cru, o DOF ou o motion blur
     s_CompositeShader->SetInt("u_SceneColor", 0);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, s_Settings.BloomEnabled ? s_BloomColorBuffer[bloomReadIdx] : s_HDRColorBuffer);
@@ -2826,6 +3012,7 @@ void Renderer3D::EndScene() {
             dump << "TAA: " << (s_Settings.TAAEnabled ? "on" : "off") << "\n";
             dump << "PCSS (penumbra): " << s_Settings.ShadowSoftness << "\n";
             dump << "God rays: " << (s_Settings.GodRaysEnabled ? "on" : "off") << "\n";
+            dump << "DOF: " << (s_Settings.DOFEnabled ? "on" : "off") << " / Motion blur: " << (s_Settings.MotionBlurEnabled ? "on" : "off") << "\n";
             dump << "Bloom: " << (s_Settings.BloomEnabled ? "on" : "off") << "\n";
             auto fbStatus = [](GLuint fbo) {
                 if (fbo == 0) return 0;
@@ -2861,6 +3048,7 @@ void Renderer3D::EndScene() {
         }
     }
 
+    s_MotionPrevVP = s_MotionCurrVP; // base do motion blur do próximo frame
     s_DrawList.clear();
 }
 

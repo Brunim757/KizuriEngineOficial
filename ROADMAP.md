@@ -441,4 +441,27 @@
   câmera atrás do espelho desliga o passe
 - [x] Serialização `PlanarReflect` no `.kzscene`; 100% OpenGL 3.3 (FBO padrão)
 
+### ✅ DOF (bokeh) + Motion blur — pós-cinema
+- [x] **DOF em UM passe** (gather): círculo de confusão pela distância ao plano
+  focal (reconstruída do depth) + disco de **Poisson FIXO** (20 taps,
+  constante no shader) — frente/fundo desfocam com bokeh, amostras em foco
+  pesam mais
+- [x] **Motion blur por REPROJEÇÃO** (sem velocity buffer): ponto do mundo
+  reconstruído pelo depth, projetado com a VP do frame ANTERIOR (guardada a
+  cada frame, sem jitter do TAA) e do atual; blur linear ao longo do vetor de
+  movimento (taps fixos)
+- [x] Cadeia: HDR → DOF → Motion blur → bright-pass/composite (fonte única)
+- [x] `DOFEnabled`/`DOFFocusDistance`/`DOFFocusRange`/`DOFStrength` +
+  `MotionBlurEnabled`/`MotionBlurIntensity` — presets (Ultra/High ligam),
+  `settings.json` e UI no editor; guardas anti-NaN
+
+---
+
+## 🎯 v0.24 completo — o que o OpenGL 3.3 entregou
+- Reflexos (SSR 3.3-safe) · AA temporal (TAA) · Parallax Occlusion Mapping
+- Céu Rayleigh/Mie · PCSS de passos fixos · God rays volumétricos
+- Reflexões planares (espelho real) · DOF bokeh · Motion blur
+- Tudo com loops de TETO CONSTANTE — 100% compilável em GLSL 330 core em
+  qualquer driver (Wine, iGPU, VM), sem os bugs de drivers 4.x
+
 ---

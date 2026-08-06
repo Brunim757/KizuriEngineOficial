@@ -266,6 +266,15 @@ private:
     static glm::mat4 s_ReflectionViewProjection; // VP da câmera refletida (pro sampling no shader)
     static bool s_HasPlanarReflection;
 
+    // DOF (bokeh, 1 passe) + Motion blur (por reprojeção): FBOs RGBA16F entre
+    // a cena HDR e o bright-pass. Movimento estimado pela VP do frame anterior
+    // (sem velocity buffer) — ambos com loops de passos FIXOS, GLSL 330-safe.
+    static Ref<Shader> s_DOFShader, s_MotionBlurShader;
+    static uint32_t s_DOFFBO, s_DOFTex;
+    static uint32_t s_MotionFBO, s_MotionTex;
+    static glm::mat4 s_MotionPrevVP; // VP (sem jitter) do frame anterior
+    static glm::mat4 s_MotionCurrVP; // VP (sem jitter) do frame atual
+
     // (Re)cria o FBO da reflexão planar se a resolução mudou.
     static void EnsurePlanarBuffers(uint32_t width, uint32_t height);
     // Pré-passe do espelho real: desenha skybox + meshes (sem o espelho) com a

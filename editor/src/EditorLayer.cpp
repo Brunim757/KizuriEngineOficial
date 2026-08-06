@@ -1348,6 +1348,15 @@ void EditorLayer::DrawSettingsGraphics() {
     customTweak |= ImGui::Checkbox("God rays (luz volumétrica)", &m_GraphicsSettings.GodRaysEnabled);
     if (m_GraphicsSettings.GodRaysEnabled)
         customTweak |= ImGui::DragFloat("Intensidade dos god rays", &m_GraphicsSettings.GodRaysIntensity, 0.01f, 0.0f, 3.0f);
+    customTweak |= ImGui::Checkbox("Depth of field (bokeh)", &m_GraphicsSettings.DOFEnabled);
+    if (m_GraphicsSettings.DOFEnabled) {
+        customTweak |= ImGui::DragFloat("Distância focal", &m_GraphicsSettings.DOFFocusDistance, 0.1f, 0.1f, 500.0f);
+        customTweak |= ImGui::DragFloat("Faixa em foco", &m_GraphicsSettings.DOFFocusRange, 0.1f, 0.1f, 100.0f);
+        customTweak |= ImGui::DragFloat("Força do bokeh", &m_GraphicsSettings.DOFStrength, 0.05f, 0.0f, 5.0f);
+    }
+    customTweak |= ImGui::Checkbox("Motion blur", &m_GraphicsSettings.MotionBlurEnabled);
+    if (m_GraphicsSettings.MotionBlurEnabled)
+        customTweak |= ImGui::DragFloat("Intensidade do motion blur", &m_GraphicsSettings.MotionBlurIntensity, 0.01f, 0.0f, 2.0f);
     customTweak |= ImGui::Checkbox("VSync", &m_GraphicsSettings.VSync);
     ImGui::Separator();
     customTweak |= ImGui::Checkbox("Névoa (fog exponencial)", &m_GraphicsSettings.FogEnabled);

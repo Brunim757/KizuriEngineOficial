@@ -65,6 +65,19 @@ struct GraphicsSettings {
     bool GodRaysEnabled = false;
     float GodRaysIntensity = 0.6f;
 
+    // Depth of field (bokeh, 1 passe): blur por círculo de confusão calculado
+    // da distância ao plano focal. Passos FIXOS (teto constante no shader).
+    bool DOFEnabled = false;
+    float DOFFocusDistance = 10.0f; // distância do plano em foco (mundo)
+    float DOFFocusRange = 4.0f;     // metade da faixa em foco (fora = desfoca)
+    float DOFStrength = 1.0f;       // força do desfoque (raio do bokeh)
+
+    // Motion blur por REPROJEÇÃO (sem velocity buffer): reconstrói o mundo do
+    // depth e projeta com a VP do frame anterior — blur linear ao longo do
+    // vetor de movimento. Passos FIXOS no shader.
+    bool MotionBlurEnabled = false;
+    float MotionBlurIntensity = 0.5f;
+
     // Exposição multiplicada antes do tonemap ACES (equivalente ao "EV").
     float Exposure = 1.0f;
 

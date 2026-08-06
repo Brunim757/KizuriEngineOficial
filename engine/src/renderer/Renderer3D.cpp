@@ -167,6 +167,7 @@ uniform sampler2D u_ShadowMap2;
 uniform mat4 u_LightSpaceMatrix[CASCADE_COUNT];
 uniform float u_CascadeSplits[CASCADE_COUNT]; // distância (view-space) onde cada cascata termina
 uniform int u_ShadowPCF; // raio do PCF
+uniform float u_ShadowSoftness; // PCSS: largura da penumbra (0 = desligado)
 
 #define MAX_LIGHTS 16
 uniform int u_LightCount;
@@ -185,9 +186,16 @@ uniform float u_MaxPrefilterLod;
 
 const float PI = 3.14159265359;
 
-// PCF simples: média numa vizinhança de raio configurável. O caminho 3.3
-// comprovado — não corrompe em nenhum compilador/driver (o PCSS 4.x que
-// quebrava em Wine/drivers e deixava objetos brancos foi REMOVIDO).
+// ---------------------------------------------------------------------
+// PCSS (Percentage-Closer Soft Shadows) — sombra suave com penumbra
+// proporcional ao tamanho do bloqueador. Tudo com loops de TETO CONSTANTE
+// (PCSS_MAX_RADIUS é #define fixo) — compila em GLSL 330 core em qualquer
+// driver. O PCSS antigo usava raio DINÂMICO (uniform) e quebrava em
+// 3.3/Wine (objetos brancos); aqui o raio é fixo e só o número de taps
+// EFETIVOS varia via `continue` (o loop em si permanece unrollável).
+// ---------------------------------------------------------------------
+#define PCSS_MAX_RADIUS 5
+
 float SampleShadowPCF(sampler2D map, vec3 projCoords, float bias) {
     if (projCoords.z > 1.0) return 0.0;
     float shadow = 0.0;
@@ -203,6 +211,45 @@ float SampleShadowPCF(sampler2D map, vec3 projCoords, float bias) {
     return shadow / count;
 }
 
+// PCSS: busca de bloqueadores -> penumbra -> PCF dentro da penumbra.
+float SampleShadowPCSS(sampler2D map, vec3 projCoords, float bias) {
+    if (projCoords.z > 1.0) return 0.0;
+    vec2 texelSize = 1.0 / textureSize(map, 0);
+
+    // 1) Busca de bloqueadores num raio FIXO (teto constante).
+    float blockerSum = 0.0;
+    int blockerCount = 0;
+    for (int x = -PCSS_MAX_RADIUS; x <= PCSS_MAX_RADIUS; ++x) {
+        for (int y = -PCSS_MAX_RADIUS; y <= PCSS_MAX_RADIUS; ++y) {
+            float d = texture(map, projCoords.xy + vec2(x, y) * texelSize).r;
+            if (d < projCoords.z - bias) { blockerSum += d; ++blockerCount; }
+        }
+    }
+    if (blockerCount == 0) return 0.0; // sem bloqueador = 100% iluminado
+    float avgBlocker = blockerSum / float(blockerCount);
+
+    // 2) Tamanho da penumbra proporcional à distância do bloqueador.
+    float penumbra = clamp((projCoords.z - bias - avgBlocker) * u_ShadowSoftness * 120.0, 0.0, 1.0);
+    if (penumbra <= 0.001) {
+        // Sem penumbra (bloqueador colado): PCF simples.
+        return SampleShadowPCF(map, projCoords, bias);
+    }
+    int pr = max(1, int(ceil(penumbra * float(PCSS_MAX_RADIUS))));
+
+    // 3) PCF dentro do raio da penumbra (loop FIXO; o continue só descarta
+    //    taps fora do raio efetivo — não muda a contagem do loop).
+    float shadow = 0.0;
+    int cnt = 0;
+    for (int x = -PCSS_MAX_RADIUS; x <= PCSS_MAX_RADIUS; ++x) {
+        for (int y = -PCSS_MAX_RADIUS; y <= PCSS_MAX_RADIUS; ++y) {
+            if (x * x + y * y > pr * pr) continue;
+            if (projCoords.z - bias > texture(map, projCoords.xy + vec2(x, y) * texelSize).r) shadow += 1.0;
+            ++cnt;
+        }
+    }
+    return shadow / float(max(cnt, 1));
+}
+
 // Escolhe a cascata pela profundidade view-space e amostra o shadow map certo — GLSL 330
 // core não permite indexar array de sampler com índice dinâmico, daí o if/else explícito.
 float CalculateShadow(vec3 N, vec3 L) {
@@ -210,15 +257,20 @@ float CalculateShadow(vec3 N, vec3 L) {
     int idx = (viewDepth < u_CascadeSplits[0]) ? 0 : (viewDepth < u_CascadeSplits[1]) ? 1 : 2;
     float bias = max(0.0025 * (1.0 - dot(N, L)), 0.0006);
 
+    // PCSS se a suavidade > 0; senão o PCF simples comprovado.
+    bool usePCSS = (u_ShadowSoftness > 0.001);
     if (idx == 0) {
         vec4 p = u_LightSpaceMatrix[0] * vec4(v_FragPos, 1.0);
-        return SampleShadowPCF(u_ShadowMap0, p.xyz / p.w * 0.5 + 0.5, bias);
+        vec3 pc = p.xyz / p.w * 0.5 + 0.5;
+        return usePCSS ? SampleShadowPCSS(u_ShadowMap0, pc, bias) : SampleShadowPCF(u_ShadowMap0, pc, bias);
     } else if (idx == 1) {
         vec4 p = u_LightSpaceMatrix[1] * vec4(v_FragPos, 1.0);
-        return SampleShadowPCF(u_ShadowMap1, p.xyz / p.w * 0.5 + 0.5, bias);
+        vec3 pc = p.xyz / p.w * 0.5 + 0.5;
+        return usePCSS ? SampleShadowPCSS(u_ShadowMap1, pc, bias) : SampleShadowPCF(u_ShadowMap1, pc, bias);
     } else {
         vec4 p = u_LightSpaceMatrix[2] * vec4(v_FragPos, 1.0);
-        return SampleShadowPCF(u_ShadowMap2, p.xyz / p.w * 0.5 + 0.5, bias);
+        vec3 pc = p.xyz / p.w * 0.5 + 0.5;
+        return usePCSS ? SampleShadowPCSS(u_ShadowMap2, pc, bias) : SampleShadowPCF(u_ShadowMap2, pc, bias);
     }
 }
 
@@ -2036,6 +2088,7 @@ void Renderer3D::EndScene() {
         s_MeshShader->SetFloat3("u_ViewPos", s_CameraPos);
         s_MeshShader->SetInt("u_HasShadow", s_HasShadowCaster ? 1 : 0);
         s_MeshShader->SetInt("u_ShadowPCF", s_Settings.ShadowPCFRadius);
+        s_MeshShader->SetFloat("u_ShadowSoftness", s_Settings.ShadowSoftness);
         if (s_HasShadowCaster) {
             for (int c = 0; c < kCascadeCount; ++c) {
                 std::string idx = "[" + std::to_string(c) + "]";
@@ -2404,6 +2457,7 @@ void Renderer3D::EndScene() {
             dump << "SSAO: " << (s_Settings.SSAOEnabled ? "on" : "off") << "\n";
             dump << "SSR: " << (s_Settings.SSREnabled ? "on" : "off") << "\n";
             dump << "TAA: " << (s_Settings.TAAEnabled ? "on" : "off") << "\n";
+            dump << "PCSS (penumbra): " << s_Settings.ShadowSoftness << "\n";
             dump << "Bloom: " << (s_Settings.BloomEnabled ? "on" : "off") << "\n";
             auto fbStatus = [](GLuint fbo) {
                 if (fbo == 0) return 0;

@@ -28,6 +28,13 @@ struct GraphicsSettings {
     // Raio do PCF do shadow map (0 = amostra única, 1..3 = vizinhança).
     int ShadowPCFRadius = 2;
 
+    // PCSS (Percentage-Closer Soft Shadows) — sombras suaves de verdade com
+    // penumbra proporcional ao tamanho do bloqueador. Reimplementado com
+    // loops de PASSOS FIXOS (teto constante no shader) — 100% seguro em GLSL
+    // 330 core (o PCSS antigo usava loops dinâmicos e só rodava em 4.x).
+    // 0..1 = largura da penumbra (0 = desligado, PCF simples).
+    float ShadowSoftness = 0.6f;
+
     bool BloomEnabled = true;
     float BloomThreshold = 1.2f;
     float BloomIntensity = 0.45f;

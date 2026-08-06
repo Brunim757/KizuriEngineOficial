@@ -409,4 +409,14 @@
   céu passa a ser o scattering (o pôr-do-sol laranja realista)
 - [x] Guardas anti-NaN no skybox
 
+### ✅ PCSS — sombras suaves de verdade (passos fixos, 3.3-safe)
+- [x] Percentage-Closer Soft Shadows reimplementado com loops de TETO
+  CONSTANTE (`#define PCSS_MAX_RADIUS 5`): busca de bloqueadores → penumbra
+  proporcional à distância do bloqueador → PCF dentro da penumbra. O raio
+  fixo com `continue` só descarta taps — o loop é unrollável no GLSL 330
+  (o PCSS antigo de raio dinâmico era o que quebrava em Wine → objetos
+  brancos; por isso tinha virado 4.x)
+- [x] `ShadowSoftness` (0..1, 0 = desliga e cai no PCF simples) — presets,
+  `settings.json` + UI no editor ("Penumbra (PCSS)")
+
 ---

@@ -1316,6 +1316,7 @@ void EditorLayer::DrawSettingsGraphics() {
     if (ImGui::Combo("Shadow map (CSM)", &shadowIdx, shadowNames, 4)) m_GraphicsSettings.ShadowMapSize = shadowValues[shadowIdx];
     customTweak |= (ImGui::IsItemActive() || ImGui::IsItemActivated());
     customTweak |= ImGui::SliderInt("Suavização de sombra (PCF)", &m_GraphicsSettings.ShadowPCFRadius, 0, 3);
+    customTweak |= ImGui::DragFloat("Penumbra (PCSS)", &m_GraphicsSettings.ShadowSoftness, 0.01f, 0.0f, 1.0f);
     ImGui::Separator();
     customTweak |= ImGui::Checkbox("Bloom", &m_GraphicsSettings.BloomEnabled);
     if (m_GraphicsSettings.BloomEnabled) {

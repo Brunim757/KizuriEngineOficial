@@ -785,10 +785,10 @@ vec3 ComputeAtmosphere(vec3 rd) {
 
     // Passos ALTOS perto do horizonte: a densidade cai exponencialmente
     // (scale height ~0.00125) e, com passos grossos, cada pixel amostra o
-    // gradiente num ponto diferente -> "ruído de TV colorido" na faixa baixa
-    // (some quando o céu vira HDRI porque aí não há raymarch). 32/12 suavizam.
-    const int kSteps = 32;
-    const int kLightSteps = 12;
+    // gradiente num ponto diferente -> "ruído de TV colorido" na faixa baixa.
+    // O speckle "que anda" era as NUVENS (raymarch na casca fina) — removidas.
+    const int kSteps = 24;
+    const int kLightSteps = 10;
     float dt = tMax / float(kSteps);
     float t = dt * 0.5;
 
@@ -870,52 +870,35 @@ float CloudNoise(vec3 p) {
 }
 float CloudFBM(vec3 p) {
     float v = 0.0;
-    float a = 0.5;
-    // 3 oitavas (era 4): menos detalhe em alta frequência — o 4º octave era
-    // o que dava o aspecto de "grão/TV" na camada de nuvens.
-    for (int i = 0; i < 3; ++i) {
+    float a = 0.6;
+    // 2 oitavas de RUÍDO GRANDE (nuvens aveludadas). O raymarch antigo por uma
+    // casca fina (~10km) com 14 amostras + fbm fino virava SPECKLE denso que
+    // "andava" (u_CloudTime) — os "milhões de pontos" do relato.
+    for (int i = 0; i < 2; ++i) {
         v += a * CloudNoise(p);
-        p = p * 2.03 + vec3(11.3, 7.7, 3.9);
+        p = p * 1.7 + vec3(11.3, 7.7, 3.9);
         a *= 0.5;
     }
     return v;
 }
 vec3 ComputeClouds(vec3 rd) {
-    // Nuvens só bem acima do horizonte: no ângulo rasante o raio corta a
-    // casca em poucos pontos e o fbm vira grão/estática.
-    if (rd.y <= 0.1) return vec3(0.0);
-    vec3 origin = vec3(0.0, kPlanetRadius, 0.0);
-    // Camada de nuvens entre ~1.0015 e ~1.0025 (≈10km em escala).
-    float cloudBottom = kPlanetRadius + 0.0015;
-    float cloudTop    = kPlanetRadius + 0.0025;
-    float b = dot(rd, origin);
-    float t0 = -b + sqrt(max(b * b + (cloudBottom * cloudBottom - kPlanetRadius * kPlanetRadius), 0.0));
-    float t1 = -b + sqrt(max(b * b + (cloudTop * cloudTop - kPlanetRadius * kPlanetRadius), 0.0));
-    if (t1 <= 0.001) return vec3(0.0);
-    t0 = max(t0, 0.0);
-    float thickness = max(t1 - t0, 0.0001);
+    // Nuvens como CAMADA projetada na direção (sem marchar casca): baratas,
+    // suaves e sem aliasing. Só acima do horizonte.
+    if (rd.y <= 0.06) return vec3(0.0);
+    // Faixa de elevação: concentra as nuvens no meio do céu (nem coladas no
+    // horizonte, nem no zênite).
+    float elev = smoothstep(0.10, 0.35, rd.y) * (1.0 - smoothstep(0.55, 0.9, rd.y));
+    if (elev < 0.002) return vec3(0.0);
 
-    const int CLOUD_STEPS = 14;
-    float dt = thickness / float(CLOUD_STEPS);
-    vec3 acc = vec3(0.0);
-    float trans = 1.0;
-    float t = t0 + dt * 0.5;
-    for (int i = 0; i < CLOUD_STEPS; ++i) {
-        vec3 p = origin + rd * t;
-        vec3 wp = p * 9.0;            // escala maior = nuvens mais "aveludadas"
-        wp.z += u_CloudTime * 0.002;  // deriva lenta
-        float d = CloudFBM(wp);
-        d = smoothstep(0.58, 0.82, d); // limiar mais alto e mais suave
-        if (d > 0.002) {
-            float sunAmt = clamp(dot(rd, u_SunDirection), 0.0, 1.0);
-            vec3 col = mix(vec3(0.62, 0.66, 0.74), vec3(1.0, 0.96, 0.88), sunAmt);
-            acc += col * d * trans * dt * 9.0;
-            trans *= 1.0 - d * 0.4;
-            if (trans < 0.02) break;
-        }
-        t += dt;
-    }
-    return acc;
+    // Escala baixa no espaço da direção = nuvens grandes. Deriva lenta no tempo.
+    vec3 wp = rd * 2.2 + vec3(0.0, 0.0, u_CloudTime * 0.008);
+    float d = CloudFBM(wp);
+    d = smoothstep(0.55, 0.78, d) * elev;
+    if (d < 0.002) return vec3(0.0);
+
+    float sunAmt = clamp(dot(rd, u_SunDirection), 0.0, 1.0);
+    vec3 col = mix(vec3(0.62, 0.66, 0.74), vec3(1.0, 0.96, 0.88), sunAmt);
+    return col * d * 0.85;
 }
 
 void main() {

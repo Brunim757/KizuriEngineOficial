@@ -2589,6 +2589,13 @@ bool Renderer3D::LoadHDRI(const std::string& path) {
     int w = 0, h = 0, comp = 0;
     float* data = nullptr;
 
+    // stbi_set_flip_vertically_on_load é GLOBAL. Cada loader de textura seta
+    // o valor antes do próprio load; o LoadHDRI não setava NADA e herdava o
+    // flip da ÚLTIMA textura carregada (PNG flipada = céu certo; glTF sem
+    // flip = céu DE CABEÇA PARA BAIXO — as nuvens iam pro chão). O equirect
+    // precisa de flip: zênite (topo da imagem) deve cair em v=1.0.
+    stbi_set_flip_vertically_on_load(1);
+
     if (IsEmbeddedPath(path)) {
         EmbeddedBuffer buf;
         if (!GetEmbeddedResource(EmbeddedNameFromPath(path), buf)) {

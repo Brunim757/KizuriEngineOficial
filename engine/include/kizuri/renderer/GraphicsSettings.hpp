@@ -28,12 +28,6 @@ struct GraphicsSettings {
     // Raio do PCF do shadow map (0 = amostra única, 1..3 = vizinhança).
     int ShadowPCFRadius = 2;
 
-    // PCSS (sombras suaves): quanto maior, mais larga a penumbra (0..1).
-    float ShadowSoftness = 0.5f;
-
-    // Resolução do shadow map da luz pontual (depth cubemap).
-    int PointShadowMapSize = 512;
-
     bool BloomEnabled = true;
     float BloomThreshold = 1.2f;
     float BloomIntensity = 0.45f;
@@ -42,17 +36,6 @@ struct GraphicsSettings {
     bool SSAOEnabled = true;
     int SSAOSamples = 32;
     float SSAORadius = 0.5f;
-
-    // Ray tracing em espaço de tela (SSR — reflexos): marcha o raio refletido
-    // contra o depth buffer e compõe a cor do ponto de impacto. Só roda em
-    // OpenGL 4.0+ (o shader usa loop de comprimento variável); em 3.3 é
-    // ignorado. A "intensidade" vira força da reflexão; "marcha" é o
-    // comprimento máximo do raio em unidades de mundo.
-    bool SSREnabled = true;
-    int SSRMaxSteps = 48;
-    float SSRThickness = 0.12f;   // espessura do depth para o raio "acertar"
-    float SSRIntensity = 0.6f;    // força da reflexão
-    float SSRMarchDistance = 20.0f; // distância máxima do raio (unidades)
 
     // Exposição multiplicada antes do tonemap ACES (equivalente ao "EV").
     float Exposure = 1.0f;

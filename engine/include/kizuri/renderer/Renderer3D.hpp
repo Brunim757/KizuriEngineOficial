@@ -183,14 +183,6 @@ private:
     static glm::mat4 s_LightSpaceMatrix[kCascadeCount];
     static float s_CascadeSplits[kCascadeCount]; // distância (view-space) onde cada cascata termina
 
-    // Sombra de luz PONTUAL (depth cubemap): a 1ª luz Point com CastsShadow
-    // do frame renderiza a cena 6x (uma por face) a partir da posição da luz.
-    static uint32_t s_PointShadowFBO, s_PointShadowMap;
-    static Ref<Shader> s_PointShadowShader;
-    static Light s_PointShadowCaster;
-    static bool s_HasPointShadowCaster;
-    static int s_PointShadowLightIndex; // índice da luz pontual castora em s_LightList
-    static void EnsurePointShadowMaps(uint32_t size);
 
     // HDRI: textura equirectangular 2D carregada do arquivo (0 = procedural);
     // o shader converte pra cubemap durante o bake.
@@ -241,13 +233,6 @@ private:
     static Ref<Shader> s_SSAOShader;
     static std::vector<glm::vec3> s_SSAOKernel; // amostras do hemisfério (geradas em Init)
     static uint32_t s_SSAOWidth, s_SSAOHeight;
-
-    // SSR (ray tracing em espaço de tela): cor + depth -> marcha do raio refletido -> reflexo.
-    // Só existe/cria o shader em OpenGL 4.0+ (loop de comprimento variável).
-    static void EnsureSSRBuffer(uint32_t width, uint32_t height); // (re)cria se o tamanho mudou
-    static Ref<Shader> s_SSRShader;
-    static uint32_t s_SSRFBO, s_SSRColorBuffer;
-    static uint32_t s_SSRWidth, s_SSRHeight;
 
     // Partículas: 1 VAO reaproveitado por todos os lotes do frame — buffer de quad estático
     // (attribs 0/1) + buffer de instância dinâmico, reescrito via glBufferSubData a cada lote.

@@ -332,3 +332,22 @@
 - [x] Os gráficos "ultra" futuros virão do backend VULKAN (em andamento)
 
 ---
+
+## ✅ v0.23 — Removido TUDO de OpenGL > 3.3 (limpeza final)
+
+- [x] **PCSS removido** do mesh shader — volta ao PCF simples comprovado (o
+  bug de "objetos brilhando branco absurdo" era dos loops dinâmicos 4.x)
+- [x] **Sombra de luz pontual removida** (shaders + FBO cubemap + passe 6
+  faces + uniforms + campos de settings) — luzes de ponto iluminam sem sombra
+- [x] **SSR (reflexos por raio) removido inteiro** (shader, FBO, passe,
+  uniforms do composite, campos de settings, UI)
+- [x] `Shader`: sem escalonamento por versão — #version 330 core fixo, sem
+  KZ_GLSL_VERSION e sem fallback de versões
+- [x] `GraphicsSettings`: sem `ShadowSoftness`/`PointShadowMapSize` e sem os
+  campos de SSR (mortos); `TuneToHardware` usa UM único conjunto 3.3
+- [x] UI do editor sem os sliders de PCSS/sombra pontual/SSR
+- [x] Resultado: a engine é 100% OpenGL 3.3 — um único caminho comprovado.
+  Mesmo num PC com OpenGL 4.5/4.6 o contexto pedido é {3,3} e todos os
+  shaders são GLSL 330 core.
+
+---

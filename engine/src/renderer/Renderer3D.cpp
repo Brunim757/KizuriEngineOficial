@@ -33,11 +33,6 @@ Ref<Shader> Renderer3D::s_ShadowShader;
 glm::mat4 Renderer3D::s_LightSpaceMatrix[kCascadeCount];
 float Renderer3D::s_CascadeSplits[kCascadeCount] = {};
 
-uint32_t Renderer3D::s_PointShadowFBO = 0, Renderer3D::s_PointShadowMap = 0;
-Ref<Shader> Renderer3D::s_PointShadowShader;
-Light Renderer3D::s_PointShadowCaster;
-bool Renderer3D::s_HasPointShadowCaster = false;
-int Renderer3D::s_PointShadowLightIndex = -1;
 
 uint32_t Renderer3D::s_EquirectTexture = 0;
 Ref<Shader> Renderer3D::s_EquirectShader;
@@ -69,9 +64,6 @@ uint32_t Renderer3D::s_NoiseTexture = 0;
 Ref<Shader> Renderer3D::s_SSAOShader;
 std::vector<glm::vec3> Renderer3D::s_SSAOKernel;
 uint32_t Renderer3D::s_SSAOWidth = 0, Renderer3D::s_SSAOHeight = 0;
-Ref<Shader> Renderer3D::s_SSRShader;
-uint32_t Renderer3D::s_SSRFBO = 0, Renderer3D::s_SSRColorBuffer = 0;
-uint32_t Renderer3D::s_SSRWidth = 0, Renderer3D::s_SSRHeight = 0;
 static float s_PostTime = 0.0f; // relógio do pós-processamento (grão de filme animado)
 
 std::vector<Renderer3D::ParticleBatch> Renderer3D::s_ParticleBatches;
@@ -162,19 +154,7 @@ uniform sampler2D u_ShadowMap1;
 uniform sampler2D u_ShadowMap2;
 uniform mat4 u_LightSpaceMatrix[CASCADE_COUNT];
 uniform float u_CascadeSplits[CASCADE_COUNT]; // distância (view-space) onde cada cascata termina
-uniform int u_ShadowPCF; // raio do PCF (3.3) / busca de bloqueadores (4.x)
-
-// PCSS + sombra de luz pontual só em GL 4.0+: os loops dinâmicos do PCSS
-// quebram em compiladores 3.3/emuladores (ex.: Wine) e corrompem o shader
-// (objetos brancos). No 3.3 o mesh shader fica byte-a-byte o comprovado.
-#if KZ_GLSL_VERSION >= 400
-uniform float u_ShadowSoftness; // suavidade da penumbra (PCSS)
-uniform samplerCube u_PointShadowMap;
-uniform bool u_HasPointShadow;
-uniform int u_PointShadowLightIndex;
-uniform vec3 u_PointLightPos;
-uniform float u_PointLightFar;
-#endif
+uniform int u_ShadowPCF; // raio do PCF
 
 #define MAX_LIGHTS 16
 uniform int u_LightCount;
@@ -193,8 +173,9 @@ uniform float u_MaxPrefilterLod;
 
 const float PI = 3.14159265359;
 
-// PCF simples (usado no 3.3 e como fallback): média numa vizinhança de raio
-// configurável. Comprovado — não corrompe em nenhum compilador.
+// PCF simples: média numa vizinhança de raio configurável. O caminho 3.3
+// comprovado — não corrompe em nenhum compilador/driver (o PCSS 4.x que
+// quebrava em Wine/drivers e deixava objetos brancos foi REMOVIDO).
 float SampleShadowPCF(sampler2D map, vec3 projCoords, float bias) {
     if (projCoords.z > 1.0) return 0.0;
     float shadow = 0.0;
@@ -210,60 +191,6 @@ float SampleShadowPCF(sampler2D map, vec3 projCoords, float bias) {
     return shadow / count;
 }
 
-#if KZ_GLSL_VERSION >= 400
-// PCSS (Percentage-Closer Soft Shadows) — sombra suave de verdade, só 4.x.
-float BlockerSearch(sampler2D map, vec3 p, float bias) {
-    vec2 texelSize = 1.0 / textureSize(map, 0);
-    int r = max(u_ShadowPCF, 1);
-    float avg = 0.0; int cnt = 0;
-    for (int x = -r; x <= r; ++x) {
-        for (int y = -r; y <= r; ++y) {
-            float d = texture(map, p.xy + vec2(x, y) * texelSize).r;
-            if (d < p.z - bias) { avg += d; ++cnt; }
-        }
-    }
-    return cnt == 0 ? -1.0 : avg / float(cnt);
-}
-
-float PCSS(sampler2D map, vec3 p, float bias) {
-    if (p.z > 1.0) return 0.0;
-    float avg = BlockerSearch(map, p, bias);
-    if (avg < 0.0) return 0.0;
-    float penumbra = clamp((p.z - bias - avg) * u_ShadowSoftness * 140.0, 0.5, 3.0);
-    int r = int(ceil(float(max(u_ShadowPCF, 1)) * penumbra));
-    r = min(r, 6);
-    vec2 texelSize = 1.0 / textureSize(map, 0);
-    float shadow = 0.0; int cnt = 0;
-    for (int x = -r; x <= r; ++x) {
-        for (int y = -r; y <= r; ++y) {
-            if (p.z - bias > texture(map, p.xy + vec2(x, y) * texelSize).r) shadow += 1.0;
-            ++cnt;
-        }
-    }
-    return shadow / float(cnt);
-}
-
-// Sombra de luz PONTUAL (só 4.x): amostra o cubemap de profundidade LINEAR
-// com um PCF 3D de 9 taps. Array com tamanho EXPLÍCITO (vec3[9]).
-float PointShadow(vec3 fragToLight, float bias) {
-    if (!u_HasPointShadow) return 0.0;
-    float current = length(fragToLight) / max(u_PointLightFar, 0.001);
-    vec3 offsets[9] = vec3[9](
-        vec3(0.0),
-        vec3(0.02, 0.0, 0.0), vec3(-0.02, 0.0, 0.0),
-        vec3(0.0, 0.02, 0.0), vec3(0.0, -0.02, 0.0),
-        vec3(0.0, 0.0, 0.02), vec3(0.0, 0.0, -0.02),
-        vec3(0.014, 0.014, 0.0), vec3(-0.014, -0.014, 0.0)
-    );
-    float shadow = 0.0;
-    for (int i = 0; i < 9; ++i) {
-        float d = texture(u_PointShadowMap, fragToLight + offsets[i]).r;
-        if (current - bias > d) shadow += 1.0;
-    }
-    return shadow / 9.0;
-}
-#endif // KZ_GLSL_VERSION >= 400
-
 // Escolhe a cascata pela profundidade view-space e amostra o shadow map certo — GLSL 330
 // core não permite indexar array de sampler com índice dinâmico, daí o if/else explícito.
 float CalculateShadow(vec3 N, vec3 L) {
@@ -271,18 +198,6 @@ float CalculateShadow(vec3 N, vec3 L) {
     int idx = (viewDepth < u_CascadeSplits[0]) ? 0 : (viewDepth < u_CascadeSplits[1]) ? 1 : 2;
     float bias = max(0.0025 * (1.0 - dot(N, L)), 0.0006);
 
-#if KZ_GLSL_VERSION >= 400
-    if (idx == 0) {
-        vec4 p = u_LightSpaceMatrix[0] * vec4(v_FragPos, 1.0);
-        return PCSS(u_ShadowMap0, p.xyz / p.w * 0.5 + 0.5, bias);
-    } else if (idx == 1) {
-        vec4 p = u_LightSpaceMatrix[1] * vec4(v_FragPos, 1.0);
-        return PCSS(u_ShadowMap1, p.xyz / p.w * 0.5 + 0.5, bias);
-    } else {
-        vec4 p = u_LightSpaceMatrix[2] * vec4(v_FragPos, 1.0);
-        return PCSS(u_ShadowMap2, p.xyz / p.w * 0.5 + 0.5, bias);
-    }
-#else
     if (idx == 0) {
         vec4 p = u_LightSpaceMatrix[0] * vec4(v_FragPos, 1.0);
         return SampleShadowPCF(u_ShadowMap0, p.xyz / p.w * 0.5 + 0.5, bias);
@@ -293,7 +208,6 @@ float CalculateShadow(vec3 N, vec3 L) {
         vec4 p = u_LightSpaceMatrix[2] * vec4(v_FragPos, 1.0);
         return SampleShadowPCF(u_ShadowMap2, p.xyz / p.w * 0.5 + 0.5, bias);
     }
-#endif
 }
 
 // Distribuição GGX/Trowbridge-Reitz: alinhamento dos micro-facetos com o meio-vetor H.
@@ -402,13 +316,6 @@ void main() {
         // Sombra só se aplica à luz 0 quando ela é a shadow caster (sempre a Directional, ver C++).
         if (i == 0 && u_HasShadow) contribution *= (1.0 - shadow);
 
-#if KZ_GLSL_VERSION >= 400
-        // Sombra da luz PONTUAL (a marcada como castora no frame) — só 4.x.
-        if (u_HasPointShadow && i == u_PointShadowLightIndex) {
-            float pbias = max(0.01 * (1.0 - dot(N, L)), 0.005);
-            contribution *= (1.0 - PointShadow(toLight, pbias));
-        }
-#endif
         directLighting += contribution;
     }
 
@@ -740,8 +647,6 @@ uniform sampler2D u_SceneColor;
 uniform sampler2D u_BloomBlur;
 uniform sampler2D u_AOTexture;
 uniform bool u_HasAO;
-uniform sampler2D u_SSRTexture;
-uniform bool u_HasSSR;
 uniform float u_BloomIntensity;
 uniform float u_Exposure;
 uniform float u_Vignette;
@@ -772,13 +677,6 @@ void main() {
 
     vec3 bloom = texture(u_BloomBlur, uv).rgb;
     vec3 color = hdr + bloom * u_BloomIntensity;
-    if (u_HasSSR) {
-        // Guarda anti-NaN: um reflexo degenerado (SSR) não pode envenenar
-        // o frame inteiro com NaN (tela preta).
-        vec3 ssr = texture(u_SSRTexture, uv).rgb;
-        if (any(isnan(ssr)) || any(isinf(ssr))) ssr = vec3(0.0);
-        color += ssr;
-    }
     if (u_HasAO) color *= texture(u_AOTexture, uv).r;
     // Guarda final: NENHUM passe de pós pode produzir NaN/Inf e apagar a tela.
     if (any(isnan(color)) || any(isinf(color))) color = vec3(0.0);
@@ -865,99 +763,6 @@ void main() {
     // e escurecia a cena ~10x), o AO nunca passa de 0.35 — o efeito fica
     // visível mas não deixa a cena escura.
     o_AO = clamp(pow(occlusion, u_Power), 0.35, 1.0);
-}
-)";
-
-// ---------------------------------------------------------------------
-// SSR — "ray tracing em espaço de tela" (reflexos): para cada pixel,
-// projeta o raio refletido (normal reconstruída do depth) no espaço de
-// tela e marcha contra o depth buffer até acertar geometria; a cor do
-// ponto de impacto vira a reflexão. Só roda em OpenGL 4.0+ (o loop tem
-// comprimento VARIÁVEL — em 3.3/Wine isso quebrava shaders), gated em
-// C++ por GetGLSLVersion() >= 400. A versão da linguagem é injetada pelo
-// Shader (RewriteVersion), então não tem "#version" aqui.
-// ---------------------------------------------------------------------
-static const char* s_SSRFragmentSrc = R"(
-in vec2 v_TexCoord;
-out vec4 o_Color;
-
-uniform sampler2D u_SceneColor;
-uniform sampler2D u_Depth;
-uniform mat4 u_Projection;
-uniform mat4 u_InverseProjection;
-uniform int u_MaxSteps;
-uniform float u_Thickness;
-uniform float u_Intensity;
-uniform float u_MarchDistance;
-uniform vec2 u_ViewportSize;
-
-// Reconstrução do ponto de vista (mesma técnica do SSAO: inversa da projeção).
-vec3 ReconstructViewPos(vec2 uv, float depth) {
-    vec4 clip = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
-    vec4 view = u_InverseProjection * clip;
-    return view.xyz / view.w;
-}
-
-void main() {
-    o_Color = vec4(0.0);
-    float depth = texture(u_Depth, v_TexCoord).r;
-    if (depth >= 0.9999) return; // céu: já tem reflexo do IBL, não duplica
-
-    vec3 fragPos = ReconstructViewPos(v_TexCoord, depth);
-    vec3 n = cross(dFdx(fragPos), dFdy(fragPos));
-    // Silhuetas/bordas de objeto podem ter derivadas quase paralelas -> cross
-    // ~0 -> normalize() vira NaN. NaN aqui POISONA o composite (tela preta),
-    // então descarta esses pixels em vez de refletir neles.
-    if (dot(n, n) < 1e-8) return;
-    vec3 normal = normalize(n);
-    if (dot(normal, -fragPos) < 0.001) return; // face voltada pra longe
-
-    vec3 viewDir = normalize(fragPos);
-    vec3 reflDir = reflect(viewDir, normal);
-
-    // Origem do raio levemente afastada da superfície pra evitar que o
-    // pixel de partida se "auto-acerta" na própria profundidade.
-    vec3 rayOrigin = fragPos + reflDir * 0.05;
-
-    vec4 startClip = u_Projection * vec4(rayOrigin, 1.0);
-    vec4 endClip   = u_Projection * vec4(rayOrigin + reflDir * u_MarchDistance, 1.0);
-    if (startClip.w <= 0.0 || endClip.w <= 0.0) return; // algum ponto atrás da câmera
-    vec2 startNDC = startClip.xy / startClip.w;
-    vec2 endNDC   = endClip.xy / endClip.w;
-    vec2 deltaNDC = endNDC - startNDC;
-
-    // Número de passos proporcional à distância em pixels do raio na tela.
-    float pixelDist = length(deltaNDC * 0.5 * u_ViewportSize);
-    int steps = clamp(int(pixelDist / 2.0), 8, u_MaxSteps);
-    if (steps < 2) return;
-
-    vec2 stepNDC = deltaNDC / float(steps);
-    float z0 = startClip.z / startClip.w;         // z linear de view (negativo)
-    float zStep = (endClip.z / endClip.w - z0) / float(steps);
-
-    vec2 uv = startNDC * 0.5 + 0.5;
-    float rayZ = z0;
-    for (int i = 0; i < steps; ++i) {
-        uv += stepNDC * 0.5;
-        rayZ += zStep;
-        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return;
-
-        float hitDepth = texture(u_Depth, uv).r;
-        if (hitDepth >= 0.9999) continue; // ainda voando sobre o céu
-
-        vec3 hitPos = ReconstructViewPos(uv, hitDepth);
-        float diff = hitPos.z - rayZ;
-        if (diff < 0.0 && abs(diff) < u_Thickness) {
-            // Atingiu: reflete a cor da cena naquele ponto. Fresnel de
-            // Schlick aproximado — ângulos rasantes refletem bem mais.
-            vec3 hitColor = texture(u_SceneColor, uv).rgb;
-            if (any(isnan(hitColor)) || any(isinf(hitColor))) hitColor = vec3(0.0);
-            float fresnel = pow(1.0 - clamp(dot(normal, -viewDir), 0.0, 1.0), 5.0);
-            float strength = mix(0.04, 1.0, fresnel);
-            o_Color = vec4(clamp(hitColor * strength * u_Intensity, 0.0, 32.0), 1.0);
-            return;
-        }
-    }
 }
 )";
 
@@ -1067,38 +872,6 @@ static const char* s_ShadowFragmentSrc = R"(
 void main() { }
 )";
 
-// Shadow map de luz PONTUAL: escreve PROFUNDIDADE LINEAR (distância/far) no
-// cubemap em vez do depth não-linear da perspectiva — é o que permite
-// comparar com length(fragToLight) no fragment shader de iluminação.
-static const char* s_PointShadowVertexSrc = R"(
-#version 330 core
-layout(location = 0) in vec3 a_Position;
-
-uniform mat4 u_LightViewProjection;
-uniform mat4 u_Model;
-
-out vec3 v_WorldPos;
-
-void main() {
-    v_WorldPos = vec3(u_Model * vec4(a_Position, 1.0));
-    gl_Position = u_LightViewProjection * u_Model * vec4(a_Position, 1.0);
-}
-)";
-
-static const char* s_PointShadowFragmentSrc = R"(
-#version 330 core
-in vec3 v_WorldPos;
-out vec4 o_Color;
-
-uniform vec3 u_LightPos;
-uniform float u_FarPlane;
-
-void main() {
-    gl_FragDepth = length(v_WorldPos - u_LightPos) / max(u_FarPlane, 0.001);
-    o_Color = vec4(1.0);
-}
-)";
-
 static const char* s_LineVertexSrc = R"(
 #version 330 core
 layout(location = 0) in vec3 a_Position;
@@ -1177,9 +950,6 @@ void Renderer3D::Init() {
     EnsureShadowMaps((uint32_t)s_Settings.ShadowMapSize);
 
     // Shadow map de luz pontual (depth cubemap com profundidade LINEAR).
-    s_PointShadowShader = CreateRef<Shader>("Renderer3D_PointShadow", s_PointShadowVertexSrc, s_PointShadowFragmentSrc);
-    EnsurePointShadowMaps((uint32_t)s_Settings.PointShadowMapSize);
-
     s_EquirectShader = CreateRef<Shader>("Renderer3D_Equirect", s_CaptureVertexSrc, s_EquirectFragmentSrc);
 
     GenerateEnvironment();
@@ -1205,11 +975,6 @@ void Renderer3D::Init() {
     // SSAO: kernel de hemisfério (64 amostras) + textura de ruído 4x4 que
     // gira o kernel por pixel e esconde o padrão de amostragem.
     s_SSAOShader = CreateRef<Shader>("Renderer3D_SSAO", s_FullscreenVertexSrc, s_SSAOFragmentSrc);
-    // SSR (reflexos por raio) precisa de GL 4.0+: o shader usa um loop de
-    // comprimento VARIÁVEL, que em 3.3/Wine quebrava o shader (o motivo do
-    // caminho estável 3.3). Em 3.3 o shader nem é criado e a feature fica off.
-    if (GetGLSLVersion() >= 400)
-        s_SSRShader = CreateRef<Shader>("Renderer3D_SSR", s_FullscreenVertexSrc, s_SSRFragmentSrc);
     std::srand(2026u);
     s_SSAOKernel.resize(64);
     for (int i = 0; i < 64; ++i) {
@@ -1436,40 +1201,6 @@ void Renderer3D::EnsureShadowMaps(uint32_t size) {
 
 // (Re)cria os dois FBOs de SSAO (oclusão bruta + borrada), meia resolução,
 // se o tamanho mudou desde a última vez.
-// (Re)cria o depth cubemap da luz pontual se a resolução mudou (preset).
-void Renderer3D::EnsurePointShadowMaps(uint32_t size) {
-    size = glm::max(256u, size);
-    static uint32_t s_CurrentPointSize = 0;
-    if (size == s_CurrentPointSize && s_PointShadowMap != 0) return;
-    s_CurrentPointSize = size;
-
-    if (s_PointShadowMap != 0) {
-        glDeleteFramebuffers(1, &s_PointShadowFBO);
-        glDeleteTextures(1, &s_PointShadowMap);
-    }
-
-    glGenTextures(1, &s_PointShadowMap);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, s_PointShadowMap);
-    for (int i = 0; i < 6; ++i) {
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT24,
-                     (GLsizei)size, (GLsizei)size, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-    }
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-    glGenFramebuffers(1, &s_PointShadowFBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, s_PointShadowFBO);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_CUBE_MAP_POSITIVE_X, s_PointShadowMap, 0);
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        KZ_CORE_ERROR("Framebuffer de sombra pontual incompleto.");
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
 void Renderer3D::EnsureSSAOBuffers(uint32_t width, uint32_t height) {
     uint32_t w = glm::max(1u, width / 2), h = glm::max(1u, height / 2);
     if (s_SSAOColorBuffer != 0 && w == s_SSAOWidth && h == s_SSAOHeight) return;
@@ -1504,33 +1235,7 @@ void Renderer3D::EnsureSSAOBuffers(uint32_t width, uint32_t height) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-// Framebuffer da reflexão (SSR) em resolução interna — RGBA16F (cor HDR do
-// impacto do raio). Só é usado quando o shader SSR existe (GL 4.0+).
-void Renderer3D::EnsureSSRBuffer(uint32_t width, uint32_t height) {
-    if (s_SSRColorBuffer != 0 && width == s_SSRWidth && height == s_SSRHeight) return;
-    s_SSRWidth = width;
-    s_SSRHeight = height;
 
-    if (s_SSRColorBuffer != 0) {
-        glDeleteFramebuffers(1, &s_SSRFBO);
-        glDeleteTextures(1, &s_SSRColorBuffer);
-    }
-    glGenFramebuffers(1, &s_SSRFBO);
-    glGenTextures(1, &s_SSRColorBuffer);
-    glBindTexture(GL_TEXTURE_2D, s_SSRColorBuffer);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, (GLsizei)width, (GLsizei)height, 0, GL_RGBA, GL_FLOAT, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glBindFramebuffer(GL_FRAMEBUFFER, s_SSRFBO);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_SSRColorBuffer, 0);
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        KZ_CORE_ERROR("Framebuffer SSR incompleto.");
-        SetShaderDiagnostic("Framebuffer SSR incompleto");
-    }
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
 // único, síncrono. A fonte do ambiente é o céu procedural OU uma imagem HDR
 // equirectangular (Renderer3D::SetEnvironmentHDRIPath) — pra HDRI a imagem é
 // carregada, convertida pra cubemap e a partir daí o restante do pipeline
@@ -1839,8 +1544,6 @@ void Renderer3D::BeginScene(const PerspectiveCamera& camera) {
     s_DrawList.clear();
     s_LightList.clear();
     s_HasShadowCaster = false;
-    s_HasPointShadowCaster = false;
-    s_PointShadowLightIndex = -1;
     s_DrawGridFlag = false;
     s_ParticleBatches.clear();
 }
@@ -1862,11 +1565,6 @@ void Renderer3D::SubmitLight(const Light& light) {
         s_HasShadowCaster = true;
         s_LightList.insert(s_LightList.begin(), light); // shadow caster sempre no índice 0
         return;
-    }
-    if (light.Type == LightType::Point && light.CastsShadow && !s_HasPointShadowCaster) {
-        s_PointShadowCaster = light;
-        s_HasPointShadowCaster = true;
-        s_PointShadowLightIndex = (int)s_LightList.size();
     }
     s_LightList.push_back(light);
 }
@@ -1916,40 +1614,6 @@ void Renderer3D::EndScene() {
         glCullFace(GL_BACK);
     }
 
-    // --- Passe 0.5: shadow map da luz PONTUAL (depth cubemap, 6 faces,
-    // profundidade LINEAR = distância/far) — 1ª luz Point com CastsShadow ---
-    if (!s_DrawList.empty() && s_HasPointShadowCaster) {
-        EnsurePointShadowMaps((uint32_t)s_Settings.PointShadowMapSize);
-        uint32_t pointSize = (uint32_t)s_Settings.PointShadowMapSize;
-        glm::vec3 lp = s_PointShadowCaster.Position;
-        glm::mat4 pointProj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, s_PointShadowCaster.Range);
-        glm::mat4 pointViews[6] = {
-            glm::lookAt(lp, lp + glm::vec3( 1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-            glm::lookAt(lp, lp + glm::vec3(-1.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-            glm::lookAt(lp, lp + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
-            glm::lookAt(lp, lp + glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f)),
-            glm::lookAt(lp, lp + glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-            glm::lookAt(lp, lp + glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, -1.0f, 0.0f)),
-        };
-        glCullFace(GL_FRONT);
-        s_PointShadowShader->Bind();
-        s_PointShadowShader->SetFloat3("u_LightPos", lp);
-        s_PointShadowShader->SetFloat("u_FarPlane", s_PointShadowCaster.Range);
-        glBindFramebuffer(GL_FRAMEBUFFER, s_PointShadowFBO);
-        glViewport(0, 0, (GLsizei)pointSize, (GLsizei)pointSize);
-        for (int f = 0; f < 6; ++f) {
-            s_PointShadowShader->SetMat4("u_LightViewProjection", pointProj * pointViews[f]);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                                    GL_TEXTURE_CUBE_MAP_POSITIVE_X + f, s_PointShadowMap, 0);
-            glClear(GL_DEPTH_BUFFER_BIT);
-            for (auto& cmd : s_DrawList) {
-                s_PointShadowShader->SetMat4("u_Model", cmd.Transform);
-                RenderCommand::DrawIndexed(cmd.MeshAsset->GetVertexArray(), cmd.MeshAsset->GetIndexCount());
-            }
-        }
-        glCullFace(GL_BACK);
-    }
-
     // --- Passe 1: cena inteira (mesh + skybox), pro framebuffer HDR interno ---
     uint32_t sceneFBO = (s_CurrentMSAA > 1) ? s_MSAAHDRFBO : s_HDRFBO;
     glBindFramebuffer(GL_FRAMEBUFFER, sceneFBO);
@@ -1969,16 +1633,6 @@ void Renderer3D::EndScene() {
         s_MeshShader->SetFloat3("u_ViewPos", s_CameraPos);
         s_MeshShader->SetInt("u_HasShadow", s_HasShadowCaster ? 1 : 0);
         s_MeshShader->SetInt("u_ShadowPCF", s_Settings.ShadowPCFRadius);
-        s_MeshShader->SetFloat("u_ShadowSoftness", s_Settings.ShadowSoftness);
-        s_MeshShader->SetInt("u_HasPointShadow", s_HasPointShadowCaster ? 1 : 0);
-        s_MeshShader->SetInt("u_PointShadowLightIndex", s_PointShadowLightIndex);
-        if (s_HasPointShadowCaster) {
-            glActiveTexture(GL_TEXTURE9);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, s_PointShadowMap);
-            s_MeshShader->SetInt("u_PointShadowMap", 9);
-            s_MeshShader->SetFloat3("u_PointLightPos", s_PointShadowCaster.Position);
-            s_MeshShader->SetFloat("u_PointLightFar", s_PointShadowCaster.Range);
-        }
         if (s_HasShadowCaster) {
             for (int c = 0; c < kCascadeCount; ++c) {
                 std::string idx = "[" + std::to_string(c) + "]";
@@ -2170,33 +1824,6 @@ void Renderer3D::EndScene() {
         hasAO = true;
     }
 
-    // --- Passe 1.6: SSR (ray tracing em espaço de tela) — reflexos em GL 4.0+ ---
-    // Marcha o raio refletido contra o depth e devolve a cor do impacto.
-    // O shader só existe em 4.0+ (loop de comprimento variável), então aqui
-    // basta conferir se ele foi criado — em 3.3 a feature fica desligada.
-    bool hasSSR = false;
-    if (s_SSRShader && s_SSRShader->IsValid() && s_Settings.SSREnabled) {
-        EnsureSSRBuffer(internalW, internalH);
-        glBindFramebuffer(GL_FRAMEBUFFER, s_SSRFBO);
-        glViewport(0, 0, (GLsizei)s_SSRWidth, (GLsizei)s_SSRHeight);
-        s_SSRShader->Bind();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, s_HDRColorBuffer);
-        s_SSRShader->SetInt("u_SceneColor", 0);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, s_HDRDepthTexture);
-        s_SSRShader->SetInt("u_Depth", 1);
-        s_SSRShader->SetMat4("u_Projection", s_Projection);
-        s_SSRShader->SetMat4("u_InverseProjection", glm::inverse(s_Projection));
-        s_SSRShader->SetInt("u_MaxSteps", s_Settings.SSRMaxSteps);
-        s_SSRShader->SetFloat("u_Thickness", s_Settings.SSRThickness);
-        s_SSRShader->SetFloat("u_Intensity", s_Settings.SSRIntensity);
-        s_SSRShader->SetFloat("u_MarchDistance", s_Settings.SSRMarchDistance);
-        s_SSRShader->SetFloat2("u_ViewportSize", glm::vec2((float)s_SSRWidth, (float)s_SSRHeight));
-        RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
-        hasSSR = true;
-    }
-
     // --- Passe 2: bright-pass (meia resolução) — extrai o glow, se bloom ligado ---
     uint32_t bloomW = glm::max(1u, internalW / 2), bloomH = glm::max(1u, internalH / 2);
     int bloomReadIdx = 0;
@@ -2251,12 +1878,6 @@ void Renderer3D::EndScene() {
         glBindTexture(GL_TEXTURE_2D, s_SSAOColorBuffer); // borrada (passe 2 do blur volta pro s_SSAOFBO)
         s_CompositeShader->SetInt("u_AOTexture", 2);
     }
-    s_CompositeShader->SetInt("u_HasSSR", hasSSR ? 1 : 0);
-    if (hasSSR) {
-        glActiveTexture(GL_TEXTURE3);
-        glBindTexture(GL_TEXTURE_2D, s_SSRColorBuffer); // reflexos (ray tracing em tela)
-        s_CompositeShader->SetInt("u_SSRTexture", 3);
-    }
     RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
     RenderCommand::SetDepthTest(true);
 
@@ -2293,8 +1914,6 @@ void Renderer3D::EndScene() {
             dump << "GLSL core: " << GetGLSLVersion() << "\n";
             GLint maxS = 0; glGetIntegerv(GL_MAX_SAMPLES, &maxS);
             dump << "MSAA: config " << s_Settings.MSAA << " / ativo " << s_CurrentMSAA << " (max samples " << maxS << ")\n";
-            dump << "SSR: " << (s_Settings.SSREnabled ? "on" : "off")
-                 << " shader " << (s_SSRShader ? (s_SSRShader->IsValid() ? "ok" : "INVALIDO") : "nao criado") << "\n";
             dump << "SSAO: " << (s_Settings.SSAOEnabled ? "on" : "off") << "\n";
             dump << "Bloom: " << (s_Settings.BloomEnabled ? "on" : "off") << "\n";
             auto fbStatus = [](GLuint fbo) {
@@ -2308,12 +1927,10 @@ void Renderer3D::EndScene() {
             dump << "FBO HDR: 0x" << std::hex << fbStatus(s_HDRFBO) << std::dec << "\n";
             dump << "FBO MSAA: 0x" << std::hex << fbStatus(s_MSAAHDRFBO) << std::dec << "\n";
             dump << "FBO SSAO: 0x" << std::hex << fbStatus(s_SSAOFBO) << std::dec << "\n";
-            dump << "FBO SSR: 0x" << std::hex << fbStatus(s_SSRFBO) << std::dec << "\n";
             dump << "Shader mesh: " << ShaderOk(s_MeshShader) << "\n";
             dump << "Shader skybox: " << ShaderOk(s_SkyboxShader) << "\n";
             dump << "Shader composite: " << ShaderOk(s_CompositeShader) << "\n";
             dump << "Shader shadow: " << ShaderOk(s_ShadowShader) << "\n";
-            if (s_PointShadowShader) dump << "Shader point shadow: " << ShaderOk(s_PointShadowShader) << "\n";
             dump.close();
         }
 
@@ -2326,7 +1943,6 @@ void Renderer3D::EndScene() {
             SetShaderDiagnostic(msg);
             GraphicsSettings basic = s_Settings;
             basic.MSAA = 1;
-            basic.SSREnabled = false;
             basic.SSAOEnabled = false;
             basic.BloomEnabled = false;
             basic.Preset = QualityPreset::Custom;

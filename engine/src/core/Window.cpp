@@ -98,10 +98,9 @@ void Window::Init(const WindowProps& props) {
     // A engine roda SEMPRE em OpenGL 3.3 core: é o caminho comprovado e
     // estável em QUALQUER máquina (Wine, iGPU, VM, driver novo) — sem a saga
     // de viewport preto de drivers que anunciam GLSL 4.x e rejeitam os
-    // shaders. As features avançadas (reflexos por raio, PCSS, sombra de luz
-    // pontual) ficaram gated por GLSL>=400 e, com o teto fixo em 330, ficam
-    // sempre desligadas — o "ultra" dos gráficos vem do backend Vulkan (em
-    // andamento), não de versões de OpenGL.
+    // shaders. Não há mais features de outras versões no código (PCSS, sombra
+    // de luz pontual e SSR foram REMOVIDOS) — mesmo num PC com OpenGL 4.5/4.6
+    // o contexto pedido é só 3.3 e os shaders são #version 330 core.
     const int contextVersions[][2] = {
         {3, 3}
     };

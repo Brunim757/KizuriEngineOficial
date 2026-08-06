@@ -226,10 +226,9 @@ void EditorLayer::CreateDemoScene3D() {
     gm.MeshMaterial.Roughness = 0.9f;
     ground.GetComponent<TransformComponent>().Scale = { 12.0f, 1.0f, 12.0f };
 
-    // Piso espelhado (metal polido) — mostra o reflexo por raio (SSR, GL 4.0+):
-    // as meshes acima aparecem refletidas no chão. Em GL 3.3 o SSR fica off e
-    // o piso apenas reflete o ambiente (IBL), sem quebrar nada.
-    Entity mirrorFloor = m_ActiveScene->CreateEntity("Piso Espelhado (SSR)");
+    // Piso espelhado (metal polido) — reflete o ambiente (IBL). Em GL 3.3
+    // não há SSR (reflexos por raio), então reflete só o céu de forma estável.
+    Entity mirrorFloor = m_ActiveScene->CreateEntity("Piso Espelhado");
     auto& mm = mirrorFloor.AddComponent<MeshRendererComponent>();
     mm.MeshSource = "builtin:plane";
     mm.MeshAsset = Mesh::FromSource(mm.MeshSource);
@@ -1317,13 +1316,6 @@ void EditorLayer::DrawSettingsGraphics() {
     if (ImGui::Combo("Shadow map (CSM)", &shadowIdx, shadowNames, 4)) m_GraphicsSettings.ShadowMapSize = shadowValues[shadowIdx];
     customTweak |= (ImGui::IsItemActive() || ImGui::IsItemActivated());
     customTweak |= ImGui::SliderInt("Suavização de sombra (PCF)", &m_GraphicsSettings.ShadowPCFRadius, 0, 3);
-    customTweak |= ImGui::DragFloat("Suavidade da sombra (PCSS)", &m_GraphicsSettings.ShadowSoftness, 0.01f, 0.0f, 1.0f);
-    const char* pointShadowNames[] = { "256", "512", "1024", "2048" };
-    int pointShadowValues[] = { 256, 512, 1024, 2048 };
-    int pointShadowIdx = 0;
-    for (int i = 0; i < 4; ++i) if (m_GraphicsSettings.PointShadowMapSize == pointShadowValues[i]) pointShadowIdx = i;
-    if (ImGui::Combo("Shadow map da luz pontual", &pointShadowIdx, pointShadowNames, 4)) m_GraphicsSettings.PointShadowMapSize = pointShadowValues[pointShadowIdx];
-    customTweak |= (ImGui::IsItemActive() || ImGui::IsItemActivated());
     ImGui::Separator();
     customTweak |= ImGui::Checkbox("Bloom", &m_GraphicsSettings.BloomEnabled);
     if (m_GraphicsSettings.BloomEnabled) {
@@ -1338,24 +1330,6 @@ void EditorLayer::DrawSettingsGraphics() {
     if (m_GraphicsSettings.SSAOEnabled) {
         customTweak |= ImGui::SliderInt("Amostras SSAO", &m_GraphicsSettings.SSAOSamples, 8, 64);
         customTweak |= ImGui::DragFloat("Raio SSAO", &m_GraphicsSettings.SSAORadius, 0.01f, 0.05f, 2.0f);
-    }
-    ImGui::Separator();
-    // SSR — "ray tracing" em espaço de tela (reflexos). Só funciona em GL 4.0+
-    // (o shader usa loop de comprimento variável); em 3.3 fica travado off.
-    bool ssrSupported = kizuri::GetGLSLVersion() >= 400;
-    if (!ssrSupported) m_GraphicsSettings.SSREnabled = false;
-    if (!ssrSupported) ImGui::BeginDisabled();
-    customTweak |= ImGui::Checkbox("Reflexos por raio (SSR)", &m_GraphicsSettings.SSREnabled);
-    if (!ssrSupported) {
-        ImGui::SameLine();
-        ImGui::TextDisabled("[requer OpenGL 4.0+]");
-        ImGui::EndDisabled();
-    }
-    if (m_GraphicsSettings.SSREnabled) {
-        customTweak |= ImGui::SliderInt("Passos do raio", &m_GraphicsSettings.SSRMaxSteps, 8, 128);
-        customTweak |= ImGui::DragFloat("Intensidade da reflexão", &m_GraphicsSettings.SSRIntensity, 0.01f, 0.0f, 2.0f);
-        customTweak |= ImGui::DragFloat("Distância da marcha", &m_GraphicsSettings.SSRMarchDistance, 0.5f, 1.0f, 100.0f);
-        customTweak |= ImGui::DragFloat("Espessura do depth", &m_GraphicsSettings.SSRThickness, 0.005f, 0.01f, 1.0f);
     }
     ImGui::Separator();
     customTweak |= ImGui::DragFloat("Exposição", &m_GraphicsSettings.Exposure, 0.01f, 0.1f, 8.0f);

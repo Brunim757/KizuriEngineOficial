@@ -87,6 +87,12 @@ uint32_t Renderer3D::s_DOFFBO = 0, Renderer3D::s_DOFTex = 0;
 uint32_t Renderer3D::s_MotionFBO = 0, Renderer3D::s_MotionTex = 0;
 glm::mat4 Renderer3D::s_MotionPrevVP = glm::mat4(1.0f);
 glm::mat4 Renderer3D::s_MotionCurrVP = glm::mat4(1.0f);
+
+Ref<Shader> Renderer3D::s_SSGIShader;
+uint32_t Renderer3D::s_SSGIFBO = 0, Renderer3D::s_SSGIColor = 0;
+Ref<Shader> Renderer3D::s_LensFlareShader;
+uint32_t Renderer3D::s_LensFBO = 0, Renderer3D::s_LensColor = 0;
+Ref<Shader> Renderer3D::s_FXAAShader;
 static float s_PostTime = 0.0f; // relógio do pós-processamento (grão de filme animado)
 
 std::vector<Renderer3D::ParticleBatch> Renderer3D::s_ParticleBatches;
@@ -173,6 +179,8 @@ uniform bool u_HasShadow; // se a luz índice 0 é a que projeta sombra
 uniform vec3 u_FogColor;
 uniform float u_FogDensity;
 uniform bool u_FogEnabled;
+uniform float u_FogHeight;      // altura do plano da névoa (mundo)
+uniform float u_FogHeightFalloff; // >0 ativa: névoa forte abaixo do plano, some acima
 
 #define CASCADE_COUNT 3
 uniform sampler2D u_ShadowMap0;
@@ -493,6 +501,11 @@ void main() {
     if (u_FogEnabled) {
         float dist = length(u_ViewPos - v_FragPos);
         float fogFactor = 1.0 - exp(-u_FogDensity * u_FogDensity * dist * dist);
+        // Névoa por altura: abaixo do plano = névoa cheia; acima, cai exponencialmente.
+        if (u_FogHeightFalloff > 0.001) {
+            float abovePlane = max(v_FragPos.y - u_FogHeight, 0.0);
+            fogFactor *= exp(-abovePlane / u_FogHeightFalloff);
+        }
         color = mix(color, u_FogColor, clamp(fogFactor, 0.0, 1.0));
     }
 
@@ -728,6 +741,8 @@ out vec4 o_Color;
 uniform samplerCube u_EnvironmentMap;
 uniform vec3 u_SunDirection;   // direção que APONTA para o sol, normalizada
 uniform bool u_AtmosphereSky;  // 1 = scattering físico (sem HDRI); 0 = amostra o cubemap
+uniform bool u_CloudsEnabled;  // nuvens volumétricas (raymarch fbm 3D, passos fixos)
+uniform float u_CloudTime;
 
 const float PI = 3.14159265359;
 // Atmosfera em unidades NORMALIZADAS (raio do planeta = 1.0) pra evitar
@@ -816,6 +831,77 @@ vec3 ComputeAtmosphere(vec3 rd) {
     return color;
 }
 
+// ---------------------------------------------------------------------
+// Nuvens volumétricas: raymarch por uma camada esférica acima da superfície,
+// com densidade de fbm 3D (ruído de valor, 4 oitavas). Loop de passos FIXOS
+// (teto constante) — 100% GLSL 330 core.
+// ---------------------------------------------------------------------
+float CloudHash(vec3 p) {
+    return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453);
+}
+float CloudNoise(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float n000 = CloudHash(i);
+    float n100 = CloudHash(i + vec3(1.0, 0.0, 0.0));
+    float n010 = CloudHash(i + vec3(0.0, 1.0, 0.0));
+    float n110 = CloudHash(i + vec3(1.0, 1.0, 0.0));
+    float n001 = CloudHash(i + vec3(0.0, 0.0, 1.0));
+    float n101 = CloudHash(i + vec3(1.0, 0.0, 1.0));
+    float n011 = CloudHash(i + vec3(0.0, 1.0, 1.0));
+    float n111 = CloudHash(i + vec3(1.0, 1.0, 1.0));
+    return mix(
+        mix(mix(n000, n100, f.x), mix(n010, n110, f.x), f.y),
+        mix(mix(n001, n101, f.x), mix(n011, n111, f.x), f.y),
+        f.z);
+}
+float CloudFBM(vec3 p) {
+    float v = 0.0;
+    float a = 0.5;
+    for (int i = 0; i < 4; ++i) {
+        v += a * CloudNoise(p);
+        p = p * 2.03 + vec3(11.3, 7.7, 3.9);
+        a *= 0.5;
+    }
+    return v;
+}
+vec3 ComputeClouds(vec3 rd) {
+    if (rd.y <= 0.02) return vec3(0.0);
+    vec3 origin = vec3(0.0, kPlanetRadius, 0.0);
+    // Camada de nuvens entre ~1.0015 e ~1.0025 (≈10km em escala).
+    float cloudBottom = kPlanetRadius + 0.0015;
+    float cloudTop    = kPlanetRadius + 0.0025;
+    float b = dot(rd, origin);
+    float t0 = -b + sqrt(max(b * b + (cloudBottom * cloudBottom - kPlanetRadius * kPlanetRadius), 0.0));
+    float t1 = -b + sqrt(max(b * b + (cloudTop * cloudTop - kPlanetRadius * kPlanetRadius), 0.0));
+    if (t1 <= 0.001) return vec3(0.0);
+    t0 = max(t0, 0.0);
+    float thickness = max(t1 - t0, 0.0001);
+
+    const int CLOUD_STEPS = 12;
+    float dt = thickness / float(CLOUD_STEPS);
+    vec3 acc = vec3(0.0);
+    float trans = 1.0;
+    float t = t0 + dt * 0.5;
+    for (int i = 0; i < CLOUD_STEPS; ++i) {
+        vec3 p = origin + rd * t;
+        vec3 wp = p * 14.0;
+        wp.z += u_CloudTime * 0.002; // deriva lenta
+        float d = CloudFBM(wp);
+        d = smoothstep(0.52, 0.78, d);
+        if (d > 0.002) {
+            float sunAmt = clamp(dot(rd, u_SunDirection), 0.0, 1.0);
+            vec3 col = mix(vec3(0.62, 0.66, 0.74), vec3(1.0, 0.96, 0.88), sunAmt);
+            acc += col * d * trans * dt * 14.0;
+            trans *= 1.0 - d * 0.45;
+            if (trans < 0.02) break;
+        }
+        t += dt;
+    }
+    return acc;
+}
+
 void main() {
     vec3 rd = normalize(v_LocalPos);
     vec3 color;
@@ -823,6 +909,7 @@ void main() {
         // Sem tonemap aqui de propósito — o sol sai bem acima de 1.0 e vira
         // combustível pro bright-pass do bloom no passe de composição.
         color = ComputeAtmosphere(rd);
+        if (u_CloudsEnabled) color += ComputeClouds(rd);
     } else {
         color = texture(u_EnvironmentMap, rd).rgb;
     }
@@ -874,12 +961,17 @@ in vec2 v_TexCoord;
 out vec4 o_Color;
 uniform sampler2D u_Image;
 uniform bool u_Horizontal;
+uniform float u_Anamorphic; // 0 = circular; >0 alonga o blur HORIZONTAL (estilo cinema)
 const float u_Weights[5] = float[](0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216);
 
 void main() {
     vec2 texelSize = 1.0 / vec2(textureSize(u_Image, 0));
     vec3 result = texture(u_Image, v_TexCoord).rgb * u_Weights[0];
-    vec2 dir = u_Horizontal ? vec2(texelSize.x, 0.0) : vec2(0.0, texelSize.y);
+    // Anamórfico: o passo horizontal é multiplicado por (1 + alongamento),
+    // o vertical fica comprimido — streaks horizontais sem perder o blur suave.
+    vec2 dir = u_Horizontal
+        ? vec2(texelSize.x * (1.0 + u_Anamorphic), 0.0)
+        : vec2(0.0, texelSize.y * max(1.0 - u_Anamorphic * 0.5, 0.1));
     for (int i = 1; i < 5; ++i) {
         result += texture(u_Image, v_TexCoord + dir * float(i)).rgb * u_Weights[i];
         result += texture(u_Image, v_TexCoord - dir * float(i)).rgb * u_Weights[i];
@@ -903,6 +995,10 @@ uniform sampler2D u_SSRTexture;
 uniform bool u_HasSSR;
 uniform sampler2D u_GodRaysTexture;
 uniform bool u_HasGodRays;
+uniform sampler2D u_SSGITexture;
+uniform bool u_HasSSGI;
+uniform sampler2D u_LensFlareTexture;
+uniform bool u_HasLensFlare;
 uniform float u_BloomIntensity;
 uniform float u_Exposure;
 uniform float u_Vignette;
@@ -910,6 +1006,8 @@ uniform float u_ChromaticAberration;
 uniform float u_FilmGrain;
 uniform float u_Time;
 uniform int u_ToneMapping; // 0=ACES, 1=Reinhard, 2=Filmic
+uniform float u_Saturation;
+uniform float u_Contrast;
 
 vec3 ACESFilm(vec3 x) {
     float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
@@ -945,6 +1043,16 @@ void main() {
         if (any(isnan(gr)) || any(isinf(gr))) gr = vec3(0.0);
         color += gr;
     }
+    if (u_HasSSGI) {
+        vec3 gi = texture(u_SSGITexture, uv).rgb;
+        if (any(isnan(gi)) || any(isinf(gi))) gi = vec3(0.0);
+        color += gi;
+    }
+    if (u_HasLensFlare) {
+        vec3 lf = texture(u_LensFlareTexture, uv).rgb;
+        if (any(isnan(lf)) || any(isinf(lf))) lf = vec3(0.0);
+        color += lf;
+    }
     if (u_HasAO) color *= texture(u_AOTexture, uv).r;
     // Guarda final: NENHUM passe de pós pode produzir NaN/Inf e apagar a tela.
     if (any(isnan(color)) || any(isinf(color))) color = vec3(0.0);
@@ -953,6 +1061,12 @@ void main() {
     else if (u_ToneMapping == 2) color = clamp(Filmic(color), 0.0, 1.0);
     else color = ACESFilm(color);
     color = pow(color, vec3(1.0 / 2.2));
+
+    // Color grading (pós-gamma): saturação e contraste "de cena".
+    float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+    color = mix(vec3(luma), color, u_Saturation);
+    color = (color - 0.5) * u_Contrast + 0.5;
+    color = clamp(color, 0.0, 1.0);
 
     float vig = 1.0 - u_Vignette * smoothstep(0.55, 1.35, length(dir * 2.0));
     color *= clamp(vig, 0.0, 1.0);
@@ -1115,6 +1229,172 @@ void main() {
         sum += c;
     }
     o_Color = vec4(sum / float(TAPS), 1.0);
+}
+)";
+
+// ---------------------------------------------------------------------
+// FXAA — anti-aliasing de pós-processamento (3 taps clássico). Usado como
+// alternativa/complemento ao TAA (ligar os dois dá a imagem mais limpa).
+// ---------------------------------------------------------------------
+static const char* s_FXAAFragmentSrc = R"(
+#version 330 core
+in vec2 v_TexCoord;
+out vec4 o_Color;
+uniform sampler2D u_Image;
+uniform vec2 u_InvResolution;
+
+void main() {
+    vec2 o = u_InvResolution;
+    vec3 rgbNW = texture(u_Image, v_TexCoord + vec2(-1.0, -1.0) * o).rgb;
+    vec3 rgbNE = texture(u_Image, v_TexCoord + vec2( 1.0, -1.0) * o).rgb;
+    vec3 rgbSW = texture(u_Image, v_TexCoord + vec2(-1.0,  1.0) * o).rgb;
+    vec3 rgbSE = texture(u_Image, v_TexCoord + vec2( 1.0,  1.0) * o).rgb;
+    vec3 rgbM  = texture(u_Image, v_TexCoord).rgb;
+
+    const vec3 luma = vec3(0.299, 0.587, 0.114);
+    float lumaNW = dot(rgbNW, luma);
+    float lumaNE = dot(rgbNE, luma);
+    float lumaSW = dot(rgbSW, luma);
+    float lumaSE = dot(rgbSE, luma);
+    float lumaM  = dot(rgbM, luma);
+
+    float lumaMin = min(lumaM, min(min(lumaNW, lumaNE), min(lumaSW, lumaSE)));
+    float lumaMax = max(lumaM, max(max(lumaNW, lumaNE), max(lumaSW, lumaSE)));
+
+    vec2 dir;
+    dir.x = -((lumaNW + lumaNE) - (lumaSW + lumaSE));
+    dir.y =  ((lumaNW + lumaSW) - (lumaNE + lumaSE));
+
+    float dirReduce = max((lumaNW + lumaNE + lumaSW + lumaSE) * 0.25 * (1.0 / 12.0), 1.0 / 32.0);
+    float rcpDirMin = 1.0 / (min(abs(dir.x), abs(dir.y)) + dirReduce);
+    dir = clamp(dir * rcpDirMin, vec2(-8.0), vec2(8.0)) * o;
+
+    vec3 rgbA = 0.5 * (texture(u_Image, v_TexCoord + dir * (1.0 / 3.0 - 0.5)).rgb +
+                       texture(u_Image, v_TexCoord + dir * (2.0 / 3.0 - 0.5)).rgb);
+    vec3 rgbB = rgbA * 0.5 + 0.25 * (texture(u_Image, v_TexCoord + dir * -0.5).rgb +
+                                     texture(u_Image, v_TexCoord + dir *  0.5).rgb);
+    float lumaB = dot(rgbB, luma);
+    if (lumaB < lumaMin || lumaB > lumaMax) rgbA = rgbM;
+    o_Color = vec4(rgbA, 1.0);
+}
+)";
+
+// ---------------------------------------------------------------------
+// Lens flare (espaço de tela): ghosts ao longo da linha pixel->sol a partir
+// do brilho (bloom), + um streak horizontal. Loop de passos FIXOS.
+// ---------------------------------------------------------------------
+static const char* s_LensFlareFragmentSrc = R"(
+#version 330 core
+in vec2 v_TexCoord;
+out vec4 o_Color;
+uniform sampler2D u_Bloom;
+uniform vec2 u_SunUV;
+uniform float u_Intensity;
+
+void main() {
+    vec2 uv = v_TexCoord;
+    vec2 delta = u_SunUV - uv;
+    float dist = length(delta);
+    if (dist > 1.3) { o_Color = vec4(0.0); return; }
+    vec2 dir = (dist < 0.0001) ? vec2(0.0) : delta / dist;
+
+    vec3 flare = vec3(0.0);
+    // Ghosts simétricos ao longo da linha (centro mais forte).
+    const int GHOSTS = 10;
+    for (int i = 0; i < GHOSTS; ++i) {
+        float f = float(i) / float(GHOSTS - 1) * 2.0 - 1.0;
+        if (abs(f) < 0.05) continue;
+        vec2 guv = clamp(uv + dir * f * 0.35, vec2(0.0), vec2(1.0));
+        vec3 g = texture(u_Bloom, guv).rgb;
+        if (any(isnan(g)) || any(isinf(g))) g = vec3(0.0);
+        float w = (1.0 - abs(f)); w *= w;
+        flare += g * w;
+    }
+    // Streak horizontal (linha fina de brilho).
+    float streak = 0.0;
+    for (int i = -6; i <= 6; ++i) {
+        vec2 suv = clamp(uv + vec2(float(i) * 0.005, 0.0), vec2(0.0), vec2(1.0));
+        streak += dot(texture(u_Bloom, suv).rgb, vec3(0.299, 0.587, 0.114));
+    }
+    streak /= 13.0;
+    flare += vec3(streak) * 0.6;
+
+    o_Color = vec4(flare * u_Intensity, 1.0);
+}
+)";
+
+// ---------------------------------------------------------------------
+// SSGI — iluminação global em espaço de tela (1-bounce difuso). Raios do
+// hemisfério (8 direções fixas) marchados contra o depth (como o SSR); a cor
+// do impacto vira luz indireta. Meia resolução, loop de passos FIXOS.
+// ---------------------------------------------------------------------
+static const char* s_SSGIFragmentSrc = R"(
+#version 330 core
+in vec2 v_TexCoord;
+out vec4 o_Color;
+
+uniform sampler2D u_SceneColor;
+uniform sampler2D u_Depth;
+uniform mat4 u_Projection;
+uniform mat4 u_InverseProjection;
+uniform float u_Intensity;
+
+vec3 ReconstructViewPos(vec2 uv, float depth) {
+    vec4 clip = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+    vec4 view = u_InverseProjection * clip;
+    return view.xyz / view.w;
+}
+
+void main() {
+    o_Color = vec4(0.0);
+    float depth = texture(u_Depth, v_TexCoord).r;
+    if (depth >= 0.9999) return; // céu não reflete luz indireta na tela
+    vec3 fragPos = ReconstructViewPos(v_TexCoord, depth);
+    vec3 n = cross(dFdx(fragPos), dFdy(fragPos));
+    if (dot(n, n) < 1e-8) return;
+    vec3 N = normalize(n);
+
+    vec3 indirect = vec3(0.0);
+    const int NUM_RAYS = 8;
+    const int MARCH = 8;
+    for (int r = 0; r < NUM_RAYS; ++r) {
+        // Direção do hemisfério, determinística por raio (sem uniform).
+        float phi = (float(r) * 2.399963) + 1.618; // ouro + desconto de regularidade
+        float cosT = 0.5 + 0.5 * float(r) / float(NUM_RAYS);
+        float sinT = sqrt(max(1.0 - cosT * cosT, 0.0));
+        vec3 dir = vec3(cos(phi) * sinT, sin(phi) * sinT, cosT);
+        if (dot(dir, N) < 0.0) dir = reflect(dir, N);
+
+        vec3 rayOrigin = fragPos + dir * 0.1;
+        vec4 curClip = u_Projection * vec4(rayOrigin, 1.0);
+        vec4 endClip = u_Projection * vec4(rayOrigin + dir * 3.0, 1.0);
+        if (curClip.w <= 0.0 || endClip.w <= 0.0) continue;
+
+        vec2 curNDC = curClip.xy / curClip.w;
+        vec2 endNDC = endClip.xy / endClip.w;
+        vec2 stepNDC = (endNDC - curNDC) / float(MARCH);
+        vec2 uvS = curNDC * 0.5 + 0.5;
+        float z = curClip.z / curClip.w;
+        float zStep = (endClip.z / endClip.w - z) / float(MARCH);
+
+        vec3 hitColor = vec3(0.0);
+        for (int i = 0; i < MARCH; ++i) {
+            uvS += stepNDC;
+            if (uvS.x < 0.0 || uvS.x > 1.0 || uvS.y < 0.0 || uvS.y > 1.0) break;
+            float hd = texture(u_Depth, uvS).r;
+            if (hd >= 0.9999) continue;
+            vec3 hp = ReconstructViewPos(uvS, hd);
+            if (hp.z - z < 0.0 && abs(hp.z - z) < 0.5) {
+                hitColor = texture(u_SceneColor, uvS).rgb;
+                if (any(isnan(hitColor)) || any(isinf(hitColor))) hitColor = vec3(0.0);
+                break;
+            }
+            z += zStep;
+        }
+        indirect += hitColor * abs(dot(dir, N));
+    }
+    indirect /= float(NUM_RAYS);
+    o_Color = vec4(indirect * u_Intensity, 1.0);
 }
 )";
 
@@ -1560,6 +1840,9 @@ void Renderer3D::Init() {
     // DOF (bokeh) + Motion blur (por reprojeção) — passes fullscreen 3.3-safe.
     s_DOFShader = CreateRef<Shader>("Renderer3D_DOF", s_FullscreenVertexSrc, s_DOFFragmentSrc);
     s_MotionBlurShader = CreateRef<Shader>("Renderer3D_MotionBlur", s_FullscreenVertexSrc, s_MotionBlurFragmentSrc);
+    s_SSGIShader = CreateRef<Shader>("Renderer3D_SSGI", s_FullscreenVertexSrc, s_SSGIFragmentSrc);
+    s_LensFlareShader = CreateRef<Shader>("Renderer3D_LensFlare", s_FullscreenVertexSrc, s_LensFlareFragmentSrc);
+    s_FXAAShader = CreateRef<Shader>("Renderer3D_FXAA", s_FullscreenVertexSrc, s_FXAAFragmentSrc);
     std::srand(2026u);
     s_SSAOKernel.resize(64);
     for (int i = 0; i < 64; ++i) {
@@ -1665,6 +1948,10 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         glDeleteTextures(1, &s_DOFTex);
         glDeleteFramebuffers(1, &s_MotionFBO);
         glDeleteTextures(1, &s_MotionTex);
+        glDeleteFramebuffers(1, &s_SSGIFBO);
+        glDeleteTextures(1, &s_SSGIColor);
+        glDeleteFramebuffers(1, &s_LensFBO);
+        glDeleteTextures(1, &s_LensColor);
     }
 
     // --- Destino simples (o que os passes de pós amostram): cor HDR + depth textura ---
@@ -1836,6 +2123,22 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         SetShaderDiagnostic("Framebuffer Motion blur INCOMPLETO");
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // --- SSGI (meia resolução) + Lens flare: alvos RGBA16F ---
+    uint32_t ssgiW = glm::max(1u, width / 2), ssgiH = glm::max(1u, height / 2);
+    glGenFramebuffers(1, &s_SSGIFBO);
+    makeColorTex(s_SSGIColor, ssgiW, ssgiH);
+    glBindFramebuffer(GL_FRAMEBUFFER, s_SSGIFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_SSGIColor, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        SetShaderDiagnostic("Framebuffer SSGI INCOMPLETO");
+    glGenFramebuffers(1, &s_LensFBO);
+    makeColorTex(s_LensColor, width, height);
+    glBindFramebuffer(GL_FRAMEBUFFER, s_LensFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_LensColor, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        SetShaderDiagnostic("Framebuffer Lens flare INCOMPLETO");
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 // (Re)cria o FBO da reflexão planar (espelho real): cor RGBA16F + depth.
@@ -1902,6 +2205,8 @@ void Renderer3D::RenderPlanarReflection(const glm::vec3& planePoint, const glm::
         : glm::normalize(glm::vec3(0.3f, 1.0f, 0.2f));
     s_SkyboxShader->SetFloat3("u_SunDirection", sunDir);
     s_SkyboxShader->SetInt("u_AtmosphereSky", s_EnvironmentHDRIPath.empty() ? 1 : 0);
+    s_SkyboxShader->SetInt("u_CloudsEnabled", s_Settings.CloudsEnabled ? 1 : 0);
+    s_SkyboxShader->SetFloat("u_CloudTime", s_PostTime);
     RenderCommand::DrawIndexed(s_CaptureCube->GetVertexArray(), s_CaptureCube->GetIndexCount());
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);
@@ -1939,6 +2244,8 @@ void Renderer3D::RenderPlanarReflection(const glm::vec3& planePoint, const glm::
         s_MeshShader->SetFloat3("u_FogColor",
             glm::vec3(s_Settings.FogColor[0], s_Settings.FogColor[1], s_Settings.FogColor[2]));
         s_MeshShader->SetFloat("u_FogDensity", s_Settings.FogDensity);
+        s_MeshShader->SetFloat("u_FogHeight", s_Settings.FogHeight);
+        s_MeshShader->SetFloat("u_FogHeightFalloff", s_Settings.FogHeightFalloff);
 
         s_MeshShader->SetInt("u_LightCount", (int)s_LightList.size());
         for (size_t i = 0; i < s_LightList.size(); ++i) {
@@ -2574,6 +2881,8 @@ void Renderer3D::EndScene() {
         s_MeshShader->SetFloat3("u_FogColor",
             glm::vec3(s_Settings.FogColor[0], s_Settings.FogColor[1], s_Settings.FogColor[2]));
         s_MeshShader->SetFloat("u_FogDensity", s_Settings.FogDensity);
+        s_MeshShader->SetFloat("u_FogHeight", s_Settings.FogHeight);
+        s_MeshShader->SetFloat("u_FogHeightFalloff", s_Settings.FogHeightFalloff);
 
         s_MeshShader->SetInt("u_LightCount", (int)s_LightList.size());
         for (size_t i = 0; i < s_LightList.size(); ++i) {
@@ -2675,6 +2984,8 @@ void Renderer3D::EndScene() {
     s_SkyboxShader->SetFloat3("u_SunDirection", sunDir);
     // HDRI carregado = o usuário quer ver o ambiente dele; senão, scattering.
     s_SkyboxShader->SetInt("u_AtmosphereSky", s_EnvironmentHDRIPath.empty() ? 1 : 0);
+    s_SkyboxShader->SetInt("u_CloudsEnabled", s_Settings.CloudsEnabled ? 1 : 0);
+    s_SkyboxShader->SetFloat("u_CloudTime", s_PostTime);
     RenderCommand::DrawIndexed(s_CaptureCube->GetVertexArray(), s_CaptureCube->GetIndexCount());
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);
@@ -2759,6 +3070,7 @@ void Renderer3D::EndScene() {
             glBindTexture(GL_TEXTURE_2D, readTex);
             s_BlurShader->SetInt("u_Image", 0);
             s_BlurShader->SetInt("u_Horizontal", (i == 0) ? 1 : 0);
+            s_BlurShader->SetFloat("u_Anamorphic", 0.0f); // AO não usa streaks
             RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
             std::swap(aoRead, aoWrite);
         }
@@ -2787,6 +3099,27 @@ void Renderer3D::EndScene() {
         s_SSRShader->SetFloat2("u_ViewportSize", glm::vec2((float)internalW, (float)internalH));
         RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
         hasSSR = true;
+    }
+
+    // --- Passe 1.75b: SSGI — iluminação global 1-bounce (meia resolução),
+    // raios do hemisfério marchados contra o depth coletando cor indireta ---
+    bool hasSSGI = false;
+    if (s_Settings.SSGIEnabled && s_Settings.SSGIIntensity > 0.001f) {
+        uint32_t ssgiW = glm::max(1u, internalW / 2), ssgiH = glm::max(1u, internalH / 2);
+        glBindFramebuffer(GL_FRAMEBUFFER, s_SSGIFBO);
+        glViewport(0, 0, (GLsizei)ssgiW, (GLsizei)ssgiH);
+        s_SSGIShader->Bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, s_HDRColorBuffer);
+        s_SSGIShader->SetInt("u_SceneColor", 0);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, s_HDRDepthTexture);
+        s_SSGIShader->SetInt("u_Depth", 1);
+        s_SSGIShader->SetMat4("u_Projection", s_Projection);
+        s_SSGIShader->SetMat4("u_InverseProjection", glm::inverse(s_Projection));
+        s_SSGIShader->SetFloat("u_Intensity", s_Settings.SSGIIntensity);
+        RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
+        hasSSGI = true;
     }
 
     // --- Passe 1.8: God rays / luz volumétrica (meia resolução) — marcha
@@ -2822,6 +3155,7 @@ void Renderer3D::EndScene() {
                 glBindTexture(GL_TEXTURE_2D, s_GodRaysColorBuffer);
                 s_BlurShader->SetInt("u_Image", 0);
                 s_BlurShader->SetInt("u_Horizontal", 1);
+                s_BlurShader->SetFloat("u_Anamorphic", 0.0f);
                 RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
                 hasGodRays = true;
             }
@@ -2891,18 +3225,44 @@ void Renderer3D::EndScene() {
             glBindTexture(GL_TEXTURE_2D, s_BloomColorBuffer[bloomReadIdx]);
             s_BlurShader->SetInt("u_Image", 0);
             s_BlurShader->SetInt("u_Horizontal", horizontal ? 1 : 0);
+            s_BlurShader->SetFloat("u_Anamorphic", s_Settings.BloomAnamorphic);
             RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
             bloomReadIdx = writeIdx;
             horizontal = !horizontal;
         }
     }
 
+    // --- Passe 3.5: Lens flare — ghosts + streak a partir do brilho do bloom,
+    // na direção do sol. Usa o bloom borrado (ou o HDR se bloom desligado). ---
+    bool hasLensFlare = false;
+    if (s_Settings.LensFlareEnabled && s_Settings.LensFlareIntensity > 0.001f) {
+        glm::vec3 sunDir = s_HasShadowCaster
+            ? glm::normalize(-s_ShadowCaster.Direction)
+            : glm::normalize(glm::vec3(0.3f, 1.0f, 0.2f));
+        glm::vec4 sunClip = s_Projection * (s_View * glm::vec4(sunDir, 0.0f));
+        if (sunClip.w > 0.0f) {
+            glm::vec2 sunNDC = glm::vec2(sunClip) / sunClip.w;
+            glm::vec2 sunUV = sunNDC * 0.5f + 0.5f;
+            glBindFramebuffer(GL_FRAMEBUFFER, s_LensFBO);
+            glViewport(0, 0, (GLsizei)internalW, (GLsizei)internalH);
+            s_LensFlareShader->Bind();
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, s_Settings.BloomEnabled ? s_BloomColorBuffer[bloomReadIdx] : s_HDRColorBuffer);
+            s_LensFlareShader->SetInt("u_Bloom", 0);
+            s_LensFlareShader->SetFloat2("u_SunUV", sunUV);
+            s_LensFlareShader->SetFloat("u_Intensity", s_Settings.LensFlareIntensity);
+            RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
+            hasLensFlare = true;
+        }
+    }
+
     // --- Passe 4: composição final (HDR + bloom + AO + exposição, tonemap ACES) ---
-    // Com TAA ligado o composite escreve num alvo intermediário (resolução
-    // interna); o passe seguinte mistura com o histórico e blita pro destino.
+    // Com TAA/FXAA ligados o composite escreve num alvo intermediário
+    // (resolução interna); o passe seguinte (TAA e/ou FXAA) blita pro destino.
+    bool fxaaEnabled = s_Settings.FXAAEnabled;
     GLuint compositeTarget = (GLuint)prevFBO;
     int compositeW = prevViewport[2], compositeH = prevViewport[3];
-    if (taaEnabled) {
+    if (taaEnabled || fxaaEnabled) {
         compositeTarget = s_TAACompositeFBO;
         compositeW = (int)internalW;
         compositeH = (int)internalH;
@@ -2922,6 +3282,8 @@ void Renderer3D::EndScene() {
     s_CompositeShader->SetFloat("u_ChromaticAberration", s_Settings.ChromaticAberration);
     s_CompositeShader->SetFloat("u_FilmGrain", s_Settings.FilmGrain);
     s_CompositeShader->SetInt("u_ToneMapping", s_Settings.ToneMapping);
+    s_CompositeShader->SetFloat("u_Saturation", s_Settings.Saturation);
+    s_CompositeShader->SetFloat("u_Contrast", s_Settings.Contrast);
     s_PostTime += 0.016f; // grão de filme animado (relógio de pós-processamento)
     s_CompositeShader->SetFloat("u_Time", s_PostTime);
     s_CompositeShader->SetInt("u_HasAO", hasAO ? 1 : 0);
@@ -2942,10 +3304,23 @@ void Renderer3D::EndScene() {
         glBindTexture(GL_TEXTURE_2D, s_GodRaysColorBuffer);
         s_CompositeShader->SetInt("u_GodRaysTexture", 4);
     }
+    s_CompositeShader->SetInt("u_HasSSGI", hasSSGI ? 1 : 0);
+    if (hasSSGI) {
+        glActiveTexture(GL_TEXTURE5);
+        glBindTexture(GL_TEXTURE_2D, s_SSGIColor);
+        s_CompositeShader->SetInt("u_SSGITexture", 5);
+    }
+    s_CompositeShader->SetInt("u_HasLensFlare", hasLensFlare ? 1 : 0);
+    if (hasLensFlare) {
+        glActiveTexture(GL_TEXTURE6);
+        glBindTexture(GL_TEXTURE_2D, s_LensColor);
+        s_CompositeShader->SetInt("u_LensFlareTexture", 6);
+    }
     RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
 
-    // --- Passe 4.5: TAA — mistura com o histórico (clamp de vizinhança) e
-    // blita pro destino. O histórico antigo (read) vira o novo (write) ---
+    // --- Passe 4.5: TAA — mistura com o histórico (clamp de vizinhança). O
+    // histórico antigo (read) vira o novo (write); a saída é a entrada do FXAA.
+    uint32_t finalInput = s_TAACompositeTex;
     if (taaEnabled) {
         int histRead = (int)(s_TAACounter % 2u);
         int histWrite = 1 - histRead;
@@ -2962,15 +3337,29 @@ void Renderer3D::EndScene() {
         s_TAAShader->SetFloat("u_HistoryWeight", 0.1f);
         s_TAAShader->SetInt("u_UseHistory", s_TAAHistoryValid ? 1 : 0);
         RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
+        finalInput = s_TAAHistoryTex[histWrite];
+        s_TAAHistoryValid = true;
+    }
 
-        // Blit pro destino real (up/downscale pro tamanho do alvo).
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, s_TAAHistoryFBO[histWrite]);
+    // --- Passe 4.75: FXAA (opcional) — AA de pós-processamento em cima do
+    // composite (ou do TAA), direto pro destino final. ---
+    if (fxaaEnabled) {
+        glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prevFBO);
+        glViewport(prevViewport[0], prevViewport[1], (GLsizei)prevViewport[2], (GLsizei)prevViewport[3]);
+        s_FXAAShader->Bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, finalInput);
+        s_FXAAShader->SetInt("u_Image", 0);
+        s_FXAAShader->SetFloat2("u_InvResolution", glm::vec2(1.0f / (float)internalW, 1.0f / (float)internalH));
+        RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
+    } else if (taaEnabled) {
+        // Sem FXAA, o resultado do TAA é blitado pro destino (upscale).
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, finalInput);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)prevFBO);
         glBlitFramebuffer(0, 0, (GLint)internalW, (GLint)internalH,
                           prevViewport[0], prevViewport[1], (GLsizei)prevViewport[2], (GLsizei)prevViewport[3],
                           GL_COLOR_BUFFER_BIT, GL_LINEAR);
         glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prevFBO);
-        s_TAAHistoryValid = true;
     }
 
     RenderCommand::SetDepthTest(true);
@@ -3014,6 +3403,7 @@ void Renderer3D::EndScene() {
             dump << "PCSS (penumbra): " << s_Settings.ShadowSoftness << "\n";
             dump << "God rays: " << (s_Settings.GodRaysEnabled ? "on" : "off") << "\n";
             dump << "DOF: " << (s_Settings.DOFEnabled ? "on" : "off") << " / Motion blur: " << (s_Settings.MotionBlurEnabled ? "on" : "off") << "\n";
+            dump << "SSGI: " << (s_Settings.SSGIEnabled ? "on" : "off") << " / Clouds: " << (s_Settings.CloudsEnabled ? "on" : "off") << " / Lens flare: " << (s_Settings.LensFlareEnabled ? "on" : "off") << " / FXAA: " << (s_Settings.FXAAEnabled ? "on" : "off") << "\n";
             dump << "Bloom: " << (s_Settings.BloomEnabled ? "on" : "off") << "\n";
             auto fbStatus = [](GLuint fbo) {
                 if (fbo == 0) return 0;

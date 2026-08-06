@@ -78,6 +78,38 @@ struct GraphicsSettings {
     bool MotionBlurEnabled = false;
     float MotionBlurIntensity = 0.5f;
 
+    // ---- v0.25 — mais do que o 3.3 aguenta --------------------------------
+
+    // SSGI (iluminação global em espaço de tela): raios de hemisfério marchados
+    // contra o depth (como o SSR) que coletam a cor indireta da cena. Loop de
+    // passos FIXOS, meia resolução.
+    bool SSGIEnabled = false;
+    float SSGIIntensity = 0.4f;
+
+    // Nuvens volumétricas no céu atmosférico (raymarch com fbm 3D, passos fixos).
+    bool CloudsEnabled = false;
+
+    // Lens flare em espaço de tela (ghosts a partir do brilho do bloom, na
+    // direção do sol).
+    bool LensFlareEnabled = false;
+    float LensFlareIntensity = 0.6f;
+
+    // FXAA (AA de pós-processamento) — alternativa/complemento ao TAA.
+    bool FXAAEnabled = false;
+
+    // Color grading no composite: saturação e contraste (pós-tonemap).
+    float Saturation = 1.0f;
+    float Contrast = 1.0f;
+
+    // Bloom anamórfico: os raios horizontais do blur são alongados (estilo
+    // cinema, 0 = circular normal).
+    float BloomAnamorphic = 0.0f;
+
+    // Névoa por altura: a névoa exponencial fica mais forte abaixo da altura
+    // FogHeight e some acima (0 = desligado, aplicado só se FogEnabled).
+    float FogHeight = 0.0f;
+    float FogHeightFalloff = 0.0f;
+
     // Exposição multiplicada antes do tonemap ACES (equivalente ao "EV").
     float Exposure = 1.0f;
 

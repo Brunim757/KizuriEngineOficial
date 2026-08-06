@@ -1357,6 +1357,22 @@ void EditorLayer::DrawSettingsGraphics() {
     customTweak |= ImGui::Checkbox("Motion blur", &m_GraphicsSettings.MotionBlurEnabled);
     if (m_GraphicsSettings.MotionBlurEnabled)
         customTweak |= ImGui::DragFloat("Intensidade do motion blur", &m_GraphicsSettings.MotionBlurIntensity, 0.01f, 0.0f, 2.0f);
+    ImGui::Separator();
+    customTweak |= ImGui::Checkbox("SSGI (iluminação global)", &m_GraphicsSettings.SSGIEnabled);
+    if (m_GraphicsSettings.SSGIEnabled)
+        customTweak |= ImGui::DragFloat("Intensidade SSGI", &m_GraphicsSettings.SSGIIntensity, 0.01f, 0.0f, 2.0f);
+    customTweak |= ImGui::Checkbox("Nuvens volumétricas", &m_GraphicsSettings.CloudsEnabled);
+    customTweak |= ImGui::Checkbox("Lens flare", &m_GraphicsSettings.LensFlareEnabled);
+    if (m_GraphicsSettings.LensFlareEnabled)
+        customTweak |= ImGui::DragFloat("Intensidade do lens flare", &m_GraphicsSettings.LensFlareIntensity, 0.01f, 0.0f, 3.0f);
+    customTweak |= ImGui::Checkbox("FXAA (anti-aliasing extra)", &m_GraphicsSettings.FXAAEnabled);
+    ImGui::Separator();
+    customTweak |= ImGui::DragFloat("Saturação", &m_GraphicsSettings.Saturation, 0.01f, 0.0f, 2.0f);
+    customTweak |= ImGui::DragFloat("Contraste", &m_GraphicsSettings.Contrast, 0.01f, 0.0f, 2.0f);
+    customTweak |= ImGui::DragFloat("Bloom anamórfico", &m_GraphicsSettings.BloomAnamorphic, 0.01f, 0.0f, 1.0f);
+    ImGui::Separator();
+    customTweak |= ImGui::DragFloat("Altura da névoa", &m_GraphicsSettings.FogHeight, 0.1f, -100.0f, 100.0f);
+    customTweak |= ImGui::DragFloat("Atenuação da névoa por altura", &m_GraphicsSettings.FogHeightFalloff, 0.1f, 0.0f, 200.0f);
     customTweak |= ImGui::Checkbox("VSync", &m_GraphicsSettings.VSync);
     ImGui::Separator();
     customTweak |= ImGui::Checkbox("Névoa (fog exponencial)", &m_GraphicsSettings.FogEnabled);

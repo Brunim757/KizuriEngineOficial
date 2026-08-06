@@ -275,6 +275,13 @@ private:
     static glm::mat4 s_MotionPrevVP; // VP (sem jitter) do frame anterior
     static glm::mat4 s_MotionCurrVP; // VP (sem jitter) do frame atual
 
+    // v0.25 — SSGI (GI 1-bounce), Lens flare, FXAA.
+    static Ref<Shader> s_SSGIShader;
+    static uint32_t s_SSGIFBO, s_SSGIColor;
+    static Ref<Shader> s_LensFlareShader;
+    static uint32_t s_LensFBO, s_LensColor;
+    static Ref<Shader> s_FXAAShader;
+
     // (Re)cria o FBO da reflexão planar se a resolução mudou.
     static void EnsurePlanarBuffers(uint32_t width, uint32_t height);
     // Pré-passe do espelho real: desenha skybox + meshes (sem o espelho) com a

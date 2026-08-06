@@ -465,3 +465,24 @@
   qualquer driver (Wine, iGPU, VM), sem os bugs de drivers 4.x
 
 ---
+
+## ✅ v0.25 — Mais do que o OpenGL 3.3 aguenta (parte 2)
+
+- [x] **SSGI — iluminação global 1-bounce** (meia resolução): raios do
+  hemisfério (8 direções fixas) marchados contra o depth coletando a cor
+  indireta da cena — luz "quicada" real entre objetos
+- [x] **Nuvens volumétricas** no céu atmosférico: raymarch por uma camada
+  esférica com densidade de fbm 3D (4 oitavas, passos fixos), iluminadas pelo
+  sol, com deriva lenta no tempo
+- [x] **Lens flare** em espaço de tela: ghosts simétricos + streak horizontal
+  a partir do brilho do bloom, na direção do sol
+- [x] **FXAA** — AA de pós-processamento (3 taps clássico), alternativa/
+  complemento ao TAA
+- [x] **Color grading**: saturação e contraste no composite (pós-gamma)
+- [x] **Bloom anamórfico**: blur horizontal alongado (streaks de cinema)
+- [x] **Névoa por altura**: a névoa exponencial fica forte abaixo do plano e
+  some acima (falloff configurável)
+- [x] Todos os novos passes com loops de TETO CONSTANTE — 100% GLSL 330 core;
+  `GraphicsSettings` completo (presets + `settings.json` + UI do editor)
+
+---

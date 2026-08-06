@@ -226,8 +226,8 @@ void EditorLayer::CreateDemoScene3D() {
     gm.MeshMaterial.Roughness = 0.9f;
     ground.GetComponent<TransformComponent>().Scale = { 12.0f, 1.0f, 12.0f };
 
-    // Piso espelhado (metal polido) — reflete o ambiente (IBL). Em GL 3.3
-    // não há SSR (reflexos por raio), então reflete só o céu de forma estável.
+    // Piso espelhado (metal polido) — reflete o ambiente (IBL) e, com o SSR
+    // 3.3-safe ligado, reflete as meshes da cena (reflexos por raio).
     Entity mirrorFloor = m_ActiveScene->CreateEntity("Piso Espelhado");
     auto& mm = mirrorFloor.AddComponent<MeshRendererComponent>();
     mm.MeshSource = "builtin:plane";
@@ -1330,6 +1330,16 @@ void EditorLayer::DrawSettingsGraphics() {
     if (m_GraphicsSettings.SSAOEnabled) {
         customTweak |= ImGui::SliderInt("Amostras SSAO", &m_GraphicsSettings.SSAOSamples, 8, 64);
         customTweak |= ImGui::DragFloat("Raio SSAO", &m_GraphicsSettings.SSAORadius, 0.01f, 0.05f, 2.0f);
+    }
+    ImGui::Separator();
+    // SSR (reflexos em espaço de tela) — agora 3.3-safe: loop de passos fixos
+    // (constante no shader), funciona em qualquer driver GL 3.3 core.
+    customTweak |= ImGui::Checkbox("Reflexos por raio (SSR)", &m_GraphicsSettings.SSREnabled);
+    if (m_GraphicsSettings.SSREnabled) {
+        customTweak |= ImGui::SliderInt("Passos do raio", &m_GraphicsSettings.SSRMaxSteps, 8, 48);
+        customTweak |= ImGui::DragFloat("Intensidade da reflexão", &m_GraphicsSettings.SSRIntensity, 0.01f, 0.0f, 2.0f);
+        customTweak |= ImGui::DragFloat("Distância da marcha", &m_GraphicsSettings.SSRMarchDistance, 0.5f, 1.0f, 100.0f);
+        customTweak |= ImGui::DragFloat("Espessura do depth", &m_GraphicsSettings.SSRThickness, 0.005f, 0.01f, 1.0f);
     }
     ImGui::Separator();
     customTweak |= ImGui::DragFloat("Exposição", &m_GraphicsSettings.Exposure, 0.01f, 0.1f, 8.0f);

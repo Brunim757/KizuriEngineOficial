@@ -351,3 +351,24 @@
   shaders são GLSL 330 core.
 
 ---
+
+## 🚧 v0.24 — Extraindo o MÁXIMO do OpenGL 3.3 (rumo a gráficos AAA)
+
+> A engine roda 100% em OpenGL 3.3 core, mas isso não é limite de qualidade:
+> GLSL 330 compila loops de passos CONSTANTES, então técnicas "próximas" de
+> reflexos/soft-shadow/AO que antes exigiam 4.x voltam reescritas 3.3-safe.
+
+### ✅ Reflexos por raio (SSR) 3.3-safe
+- [x] SSR reimplementado com marcha de loop de PASSOS FIXOS (`#define
+  SSR_MAX_STEPS 48` constante no shader) — unrollável, compila em qualquer
+  driver GL 3.3 (Wine/iGPU/VM). O SSR antigo usava loop de comprimento
+  variável (só 4.x) e por isso tinha sido removido
+- [x] Pipeline: cor + depth resolvidos → RGBA16F → somado ao HDR no composite
+  antes do tonemap, com Fresnel (ângulos rasantes refletem mais)
+- [x] Guardas anti-NaN no shader (normal degenerada descartada) e no composite
+  (reflexo envenenado nunca apaga a tela)
+- [x] `GraphicsSettings`: SSR ligado/desligado, passos, intensidade, distância
+  da marcha, espessura do depth — com presets, persistência em `settings.json`
+  e UI no editor (Configurações > Gráficos)
+
+---

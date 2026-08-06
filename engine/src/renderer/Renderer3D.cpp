@@ -64,6 +64,9 @@ uint32_t Renderer3D::s_NoiseTexture = 0;
 Ref<Shader> Renderer3D::s_SSAOShader;
 std::vector<glm::vec3> Renderer3D::s_SSAOKernel;
 uint32_t Renderer3D::s_SSAOWidth = 0, Renderer3D::s_SSAOHeight = 0;
+
+Ref<Shader> Renderer3D::s_SSRShader;
+uint32_t Renderer3D::s_SSRFBO = 0, Renderer3D::s_SSRColorBuffer = 0;
 static float s_PostTime = 0.0f; // relógio do pós-processamento (grão de filme animado)
 
 std::vector<Renderer3D::ParticleBatch> Renderer3D::s_ParticleBatches;
@@ -647,6 +650,8 @@ uniform sampler2D u_SceneColor;
 uniform sampler2D u_BloomBlur;
 uniform sampler2D u_AOTexture;
 uniform bool u_HasAO;
+uniform sampler2D u_SSRTexture;
+uniform bool u_HasSSR;
 uniform float u_BloomIntensity;
 uniform float u_Exposure;
 uniform float u_Vignette;
@@ -677,6 +682,13 @@ void main() {
 
     vec3 bloom = texture(u_BloomBlur, uv).rgb;
     vec3 color = hdr + bloom * u_BloomIntensity;
+    if (u_HasSSR) {
+        // Guarda anti-NaN: um reflexo degenerado não pode envenenar o frame
+        // inteiro com NaN (tela preta).
+        vec3 ssr = texture(u_SSRTexture, uv).rgb;
+        if (any(isnan(ssr)) || any(isinf(ssr))) ssr = vec3(0.0);
+        color += ssr;
+    }
     if (u_HasAO) color *= texture(u_AOTexture, uv).r;
     // Guarda final: NENHUM passe de pós pode produzir NaN/Inf e apagar a tela.
     if (any(isnan(color)) || any(isinf(color))) color = vec3(0.0);
@@ -763,6 +775,105 @@ void main() {
     // e escurecia a cena ~10x), o AO nunca passa de 0.35 — o efeito fica
     // visível mas não deixa a cena escura.
     o_AO = clamp(pow(occlusion, u_Power), 0.35, 1.0);
+}
+)";
+
+// ---------------------------------------------------------------------
+// SSR — reflexos em espaço de tela (GLSL 330 core SEGURO). Para cada pixel,
+// projeta o raio refletido (normal reconstruída do depth) no espaço de tela
+// e marcha contra o depth buffer até acertar geometria; a cor do impacto
+// vira a reflexão (com Fresnel — ângulos rasantes refletem mais).
+//
+// A diferença pro SSR antigo (que exigia GL 4.0+): o loop de marcha tem
+// TETO CONSTANTE (SSR_MAX_STEPS é #define fixo) e o número de passos é
+// clampado nele. Em GLSL 3.30 core o compilador exige loops com contagem
+// determinável em compile-time; o loop antigo derivava o teto de um
+// uniform (comprimento VARIÁVEL) e por isso só rodava em 4.x. Aqui o
+// `for (int i = 0; i < SSR_MAX_STEPS; ++i)` é unrollável e compila em
+// qualquer driver 3.3 (Wine, iGPU, VM) — sem risco de viewport preto.
+// ---------------------------------------------------------------------
+static const char* s_SSRFragmentSrc = R"(
+#version 330 core
+#define SSR_MAX_STEPS 48
+
+in vec2 v_TexCoord;
+out vec4 o_Color;
+
+uniform sampler2D u_SceneColor;
+uniform sampler2D u_Depth;
+uniform mat4 u_Projection;
+uniform mat4 u_InverseProjection;
+uniform int u_MaxSteps;      // clampado em [8, SSR_MAX_STEPS] no C++
+uniform float u_Thickness;
+uniform float u_Intensity;
+uniform float u_MarchDistance;
+uniform vec2 u_ViewportSize;
+
+vec3 ReconstructViewPos(vec2 uv, float depth) {
+    vec4 clip = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+    vec4 view = u_InverseProjection * clip;
+    return view.xyz / view.w;
+}
+
+void main() {
+    o_Color = vec4(0.0);
+    float depth = texture(u_Depth, v_TexCoord).r;
+    if (depth >= 0.9999) return; // céu: já tem reflexo do IBL, não duplica
+
+    vec3 fragPos = ReconstructViewPos(v_TexCoord, depth);
+    vec3 n = cross(dFdx(fragPos), dFdy(fragPos));
+    // Silhuetas/bordas podem ter derivadas quase paralelas -> cross ~0 ->
+    // normalize() vira NaN, que POISONA o composite (tela preta). Descarta.
+    if (dot(n, n) < 1e-8) return;
+    vec3 normal = normalize(n);
+    if (dot(normal, -fragPos) < 0.001) return; // face voltada pra longe da câmera
+
+    vec3 viewDir = normalize(fragPos);
+    vec3 reflDir = reflect(viewDir, normal);
+
+    // Origem levemente afastada da superfície pra não "auto-acertar" o próprio pixel.
+    vec3 rayOrigin = fragPos + reflDir * 0.05;
+
+    vec4 startClip = u_Projection * vec4(rayOrigin, 1.0);
+    vec4 endClip   = u_Projection * vec4(rayOrigin + reflDir * u_MarchDistance, 1.0);
+    if (startClip.w <= 0.0 || endClip.w <= 0.0) return; // algum ponto atrás da câmera
+
+    vec2 startNDC = startClip.xy / startClip.w;
+    vec2 endNDC   = endClip.xy / endClip.w;
+    vec2 deltaNDC = endNDC - startNDC;
+
+    // Passos proporcionais à distância em pixels do raio na tela, SEMPRE
+    // clampado no teto constante — a contagem fica determinística.
+    float pixelDist = length(deltaNDC * 0.5 * u_ViewportSize);
+    int steps = clamp(int(pixelDist / 2.0), 4, min(max(u_MaxSteps, 4), SSR_MAX_STEPS));
+    if (steps < 2) return;
+
+    vec2 stepNDC = deltaNDC / float(steps);
+    float z0 = startClip.z / startClip.w;         // z linear de view (negativo)
+    float zStep = (endClip.z / endClip.w - z0) / float(steps);
+
+    vec2 uv = startNDC * 0.5 + 0.5;
+    float rayZ = z0;
+    for (int i = 0; i < SSR_MAX_STEPS; ++i) {
+        if (i >= steps) break; // teto constante; saída antecipada sem loop variável
+        uv += stepNDC * 0.5;
+        rayZ += zStep;
+        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return;
+
+        float hitDepth = texture(u_Depth, uv).r;
+        if (hitDepth >= 0.9999) continue; // ainda voando sobre o céu
+
+        vec3 hitPos = ReconstructViewPos(uv, hitDepth);
+        float diff = hitPos.z - rayZ;
+        if (diff < 0.0 && abs(diff) < u_Thickness) {
+            vec3 hitColor = texture(u_SceneColor, uv).rgb;
+            if (any(isnan(hitColor)) || any(isinf(hitColor))) hitColor = vec3(0.0);
+            float fresnel = pow(1.0 - clamp(dot(normal, -viewDir), 0.0, 1.0), 5.0);
+            float strength = mix(0.04, 1.0, fresnel);
+            o_Color = vec4(clamp(hitColor * strength * u_Intensity, 0.0, 32.0), 1.0);
+            return;
+        }
+    }
 }
 )";
 
@@ -975,6 +1086,10 @@ void Renderer3D::Init() {
     // SSAO: kernel de hemisfério (64 amostras) + textura de ruído 4x4 que
     // gira o kernel por pixel e esconde o padrão de amostragem.
     s_SSAOShader = CreateRef<Shader>("Renderer3D_SSAO", s_FullscreenVertexSrc, s_SSAOFragmentSrc);
+    // SSR (reflexos em espaço de tela) — loop de passos FIXOS, compila em
+    // GLSL 330 core em qualquer driver (o SSR antigo, de loop variável,
+    // precisava de 4.x e foi removido; este é 3.3 puro e sempre disponível).
+    s_SSRShader = CreateRef<Shader>("Renderer3D_SSR", s_FullscreenVertexSrc, s_SSRFragmentSrc);
     std::srand(2026u);
     s_SSAOKernel.resize(64);
     for (int i = 0; i < 64; ++i) {
@@ -1068,6 +1183,8 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         glDeleteRenderbuffers(1, &s_MSAAHDRDepthRBO);
         glDeleteFramebuffers(2, s_BloomFBO);
         glDeleteTextures(2, s_BloomColorBuffer);
+        glDeleteFramebuffers(1, &s_SSRFBO);
+        glDeleteTextures(1, &s_SSRColorBuffer);
     }
 
     // --- Destino simples (o que os passes de pós amostram): cor HDR + depth textura ---
@@ -1151,6 +1268,23 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
             KZ_CORE_ERROR("Framebuffer de bloom {0} incompleto.", i);
             SetShaderDiagnostic("Framebuffer de bloom incompleto");
         }
+    }
+
+    // --- SSR (reflexos em espaço de tela): cor HDR + depth -> RGBA16F ---
+    // Textura só cor (a profundidade vem do s_HDRDepthTexture, já resolvido).
+    glGenFramebuffers(1, &s_SSRFBO);
+    glGenTextures(1, &s_SSRColorBuffer);
+    glBindTexture(GL_TEXTURE_2D, s_SSRColorBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, (GLsizei)width, (GLsizei)height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindFramebuffer(GL_FRAMEBUFFER, s_SSRFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_SSRColorBuffer, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        KZ_CORE_ERROR("Framebuffer SSR incompleto.");
+        SetShaderDiagnostic("Framebuffer SSR incompleto");
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -1824,6 +1958,30 @@ void Renderer3D::EndScene() {
         hasAO = true;
     }
 
+    // --- Passe 1.75: SSR (reflexos em espaço de tela) — cor + depth resolvidos,
+    // marcha do raio refletido com loop de PASSOS FIXOS (seguro em 3.3) ---
+    bool hasSSR = false;
+    if (s_Settings.SSREnabled) {
+        glBindFramebuffer(GL_FRAMEBUFFER, s_SSRFBO);
+        glViewport(0, 0, (GLsizei)internalW, (GLsizei)internalH);
+        s_SSRShader->Bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, s_HDRColorBuffer);
+        s_SSRShader->SetInt("u_SceneColor", 0);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, s_HDRDepthTexture);
+        s_SSRShader->SetInt("u_Depth", 1);
+        s_SSRShader->SetMat4("u_Projection", s_Projection);
+        s_SSRShader->SetMat4("u_InverseProjection", glm::inverse(s_Projection));
+        s_SSRShader->SetInt("u_MaxSteps", s_Settings.SSRMaxSteps);
+        s_SSRShader->SetFloat("u_Thickness", s_Settings.SSRThickness);
+        s_SSRShader->SetFloat("u_Intensity", s_Settings.SSRIntensity);
+        s_SSRShader->SetFloat("u_MarchDistance", s_Settings.SSRMarchDistance);
+        s_SSRShader->SetFloat2("u_ViewportSize", glm::vec2((float)internalW, (float)internalH));
+        RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
+        hasSSR = true;
+    }
+
     // --- Passe 2: bright-pass (meia resolução) — extrai o glow, se bloom ligado ---
     uint32_t bloomW = glm::max(1u, internalW / 2), bloomH = glm::max(1u, internalH / 2);
     int bloomReadIdx = 0;
@@ -1878,6 +2036,12 @@ void Renderer3D::EndScene() {
         glBindTexture(GL_TEXTURE_2D, s_SSAOColorBuffer); // borrada (passe 2 do blur volta pro s_SSAOFBO)
         s_CompositeShader->SetInt("u_AOTexture", 2);
     }
+    s_CompositeShader->SetInt("u_HasSSR", hasSSR ? 1 : 0);
+    if (hasSSR) {
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, s_SSRColorBuffer);
+        s_CompositeShader->SetInt("u_SSRTexture", 3);
+    }
     RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
     RenderCommand::SetDepthTest(true);
 
@@ -1915,6 +2079,7 @@ void Renderer3D::EndScene() {
             GLint maxS = 0; glGetIntegerv(GL_MAX_SAMPLES, &maxS);
             dump << "MSAA: config " << s_Settings.MSAA << " / ativo " << s_CurrentMSAA << " (max samples " << maxS << ")\n";
             dump << "SSAO: " << (s_Settings.SSAOEnabled ? "on" : "off") << "\n";
+            dump << "SSR: " << (s_Settings.SSREnabled ? "on" : "off") << "\n";
             dump << "Bloom: " << (s_Settings.BloomEnabled ? "on" : "off") << "\n";
             auto fbStatus = [](GLuint fbo) {
                 if (fbo == 0) return 0;

@@ -234,6 +234,12 @@ private:
     static std::vector<glm::vec3> s_SSAOKernel; // amostras do hemisfério (geradas em Init)
     static uint32_t s_SSAOWidth, s_SSAOHeight;
 
+    // SSR (reflexos em espaço de tela) — marcha do raio refletido contra o depth
+    // buffer num loop de PASSOS FIXOS (GLSL 330-safe). Cor + depth -> RGBA16F;
+    // o composite adiciona a reflexão ao HDR antes do tonemap.
+    static Ref<Shader> s_SSRShader;
+    static uint32_t s_SSRFBO, s_SSRColorBuffer;
+
     // Partículas: 1 VAO reaproveitado por todos os lotes do frame — buffer de quad estático
     // (attribs 0/1) + buffer de instância dinâmico, reescrito via glBufferSubData a cada lote.
     struct ParticleBatch { std::vector<ParticleInstance> Instances; bool Additive; Ref<Texture2D> Texture; };

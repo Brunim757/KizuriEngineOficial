@@ -37,6 +37,16 @@ struct GraphicsSettings {
     int SSAOSamples = 32;
     float SSAORadius = 0.5f;
 
+    // Reflexos em espaço de tela (SSR): marcha o raio refletido contra o depth
+    // buffer num loop de PASSOS FIXOS (constante no shader) — 100% seguro em
+    // GLSL 330 core. O SSR antigo usava loop de comprimento VARIÁVEL (só 4.x)
+    // e quebrava em 3.3/Wine; com teto constante ele compila em qualquer driver.
+    bool SSREnabled = true;
+    int SSRMaxSteps = 24;        // passos máximos do raio (clampado no teto do shader)
+    float SSRThickness = 0.12f;  // espessura do depth pro raio "acertar"
+    float SSRIntensity = 0.6f;   // força da reflexão
+    float SSRMarchDistance = 20.0f; // distância máxima da marcha (unidades de mundo)
+
     // Exposição multiplicada antes do tonemap ACES (equivalente ao "EV").
     float Exposure = 1.0f;
 

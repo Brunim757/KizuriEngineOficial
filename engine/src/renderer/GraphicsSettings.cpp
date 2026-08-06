@@ -15,6 +15,7 @@ void GraphicsSettings::TuneToHardware() {
     BloomIterations = 4;
     SSREnabled = true; SSRMaxSteps = 24; SSRThickness = 0.12f; SSRIntensity = 0.6f;
     SSRMarchDistance = 20.0f;
+    TAAEnabled = true;
 }
 static const char* PresetName(QualityPreset p) {
     switch (p) {
@@ -64,6 +65,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             SSAOEnabled = true;   SSAOSamples = 64;      SSAORadius = 0.5f;
             SSREnabled = true;    SSRMaxSteps = 32;      SSRIntensity = 0.7f;
             SSRThickness = 0.12f; SSRMarchDistance = 28.0f;
+            TAAEnabled = true;
             Exposure = 1.0f;      VSync = true;
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
@@ -76,6 +78,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             SSAOEnabled = true;   SSAOSamples = 32;      SSAORadius = 0.5f;
             SSREnabled = true;    SSRMaxSteps = 24;      SSRIntensity = 0.6f;
             SSRThickness = 0.12f; SSRMarchDistance = 20.0f;
+            TAAEnabled = true;
             Exposure = 1.0f;      VSync = true;
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
@@ -88,6 +91,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             SSAOEnabled = true;   SSAOSamples = 16;      SSAORadius = 0.5f;
             SSREnabled = true;    SSRMaxSteps = 16;      SSRIntensity = 0.45f;
             SSRThickness = 0.14f; SSRMarchDistance = 16.0f;
+            TAAEnabled = true;
             Exposure = 1.0f;      VSync = true;
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
@@ -100,6 +104,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             SSAOEnabled = false;  SSAOSamples = 8;       SSAORadius = 0.5f;
             SSREnabled = false;   SSRMaxSteps = 8;       SSRIntensity = 0.0f;
             SSRThickness = 0.16f; SSRMarchDistance = 10.0f;
+            TAAEnabled = false;
             Exposure = 1.0f;      VSync = false;
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
@@ -131,6 +136,7 @@ bool SaveGraphicsSettings(const std::string& path, const GraphicsSettings& setti
     j["ssr_thickness"] = settings.SSRThickness;
     j["ssr_intensity"] = settings.SSRIntensity;
     j["ssr_march_distance"] = settings.SSRMarchDistance;
+    j["taa_enabled"] = settings.TAAEnabled;
     j["exposure"] = settings.Exposure;
     j["fog_enabled"] = settings.FogEnabled;
     j["fog_density"] = settings.FogDensity;
@@ -170,6 +176,7 @@ bool LoadGraphicsSettings(const std::string& path, GraphicsSettings& out) {
         out.SSRThickness = j.value("ssr_thickness", out.SSRThickness);
         out.SSRIntensity = j.value("ssr_intensity", out.SSRIntensity);
         out.SSRMarchDistance = j.value("ssr_march_distance", out.SSRMarchDistance);
+        out.TAAEnabled = j.value("taa_enabled", out.TAAEnabled);
         out.Exposure = j.value("exposure", out.Exposure);
         out.FogEnabled = j.value("fog_enabled", out.FogEnabled);
         out.FogDensity = j.value("fog_density", out.FogDensity);

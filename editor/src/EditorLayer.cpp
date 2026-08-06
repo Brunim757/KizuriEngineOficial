@@ -1343,6 +1343,7 @@ void EditorLayer::DrawSettingsGraphics() {
     }
     ImGui::Separator();
     customTweak |= ImGui::DragFloat("Exposição", &m_GraphicsSettings.Exposure, 0.01f, 0.1f, 8.0f);
+    customTweak |= ImGui::Checkbox("Anti-aliasing temporal (TAA)", &m_GraphicsSettings.TAAEnabled);
     customTweak |= ImGui::Checkbox("VSync", &m_GraphicsSettings.VSync);
     ImGui::Separator();
     customTweak |= ImGui::Checkbox("Névoa (fog exponencial)", &m_GraphicsSettings.FogEnabled);

@@ -240,6 +240,15 @@ private:
     static Ref<Shader> s_SSRShader;
     static uint32_t s_SSRFBO, s_SSRColorBuffer;
 
+    // TAA (anti-aliasing temporal): composite escreve num alvo intermediário
+    // (s_TAAComposite), um passe fullscreen mistura com o histórico
+    // (ping-pong s_TAAHistoryFBO) com clamp de vizinhança e blita pro destino.
+    static Ref<Shader> s_TAAShader;
+    static uint32_t s_TAACompositeFBO, s_TAACompositeTex;
+    static uint32_t s_TAAHistoryFBO[2], s_TAAHistoryTex[2];
+    static bool s_TAAHistoryValid;
+    static uint32_t s_TAACounter;
+
     // Partículas: 1 VAO reaproveitado por todos os lotes do frame — buffer de quad estático
     // (attribs 0/1) + buffer de instância dinâmico, reescrito via glBufferSubData a cada lote.
     struct ParticleBatch { std::vector<ParticleInstance> Instances; bool Additive; Ref<Texture2D> Texture; };

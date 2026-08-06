@@ -371,4 +371,17 @@
   da marcha, espessura do depth — com presets, persistência em `settings.json`
   e UI no editor (Configurações > Gráficos)
 
+### ✅ Anti-aliasing temporal (TAA) — imagem "de filme"
+- [x] Jitter da câmera por frame em sequência **Halton** de baixa discrepância
+  (±1px em cada eixo), aplicado ANTES de renderizar a cena — cor, depth, SSAO
+  e SSR ficam todos consistentes com a mesma projeção jitterada
+- [x] Passe fullscreen: mistura do frame atual com o histórico anterior com
+  **clamp em AABB** (vizinhos 3x3 do frame atual) — sem vazar cores/ghosting
+- [x] Alvo intermediário do composite + 2 históricos RGBA8 ping-pong; blit
+  pro destino final (upscale/upsample na mesma qualidade de antes)
+- [x] Histórico invalidado automaticamente em resize/troca de alvo (sem
+  manchas residuais); primeiro frame usa o atual puro
+- [x] `GraphicsSettings`: TAA ligado/desligado — presets (Low desliga) +
+  `settings.json` + UI no editor
+
 ---

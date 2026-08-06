@@ -47,6 +47,11 @@ struct GraphicsSettings {
     float SSRIntensity = 0.6f;   // força da reflexão
     float SSRMarchDistance = 20.0f; // distância máxima da marcha (unidades de mundo)
 
+    // Anti-aliasing temporal (TAA): jitter da câmera (sequência Halton) por
+    // frame + mistura com o histórico anterior com clamp de vizinhança —
+    // tira o aliasing/estrelinhas das silhuetas (100% 3.3, passe fullscreen).
+    bool TAAEnabled = true;
+
     // Exposição multiplicada antes do tonemap ACES (equivalente ao "EV").
     float Exposure = 1.0f;
 

@@ -67,6 +67,12 @@ uint32_t Renderer3D::s_SSAOWidth = 0, Renderer3D::s_SSAOHeight = 0;
 
 Ref<Shader> Renderer3D::s_SSRShader;
 uint32_t Renderer3D::s_SSRFBO = 0, Renderer3D::s_SSRColorBuffer = 0;
+
+Ref<Shader> Renderer3D::s_TAAShader;
+uint32_t Renderer3D::s_TAACompositeFBO = 0, Renderer3D::s_TAACompositeTex = 0;
+uint32_t Renderer3D::s_TAAHistoryFBO[2] = { 0, 0 }, Renderer3D::s_TAAHistoryTex[2] = { 0, 0 };
+bool Renderer3D::s_TAAHistoryValid = false;
+uint32_t Renderer3D::s_TAACounter = 0;
 static float s_PostTime = 0.0f; // relógio do pós-processamento (grão de filme animado)
 
 std::vector<Renderer3D::ParticleBatch> Renderer3D::s_ParticleBatches;
@@ -877,6 +883,61 @@ void main() {
 }
 )";
 
+// ---------------------------------------------------------------------
+// TAA — anti-aliasing temporal. O composite escreve LDR num alvo
+// intermediário (s_TAAComposite); aqui misturamos com o histórico do frame
+// anterior usando um clamp em caixa (AABB dos 3x3 vizinhos do frame atual)
+// pra não vazar cores/ghosting. Roda em LDR (pós-tonemap), 100% GLSL 330.
+// Sem velocity buffer nesta v1: o clamp de vizinhança limita o ghosting em
+// movimento de câmera; com câmera parada a convergência é total.
+// ---------------------------------------------------------------------
+static const char* s_TAAFragmentSrc = R"(
+#version 330 core
+in vec2 v_TexCoord;
+out vec4 o_Color;
+
+uniform sampler2D u_Current;
+uniform sampler2D u_History;
+uniform vec2 u_InvResolution;
+uniform float u_HistoryWeight; // 0 = frame atual (primeiro frame)
+uniform bool u_UseHistory;
+
+void main() {
+    vec2 uv = v_TexCoord;
+    vec3 cur = texture(u_Current, uv).rgb;
+    vec3 hist = texture(u_History, uv).rgb;
+
+    if (!u_UseHistory) {
+        o_Color = vec4(cur, 1.0);
+        return;
+    }
+
+    // AABB de vizinhança 3x3 (mais os 4 em cruz do 5x5) do frame ATUAL:
+    // o histórico é clampado dentro dessa caixa, então um pixel novo muito
+    // diferente (objeto/movimento) puxa o histórico pra si sem vazar cor.
+    vec2 o = u_InvResolution;
+    vec3 c00 = texture(u_Current, uv + vec2(-o.x, -o.y)).rgb;
+    vec3 c10 = texture(u_Current, uv + vec2(0.0,  -o.y)).rgb;
+    vec3 c20 = texture(u_Current, uv + vec2(o.x,  -o.y)).rgb;
+    vec3 c01 = texture(u_Current, uv + vec2(-o.x, 0.0)).rgb;
+    vec3 c21 = texture(u_Current, uv + vec2(o.x,  0.0)).rgb;
+    vec3 c02 = texture(u_Current, uv + vec2(-o.x, o.y)).rgb;
+    vec3 c12 = texture(u_Current, uv + vec2(0.0,  o.y)).rgb;
+    vec3 c22 = texture(u_Current, uv + vec2(o.x,  o.y)).rgb;
+
+    vec3 mn = min(min(min(c00, c10), min(c20, c01)), min(min(c21, c02), min(c12, c22)));
+    vec3 mx = max(max(max(c00, c10), max(c20, c01)), max(max(c21, c02), max(c12, c22)));
+    // Amplia a caixa em ~2% pra evitar "shimmer" no limite de saturação.
+    vec3 ext = (mx - mn) * 0.02;
+    mn -= ext;
+    mx += ext;
+
+    vec3 clmp = clamp(hist, mn, mx);
+    vec3 result = mix(cur, clmp, u_HistoryWeight);
+    o_Color = vec4(result, 1.0);
+}
+)";
+
 // Converte equirectangular (latitude/longitude, textura 2D) pra cubemap —
 // roda no bake do ambiente quando o usuário carrega um .hdr de céu.
 static const char* s_EquirectFragmentSrc = R"(
@@ -1090,6 +1151,8 @@ void Renderer3D::Init() {
     // GLSL 330 core em qualquer driver (o SSR antigo, de loop variável,
     // precisava de 4.x e foi removido; este é 3.3 puro e sempre disponível).
     s_SSRShader = CreateRef<Shader>("Renderer3D_SSR", s_FullscreenVertexSrc, s_SSRFragmentSrc);
+    // TAA — anti-aliasing temporal (jitter + histórico com clamp de vizinhança).
+    s_TAAShader = CreateRef<Shader>("Renderer3D_TAA", s_FullscreenVertexSrc, s_TAAFragmentSrc);
     std::srand(2026u);
     s_SSAOKernel.resize(64);
     for (int i = 0; i < 64; ++i) {
@@ -1185,6 +1248,10 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         glDeleteTextures(2, s_BloomColorBuffer);
         glDeleteFramebuffers(1, &s_SSRFBO);
         glDeleteTextures(1, &s_SSRColorBuffer);
+        glDeleteFramebuffers(1, &s_TAACompositeFBO);
+        glDeleteTextures(1, &s_TAACompositeTex);
+        glDeleteFramebuffers(2, s_TAAHistoryFBO);
+        glDeleteTextures(2, s_TAAHistoryTex);
     }
 
     // --- Destino simples (o que os passes de pós amostram): cor HDR + depth textura ---
@@ -1287,6 +1354,35 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         SetShaderDiagnostic("Framebuffer SSR incompleto");
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // --- TAA (anti-aliasing temporal): alvo intermediário do composite + 2
+    // históricos ping-pong (RGBA8, espaço LDR pós-tonemap) ---
+    auto makeTex = [](uint32_t& tex, uint32_t w, uint32_t h) {
+        glGenTextures(1, &tex);
+        glBindTexture(GL_TEXTURE_2D, tex);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, (GLsizei)w, (GLsizei)h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    };
+    glGenFramebuffers(1, &s_TAACompositeFBO);
+    makeTex(s_TAACompositeTex, width, height);
+    glBindFramebuffer(GL_FRAMEBUFFER, s_TAACompositeFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_TAACompositeTex, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        SetShaderDiagnostic("Framebuffer TAA composite INCOMPLETO");
+    for (int i = 0; i < 2; ++i) {
+        glGenFramebuffers(1, &s_TAAHistoryFBO[i]);
+        makeTex(s_TAAHistoryTex[i], width, height);
+        glBindFramebuffer(GL_FRAMEBUFFER, s_TAAHistoryFBO[i]);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_TAAHistoryTex[i], 0);
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            SetShaderDiagnostic("Framebuffer TAA histórico INCOMPLETO");
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    s_TAAHistoryValid = false; // resolução/alvo mudou: histórico antigo é inválido
+    s_TAACounter = 0;
 }
 
 // (Re)cria os 3 shadow maps se a resolução mudou (preset de qualidade pode
@@ -1718,6 +1814,27 @@ void Renderer3D::EndScene() {
     EnsurePostBuffers(internalW, internalH, s_Settings.MSAA);
     EnsureShadowMaps((uint32_t)s_Settings.ShadowMapSize);
 
+    // Jitter da câmera (TAA): desloca a projeção por ±1 pixel em cada eixo,
+    // em sequência Halton de baixa discrepância, pra cada frame amostrar uma
+    // subposição de pixel diferente — o misturador temporal junta tudo.
+    // Aplicado ANTES de renderizar a cena, pra cor+depth+AO/SSR ficarem
+    // consistentes com a mesma projeção jitterada.
+    bool taaEnabled = s_Settings.TAAEnabled;
+    if (taaEnabled) {
+        ++s_TAACounter;
+        auto halton = [](uint32_t index, uint32_t base) {
+            float result = 0.0f, f = 1.0f / (float)base;
+            uint32_t i = index;
+            while (i > 0) { result += f * (float)(i % base); i /= base; f /= (float)base; }
+            return result;
+        };
+        float jx = (halton(s_TAACounter, 2u) - 0.5f) * 2.0f / (float)internalW;
+        float jy = (halton(s_TAACounter, 3u) - 0.5f) * 2.0f / (float)internalH;
+        s_Projection[2][0] += jx;
+        s_Projection[2][1] += jy;
+        s_ViewProjection = s_Projection * s_View;
+    }
+
     // --- Passe 0: profundidade vista da luz, uma vez por cascata (só se há shadow caster) ---
     if (!s_DrawList.empty() && s_HasShadowCaster) {
         ComputeCascades(s_ShadowCaster.Direction);
@@ -2013,8 +2130,17 @@ void Renderer3D::EndScene() {
     }
 
     // --- Passe 4: composição final (HDR + bloom + AO + exposição, tonemap ACES) ---
-    glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prevFBO);
-    glViewport(prevViewport[0], prevViewport[1], (GLsizei)prevViewport[2], (GLsizei)prevViewport[3]);
+    // Com TAA ligado o composite escreve num alvo intermediário (resolução
+    // interna); o passe seguinte mistura com o histórico e blita pro destino.
+    GLuint compositeTarget = (GLuint)prevFBO;
+    int compositeW = prevViewport[2], compositeH = prevViewport[3];
+    if (taaEnabled) {
+        compositeTarget = s_TAACompositeFBO;
+        compositeW = (int)internalW;
+        compositeH = (int)internalH;
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, compositeTarget);
+    glViewport(0, 0, (GLsizei)compositeW, (GLsizei)compositeH);
     s_CompositeShader->Bind();
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, s_HDRColorBuffer);
@@ -2043,6 +2169,36 @@ void Renderer3D::EndScene() {
         s_CompositeShader->SetInt("u_SSRTexture", 3);
     }
     RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
+
+    // --- Passe 4.5: TAA — mistura com o histórico (clamp de vizinhança) e
+    // blita pro destino. O histórico antigo (read) vira o novo (write) ---
+    if (taaEnabled) {
+        int histRead = (int)(s_TAACounter % 2u);
+        int histWrite = 1 - histRead;
+        glBindFramebuffer(GL_FRAMEBUFFER, s_TAAHistoryFBO[histWrite]);
+        glViewport(0, 0, (GLsizei)internalW, (GLsizei)internalH);
+        s_TAAShader->Bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, s_TAACompositeTex);
+        s_TAAShader->SetInt("u_Current", 0);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, s_TAAHistoryTex[histRead]);
+        s_TAAShader->SetInt("u_History", 1);
+        s_TAAShader->SetFloat2("u_InvResolution", glm::vec2(1.0f / (float)internalW, 1.0f / (float)internalH));
+        s_TAAShader->SetFloat("u_HistoryWeight", 0.1f);
+        s_TAAShader->SetInt("u_UseHistory", s_TAAHistoryValid ? 1 : 0);
+        RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
+
+        // Blit pro destino real (up/downscale pro tamanho do alvo).
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, s_TAAHistoryFBO[histWrite]);
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)prevFBO);
+        glBlitFramebuffer(0, 0, (GLint)internalW, (GLint)internalH,
+                          prevViewport[0], prevViewport[1], (GLsizei)prevViewport[2], (GLsizei)prevViewport[3],
+                          GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prevFBO);
+        s_TAAHistoryValid = true;
+    }
+
     RenderCommand::SetDepthTest(true);
 
     // Diagnóstico: qualquer erro de driver neste frame aparece no log (ex.:
@@ -2080,6 +2236,7 @@ void Renderer3D::EndScene() {
             dump << "MSAA: config " << s_Settings.MSAA << " / ativo " << s_CurrentMSAA << " (max samples " << maxS << ")\n";
             dump << "SSAO: " << (s_Settings.SSAOEnabled ? "on" : "off") << "\n";
             dump << "SSR: " << (s_Settings.SSREnabled ? "on" : "off") << "\n";
+            dump << "TAA: " << (s_Settings.TAAEnabled ? "on" : "off") << "\n";
             dump << "Bloom: " << (s_Settings.BloomEnabled ? "on" : "off") << "\n";
             auto fbStatus = [](GLuint fbo) {
                 if (fbo == 0) return 0;

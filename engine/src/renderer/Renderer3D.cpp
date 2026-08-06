@@ -741,35 +741,35 @@ const float kScaleHeightR      = 0.00125; // ~8 km (Rayleigh, azul)
 const float kScaleHeightM      = 0.00019; // ~1.2 km (Mie, haze)
 const vec3  kBetaR             = vec3(35.0, 83.0, 143.0); // Rayleigh β (normalizado)
 const vec3  kBetaM             = vec3(134.0);              // Mie β (normalizado)
-const float kSunIntensity      = 0.6;
+const float kSunIntensity      = 0.9;
 const float kMieG              = 0.82;
-
-// Interseção raio-esfera. Devolve a distância de ENTRADA (ou -1 se não bate).
-float IntersectSphere(vec3 o, vec3 d, float r) {
-    float b = dot(d, o);
-    float c = dot(o, o) - r * r;
-    float det = b * b - c;
-    if (det < 0.0) return -1.0;
-    det = sqrt(det);
-    return -b - det;
-}
 
 // Espalhamento single-scattering de Rayleigh + Mie, marchando o raio de visão
 // dentro da atmosfera e a luz do sol até cada ponto. Todos os loops têm TETO
 // CONSTANTE (#define de compilação) — compila em GLSL 330 core em qualquer
 // driver (nada de loop de comprimento variável).
+//
+// Observador na SUPERFÍCIE do planeta, DENTRO da esfera de atmosfera: a
+// distância percorrida é a raiz POSITIVA da interseção com a casca de
+// atmosfera (a raiz negativa é a "entrada" atrás da câmera — usar ela era o
+// bug que deixava o céu PRETO). O planeta opaco é a raiz menor da esfera do
+// planeta (>= 0 só quando o raio aponta pra baixo).
 vec3 ComputeAtmosphere(vec3 rd) {
     vec3 sun = u_SunDirection;
     vec3 origin = vec3(0.0, kPlanetRadius, 0.0); // observador na superfície
-    float tIn = IntersectSphere(origin, rd, kAtmosphereRadius);
-    if (tIn < 0.0) return vec3(0.0); // fora da atmosfera (não deveria aparecer no skybox)
-    float tPlanet = IntersectSphere(origin, rd, kPlanetRadius);
-    float tMax = (tPlanet > 0.0) ? tPlanet : tIn;
-    float tFar = min(tMax, 200.0);
+
+    float b = dot(rd, origin);
+    // Saída da atmosfera (raiz positiva; sempre existe, |origin| < R_atm).
+    float tAtm = -b + sqrt(b * b + (kAtmosphereRadius * kAtmosphereRadius - kPlanetRadius * kPlanetRadius));
+    // Interseção com o planeta opaco: -b - |b| é 0 quando o raio desce e
+    // negativo quando sobe (aí o raio não atinge o planeta).
+    float tPlanet = -b - sqrt(max(b * b, 0.0));
+    float tMax = (tPlanet >= 0.0) ? tPlanet : tAtm;
+    if (tMax < 0.0001) return vec3(0.0); // abaixo do chão do planeta (opaco)
 
     const int kSteps = 16;
     const int kLightSteps = 8;
-    float dt = tFar / float(kSteps);
+    float dt = tMax / float(kSteps);
     float t = dt * 0.5;
 
     vec3 inScatter = vec3(0.0);
@@ -778,14 +778,15 @@ vec3 ComputeAtmosphere(vec3 rd) {
         float h = max(length(pos) - kPlanetRadius, 0.0);
         vec3 beta = kBetaR * exp(-h / kScaleHeightR) + kBetaM * exp(-h / kScaleHeightM);
 
-        // Marcha da luz do sol até este ponto (transmitância).
-        vec3 sunPos = pos + sun * (kAtmosphereRadius * 2.0);
-        float tSun = IntersectSphere(sunPos, -sun, kAtmosphereRadius);
+        // Transmitância da luz do sol até este ponto: marcha de `pos` na
+        // direção DO sol até sair da casca de atmosfera (raiz positiva).
+        float bSun = dot(sun, pos);
+        float tSun = -bSun + sqrt(bSun * bSun + (kAtmosphereRadius * kAtmosphereRadius - dot(pos, pos)));
         float dtSun = tSun / float(kLightSteps);
         float ts = dtSun * 0.5;
         vec3 sunDepth = vec3(0.0);
         for (int j = 0; j < kLightSteps; ++j) {
-            vec3 sp = sunPos - sun * ts;
+            vec3 sp = pos + sun * ts;
             float sh = max(length(sp) - kPlanetRadius, 0.0);
             sunDepth += (kBetaR * exp(-sh / kScaleHeightR) + kBetaM * exp(-sh / kScaleHeightM)) * dtSun;
             ts += dtSun;
@@ -808,7 +809,7 @@ vec3 ComputeAtmosphere(vec3 rd) {
 
     // Estrelas celulares fracas no lado noturno (estáveis, sem shimmer).
     float nightFactor = smoothstep(-0.03, -0.5, mu);
-    vec3 cell = floor(rd * 170.0);
+    vec3 cell = floor(rd * 90.0);
     float starHash = fract(sin(dot(cell, vec3(127.1, 311.7, 74.7))) * 43758.5453);
     color += vec3(step(0.996, starHash)) * nightFactor * 1.2;
 

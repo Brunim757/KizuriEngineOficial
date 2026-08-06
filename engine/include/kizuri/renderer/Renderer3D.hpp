@@ -75,12 +75,15 @@ struct Material {
     Ref<Texture2D> NormalMap; // tangent-space; TBN calculado por derivada de tela, sem atributo extra na mesh
     Ref<Texture2D> MetallicRoughnessMap; // canal G = roughness, canal B = metallic (convenção glTF)
     Ref<Texture2D> EmissiveMap;
+    Ref<Texture2D> HeightMap; // parallax occlusion mapping (POM) — profundidade real de superfície
+    float HeightScale = 0.08f; // intensidade do deslocamento de paralaxe (POM)
     // Caminhos serializáveis — é o que permite salvar/abrir cena com
     // textura de material (ver ComponentSerialization.hpp). Vazios = sem mapa.
     std::string AlbedoMapPath;
     std::string NormalMapPath;
     std::string MetallicRoughnessMapPath;
     std::string EmissiveMapPath;
+    std::string HeightMapPath;
 };
 
 enum class LightType { Directional = 0, Point = 1, Spot = 2 };

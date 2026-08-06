@@ -3509,6 +3509,27 @@ void EditorLayer::DrawInspector() {
                     mat.EmissiveMapPath = browsedEmissive;
                     mat.EmissiveMap = mat.EmissiveMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.EmissiveMapPath);
                 }
+                char hgtBuf[512];
+                strncpy(hgtBuf, mat.HeightMapPath.c_str(), sizeof(hgtBuf) - 1); hgtBuf[sizeof(hgtBuf) - 1] = '\0';
+                if (ImGui::InputText("Mapa de Altura (POM)", hgtBuf, sizeof(hgtBuf))) {
+                    mat.HeightMapPath = hgtBuf;
+                    mat.HeightMap = mat.HeightMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.HeightMapPath);
+                }
+                std::string droppedHeight;
+                if (AcceptAssetDrop(droppedHeight)) {
+                    mat.HeightMapPath = kizuri::Project::MakeRelativePath(droppedHeight);
+                    mat.HeightMap = mat.HeightMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.HeightMapPath);
+                }
+                std::string browsedHeight;
+                if (FileBrowseButton("Mapa de Altura (POM)", "*.png;*.jpg;*.jpeg;*.bmp;*.tga", browsedHeight)) {
+                    mat.HeightMapPath = browsedHeight;
+                    mat.HeightMap = mat.HeightMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.HeightMapPath);
+                }
+                if (mat.HeightMap) {
+                    ImGui::DragFloat("Escala de paralaxe (POM)", &mat.HeightScale, 0.001f, 0.0f, 0.5f);
+                    uint32_t texID = mat.HeightMap->GetRendererID();
+                    ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(64.0f, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
+                }
                 if (mat.NormalMap) {
                     uint32_t texID = mat.NormalMap->GetRendererID();
                     ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(64.0f, 64.0f), ImVec2(0, 1), ImVec2(1, 0));

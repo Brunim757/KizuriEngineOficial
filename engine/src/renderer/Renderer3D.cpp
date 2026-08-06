@@ -148,6 +148,9 @@ uniform sampler2D u_MetallicRoughnessMap;
 uniform bool u_HasMetallicRoughnessMap;
 uniform sampler2D u_EmissiveMap;
 uniform bool u_HasEmissiveMap;
+uniform sampler2D u_HeightMap; // parallax occlusion mapping (POM)
+uniform bool u_HasHeightMap;
+uniform float u_HeightScale;   // intensidade do deslocamento de paralaxe
 
 uniform vec3 u_ViewPos;
 uniform mat4 u_View;
@@ -259,8 +262,10 @@ vec2 EnvBRDFApprox(float NdotV, float roughness) {
 }
 
 // TBN por derivada de tela (dFdx/dFdy) — não precisa de atributo de tangente na mesh.
-vec3 ApplyNormalMap(vec3 N) {
-    vec3 tangentNormal = texture(u_NormalMap, v_TexCoord).xyz * 2.0 - 1.0;
+// sampleCoord: onde amostrar o mapa; as derivadas de v_TexCoord (originais) são
+// as usadas pra montar a base tangente (o POM desloca a coordenada, não a base).
+vec3 ApplyNormalMap(vec3 N, vec2 sampleCoord) {
+    vec3 tangentNormal = texture(u_NormalMap, sampleCoord).xyz * 2.0 - 1.0;
     vec3 Q1 = dFdx(v_FragPos), Q2 = dFdy(v_FragPos);
     vec2 st1 = dFdx(v_TexCoord), st2 = dFdy(v_TexCoord);
     vec3 T = normalize(Q1 * st2.t - Q2 * st1.t);
@@ -268,19 +273,70 @@ vec3 ApplyNormalMap(vec3 N) {
     return normalize(mat3(T, B, N) * tangentNormal);
 }
 
+// Parallax Occlusion Mapping — marcha em passos FIXOS (teto constante, seguro
+// em GLSL 330 core) sobre o mapa de altura ao longo da visão em espaço tangente,
+// com interpolação linear no final pra evitar "corte" entre camadas. O
+// viewDir Vt já vem em espaço tangente (dot com a base T,B,N).
+#define POM_MAX_LAYERS 24
+vec2 ApplyParallax(vec2 tc, vec3 Vt, out float parallaxMask) {
+    parallaxMask = 0.0;
+    // Vt.z < 0 (olhando de lado/costas) ou quase raso: sem POM pra não estourar.
+    if (Vt.z < 0.02) return tc;
+    parallaxMask = 1.0;
+
+    vec2 P = Vt.xy / Vt.z * u_HeightScale;
+    // Mais camadas perto de ângulos rasantes (constante no teto POM_MAX_LAYERS).
+    float numLayers = mix(8.0, POM_MAX_LAYERS, 1.0 - Vt.z);
+    if (numLayers < 2.0) numLayers = 2.0;
+    vec2 delta = P / numLayers;
+    float layerDepth = 1.0 / numLayers;
+
+    vec2 currentTex = tc;
+    float currentDepth = 0.0;
+    float mapDepth = texture(u_HeightMap, currentTex).r;
+    for (int i = 0; i < POM_MAX_LAYERS; ++i) {
+        if (currentDepth >= mapDepth) break;
+        currentTex -= delta;
+        mapDepth = texture(u_HeightMap, currentTex).r;
+        currentDepth += layerDepth;
+    }
+
+    // Interpolação linear entre os dois últimos passos (menos "serrilhado").
+    vec2 prevTex = currentTex + delta;
+    float afterDepth = mapDepth - currentDepth;
+    float beforeDepth = texture(u_HeightMap, prevTex).r - currentDepth + layerDepth;
+    float weight = clamp(afterDepth / (afterDepth + beforeDepth), 0.0, 1.0);
+    return mix(currentTex, prevTex, weight);
+}
+
 void main() {
-    vec3 albedo = u_HasAlbedoMap ? texture(u_AlbedoMap, v_TexCoord).rgb * u_Albedo : u_Albedo;
+    // POM (parallax occlusion): desloca a coordenada de textura ao longo da
+    // visão (espaço tangente, base TBN por derivada) antes de amostrar os
+    // mapas — a superfície ganha relevo real que acompanha o ângulo da câmera.
+    vec2 texCoord = v_TexCoord;
+    vec3 N = normalize(v_Normal);
+    float pomMask = 0.0;
+    if (u_HasHeightMap) {
+        vec3 Q1 = dFdx(v_FragPos), Q2 = dFdy(v_FragPos);
+        vec2 st1 = dFdx(v_TexCoord), st2 = dFdy(v_TexCoord);
+        vec3 T = normalize(Q1 * st2.t - Q2 * st1.t);
+        vec3 B = -normalize(cross(N, T));
+        vec3 Vw = normalize(u_ViewPos - v_FragPos);
+        vec3 Vt = normalize(vec3(dot(Vw, T), dot(Vw, B), dot(Vw, N)));
+        texCoord = ApplyParallax(texCoord, Vt, pomMask);
+    }
+
+    vec3 albedo = u_HasAlbedoMap ? texture(u_AlbedoMap, texCoord).rgb * u_Albedo : u_Albedo;
 
     float metallic = u_Metallic;
     float roughness = u_Roughness;
     if (u_HasMetallicRoughnessMap) {
-        vec3 mr = texture(u_MetallicRoughnessMap, v_TexCoord).rgb;
+        vec3 mr = texture(u_MetallicRoughnessMap, texCoord).rgb;
         roughness *= mr.g; // convenção glTF
         metallic *= mr.b;
     }
 
-    vec3 N = normalize(v_Normal);
-    if (u_HasNormalMap) N = ApplyNormalMap(N);
+    if (u_HasNormalMap) N = ApplyNormalMap(N, texCoord);
 
     vec3 V = normalize(u_ViewPos - v_FragPos);
     vec3 R = reflect(-V, N);
@@ -339,7 +395,7 @@ void main() {
 
     // Emissivo soma direto (e, acima de 1.0, alimenta o bright-pass do bloom).
     vec3 emissive = u_Emissive * u_EmissiveStrength;
-    if (u_HasEmissiveMap) emissive *= texture(u_EmissiveMap, v_TexCoord).rgb;
+    if (u_HasEmissiveMap) emissive *= texture(u_EmissiveMap, texCoord).rgb;
 
     vec3 color = ambient + directLighting + emissive;
 
@@ -1968,6 +2024,13 @@ void Renderer3D::EndScene() {
             if (hasEmissive) {
                 cmd.Mat.EmissiveMap->Bind(8);
                 s_MeshShader->SetInt("u_EmissiveMap", 8);
+            }
+            bool hasHeight = (bool)cmd.Mat.HeightMap;
+            s_MeshShader->SetInt("u_HasHeightMap", hasHeight ? 1 : 0);
+            s_MeshShader->SetFloat("u_HeightScale", cmd.Mat.HeightScale);
+            if (hasHeight) {
+                cmd.Mat.HeightMap->Bind(9);
+                s_MeshShader->SetInt("u_HeightMap", 9);
             }
             s_MeshShader->SetFloat3("u_Emissive", cmd.Mat.Emissive);
             s_MeshShader->SetFloat("u_EmissiveStrength", cmd.Mat.EmissiveStrength);

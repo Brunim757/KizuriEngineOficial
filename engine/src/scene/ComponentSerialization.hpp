@@ -29,6 +29,7 @@ inline void RestoreGLTFTextureMaps(MeshRendererComponent& mr) {
     if (!mat.NormalMap && restored.NormalMap) mat.NormalMap = restored.NormalMap;
     if (!mat.MetallicRoughnessMap && restored.MetallicRoughnessMap) mat.MetallicRoughnessMap = restored.MetallicRoughnessMap;
     if (!mat.EmissiveMap && restored.EmissiveMap) mat.EmissiveMap = restored.EmissiveMap;
+    if (!mat.HeightMap && restored.HeightMap) mat.HeightMap = restored.HeightMap;
 }
 
 inline nlohmann::json Vec3ToJson(const glm::vec3& v) { return { v.x, v.y, v.z }; }
@@ -131,7 +132,9 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
             { "AlbedoMapPath", mat.AlbedoMapPath },
             { "NormalMapPath", mat.NormalMapPath },
             { "MetallicRoughnessMapPath", mat.MetallicRoughnessMapPath },
-            { "EmissiveMapPath", mat.EmissiveMapPath }
+            { "EmissiveMapPath", mat.EmissiveMapPath },
+            { "HeightMapPath", mat.HeightMapPath },
+            { "HeightScale", mat.HeightScale }
         };
     }
 
@@ -348,10 +351,13 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         mat.NormalMapPath = jm.value("NormalMapPath", "");
         mat.MetallicRoughnessMapPath = jm.value("MetallicRoughnessMapPath", "");
         mat.EmissiveMapPath = jm.value("EmissiveMapPath", "");
+        mat.HeightMapPath = jm.value("HeightMapPath", "");
+        mat.HeightScale = jm.value("HeightScale", 0.08f);
         if (!mat.AlbedoMapPath.empty()) mat.AlbedoMap = Texture2D::Create(ResolveSerializedPath(mat.AlbedoMapPath));
         if (!mat.NormalMapPath.empty()) mat.NormalMap = Texture2D::Create(ResolveSerializedPath(mat.NormalMapPath));
         if (!mat.MetallicRoughnessMapPath.empty()) mat.MetallicRoughnessMap = Texture2D::Create(ResolveSerializedPath(mat.MetallicRoughnessMapPath));
         if (!mat.EmissiveMapPath.empty()) mat.EmissiveMap = Texture2D::Create(ResolveSerializedPath(mat.EmissiveMapPath));
+        if (!mat.HeightMapPath.empty()) mat.HeightMap = Texture2D::Create(ResolveSerializedPath(mat.HeightMapPath));
         RestoreGLTFTextureMaps(mr); // texturas embutidas no .glb voltam na recarga
     }
 
@@ -592,10 +598,13 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         mat.NormalMapPath = jm.value("NormalMapPath", "");
         mat.MetallicRoughnessMapPath = jm.value("MetallicRoughnessMapPath", "");
         mat.EmissiveMapPath = jm.value("EmissiveMapPath", "");
+        mat.HeightMapPath = jm.value("HeightMapPath", "");
+        mat.HeightScale = jm.value("HeightScale", 0.08f);
         mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.AlbedoMapPath));
         mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.NormalMapPath));
         mat.MetallicRoughnessMap = mat.MetallicRoughnessMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.MetallicRoughnessMapPath));
         mat.EmissiveMap = mat.EmissiveMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.EmissiveMapPath));
+        mat.HeightMap = mat.HeightMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.HeightMapPath));
         RestoreGLTFTextureMaps(mr); // texturas embutidas no .glb voltam na recarga
     } else if (entity.HasComponent<MeshRendererComponent>()) {
         entity.RemoveComponent<MeshRendererComponent>();

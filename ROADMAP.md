@@ -384,4 +384,16 @@
 - [x] `GraphicsSettings`: TAA ligado/desligado — presets (Low desliga) +
   `settings.json` + UI no editor
 
+### ✅ Parallax Occlusion Mapping (POM) — superfície com relevo real
+- [x] Marcha de **passos fixos** (`#define POM_MAX_LAYERS 24` constante) sobre
+  o mapa de altura ao longo da visão em espaço tangente (base TBN por derivada
+  de tela) + interpolação linear entre os dois últimos passos — 100% GLSL 330
+- [x] Coordenada de textura deslocada ANTES de amostrar albedo/normais/MR/
+  emissivo — o relevo acompanha o ângulo da câmera (nada de "textura lisa")
+- [x] Material: `HeightMap` + `HeightScale` — serializados no `.kzscene`
+  (`HeightMapPath`/`HeightScale`), drop/input no Inspetor do editor
+- [x] C# API: `SetMaterialHeightMap(path)` + `SetMaterialHeightScale(scale)`
+  (`kz_material_set_height_map` / `kz_material_set_height_scale` no bridge)
+- [x] Câmera olhando de lado (Vt.z < 0.02) desliga o POM sem artefato
+
 ---

@@ -685,6 +685,21 @@ KZ_SCRIPT_API int kz_material_set_metallic_roughness_map(uint32_t entity, const 
     return 1;
 }
 
+KZ_SCRIPT_API int kz_material_set_height_map(uint32_t entity, const char* path) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::MeshRendererComponent>() || path == nullptr) return 0;
+    auto& mat = e.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial;
+    mat.HeightMapPath = path;
+    mat.HeightMap = kizuri::Texture2D::Create(kizuri::Project::ResolvePath(path));
+    return 1;
+}
+
+KZ_SCRIPT_API void kz_material_set_height_scale(uint32_t entity, float scale) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::MeshRendererComponent>()) return;
+    e.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial.HeightScale = scale;
+}
+
 KZ_SCRIPT_API void kz_material_set_emissive(uint32_t entity, float r, float g, float b, float strength) {
     auto e = Resolve(entity);
     if (!e || !e.HasComponent<kizuri::MeshRendererComponent>()) return;

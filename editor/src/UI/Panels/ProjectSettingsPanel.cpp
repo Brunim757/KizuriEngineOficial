@@ -96,9 +96,11 @@ void ProjectSettingsPanel::DrawGraphicsSection() {
     }
     ImGui::Separator();
 
-    // HDRI do céu (vazio = atmosfera procedural).
+    // Céu: HDRI, ou gradiente procedural (limpo), ou raymarch atmosférico.
     ImGui::Text("Ambiente (céu):");
-    ImGui::TextDisabled("Vazio = céu atmosférico Rayleigh/Mie. .hdr equirect = ambiente.");
+    ImGui::TextDisabled(".hdr equirect = ambiente. Vazio = gradiente procedural.");
+    changed |= ImGui::Checkbox("Céu atmosférico Rayleigh/Mie", &g.AtmosphereSky);
+    ImGui::TextDisabled("Rayleigh/Mie é raymarch físico — pode pesar em GPUs fracas/emuladores.");
     if (m_EnvHDRIPath[0] == '\0')
         std::strncpy(m_EnvHDRIPath, kizuri::Renderer3D::GetEnvironmentHDRIPath().c_str(), sizeof(m_EnvHDRIPath) - 1);
     if (ImGui::InputText("HDRI do céu", m_EnvHDRIPath, sizeof(m_EnvHDRIPath))) {

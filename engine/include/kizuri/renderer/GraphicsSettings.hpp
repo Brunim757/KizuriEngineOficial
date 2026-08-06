@@ -110,6 +110,11 @@ struct GraphicsSettings {
     float FogHeight = 0.0f;
     float FogHeightFalloff = 0.0f;
 
+    // Céu atmosférico Rayleigh/Mie (raymarch físico). PODE gerar pontilhado/
+    // lentidão em GPUs fracas/emuladores (ex.: Winlator) — por isso fica OFF
+    // por padrão. Sem ele e sem HDRI, o céu é o gradiente procedural limpo.
+    bool AtmosphereSky = false;
+
     // Exposição multiplicada antes do tonemap ACES (equivalente ao "EV").
     float Exposure = 1.0f;
 

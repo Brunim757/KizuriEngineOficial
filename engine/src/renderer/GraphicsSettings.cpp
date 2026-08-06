@@ -24,6 +24,7 @@ void GraphicsSettings::TuneToHardware() {
     Saturation = 1.0f; Contrast = 1.0f;
     BloomAnamorphic = 0.0f;
     FogHeight = 0.0f; FogHeightFalloff = 0.0f;
+    AtmosphereSky = false;
     SSREnabled = true; SSRMaxSteps = 24; SSRThickness = 0.12f; SSRIntensity = 0.6f;
     SSRMarchDistance = 20.0f;
     TAAEnabled = true;
@@ -200,6 +201,7 @@ bool SaveGraphicsSettings(const std::string& path, const GraphicsSettings& setti
     j["bloom_anamorphic"] = settings.BloomAnamorphic;
     j["fog_height"] = settings.FogHeight;
     j["fog_height_falloff"] = settings.FogHeightFalloff;
+    j["atmosphere_sky"] = settings.AtmosphereSky;
     j["bloom_enabled"] = settings.BloomEnabled;
     j["bloom_threshold"] = settings.BloomThreshold;
     j["bloom_intensity"] = settings.BloomIntensity;
@@ -260,6 +262,7 @@ bool LoadGraphicsSettings(const std::string& path, GraphicsSettings& out) {
         out.BloomAnamorphic = j.value("bloom_anamorphic", out.BloomAnamorphic);
         out.FogHeight = j.value("fog_height", out.FogHeight);
         out.FogHeightFalloff = j.value("fog_height_falloff", out.FogHeightFalloff);
+        out.AtmosphereSky = j.value("atmosphere_sky", out.AtmosphereSky);
         out.BloomEnabled = j.value("bloom_enabled", out.BloomEnabled);
         out.BloomThreshold = j.value("bloom_threshold", out.BloomThreshold);
         out.BloomIntensity = j.value("bloom_intensity", out.BloomIntensity);

@@ -1439,6 +1439,13 @@ void EditorLayer::DrawSettingsGraphics() {
     customTweak |= ImGui::DragFloat("Grão de filme", &m_GraphicsSettings.FilmGrain, 0.005f, 0.0f, 0.2f);
 
     ImGui::Separator();
+    ImGui::Checkbox("Céu atmosférico Rayleigh/Mie", &m_GraphicsSettings.AtmosphereSky);
+    if (ImGui::IsItemDeactivatedAfterEdit()) {
+        m_GraphicsSettings.Preset = kizuri::QualityPreset::Custom;
+        kizuri::Renderer3D::SetGraphicsSettings(m_GraphicsSettings);
+        SaveGraphicsSettingsToDisk();
+    }
+    ImGui::TextDisabled("Raymarch físico — desligue em GPUs fracas/emuladores (pontilhado).");
     ImGui::TextDisabled("Ambiente (céu) — vazio = procedural, ou um .hdr equirectangular:");
     bool applyHDRI = false;
     ImGui::InputText("HDRI do céu", m_EnvironmentHDRIPathBuffer, sizeof(m_EnvironmentHDRIPathBuffer));

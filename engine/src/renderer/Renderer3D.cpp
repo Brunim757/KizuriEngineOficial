@@ -2203,8 +2203,12 @@ void Renderer3D::RenderPlanarReflection(const glm::vec3& planePoint, const glm::
         ? glm::normalize(-s_ShadowCaster.Direction)
         : glm::normalize(glm::vec3(0.3f, 1.0f, 0.2f));
     s_SkyboxShader->SetFloat3("u_SunDirection", sunDir);
-    s_SkyboxShader->SetInt("u_AtmosphereSky", s_EnvironmentHDRIPath.empty() ? 1 : 0);
-    s_SkyboxShader->SetInt("u_CloudsEnabled", s_Settings.CloudsEnabled ? 1 : 0);
+    // Céu: HDRI se carregado; senão, raymarch atmosférico SÓ se o usuário
+    // optou (AtmosphereSky) — por padrão o gradiente procedural limpo, que
+    // é estável até em GPUs fracas/emuladores.
+    bool atmosphere = s_EnvironmentHDRIPath.empty() && s_Settings.AtmosphereSky;
+    s_SkyboxShader->SetInt("u_AtmosphereSky", atmosphere ? 1 : 0);
+    s_SkyboxShader->SetInt("u_CloudsEnabled", (atmosphere && s_Settings.CloudsEnabled) ? 1 : 0);
     s_SkyboxShader->SetFloat("u_CloudTime", s_PostTime);
     RenderCommand::DrawIndexed(s_CaptureCube->GetVertexArray(), s_CaptureCube->GetIndexCount());
     glDepthMask(GL_TRUE);
@@ -2989,8 +2993,12 @@ void Renderer3D::EndScene() {
         : glm::normalize(glm::vec3(0.3f, 1.0f, 0.2f));
     s_SkyboxShader->SetFloat3("u_SunDirection", sunDir);
     // HDRI carregado = o usuário quer ver o ambiente dele; senão, scattering.
-    s_SkyboxShader->SetInt("u_AtmosphereSky", s_EnvironmentHDRIPath.empty() ? 1 : 0);
-    s_SkyboxShader->SetInt("u_CloudsEnabled", s_Settings.CloudsEnabled ? 1 : 0);
+    // Céu: HDRI se carregado; senão, raymarch atmosférico SÓ se o usuário
+    // optou (AtmosphereSky) — por padrão o gradiente procedural limpo, que
+    // é estável até em GPUs fracas/emuladores.
+    bool atmosphere = s_EnvironmentHDRIPath.empty() && s_Settings.AtmosphereSky;
+    s_SkyboxShader->SetInt("u_AtmosphereSky", atmosphere ? 1 : 0);
+    s_SkyboxShader->SetInt("u_CloudsEnabled", (atmosphere && s_Settings.CloudsEnabled) ? 1 : 0);
     s_SkyboxShader->SetFloat("u_CloudTime", s_PostTime);
     RenderCommand::DrawIndexed(s_CaptureCube->GetVertexArray(), s_CaptureCube->GetIndexCount());
     glDepthMask(GL_TRUE);

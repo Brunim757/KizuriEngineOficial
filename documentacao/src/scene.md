@@ -1,88 +1,65 @@
 ---
-title: Scene — referência
+title: Scene (API)
 group: Scripting C#
-order: 4
+order: 3
 ---
 
-# Scene — referência
+# Scene — API
 
-`Scene` dá acesso à cena ativa em runtime.
+A **Scene** é o mundo do jogo. O script acessa a cena atual via `Scene`.
 
-## Criar e instanciar
-
-| Método | Descrição |
-|--------|-----------|
-| `CreateEntity(string name = "")` | Cria entidade vazia (Transform + Tag) |
-| `InstantiatePrefab(string path)` | Instancia `.kzprefab` |
-| `InstantiatePrefab(string path, Vector3 position)` | Instancia em uma posição |
-| `InstantiatePrefab(string path, Vector3 position, Vector3 rotation)` | Instancia com posição **e rotação** (euler, rad) |
-| `Duplicate(Entity)` | Duplica a entidade (com a subárvore), com leve deslocamento |
+## Criar e destruir entidades
 
 ```csharp
-var tiro = Scene.InstantiatePrefab("Assets/Tiro.kzprefab", new Vector3(3f, 0f, 0f));
-var fogo = Scene.InstantiatePrefab("Assets/Fogo.kzprefab", pos, new Vector3(0f, 0f, 0.5f));
+var entidade = Scene.CreateEntity("Inimigo");
+entidade.AddSprite("Assets/imgs/zumbi.png");
+Scene.Destroy(entidade);
 ```
 
-::: info
-Em runtime, a prefab instanciada **ganha corpos de física** e **dispara
-`OnCreate`** dos scripts — exatamente como se estivesse na cena.
-:::
-
-## Buscar e navegar
-
-| Método | Descrição |
-|--------|-----------|
-| `Find(string name)` | Primeira entidade com o nome (Tag). `Entity.Invalid` se não achar |
-| `GetPrimaryCamera()` | Entidade com `CameraComponent` marcada como Primary |
-| `Load(string scenePath)` | **Pedido** de troca de cena (realizado no fim do frame) |
+## Prefabs
 
 ```csharp
-var jogador = Scene.Find("Jogador");
-if (jogador.IsValid) { /* achou */ }
+Scene.InstantiatePrefab("Assets/Prefabs/tiro.kzprefab", x, y, z);
+Scene.InstantiatePrefab(path, x, y, z, rotX, rotY, rotZ);
+```
 
+## Trocar de cena
+
+```csharp
+Scene.Load("Assets/Cenas/fase2.kzscene"); // carregamento diferido/assíncrono
+```
+
+## Câmera
+
+```csharp
 var cam = Scene.GetPrimaryCamera();
-Scene.Load("Assets/Fase2.kzscene"); // troca no fim do frame
 ```
 
-## Queries de física
-
-### 2D (Box2D)
+## Consultas (raycasts)
 
 ```csharp
-bool Raycast2D(Vector2 from, Vector2 to, out Entity hit, out Vector2 point);
+// 2D (Box2D)
+var hit = Scene.Raycast2D(origemX, origemY, dirX, dirY);
+var alvos = Scene.OverlapCircle2D(x, y, raio);
+
+// 3D (Bullet)
+var hit3D = Scene.Raycast3D(origX, origY, origZ, dirX, dirY, dirZ);
+var corpos = Scene.OverlapSphere3D(x, y, z, raio);
 ```
 
-### 3D (Bullet3)
+## Corrotinas
 
 ```csharp
-bool Raycast3D(Vector3 from, Vector3 to,
-               out Entity hit, out Vector3 point, out float fraction);
-```
+StartCoroutine(Contador());
 
-### Área
-
-```csharp
-bool OverlapCircle2D(Vector2 center, float radius, out Entity hit);
-bool OverlapSphere3D(Vector3 center, float radius, out Entity hit);
-```
-
-::: warn
-**Só no Play.** As queries e a simulação da física só funcionam durante o
-Play (ou no jogo exportado).
-:::
-
-## Exemplo de uso
-
-```csharp
-// cria um projétil na frente do jogador
-if (Entity.TryGetWorldPosition(out var p))
+IEnumerator Contador()
 {
-    var tiro = Scene.CreateEntity("Tiro");
-    tiro.AddSprite("Assets/Textures/tiro.png");
-    tiro.SetPosition(p);
-
-    // tiro em linha reta até acertar algo
-    if (Scene.Raycast3D(p, p + new Vector3(0f, 0f, -50f), out var hit, out _, out _))
-        Log.Info($"Tiro acertou {hit.Name}");
+    yield return new WaitForSeconds(2f);
+    Scene.Destroy(Entity);
 }
 ```
+
+::: dica
+O **Load** de cena é assíncrono — o jogo não congela, e a conclusão religa o
+runtime automaticamente. Veja [Save](save.html) para persistência.
+:::

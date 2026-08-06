@@ -1,58 +1,45 @@
 ---
-title: Time
+title: Time (API)
 group: Scripting C#
-order: 6
+order: 5
 ---
 
-# Time
+# Time — API
 
-Tempo de jogo e do mundo.
+Controle de **tempo** do jogo.
 
 ## Propriedades
 
-| Membro | Tipo | Descrição |
-|--------|------|-----------|
-| `Time.DeltaSeconds` | `float` | Delta deste frame (escalado pelo `TimeScale`) |
-| `Time.time` | `float` | Tempo acumulado desde o início (escalado) |
-| `Time.unscaledTime` | `float` | Tempo real acumulado (ignora `TimeScale`) |
-| `Time.unscaledDeltaTime` | `float` | Delta real do frame |
-| `Time.TimeScale` | `float` (get/set) | Escala global do tempo |
+```csharp
+Time.deltaTime;            // tempo do último frame (segundos)
+Time.time;                 // tempo total de jogo
+Time.unscaledTime;         // tempo real (ignora TimeScale)
+Time.unscaledDeltaTime;    // delta real (ignora TimeScale)
+```
 
-## Uso
+## Escala de tempo
 
 ```csharp
-var dt = Time.DeltaSeconds;                 // para o movimento
-var t  = Time.time;                         // para animações que dependem do tempo
-
 // câmera lenta
 Time.TimeScale = 0.3f;
-// pausa os SCRIPTS (dt vira 0)
+// pausa (UI de pausa)
 Time.TimeScale = 0f;
 // volta ao normal
 Time.TimeScale = 1f;
 ```
 
-## O que o TimeScale afeta
-
-- **Escala** o `deltaSeconds` recebido pelos scripts (o `dt` do `OnUpdate`);
-- Não trava a física/partículas (que usam dt próprio) — `TimeScale = 0`
-  pausa os **scripts**, não o mundo inteiro.
+## Uso típico
 
 ```csharp
-// movimento independente da câmera lenta (UI, contadores)
-var real = Time.unscaledDeltaTime;
+// movimento independente de FPS
+Entity.Move(velocidade * Time.deltaTime, 0f, 0f);
+
+// contagem regressiva
+_tempoRestante -= Time.deltaTime;
+if (_tempoRestante <= 0f) TerminarFase();
 ```
 
-## Timestep
-
-O struct `Timestep` envolve o delta e **converte implicitamente para float**:
-
-```csharp
-Timestep ts = new(0.016f);
-float seconds = ts.Seconds;   // ou simplesmente (float)ts
-```
-
-::: info
-No `OnUpdate(float deltaSeconds)` você já recebe o delta pronto — não precisa
-chamar `Time.DeltaSeconds` de novo para o movimento do frame.
+::: dica
+Sempre multiplique velocidades por **Time.deltaTime** — senão o jogo anda
+mais rápido em máquinas com mais FPS.
 :::

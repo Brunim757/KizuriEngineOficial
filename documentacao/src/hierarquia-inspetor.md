@@ -1,54 +1,49 @@
 ---
 title: Hierarquia e Inspetor
 group: Editor
-order: 3
+order: 6
 ---
 
 # Hierarquia e Inspetor
 
+Juntos, esses dois painéis controlam **o que existe** na cena e **como cada
+coisa se comporta**.
+
 ## Hierarquia
 
-O painel **Hierarquia** lista todas as entidades da cena em árvore. Você pode:
-
-- **Selecionar** (clicando) — o Inspetor mostra a entidade;
-- **Parentar** (arrastar sobre outra) e **destacar**;
-- **Renomear** — duplo clique no nome;
-- **Buscar** — o campo de filtro filtra a árvore pelo nome;
-- **Duplicar** (`Ctrl+D`) e **Excluir** (`Del`).
-
-Novas entidades podem ser criadas pelo botão no painel, pelo menu
-**Editar**, ou em runtime via `Scene.CreateEntity`.
+- Lista todas as **entidades** da cena.
+- **Clique** para selecionar (o Inspetor e o viewport acompanham).
+- **Arraste** uma entidade sobre outra para torná-la **filha** (a filha herda
+  a posição/rotação/escala do pai).
+- **Botão direito**: Duplicar (**Ctrl+D**), Salvar como Prefab, Excluir (**Del**).
+- A **busca** (campo no topo) filtra por nome e mostra uma lista plana.
 
 ## Inspetor
 
-O Inspetor mostra a entidade selecionada e seus componentes. Para cada
-componente há uma seção colapsável com seus campos:
+Mostra os **componentes** da entidade selecionada. Cada componente tem seu
+próprio cabeçalho (pode ser recolhido/expandido):
 
-- **Transform** — posição, rotação (graus), escala;
-- **Componentes de render** — cor, textura, material, ordenação;
-- **Física** — tipo de corpo, massa, colliders;
-- **Scripts** — botão para adicionar um script registrado no GameModule.
+- **Transform** — posição, rotação e escala (e hierarquia pai/filho)
+- **MeshRenderer** — malha + material (albedo, metal, rugosidade, mapas, emissão, POM, espelho)
+- **SpriteRenderer** — sprite, cor, ordem de renderização, flip
+- **LightComponent** — direcional/ponto/spot, cor, intensidade, alcance, cone
+- **CameraComponent** — tipo (2D/3D), FOV, clipes, câmera principal
+- **Rigidbody/Colliders** — física 2D e 3D
+- **AudioSource** — som a tocar, volume, espacialização
+- **ScriptComponent** — associa um script C# do projeto
+- **Animator** — animação esquelética
+- **Tilemap**, **ParticleSystem**, **UI** e mais
 
-### Adicionar um componente
+### Adicionar componentes
 
-1. Selecione a entidade.
-2. No Inspetor, clique em **Adicionar** e escolha o componente (ou digite o
-   nome para buscar).
-3. Ajuste as propriedades.
+Clique em **Adicionar Componente** na parte inferior do Inspetor.
 
-::: info
-A maioria dos componentes tem **gizmo no viewport** quando selecionado —
-colliders desenham o contorno, luzes desenham a direção/alcance, partículas
-mostram o cone de emissão.
+### Undo/redo
+
+Toda edição no Inspetor (valores, cores, componentes) é desfazível com
+**Ctrl+Z** e refazível com **Ctrl+Y**.
+
+::: dica
+Mudou algo e não gostou? **Ctrl+Z** desfaz até mudanças de um arrastar no
+Inspetor — o histórico captura o valor antes da edição começar.
 :::
-
-## Estados de edição
-
-O editor tem dois estados:
-
-- **Edit** — você monta a cena; física/scripts **não** rodam;
-- **Play** — cópia isolada da cena com física, scripts, partículas e áudio
-  rodando de verdade.
-
-Os dois compartilham o mesmo Inspetor: durante o Play você vê o estado
-runtime dos componentes (posições, velocidades, tempos).

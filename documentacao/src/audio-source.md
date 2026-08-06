@@ -1,62 +1,42 @@
 ---
-title: AudioSource
+title: Áudio
 group: Componentes
 order: 9
 ---
 
-# AudioSource
+# Áudio
 
-Emissor de som ligado a uma entidade — usa o **AudioEngine** (miniaudio por
-baixo).
+O **AudioSource** toca sons na cena. Áudio 3D (posicional) é suportado para
+sons de mundo; sons de UI/menu usam one-shot simples.
 
-## AudioSourceComponent
+## Componente AudioSource
 
-| Campo | Descrição |
-|-------|-----------|
-| **ClipPath** | Arquivo de áudio (wav, mp3, ogg, flac…) |
-| **Loop** | Repete ao fim |
-| **PlayOnStart** | Toca ao entrar no Play |
-| **Spatial** | `true` = atenua por distância + panorâmica 3D; `false` = volume fixo (música/UI) |
-| **Volume** | Volume do source (0..1) |
-| **MinDistance / MaxDistance** | Faixa de atenuação espacial |
+- **Clip** — arquivo de áudio (`.wav`, `.ogg`, `.mp3`)
+- **Volume**
+- **Espacializado** — o som diminui com a distância da câmera (3D)
 
-## Como usar
-
-1. Adicione o componente à entidade;
-2. Escolha o `ClipPath` (relativo ao projeto);
-3. No Play, o som toca (se `PlayOnStart`) e é **posicional** — mais perto da
-   câmera = mais alto.
-
-## Em C#
+## Do script
 
 ```csharp
-Entity.AddAudio("Assets/Sounds/passo.wav", loop: true, playOnStart: true);
+// tocar/parar um AudioSource na entidade
 Entity.PlayAudio();
 Entity.StopAudio();
+
+// um som avulso (sem entidade)
+Audio.PlayOneShot("Assets/sons/coin.wav");
+Audio.PlayOneShotAt("Assets/sons/explosao.wav", 0.6f, x, y, z);
+
+// parar tudo (troca de cena, por exemplo)
+Audio.StopAll();
 ```
 
-## Sons avulsos (sem entidade)
+## Dicas
 
-Para SFX desamarrados de uma posição:
+- **PlayOneShotAt** usa um pool seguro de sons posicionais — pode chamar
+  quantas vezes quiser.
+- Sons se posicionam em relação à **câmera principal**.
+- Para música, use um AudioSource com loop.
 
-```csharp
-Audio.PlayOneShot("Assets/Sounds/tiro.wav");               // avulso
-Audio.PlayOneShot("Assets/Sounds/tiro.wav", volume: 0.8f);
-
-// POSICIONAL 3D — toca no ponto do mundo, atenua pela distância
-// ao ouvinte (câmera). Perfeito para impactos, passos, tiros.
-Audio.PlayOneShotAt("Assets/Sounds/impacto.wav", 1f, position);
-
-Audio.StopAll();                     // para tudo (troca de cena)
-Audio.SetMasterVolume(0.5f);         // volume mestre global
-```
-
-::: warn
-**Só toca no Play.** Fontes de áudio (como física e partículas) só são
-processadas durante o **Play** / jogo exportado.
+::: nota
+A engine usa **miniaudio** — carrega formatos comuns sem dependência externa.
 :::
-
-## O ouvinte
-
-O ouvinte é a **câmera primária** da cena. Movendo a câmera, o som espacial
-acompanha.

@@ -1,52 +1,61 @@
 ---
-title: Viewport e câmera
+title: Viewport
 group: Editor
-order: 2
+order: 3
 ---
 
-# Viewport e câmera
+# Viewport
 
-O **Viewport** é a pré-visualização em tempo real da cena. Ele tem dois modos
-de navegação do editor (independentes da câmera do jogo).
+O painel **Viewport** é onde você vê e edita a cena.
 
-## Modos 2D e 3D
+## Navegação 3D
 
-- **3D** — navegação orbital: **botão direito arrastando** gira a câmera de
-  edição; a roda do mouse aproxima/afasta.
-- **2D** — arraste com **botão direito** para pan e use a **roda** para zoom.
-  A câmera de edição é ortográfica, alinhada ao plano XY.
+| Ação | Controle |
+|---|---|
+| Olhar ao redor | Botão direito + mover o mouse |
+| Mover | Botão direito + **WASD** |
+| Subir / descer | Botão direito + **Q / E** |
+| Acelerar | Segurar **Shift** enquanto move |
+| Foco | Selecione na Hierarquia e use o gizmo |
 
-Alternne pela toolbar do viewport ou pelo menu **Exibir**.
+## Navegação 2D
 
-## Câmera do jogo
-
-No **Play** (e no jogo exportado), quem renderiza é a **câmera da própria
-cena** — não a câmera de navegação do editor. O que você vê no Play é o que
-sai no build.
-
-Veja o componente [Câmera](camera.html) para configurar perspectiva vs.
-ortográfica, FOV, near/far e qual câmera é a primária.
-
-## Fullscreen
-
-<kbd>F11</kbd> (ou o ícone da toolbar) maximiza o viewport para a janela
-inteira — útil para testar a cena "de verdade".
-
-## Picking
-
-- **Clique esquerdo** em um objeto seleciona a entidade.
-- Em 3D, a seleção usa **raycast** contra as meshes (mesh picking).
-- Em 2D, a seleção usa o ponto de clique sobre os sprites.
+- **Botão direito + arrastar** move a câmera (pan)
+- **Scroll** dá zoom
+- O zoom centraliza no ponteiro do mouse
 
 ## Gizmos
 
-Com uma entidade selecionada, aparecem os gizmos:
+Com uma entidade selecionada, use as teclas:
 
-| Tecla | Gizmo | Ação |
-|-------|-------|------|
-| <kbd>W</kbd> | Mover | Arraste as setas dos eixos |
-| <kbd>E</kbd> | Rotacionar | Arraste os anéis |
-| <kbd>R</kbd> | Escalar | Arraste as alças |
+- **W** — mover (setas de translação)
+- **E** — rotacionar (esferas)
+- **R** — escalar (cubos)
 
-Luzes e colliders também têm gizmos próprios (posição/direção da luz, e o
-contorno do colisor na entidade selecionada).
+Segure **Ctrl** durante o arrasto para **snap** (incrementos de 0,5 unidade,
+15° de rotação — configuráveis em Project Settings → Editor).
+
+## Modo 2D / 3D
+
+A barra de ferramentas do viewport alterna entre os modos:
+
+- **2D** — câmera ortográfica, ideal para sprites, tilemaps e UI
+- **3D** — câmera em perspectiva, para meshes e luzes
+
+O editor muda automaticamente o modo conforme o componente selecionado
+(malha 3D → 3D; sprite → 2D).
+
+## Fullscreen
+
+- Botão de ícone na toolbar ou **F11** esconde os painéis laterais e o
+  viewport ocupa a janela inteira — bom para jogar/testar.
+
+## Seleção
+
+- Clique em um objeto no viewport para selecionar (raio contra as malhas).
+- Selecione na **Hierarquia** e pressione **F** (ou use o gizmo) para focar.
+
+::: nota
+O viewport mostra a cena **de edição**; o **Game View** mostra a cena do
+jogo durante o Play.
+:::

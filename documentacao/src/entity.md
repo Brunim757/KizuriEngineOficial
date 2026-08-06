@@ -1,140 +1,81 @@
 ---
-title: Entity — referência
+title: Entity (API)
 group: Scripting C#
-order: 3
+order: 2
 ---
 
-# Entity — referência
+# Entity — API
 
-`Entity` representa uma entidade da cena. Tudo que você faz com ela passa
-pela API — sem expor detalhes internos.
+A **Entity** é qualquer objeto da cena: personagem, inimigo, câmera, luz,
+UI. No script, `Entity` é a entidade que tem o script anexado.
 
 ## Propriedades
 
-| Membro | Tipo | Descrição |
-|--------|------|-----------|
-| `Entity.Invalid` | `Entity` | Handle inválido (não existe) |
-| `IsValid` | `bool` | `Handle != 0` |
-| `Id` | `uint` | Identificador numérico |
-| `Name` | `string` | Nome (Tag) — **leitura e renomeio em runtime** |
-
 ```csharp
-Entity e = Scene.CreateEntity("Jogador");
-e.Name = "Herói";
-Log.Info($"Id={e.Id}, nome={e.Name}, válida={e.IsValid}");
+Entity.Name;                    // nome (get/set)
+Entity.Position;                // Vector3
+Entity.GetEulerAngles();        // rotação em graus (Vector3)
+Entity.Scale;                   // Vector3
+Entity.TryGetWorldPosition();   // posição de mundo (respeita o pai)
 ```
-
-## Checagem de componentes
-
-| Membro | Retorna |
-|--------|---------|
-| `HasComponent(ComponentType t)` | `bool` — tem o componente? |
-| `HasTransform` / `HasRigidbody2D` / `HasSprite` / `HasText` / `HasAudio` / `HasCamera` | atalhos |
 
 ## Transform
 
-| Método | Descrição |
-|--------|-----------|
-| `TryGetTransform(out Transform t)` | Transform local (Translation, Rotation em **rad**, Scale) |
-| `SetPosition(Vector3)` | Posição local |
-| `SetRotation(Vector3)` | Rotação local, euler em radianos |
-| `SetScale(Vector3)` | Escala local |
-| `TryGetWorldPosition(out Vector3)` | **Posição mundial** (respeita hierarquia) |
-| `LookAt(Vector3 target)` | Faz a entidade encarar um ponto |
-| `SetParent(Entity)` / `SetParent()` | Parenta / destaca |
-
-## Ciclo de vida e hierarquia
-
-| Método | Descrição |
-|--------|-----------|
-| `Destroy()` | Destrói a entidade |
-| `SetParent(Entity parent)` | Parenta a `parent` |
-| `SetParent()` | Destaca da hierarquia |
-
-## Adicionar componentes em runtime
-
-| Método | Descrição |
-|--------|-----------|
-| `AddSprite(string? texture = null)` | Sprite 2D (sem textura = cor sólida) |
-| `AddText(string text, float size = 48)` | Texto 2D |
-| `AddAudio(string clip, bool loop, bool playOnStart)` | Áudio posicional |
-| `AddCamera(bool perspective3D = false)` | Câmera |
-| `AddLight(LightType, …)` | Luz (Direcional/Ponto/Spot) |
-| `AddMeshRenderer(string meshSource)` | Mesh 3D |
-| `AddAnimator(string meshPath)` | Animação esquelética |
-| `AddRigidbody3D(BodyType3D, float mass)` | Corpo 3D |
-| `AddBoxCollider3D(hx, hy, hz)` | Collider de caixa 3D |
-| `AddSphereCollider3D(radius)` | Collider de esfera 3D |
-| `AddCircleCollider2D(radius, density, friction, restitution)` | Collider circular 2D |
-| `AddUICanvas(orthoSize)` | Canvas de UI |
-| `AddUIRect(x, y, w, h, r, g, b, a)` | Retângulo de UI |
-| `AddUIButton(x, y, w, h, r, g, b, a)` | Botão de UI |
-| `AddUIText(text, size, r, g, b, a)` | Texto de UI |
-
-## Mutação em runtime
-
-| Método | Descrição |
-|--------|-----------|
-| `SetSpriteTexture(string)` | Troca a textura do sprite |
-| `SetSpriteColor(r, g, b, a)` | Cor do sprite |
-| `SetSpriteFlip(bool flipX, bool flipY)` | Inverte o sprite |
-| `SetText(string)` / `SetTextSize(float)` / `SetTextColor(r, g, b, a)` | Texto |
-| `SetMaterial(r, g, b, metallic, roughness)` | Material PBR |
-| `SetMaterialAlbedoMap(path)` / `SetMaterialNormalMap(path)` / `SetMaterialMetallicRoughnessMap(path)` | Mapas |
-| `SetMaterialEmissive(r, g, b, strength)` | Emissão (bloom) |
-| `SetLightColor(r, g, b)` / `SetLightIntensity(float)` | Luz |
-| `SetGravityScale(float)` | Gravidade do corpo 2D |
-| `SetSortingLayer(int)` | Ordenação 2D |
-| `PlayAudio()` / `StopAudio()` | Áudio do source |
-| `SetCamera(fovDeg, near, far)` | Parâmetros de câmera |
-| `SetParticleTexture(string)` | Textura das partículas |
-| `UIButtonWasClicked()` / `UIButtonIsHovered()` | Estado do botão |
-| `SetUIRect(x, y, w, h)` / `SetUIColor(r, g, b, a)` | UI |
-
-## Animação esquelética
-
-| Método | Descrição |
-|--------|-----------|
-| `PlayAnimation(string clipName)` | Toca um clip da skin (retorna `true` se achou) |
-| `AnimationTime` / `SetAnimationTime(float)` | Posição (segundos) |
-| `SetAnimationSpeed(float)` | Velocidade |
-| `SetAnimationLoop(bool)` | Loop |
-| `SetAnimationPlaying(bool)` | Toca/pausa |
-
-## Física 3D
-
-| Método | Descrição |
-|--------|-----------|
-| `ApplyForce(Vector3)` | Força contínua |
-| `ApplyImpulse(Vector3)` | Impulso instantâneo |
-| `ApplyTorque(Vector3)` | Torque |
-| `SetVelocity(Vector3)` / `TryGetVelocity(out Vector3)` | Velocidade linear |
-| `SetAngularVelocity(Vector3)` / `TryGetAngularVelocity(out Vector3)` | Velocidade angular |
-
-## Enums
-
 ```csharp
-enum ComponentType { Transform, Rigidbody2D, Sprite, Text, Audio, Camera,
-                     Light, UIRect, UIButton, UICanvas, CircleCollider2D,
-                     MeshRenderer, ParticleSystem, Animator, Rigidbody3D,
-                     BoxCollider3D, SphereCollider3D }
-
-enum BodyType3D    { Static = 0, Dynamic, Kinematic }
-enum LightType     { Directional = 0, Point, Spot }
+Entity.Move(x, y, z);                  // translada (espaço local)
+Entity.SetPosition(x, y, z);
+Entity.Rotate(0f, 45f, 0f);
+Entity.SetEulerAngles(x, y, z);
+Entity.SetScale(x, y, z);
+Entity.LookAt(outro);
 ```
 
-## Estrutura Transform
+## Criar conteúdo
 
 ```csharp
-public struct Transform
-{
-    public Vector3 Translation;
-    public Vector3 Rotation; // euler, radianos
-    public Vector3 Scale;
-}
+Entity.AddSprite("Assets/imgs/heroi.png");
+Entity.AddText("Olá!", 24f, 1f, 1f, 1f);
+Entity.AddAudio("Assets/sons/pulo.wav");
+Entity.AddCamera();
+Entity.AddLight(LightType.Directional, r, g, b, intensidade);
+Entity.AddMeshRenderer("builtin:cube");
+Entity.AddAnimator("Assets/Models/Fox.glb");
 ```
 
-::: info
-**Rotação em radianos.** A API C# usa sempre radianos (o Inspetor mostra em
-graus). Converta com `graus * MathF.PI / 180f`.
-:::
+## Física
+
+```csharp
+Entity.AddRigidbody2D();
+Entity.AddBoxCollider2D();
+Entity.AddCircleCollider2D();
+Entity.AddRigidbody3D();
+Entity.AddBoxCollider3D();
+Entity.AddSphereCollider3D();
+Entity.SetLinearVelocity(x, y);          // 2D
+Entity.ApplyForce(x, y, z);              // 3D
+Entity.ApplyImpulse(x, y, z);
+Entity.TryGetVelocity(out vx, out vy, out vz);
+Entity.SetVelocity(vx, vy, vz);
+```
+
+## Material e luz
+
+```csharp
+Entity.SetMaterial(r, g, b, metallic, roughness);
+Entity.SetMaterialAlbedoMap(path);
+Entity.SetMaterialNormalMap(path);
+Entity.SetMaterialHeightMap(path);       // POM
+Entity.SetMaterialEmissive(r, g, b, strength);
+Entity.SetLightColor(r, g, b);
+Entity.SetLightIntensity(x);
+```
+
+## Duplicar e instanciar
+
+```csharp
+Entity.Duplicate();
+Scene.InstantiatePrefab("Assets/Prefabs/inimigo.kzprefab", x, y, z);
+```
+
+Veja também [Scene](scene.html), [Física API](fisica-api.html) e
+[UI API](ui-api.html).

@@ -1,67 +1,42 @@
 ---
-title: MeshRenderer e materiais
+title: Malhas 3D
 group: Componentes
-order: 5
+order: 3
 ---
 
-# MeshRenderer e materiais
+# Malhas 3D
 
-Desenha uma **mesh 3D** com um **material PBR**.
+O componente **MeshRenderer** desenha uma malha 3D com um material PBR.
 
-## MeshRendererComponent
+## Malhas prontas
 
-| Campo | Descrição |
-|-------|-----------|
-| **MeshSource** | `builtin:cube\|plane\|…` ou caminho de `.obj` / `.glb` / `.gltf` |
-| **Material** | Cor base, metálico, rugosidade, emissão e mapas de textura |
+No Inspetor, o campo **MeshSource** aceita:
 
-## Meshes builtin
+- `builtin:cube`, `builtin:plane`, `builtin:sphere`
+- `builtin:cylinder`, `builtin:cone`, `builtin:capsule`, `builtin:torus`
+- um arquivo `.obj`, `.glb` ou `.gltf` do seu projeto
 
-Todas geradas em código — funcionam sem nenhum arquivo:
+## Material
 
-```
-builtin:cube · builtin:plane · builtin:sphere · builtin:cylinder
-builtin:cone · builtin:capsule · builtin:torus
-```
+O material PBR controla:
 
-## Importando modelos
+- **Albedo** — cor base (e textura)
+- **Metallic** — 0 = plástico, 1 = metal
+- **Roughness** — 0 = polido, 1 = áspero
+- **AO** — oclusão ambiente local
+- **Emissive** — brilho próprio (alimenta o bloom)
+- **Mapas** — albedo, normais, metallic/roughness, emissivo e **altura (POM)**
+- **Reflexão planar** — transforma a superfície em espelho
 
-- **`.obj`** — geometria + material serializável;
-- **`.glb` / `.gltf`** — geometria, **animações esqueléticas**, e o material
-  PBR **extraído automaticamente** (fatores + texturas embutidas no arquivo).
-
-Para modelos animados, veja [Animação esquelética](animacao-3d.html).
-
-## Material PBR
-
-| Campo | Descrição |
-|-------|-----------|
-| **Albedo** | Cor base |
-| **Metallic** | 0 = dielétrico, 1 = metal |
-| **Roughness** | 0 = espelhado, 1 = rugoso |
-| **AO** | Oclusão ambiente (afeta só o IBL) |
-| **Emissive / EmissiveStrength** | Emissão (alimenta o **bloom**) |
-| **AlbedoMap** | Textura de cor |
-| **NormalMap** | Normal mapping (tangent-space, sem tangentes na mesh) |
-| **MetallicRoughnessMap** | Canal **G = rugosidade**, **B = metálico** (convenção glTF) |
-| **EmissiveMap** | Textura emissiva |
-
-```csharp
-Entity.AddMeshRenderer("builtin:torus");
-Entity.SetMaterial(0.75f, 0.55f, 0.2f, metallic: 1f, roughness: 0.25f);
-Entity.SetMaterialAlbedoMap("Assets/Textures/metal.png");
-Entity.SetMaterialEmissive(0.1f, 0.6f, 1f, strength: 6f); // brilha no bloom
-```
-
-## No editor
-
-Arraste um `.obj`/`.glb` do [Content Browser](content-browser.html) para o
-viewport — a entidade nasce com a mesh e o material já extraídos. Use os
-campos do Inspetor para afinar o material, e o material PBR atualiza no
-viewport em tempo real.
-
-::: ok
-**Texturas nunca se perdem.** O material extraído de um `.glb` guarda os
-caminhos serializáveis — ao reabrir a cena, os mapas são reextraídos do
-arquivo fonte automaticamente.
+::: dica
+Ao arrastar um `.glb` para o viewport, a engine importa a malha **e** o
+material PBR (fatores + texturas) automaticamente.
 :::
+
+## POM — relevo de superfície
+
+Com um **mapa de altura**, a superfície ganha relevo real que acompanha o
+ângulo da câmera (parallax occlusion mapping) — paredes de pedra, tijolos,
+chão com desnível.
+
+Veja mais em [Iluminação](iluminacao.html) e [Reflexos](reflexos.html).

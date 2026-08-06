@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AudioSource — Kizuri Engine</title>
+<title>Áudio — Kizuri Engine</title>
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -11,108 +11,113 @@
 <aside>
   <div class="brand">
     <div class="logo">K</div>
-    <div><b>Kizuri Engine</b><small>Documentação</small></div>
+    <div><b>Kizuri Engine</b><small>Documentação · v0.26</small></div>
   </div>
   <div class="search"><input id="filter" type="text" placeholder="Filtrar páginas…"></div>
   <nav id="toc">
 <div class="group">Introdução</div>
-<a href="index.html" class="">Visão geral</a>
+<a href="index.html" class="">Bem-vindo</a>
 <a href="instalacao.html" class="">Instalação</a>
 <a href="primeiro-projeto.html" class="">Seu primeiro projeto</a>
-<div class="group">Conceitos</div>
-<a href="projeto.html" class="">Projetos, cenas e prefabs</a>
-<a href="hierarquia.html" class="">Hierarquia e transform</a>
-<a href="recursos-embutidos.html" class="">Assets padrão</a>
+<a href="projeto.html" class="">Gerenciamento de projetos</a>
 <div class="group">Editor</div>
 <a href="interface.html" class="">Interface do editor</a>
-<a href="viewport.html" class="">Viewport e câmera</a>
-<a href="hierarquia-inspetor.html" class="">Hierarquia e Inspetor</a>
+<a href="paineis.html" class="">Painéis do editor</a>
+<a href="viewport.html" class="">Viewport</a>
 <a href="content-browser.html" class="">Content Browser</a>
-<a href="configuracoes.html" class="">Configurações</a>
+<a href="project-settings.html" class="">Project Settings</a>
+<a href="hierarquia-inspetor.html" class="">Hierarquia e Inspetor</a>
 <a href="atalhos.html" class="">Atalhos de teclado</a>
+<a href="configuracoes.html" class="">Configurações</a>
 <div class="group">Componentes</div>
 <a href="transform.html" class="">Transform</a>
-<a href="sprites-2d.html" class="">Sprites, círculos e texto 2D</a>
-<a href="animacao-2d.html" class="">Animação de sprite 2D</a>
-<a href="tilemap.html" class="">Tilemap</a>
-<a href="meshes-3d.html" class="">MeshRenderer e materiais</a>
+<a href="camera.html" class="">Câmera</a>
+<a href="meshes-3d.html" class="">Malhas 3D</a>
+<a href="sprites-2d.html" class="">Sprites 2D</a>
 <a href="luzes.html" class="">Luzes</a>
 <a href="particulas.html" class="">Partículas</a>
-<a href="animacao-3d.html" class="">Animação esquelética</a>
-<a href="audio-source.html" class="active">AudioSource</a>
-<a href="camera.html" class="">Câmera</a>
-<a href="fisica-2d.html" class="">Física 2D (Box2D)</a>
-<a href="fisica-3d.html" class="">Física 3D (Bullet3)</a>
-<a href="ui.html" class="">UI (Canvas/Rect/Button/Text)</a>
-<div class="group">Renderização</div>
-<a href="pipeline-3d.html" class="">Pipeline 3D</a>
-<a href="pipeline-2d.html" class="">Pipeline 2D</a>
-<a href="qualidade.html" class="">Qualidade gráfica</a>
+<a href="fisica-2d.html" class="">Física 2D</a>
+<a href="fisica-3d.html" class="">Física 3D</a>
+<a href="audio-source.html" class="active">Áudio</a>
+<a href="ui.html" class="">Interface (UI)</a>
+<a href="tilemap.html" class="">Tilemap</a>
+<a href="animacao-2d.html" class="">Animação 2D</a>
+<a href="animacao-3d.html" class="">Animação 3D</a>
 <div class="group">Scripting C#</div>
-<a href="scripting.html" class="">Introdução ao C#</a>
-<a href="script.html" class="">Classe Script e corrotinas</a>
-<a href="entity.html" class="">Entity — referência</a>
-<a href="scene.html" class="">Scene — referência</a>
-<a href="input.html" class="">Input</a>
-<a href="time.html" class="">Time</a>
-<a href="mathf.html" class="">Mathf</a>
-<a href="vectors.html" class="">Vetores (Vector2/3/4)</a>
-<a href="audio-api.html" class="">Audio (API)</a>
+<a href="scripting.html" class="">Scripting C#</a>
+<a href="entity.html" class="">Entity (API)</a>
+<a href="scene.html" class="">Scene (API)</a>
+<a href="input.html" class="">Input (API)</a>
+<a href="time.html" class="">Time (API)</a>
+<a href="mathf.html" class="">Mathf, Rand e Vetores</a>
 <a href="save.html" class="">SaveSystem</a>
-<a href="rand-log.html" class="">Rand e Log</a>
-<a href="fisica-api.html" class="">Rigidbody2D e queries</a>
-<a href="exemplos.html" class="">Exemplos completos</a>
+<a href="fisica-api.html" class="">Física (API C#)</a>
+<a href="audio-api.html" class="">Áudio (API C#)</a>
+<a href="ui-api.html" class="">UI (API C#)</a>
+<div class="group">Gráficos</div>
+<a href="qualidade.html" class="">Qualidade e presets</a>
+<a href="reflexos.html" class="">Reflexos</a>
+<a href="iluminacao.html" class="">Iluminação</a>
+<a href="ceu.html" class="">Céu</a>
+<a href="sombras.html" class="">Sombras</a>
+<a href="pos-processamento.html" class="">Pós-processamento</a>
 <div class="group">Distribuição</div>
 <a href="exportacao.html" class="">Exportar o jogo</a>
+<a href="recursos-embutidos.html" class="">Recursos embutidos (kzres://)</a>
 <a href="faq.html" class="">Perguntas frequentes</a>
   </nav>
 </aside>
+<div class="overlay" id="overlay"></div>
 <main>
 <header class="top">
-  <div class="crumbs"><span class="crumb">Componentes</span><span class="sep">/</span><span>AudioSource</span></div>
+  <button class="burger" id="burger" aria-label="Menu">☰</button>
+  <div class="crumbs"><span class="crumb">Componentes</span><span class="sep">/</span><span>Áudio</span></div>
   <div class="toggles">
     <a href="busca.html" class="btn">🔎 Buscar</a>
+    <button class="btn" id="themeToggle" title="Alternar tema">☀️</button>
+    <button class="btn" id="printBtn" title="Imprimir">🖨️</button>
     <a href="index.html" class="btn">Início</a>
   </div>
 </header>
+<nav class="toc"><div class="toc-title">Nesta página</div><a href="#componente-audiosource" class="t2">Componente AudioSource</a><a href="#do-script" class="t2">Do script</a><a href="#dicas" class="t2">Dicas</a></nav>
 <article>
-<h1 id="audiosource">AudioSource</h1>
-<p>Emissor de som ligado a uma entidade — usa o <strong>AudioEngine</strong> (miniaudio por baixo).</p>
-<h2 id="audiosourcecomponent">AudioSourceComponent</h2>
-<table><thead><tr><th>Campo</th><th>Descrição</th></tr></thead><tbody><tr><td><strong>ClipPath</strong></td><td>Arquivo de áudio (wav, mp3, ogg, flac…)</td></tr><tr><td><strong>Loop</strong></td><td>Repete ao fim</td></tr><tr><td><strong>PlayOnStart</strong></td><td>Toca ao entrar no Play</td></tr><tr><td><strong>Spatial</strong></td><td><code>true</code> = atenua por distância + panorâmica 3D; <code>false</code> = volume fixo (música/UI)</td></tr><tr><td><strong>Volume</strong></td><td>Volume do source (0..1)</td></tr><tr><td><strong>MinDistance / MaxDistance</strong></td><td>Faixa de atenuação espacial</td></tr></tbody></table>
-<h2 id="como-usar">Como usar</h2>
-<ol>
-<li>Adicione o componente à entidade;</li>
-<li>Escolha o <code>ClipPath</code> (relativo ao projeto);</li>
-<li>No Play, o som toca (se <code>PlayOnStart</code>) e é <strong>posicional</strong> — mais perto da</li>
-</ol>
-<p>   câmera = mais alto.</p>
-<h2 id="em-c">Em C#</h2>
-<pre><code class="language-csharp">Entity.AddAudio("Assets/Sounds/passo.wav", loop: true, playOnStart: true);
+<h1 id="udio">Áudio</h1>
+<p>O <strong>AudioSource</strong> toca sons na cena. Áudio 3D (posicional) é suportado para sons de mundo; sons de UI/menu usam one-shot simples.</p>
+<h2 id="componente-audiosource">Componente AudioSource</h2>
+<ul>
+<li><strong>Clip</strong> — arquivo de áudio (<code>.wav</code>, <code>.ogg</code>, <code>.mp3</code>)</li>
+<li><strong>Volume</strong></li>
+<li><strong>Espacializado</strong> — o som diminui com a distância da câmera (3D)</li>
+</ul>
+<h2 id="do-script">Do script</h2>
+<div class="codeblock"><pre><code class="language-csharp">// tocar/parar um AudioSource na entidade
 Entity.PlayAudio();
-Entity.StopAudio();</code></pre>
-<h2 id="sons-avulsos-sem-entidade">Sons avulsos (sem entidade)</h2>
-<p>Para SFX desamarrados de uma posição:</p>
-<pre><code class="language-csharp">Audio.PlayOneShot("Assets/Sounds/tiro.wav");               // avulso
-Audio.PlayOneShot("Assets/Sounds/tiro.wav", volume: 0.8f);
+Entity.StopAudio();
 
-// POSICIONAL 3D — toca no ponto do mundo, atenua pela distância
-// ao ouvinte (câmera). Perfeito para impactos, passos, tiros.
-Audio.PlayOneShotAt("Assets/Sounds/impacto.wav", 1f, position);
+// um som avulso (sem entidade)
+Audio.PlayOneShot("Assets/sons/coin.wav");
+Audio.PlayOneShotAt("Assets/sons/explosao.wav", 0.6f, x, y, z);
 
-Audio.StopAll();                     // para tudo (troca de cena)
-Audio.SetMasterVolume(0.5f);         // volume mestre global</code></pre>
-<div class="callout warn"><strong>Só toca no Play.</strong> Fontes de áudio (como física e partículas) só são processadas durante o <strong>Play</strong> / jogo exportado.</div>
-<h2 id="o-ouvinte">O ouvinte</h2>
-<p>O ouvinte é a <strong>câmera primária</strong> da cena. Movendo a câmera, o som espacial acompanha.</p>
+// parar tudo (troca de cena, por exemplo)
+Audio.StopAll();</code></pre><button class="copy" title="Copiar">📋</button></div>
+<h2 id="dicas">Dicas</h2>
+<ul>
+<li><strong>PlayOneShotAt</strong> usa um pool seguro de sons posicionais — pode chamar</li>
+</ul>
+<p>  quantas vezes quiser.</p>
+<ul>
+<li>Sons se posicionam em relação à <strong>câmera principal</strong>.</li>
+<li>Para música, use um AudioSource com loop.</li>
+</ul>
+<div class="callout nota">A engine usa <strong>miniaudio</strong> — carrega formatos comuns sem dependência externa.</div>
 
 </article>
 <div class="pager">
-<a class="navbtn prev" href="animacao-3d.html">← Animação esquelética</a>
-<a class="navbtn next" href="camera.html">Câmera →</a>
+<a class="navbtn prev" href="fisica-3d.html"><small>← Anterior</small><span>Física 3D</span></a>
+<a class="navbtn next" href="ui.html"><small>Próximo →</small><span>Interface (UI)</span></a>
 </div>
 <footer class="footer">
-  © Kizuri Studio. Todos os direitos reservados.
+  © Kizuri Studio · v0.26 · <a href="index.html">Início</a> · <a href="busca.html">Buscar</a>
 </footer>
 </main>
 </div>

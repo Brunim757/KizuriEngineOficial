@@ -11,91 +11,95 @@
 <aside>
   <div class="brand">
     <div class="logo">K</div>
-    <div><b>Kizuri Engine</b><small>Documentação</small></div>
+    <div><b>Kizuri Engine</b><small>Documentação · v0.26</small></div>
   </div>
   <div class="search"><input id="filter" type="text" placeholder="Filtrar páginas…"></div>
   <nav id="toc">
 <div class="group">Introdução</div>
-<a href="index.html" class="">Visão geral</a>
+<a href="index.html" class="">Bem-vindo</a>
 <a href="instalacao.html" class="">Instalação</a>
 <a href="primeiro-projeto.html" class="">Seu primeiro projeto</a>
-<div class="group">Conceitos</div>
-<a href="projeto.html" class="">Projetos, cenas e prefabs</a>
-<a href="hierarquia.html" class="">Hierarquia e transform</a>
-<a href="recursos-embutidos.html" class="">Assets padrão</a>
+<a href="projeto.html" class="">Gerenciamento de projetos</a>
 <div class="group">Editor</div>
 <a href="interface.html" class="">Interface do editor</a>
-<a href="viewport.html" class="">Viewport e câmera</a>
-<a href="hierarquia-inspetor.html" class="">Hierarquia e Inspetor</a>
+<a href="paineis.html" class="">Painéis do editor</a>
+<a href="viewport.html" class="">Viewport</a>
 <a href="content-browser.html" class="">Content Browser</a>
-<a href="configuracoes.html" class="active">Configurações</a>
+<a href="project-settings.html" class="">Project Settings</a>
+<a href="hierarquia-inspetor.html" class="">Hierarquia e Inspetor</a>
 <a href="atalhos.html" class="">Atalhos de teclado</a>
+<a href="configuracoes.html" class="active">Configurações</a>
 <div class="group">Componentes</div>
 <a href="transform.html" class="">Transform</a>
-<a href="sprites-2d.html" class="">Sprites, círculos e texto 2D</a>
-<a href="animacao-2d.html" class="">Animação de sprite 2D</a>
-<a href="tilemap.html" class="">Tilemap</a>
-<a href="meshes-3d.html" class="">MeshRenderer e materiais</a>
+<a href="camera.html" class="">Câmera</a>
+<a href="meshes-3d.html" class="">Malhas 3D</a>
+<a href="sprites-2d.html" class="">Sprites 2D</a>
 <a href="luzes.html" class="">Luzes</a>
 <a href="particulas.html" class="">Partículas</a>
-<a href="animacao-3d.html" class="">Animação esquelética</a>
-<a href="audio-source.html" class="">AudioSource</a>
-<a href="camera.html" class="">Câmera</a>
-<a href="fisica-2d.html" class="">Física 2D (Box2D)</a>
-<a href="fisica-3d.html" class="">Física 3D (Bullet3)</a>
-<a href="ui.html" class="">UI (Canvas/Rect/Button/Text)</a>
-<div class="group">Renderização</div>
-<a href="pipeline-3d.html" class="">Pipeline 3D</a>
-<a href="pipeline-2d.html" class="">Pipeline 2D</a>
-<a href="qualidade.html" class="">Qualidade gráfica</a>
+<a href="fisica-2d.html" class="">Física 2D</a>
+<a href="fisica-3d.html" class="">Física 3D</a>
+<a href="audio-source.html" class="">Áudio</a>
+<a href="ui.html" class="">Interface (UI)</a>
+<a href="tilemap.html" class="">Tilemap</a>
+<a href="animacao-2d.html" class="">Animação 2D</a>
+<a href="animacao-3d.html" class="">Animação 3D</a>
 <div class="group">Scripting C#</div>
-<a href="scripting.html" class="">Introdução ao C#</a>
-<a href="script.html" class="">Classe Script e corrotinas</a>
-<a href="entity.html" class="">Entity — referência</a>
-<a href="scene.html" class="">Scene — referência</a>
-<a href="input.html" class="">Input</a>
-<a href="time.html" class="">Time</a>
-<a href="mathf.html" class="">Mathf</a>
-<a href="vectors.html" class="">Vetores (Vector2/3/4)</a>
-<a href="audio-api.html" class="">Audio (API)</a>
+<a href="scripting.html" class="">Scripting C#</a>
+<a href="entity.html" class="">Entity (API)</a>
+<a href="scene.html" class="">Scene (API)</a>
+<a href="input.html" class="">Input (API)</a>
+<a href="time.html" class="">Time (API)</a>
+<a href="mathf.html" class="">Mathf, Rand e Vetores</a>
 <a href="save.html" class="">SaveSystem</a>
-<a href="rand-log.html" class="">Rand e Log</a>
-<a href="fisica-api.html" class="">Rigidbody2D e queries</a>
-<a href="exemplos.html" class="">Exemplos completos</a>
+<a href="fisica-api.html" class="">Física (API C#)</a>
+<a href="audio-api.html" class="">Áudio (API C#)</a>
+<a href="ui-api.html" class="">UI (API C#)</a>
+<div class="group">Gráficos</div>
+<a href="qualidade.html" class="">Qualidade e presets</a>
+<a href="reflexos.html" class="">Reflexos</a>
+<a href="iluminacao.html" class="">Iluminação</a>
+<a href="ceu.html" class="">Céu</a>
+<a href="sombras.html" class="">Sombras</a>
+<a href="pos-processamento.html" class="">Pós-processamento</a>
 <div class="group">Distribuição</div>
 <a href="exportacao.html" class="">Exportar o jogo</a>
+<a href="recursos-embutidos.html" class="">Recursos embutidos (kzres://)</a>
 <a href="faq.html" class="">Perguntas frequentes</a>
   </nav>
 </aside>
+<div class="overlay" id="overlay"></div>
 <main>
 <header class="top">
+  <button class="burger" id="burger" aria-label="Menu">☰</button>
   <div class="crumbs"><span class="crumb">Editor</span><span class="sep">/</span><span>Configurações</span></div>
   <div class="toggles">
     <a href="busca.html" class="btn">🔎 Buscar</a>
+    <button class="btn" id="themeToggle" title="Alternar tema">☀️</button>
+    <button class="btn" id="printBtn" title="Imprimir">🖨️</button>
     <a href="index.html" class="btn">Início</a>
   </div>
 </header>
+<nav class="toc"><div class="toc-title">Nesta página</div><a href="#grficos" class="t2">Gráficos</a><a href="#geral" class="t2">Geral</a><a href="#editor" class="t2">Editor</a><a href="#persistncia" class="t2">Persistência</a></nav>
 <article>
-<h1 id="configurações">Configurações</h1>
-<p>Abra com <kbd>Ctrl+,</kbd> (ou menu <strong>Exibir → Configurações</strong>). A janela tem três seções em uma sidebar.</p>
-<h2 id="gráficos">Gráficos</h2>
-<p>Todas as opções do pipeline — veja o detalhamento completo em <a href="qualidade.html">Qualidade gráfica</a>. Resumo:</p>
-<table><thead><tr><th>Item</th><th>O que faz</th></tr></thead><tbody><tr><td><strong>Qualidade</strong></td><td>Preset Ultra / High / Medium / Low (ou Custom)</td></tr><tr><td><strong>Resolução interna</strong></td><td>Fração do alvo; <1 renderiza mais barato (upscale)</td></tr><tr><td><strong>MSAA</strong></td><td>0/1/2/4/8 amostras do framebuffer HDR</td></tr><tr><td><strong>Shadow map (CSM)</strong></td><td>512–4096 por cascata</td></tr><tr><td><strong>PCF / PCSS</strong></td><td>Suavização de sombra (raio / largura da penumbra)</td></tr><tr><td><strong>Shadow map pontual</strong></td><td>Resolução do cubemap da luz pontual</td></tr><tr><td><strong>Bloom</strong></td><td>Ligar/desligar, limiar, intensidade, iterações</td></tr><tr><td><strong>Tonemapping</strong></td><td>ACES / Reinhard / Filmic</td></tr><tr><td><strong>SSAO</strong></td><td>Ligar/desligar, amostras, raio</td></tr><tr><td><strong>Exposição</strong></td><td>Multiplicador pré-tonemap (EV)</td></tr><tr><td><strong>VSync</strong></td><td>Sincronização vertical</td></tr><tr><td><strong>Névoa</strong></td><td>Fog exponencial (densidade)</td></tr></tbody></table>
+<h1 id="configuraes">Configurações</h1>
+<p>A janela <strong>Configurações</strong> (menu <strong>Exibir → Configurações...</strong> ou <code>Ctrl+,</code>) reúne os ajustes da engine em seções com sidebar. É a versão completa do painel <a href="project-settings.html">Project Settings</a>.</p>
+<h2 id="grficos">Gráficos</h2>
+<p>Presets (Ultra/High/Medium/Low), resolução interna, MSAA, sombras (CSM/PCSS), SSAO/SSGI, reflexos (SSR), TAA/FXAA, bloom (com anamórfico), DOF, motion blur, god rays, nuvens, lens flare, exposição, tonemapping, saturação/ contraste, vinheta/aberração/grão, névoa e <strong>HDRI do céu</strong>.</p>
 <h2 id="geral">Geral</h2>
-<p>Configurações do projeto e da janela.</p>
+<p>Resolução da janela (aplicar), maximizar/minimizar, <strong>VSync</strong> e informações do OpenGL (fabricante, renderer, versão).</p>
 <h2 id="editor">Editor</h2>
-<p>Preferências de uso do editor.</p>
-<div class="callout info">Os ajustes gráficos são aplicados <strong>em tempo real</strong>, sem reiniciar o editor — mude o preset e veja o viewport reagir na hora.</div>
-<h2 id="salvo-onde">Salvo onde?</h2>
-<p>As configurações gráficas são salvas em <code>settings.json</code> ao lado do executável. Os padrões são escolhidos automaticamente pelo seu hardware, e o arquivo sobrescreve com o que você ajustou.</p>
+<p>Velocidade da câmera livre, sensibilidade do mouse, snapping dos gizmos, demos (2D, 3D e 2.5D) e preferências de Play.</p>
+<h2 id="persistncia">Persistência</h2>
+<p>Os ajustes gráficos ficam salvos em <code>settings.json</code> ao lado do editor e são aplicados ao vivo — sem reiniciar.</p>
+<div class="callout nota">A janela <strong>Configurações</strong> e o painel <strong>Project Settings</strong> editam os mesmos valores — use o que for mais prático.</div>
 
 </article>
 <div class="pager">
-<a class="navbtn prev" href="content-browser.html">← Content Browser</a>
-<a class="navbtn next" href="atalhos.html">Atalhos de teclado →</a>
+<a class="navbtn prev" href="atalhos.html"><small>← Anterior</small><span>Atalhos de teclado</span></a>
+<a class="navbtn next" href="transform.html"><small>Próximo →</small><span>Transform</span></a>
 </div>
 <footer class="footer">
-  © Kizuri Studio. Todos os direitos reservados.
+  © Kizuri Studio · v0.26 · <a href="index.html">Início</a> · <a href="busca.html">Buscar</a>
 </footer>
 </main>
 </div>

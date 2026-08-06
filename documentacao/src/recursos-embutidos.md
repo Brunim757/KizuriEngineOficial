@@ -1,43 +1,44 @@
 ---
-title: Assets padrão
-group: Conceitos
-order: 3
+title: Recursos embutidos (kzres://)
+group: Distribuição
+order: 2
 ---
 
-# Assets padrão
+# Recursos embutidos (kzres://)
 
-O editor **já vem com tudo pronto** para você começar a criar — sem baixar
-nada separado.
+A engine é **self-contained**: os assets que ela usa como padrão ficam
+**dentro do executável**, acessíveis pelo prefixo `kzres://`.
 
-## O que já vem junto
+## Por que existe
 
-- **Modelos 3D** — cubo, plano, esfera, cilindro, cone, cápsula e toro
-  (gerados pelo motor);
-- **Cenas de demonstração** — 2D, 2.5D e 3D (com personagem animado e
-  objetos PBR), prontas no menu **Cena**;
-- **Céu** — HDRI padrão;
-- **Fonte** — a fonte de texto dos HUDs já está incluída;
-- **Textura de partículas** — o efeito de partículas funciona sem textura
-  (usa um brilho suave gerado pelo motor).
+Se o usuário apagar um arquivo ou rodar sem a pasta de conteúdo, **nenhuma
+função padrão quebra**. O céu, as fontes e os modelos de demonstração vêm
+embutidos.
 
-## Caminhos prontos
+## Como usar
 
-Alguns campos de asset aceitam caminhos especiais que **sempre funcionam**:
+```csharp
+// qualquer slot de asset aceita kzres://
+Entity.AddMeshRenderer("kzres://models/Fox.glb");
+Entity.SetMaterialAlbedoMap("kzres://textures/...");
+```
 
-| Caminho | O que é |
-|---------|---------|
-| `builtin:cube` / `builtin:plane` / `builtin:sphere` / … | Malhas geradas pelo motor |
-| `kzres://…` | Asset padrão do editor (ex.: `kzres://models/Fox.glb`) |
+## Prioridade de carregamento
 
-::: ok
-**Nada quebra se você apagar um arquivo.** Os padrões usados pelas funções e
-demonstrações não dependem de arquivos soltos — remova o que quiser que as
-funções continuam funcionando.
-:::
+1. **Embutido** (`kzres://`) — sempre disponível
+2. **Content Pack** (`content/`) — se o arquivo existir ao lado do jogo
+3. **Builtins** — primitivas (`builtin:cube` etc.)
 
-## Seus próprios assets
-
-Seus arquivos (modelos `.obj`/`.glb`, imagens, sons) ficam na pasta do seu
-projeto e são vistos no [Content Browser](content-browser.html). O Content
-Pack da distribuição só **enriquece** as demos com assets extras — nunca é
+Ou seja: o Content Pack **enriquece** se estiver presente, mas nunca é
 obrigatório.
+
+## O que já vem embutido
+
+- Modelos de demonstração (Fox animado, DamagedHelmet PBR, cubo)
+- Céu `kzres://skies/sky_gradient.hdr`
+- Fontes da UI (JetBrains Mono)
+
+::: dica
+Recursos embutidos são uma **garantia de funcionamento**. Para assets do
+SEU jogo, use os arquivos normais do projeto — o export inclui tudo.
+:::

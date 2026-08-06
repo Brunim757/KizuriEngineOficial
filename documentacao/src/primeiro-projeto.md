@@ -6,84 +6,57 @@ order: 3
 
 # Seu primeiro projeto
 
-Este guia leva do zero a um jogo rodando com física e script C#, em ~10
-minutos.
+Em ~10 minutos você terá um jogo 3D rodando com física e um script C#.
 
 ## 1. Crie o projeto
 
-1. Abra o **KizuriEditor**.
-2. **Novo Projeto**, dê um nome e escolha o modo:
-   - **2D** — cena já nasce com câmera ortográfica, chão com física e uma
-     caixa que cai;
-   - **3D** — câmera de perspectiva, cubo de exemplo e sol direcional;
-   - **Vazio** — só uma câmera.
+No Hub do editor, escolha **Novo Projeto**, dê um nome (ex.: `MeuJogo`) e
+selecione o modo **3D**. O editor monta a estrutura de pastas e uma cena vazia.
 
-## 2. Teste com Play
+## 2. Adicione um chão e um cubo
 
-Aperte **F5** (ou o botão ▶ da toolbar). A caixa do projeto 2D **cai de
-verdade** (Box2D). **Shift+F5** para voltar à edição.
+1. No painel **Hierarquia**, abra o menu **+** e adicione **Cubo 3D**.
+2. No **Inspetor**, em Transform, posicione o cubo em `Y = 0.5`.
+3. Adicione um **Plano 3D** (serve de chão) na posição `(0, 0, 0)`.
+4. Adicione uma **Luz Direcional** (o sol) e uma **Câmera 3D** (posicione em `(0, 2, 5)` olhando para o cubo).
 
-::: info
-O **Play** roda uma cópia isolada da cena — a edição nunca é tocada. Física,
-scripts, partículas e áudio só funcionam durante o Play.
+::: dica
+O viewport 3D navega com **botão direito + WASD**. Selecione a câmera e use
+os **gizmos** (teclas W/E/R) para posicionar.
 :::
 
-## 3. Adicione coisas ao viewport
+## 3. Dê física ao cubo
 
-- Selecione a entidade **Chão** na Hierarquia.
-- Use o **Inspetor** para mudar cor, tamanho e física.
-- Crie entidades: botão direito na Hierarquia (ou menu Editar).
-- Adicione componentes pelos botões **Adicionar** do Inspetor.
+No **Inspetor** do cubo, clique em **Adicionar Componente → Rigidbody 3D** e
+depois **Colisor Box 3D**. Agora aperte **Play** (F5): o cubo cai no chão e
+para. Aperte **Stop** (Shift+F5).
 
-## 4. Escreva um script C#
+## 4. Escreva um script
 
-Crie um projeto C# que referencia `Kizuri.Scripting`:
+1. No painel **Content Browser**, clique com o botão direito na pasta `Assets` → **Novo Script C#** e nomeie `Girar`.
+2. Abra o arquivo (o editor cria o esqueleto) e cole:
 
 ```csharp
 using Kizuri;
-using Kizuri.Math;
 
-public sealed class MeuJogador : Script
+public class Girar : KizuriScript
 {
-    public override void OnCreate() { }
-
-    public override void OnUpdate(float deltaSeconds)
+    public override void OnUpdate()
     {
-        if (Input.IsKeyPressed(Key.A)) Entity.SetPosition(new Vector3(-1f, 0f, 0f));
-        if (Input.IsKeyPressed(Key.D)) Entity.SetPosition(new Vector3( 1f, 0f, 0f));
-    }
-
-    public override void OnCollisionBegin(Entity other) { }
-    public override void OnCollisionEnd(Entity other) { }
-    public override void OnDestroy() { }
-}
-
-public static class MeuGameModule
-{
-    [Kizuri.GameEntryPoint]
-    public static void RegisterAll()
-    {
-        Kizuri.GameModule.Register<MeuJogador>("MeuJogador");
+        // Rotaciona a entidade 90 graus por segundo
+        var euler = Entity.GetEulerAngles();
+        Entity.SetEulerAngles(euler.X, euler.Y + 90f * Time.deltaTime, euler.Z);
     }
 }
 ```
 
-## 5. Carregue o GameModule
+3. Selecione o cubo e, no Inspetor, **Adicionar Componente → Script C# → Girar**.
+4. Aperte **Play**: o cubo cai e gira.
 
-1. Compile o projeto (a DLL é o que o editor carrega).
-2. No editor: **Arquivo → Carregar GameModule…** e escolha a DLL.
-3. Selecione a entidade do jogador no Inspetor e adicione o componente de
-   script **MeuJogador**.
-4. Aperte **Play** — o editor **recompila e recarrega o C# automaticamente**
-   (se compilar com erro, o Play é abortado e o erro aparece no Console).
+## 5. Exporte o jogo
 
-## 6. Exporte
+Menu **Arquivo → Exportar Jogo...**, escolha a pasta e pronto — um executável
+standalone com seu jogo.
 
-**Arquivo → Exportar Jogo…** gera um executável standalone com a cena inicial
-e o assembly. Veja [Exportar o jogo](exportacao.html).
-
-## Próximos passos
-
-- Conheça os [painéis do editor](interface.html).
-- Aprenda cada [componente](transform.html).
-- A referência completa da [API C#](scripting.html).
+Continue na seção [Editor](interface.html) para conhecer cada painel, ou
+[Transform](transform.html) para os componentes de cena.

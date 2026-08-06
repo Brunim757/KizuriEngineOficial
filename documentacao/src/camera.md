@@ -1,57 +1,36 @@
 ---
 title: Câmera
 group: Componentes
-order: 10
+order: 2
 ---
 
 # Câmera
 
-Define **o que** e **como** a cena é renderizada. Uma cena pode ter várias
-câmeras; a marcada como **Primary** é a que renderiza.
+A **câmera** define o que o jogador vê. Um jogo pode ter várias, mas a que
+tiver **Principal** marcado é a usada pelo **Game View** no Play.
 
-## CameraComponent
+## Tipos
 
-| Campo | Descrição |
-|-------|-----------|
-| **Type** | `Orthographic2D` ou `Perspective3D` |
-| **OrthoSize** | Meia-altura da projeção ortográfica (unidades de mundo) |
-| **PerspectiveFOV** | Campo de visão vertical (graus) |
-| **NearClip / FarClip** | Plano próximo / distante |
-| **Primary** | É a câmera que renderiza? |
-| **FixedAspectRatio** | Trava a razão de aspecto |
+- **2D (Ortográfica)** — sem perspectiva, ideal para sprites e UI
+- **3D (Perspectiva)** — profundidade real, FOV ajustável
 
-## Modos
+## Propriedades
 
-- **Orthographic2D** — para jogos 2D / HUD. O tamanho do mundo visto depende
-  do `OrthoSize` e da resolução da janela (a largura se ajusta pelo aspecto).
-- **Perspective3D** — para jogos 3D. `FOV` maior = visão mais aberta.
+- **Primary** — se é a câmera principal (usada no Play)
+- **FOV** (3D) — campo de visão (45° é o padrão)
+- **Near / Far** — planos de recorte (o que fica entre eles é renderizado)
+- **OrthoSize** (2D) — quanto do mundo aparece na tela
 
-## Câmera primária
+## Dicas
 
-- Se **nenhuma** câmera está marcada como primary, a primeira da cena é usada;
-- A **primeira câmera** com primary decide o passe: se for ortográfica, o
-  passe 2D roda; se perspectiva, o passe 3D roda. Cenas **2.5D** têm as duas
-  (3D de fundo + 2D na frente + UI por cima).
+- **Câmera do editor** é independente das câmeras da cena — você pode voar
+  pelo viewport sem mexer no jogo.
+- Uma cena **2.5D** usa uma câmera perspectiva (fundo 3D) + uma câmera
+  ortográfica **Principal** para a camada 2D — a engine compõe 3D → 2D → UI
+  automaticamente.
+- No código, veja a [API de câmera](entity.html) (FOV, clipes e posição).
 
-## No editor vs. no Play
-
-| Estado | Quem renderiza |
-|--------|----------------|
-| Edição | A **câmera de navegação** do editor (livre) |
-| **Play / exportado** | A **câmera da própria cena** |
-
-::: info
-**O Play é o que o jogo será.** Configure a câmera da cena — a posição da
-câmera de edição não afeta o jogo.
+::: nota
+Sem câmera principal, o **Play** não renderiza nada no 3D. Se a tela ficar
+vazia, adicione uma câmera e marque **Primary**.
 :::
-
-## Em C#
-
-```csharp
-var cam = Scene.CreateEntity("Câmera");
-cam.AddCamera(perspective3D: true);
-cam.SetCamera(fovDeg: 55f, nearClip: 0.01f, farClip: 1000f);
-cam.SetPosition(new Vector3(0f, 2f, 6f));
-
-var principal = Scene.GetPrimaryCamera(); // pega a câmera primária
-```

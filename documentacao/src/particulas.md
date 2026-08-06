@@ -1,54 +1,37 @@
 ---
 title: Partículas
 group: Componentes
-order: 7
+order: 6
 ---
 
 # Partículas
 
-Emissor de partículas **GPU-instanced** com billboarding. Fogo, faíscas,
-magia, fumaça — tudo com o mesmo componente.
+O **ParticleSystem** cria partículas (fumaça, faíscas, poeira, fogo...) com
+um único draw call instanciado.
 
-## ParticleSystemComponent
+## Como usar
 
-| Campo | Descrição |
-|-------|-----------|
-| **Playing** | Emissor ligado? |
-| **Additive** | `true` = aditivo (fogo/faísca/magia); `false` = alpha normal (fumaça) |
-| **EmissionRate** | Partículas por segundo |
-| **MaxParticles** | Teto de partículas vivas |
-| **LifetimeMin / LifetimeMax** | Vida das partículas (aleatória no intervalo) |
-| **VelocityMin / VelocityMax** | Velocidade inicial (aleatória no intervalo) |
-| **Gravity** | Aceleração aplicada às partículas |
-| **StartColor / EndColor** | Cor interpolada ao longo da vida |
-| **StartSize / EndSize** | Tamanho interpolado |
-| **TexturePath** | Textura opcional (vazia = **degradê radial procedural**) |
+1. Adicione **Partículas** à entidade.
+2. Ajuste o comportamento no Inspetor.
+3. No script, use `Spawn` para emitir (ou deixe a emissão contínua).
 
-## Exemplos de receitas
+## O que dá para controlar
 
-| Efeito | Configuração |
-|--------|--------------|
-| **Fogo** | Additive on, cor 1.0,0.65,0.15 → 1.0,0.15,0.02, gravidade −2 |
-| **Fumaça** | Additive off, cinza claro, tamanho crescendo |
-| **Faíscas** | Additive on, amarelo, gravidade −9 |
-| **Magia** | Additive on, StartColor azul/ciano, EndColor transparente |
+- **Posição/velocidade** inicial (e aceleração)
+- **Vida útil** de cada partícula
+- **Tamanho** (inicial → final) e **cor** (inicial → final)
+- **Textura** (opcional; sem textura = quad colorido)
+- **Additive** — partículas aditivas (fogo/brilho) ou normais (fumaça)
 
-## Em C#
+## Dicas
 
-```csharp
-var fogo = Scene.CreateEntity("Fogo");
-fogo.AddMeshRenderer("builtin:cube"); // ainda não há AddParticles no C#
-fogo.SetParticleTexture("Assets/Textures/faisca.png"); // textura opcional
-```
+- Partículas são renderizadas com **instancing** — milhares de partículas
+  custam pouco.
+- Use **additive** para brilho e fogo; **normal** para fumaça e poeira.
+- Partículas testam a profundidade contra a geometria (ficam atrás de
+  paredes) mas não se ocultam entre si.
 
-::: warn
-**Simula no Play.** Partículas (como física e áudio) só emitem durante o
-**Play** — no modo de edição o emissor fica parado.
+::: dica
+Combine com **emissivo + bloom** para faíscas que "brilham" — veja
+[Pós-processamento](pos-processamento.html).
 :::
-
-## No editor
-
-- Ajuste os campos no Inspetor e veja o efeito em tempo real durante o Play;
-- **Modo aditivo** é uma checkbox (fogo/faíscas = aditivo; fumaça = normal);
-- Sem textura, o degradê radial procedural já dá um resultado bom para
-  partículas suaves.

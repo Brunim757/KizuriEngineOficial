@@ -1,45 +1,46 @@
 ---
 title: Atalhos de teclado
 group: Editor
-order: 6
+order: 7
 ---
 
 # Atalhos de teclado
 
-## Jogo / Play
+## Cena e Play
 
 | Atalho | Ação |
-|--------|------|
-| <kbd>F5</kbd> | **Play** — testa a cena (física, scripts, partículas, áudio) |
-| <kbd>Shift+F5</kbd> | **Stop** — volta para a cena de edição |
+|---|---|
+| `F5` | **Play** (compila e roda o jogo) |
+| `Shift+F5` | **Stop** (volta para a edição) |
 
-## Viewport
+## Gizmos e seleção
 
 | Atalho | Ação |
-|--------|------|
-| <kbd>W</kbd> / <kbd>E</kbd> / <kbd>R</kbd> | Gizmo mover / rotacionar / escalar |
-| <kbd>F11</kbd> | Fullscreen do viewport |
-| Botão direito arrastando | Navegar a câmera de edição (2D pan / 3D orbitar) |
-| Clique esquerdo | Selecionar entidade (picking) |
+|---|---|
+| `W` | Gizmo de **mover** |
+| `E` | Gizmo de **rotacionar** |
+| `R` | Gizmo de **escalar** |
+| `Ctrl` (arrastando) | **Snap** de gizmo (0,5u / 15°) |
+| `Ctrl+D` | **Duplicar** entidade |
+| `Del` | **Excluir** entidade |
 
 ## Edição
 
 | Atalho | Ação |
-|--------|------|
-| <kbd>Ctrl+Z</kbd> | Desfazer |
-| <kbd>Ctrl+Y</kbd> | Refazer |
-| <kbd>Ctrl+D</kbd> | Duplicar entidade selecionada |
-| <kbd>Del</kbd> | Excluir entidade selecionada |
-| <kbd>Ctrl+S</kbd> | Salvar cena |
-| <kbd>Ctrl+,</kbd> | Configurações |
+|---|---|
+| `Ctrl+Z` | Desfazer |
+| `Ctrl+Y` | Refazer |
 
-## Arquivo
+## Viewport
 
 | Atalho | Ação |
-|--------|------|
-| <kbd>Ctrl+O</kbd> | Abrir cena |
-| <kbd>Ctrl+N</kbd> | Nova cena |
+|---|---|
+| `F11` | Fullscreen do viewport |
+| Botão direito + `WASD` | Navegação 3D |
+| Botão direito + `Q/E` | Subir/descer |
+| Scroll | Zoom (2D) |
+| Botão direito + arrastar | Pan (2D) |
 
-::: info
-A lista completa também aparece em **Ajuda → Atalhos do editor**.
+::: dica
+O menu **Ajuda → Atalhos do editor** mostra esta lista dentro do próprio editor.
 :::

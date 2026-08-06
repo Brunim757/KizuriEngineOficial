@@ -1,51 +1,39 @@
 ---
-title: Audio (API)
+title: Áudio (API C#)
 group: Scripting C#
 order: 9
 ---
 
-# Audio — API global
+# Áudio — API C#
 
-Áudio **avulso** (sem entidade) e controles globais. Áudio ligado a entidade
-(posicional) usa `Entity.AddAudio` / `Entity.PlayAudio`.
+Controle de som e música.
 
-## One-shot avulso
-
-```csharp
-Audio.PlayOneShot("Assets/Sounds/tiro.wav");
-Audio.PlayOneShot("Assets/Sounds/tiro.wav", volume: 0.8f);
-```
-
-## One-shot posicional (3D)
+## Na entidade
 
 ```csharp
-// toca no ponto do mundo, atenuado pela distância ao ouvinte (câmera)
-Audio.PlayOneShotAt("Assets/Sounds/impacto.wav", 1f, new Vector3(0f, 1f, 0f));
+Entity.AddAudio("Assets/sons/pulo.wav");
+Entity.PlayAudio();
+Entity.StopAudio();
 ```
 
-Perfeito para **impactos, passos, tiros** — som que "acontece no lugar".
+## One-shot
 
 ```csharp
-// impacto onde um tiro acertou
-if (Scene.Raycast3D(from, to, out var hit, out var point, out _))
-    Audio.PlayOneShotAt("Assets/Sounds/impacto.wav", 1f, point);
+Audio.PlayOneShot("Assets/sons/moeda.wav");
+Audio.PlayOneShotAt("Assets/sons/explosao.wav", 0.7f, x, y, z);
 ```
 
-## Controles globais
-
-| Método | Descrição |
-|--------|-----------|
-| `Audio.StopAll()` | Para todos os sons (usado em troca de cena) |
-| `Audio.SetMasterVolume(float)` | Volume mestre global (0..1) |
-
-## Áudio de entidade
+## Global
 
 ```csharp
-var som = Scene.CreateEntity("Motor");
-som.AddAudio("Assets/Sounds/motor.wav", loop: true, playOnStart: true);
-som.PlayAudio();
-som.StopAudio();
+Audio.StopAll();
 ```
 
-Ver [AudioSource](audio-source.html) para as propriedades (spatial, volume,
-distâncias).
+## Dicas
+
+- **PlayOneShotAt** é posicional (volume cai com a distância da câmera) e
+  usa um pool seguro — chame sem medo em alta frequência.
+- Música de fundo: um `AudioSource` com loop na cena.
+- Sons de UI/menu: `PlayOneShot` simples.
+
+Veja também [Áudio (componente)](audio-source.html).

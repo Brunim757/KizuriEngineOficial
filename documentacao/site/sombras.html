@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sombras — Kizuri Engine</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<aside>
+  <div class="brand">
+    <div class="logo">K</div>
+    <div><b>Kizuri Engine</b><small>Documentação · v0.26</small></div>
+  </div>
+  <div class="search"><input id="filter" type="text" placeholder="Filtrar páginas…"></div>
+  <nav id="toc">
+<div class="group">Introdução</div>
+<a href="index.html" class="">Bem-vindo</a>
+<a href="instalacao.html" class="">Instalação</a>
+<a href="primeiro-projeto.html" class="">Seu primeiro projeto</a>
+<a href="projeto.html" class="">Gerenciamento de projetos</a>
+<div class="group">Editor</div>
+<a href="interface.html" class="">Interface do editor</a>
+<a href="paineis.html" class="">Painéis do editor</a>
+<a href="viewport.html" class="">Viewport</a>
+<a href="content-browser.html" class="">Content Browser</a>
+<a href="project-settings.html" class="">Project Settings</a>
+<a href="hierarquia-inspetor.html" class="">Hierarquia e Inspetor</a>
+<a href="atalhos.html" class="">Atalhos de teclado</a>
+<a href="configuracoes.html" class="">Configurações</a>
+<div class="group">Componentes</div>
+<a href="transform.html" class="">Transform</a>
+<a href="camera.html" class="">Câmera</a>
+<a href="meshes-3d.html" class="">Malhas 3D</a>
+<a href="sprites-2d.html" class="">Sprites 2D</a>
+<a href="luzes.html" class="">Luzes</a>
+<a href="particulas.html" class="">Partículas</a>
+<a href="fisica-2d.html" class="">Física 2D</a>
+<a href="fisica-3d.html" class="">Física 3D</a>
+<a href="audio-source.html" class="">Áudio</a>
+<a href="ui.html" class="">Interface (UI)</a>
+<a href="tilemap.html" class="">Tilemap</a>
+<a href="animacao-2d.html" class="">Animação 2D</a>
+<a href="animacao-3d.html" class="">Animação 3D</a>
+<div class="group">Scripting C#</div>
+<a href="scripting.html" class="">Scripting C#</a>
+<a href="entity.html" class="">Entity (API)</a>
+<a href="scene.html" class="">Scene (API)</a>
+<a href="input.html" class="">Input (API)</a>
+<a href="time.html" class="">Time (API)</a>
+<a href="mathf.html" class="">Mathf, Rand e Vetores</a>
+<a href="save.html" class="">SaveSystem</a>
+<a href="fisica-api.html" class="">Física (API C#)</a>
+<a href="audio-api.html" class="">Áudio (API C#)</a>
+<a href="ui-api.html" class="">UI (API C#)</a>
+<div class="group">Gráficos</div>
+<a href="qualidade.html" class="">Qualidade e presets</a>
+<a href="reflexos.html" class="">Reflexos</a>
+<a href="iluminacao.html" class="">Iluminação</a>
+<a href="ceu.html" class="">Céu</a>
+<a href="sombras.html" class="active">Sombras</a>
+<a href="pos-processamento.html" class="">Pós-processamento</a>
+<div class="group">Distribuição</div>
+<a href="exportacao.html" class="">Exportar o jogo</a>
+<a href="recursos-embutidos.html" class="">Recursos embutidos (kzres://)</a>
+<a href="faq.html" class="">Perguntas frequentes</a>
+  </nav>
+</aside>
+<div class="overlay" id="overlay"></div>
+<main>
+<header class="top">
+  <button class="burger" id="burger" aria-label="Menu">☰</button>
+  <div class="crumbs"><span class="crumb">Gráficos</span><span class="sep">/</span><span>Sombras</span></div>
+  <div class="toggles">
+    <a href="busca.html" class="btn">🔎 Buscar</a>
+    <button class="btn" id="themeToggle" title="Alternar tema">☀️</button>
+    <button class="btn" id="printBtn" title="Imprimir">🖨️</button>
+    <a href="index.html" class="btn">Início</a>
+  </div>
+</header>
+
+<article>
+<h1 id="sombras">Sombras</h1>
+<p>A luz direcional projeta <strong>sombras em cascata (CSM)</strong>: três mapas de profundidade em distâncias crescente, para sombras nítidas perto da câmera e cobertura total ao longe.</p>
+<h2 id="ajustes">Ajustes</h2>
+<ul>
+<li><strong>Tamanho do shadow map (CSM)</strong> — 512 a 4096. Maior = sombra mais nítida,</li>
+</ul>
+<p>  mais custo.</p>
+<ul>
+<li><strong>PCF</strong> — amostras de suavização da borda (0 a 3).</li>
+<li><strong>Penumbra (PCSS)</strong> — <strong>sombras suaves de verdade</strong>: a largura da penumbra</li>
+</ul>
+<p>  é proporcional à distância do bloqueador. <code>0</code> desliga (usa PCF puro).</p>
+<div class="callout nota">O PCSS usa loops de passos <strong>fixos</strong> no shader — funciona em qualquer GPU OpenGL 3.3 (a versão antiga de raio dinâmico era o que quebrava em alguns drivers e foi substituída).</div>
+<h2 id="dicas-de-qualidade">Dicas de qualidade</h2>
+<ul>
+<li><strong>Acne</strong> (listras na sombra): aumenta o bias via valores de material ou</li>
+</ul>
+<p>  aproxime o mapa — geralmente 2048 resolve.</p>
+<ul>
+<li><strong>Sombras "blocadas" ao longe</strong>: aumente o tamanho do CSM.</li>
+<li><strong>Penumbra exagerada</strong>: reduza o valor de PCSS.</li>
+</ul>
+<div class="callout dica">Luzes de <strong>ponto</strong> e <strong>spot</strong> iluminam sem sombra projetada (a sombra é da luz direcional). Para efeito de "spot com sombra", use sombras falsas (texturas de silhueta) ou ilumine com a direcional.</div>
+
+</article>
+<div class="pager">
+<a class="navbtn prev" href="ceu.html"><small>← Anterior</small><span>Céu</span></a>
+<a class="navbtn next" href="pos-processamento.html"><small>Próximo →</small><span>Pós-processamento</span></a>
+</div>
+<footer class="footer">
+  © Kizuri Studio · v0.26 · <a href="index.html">Início</a> · <a href="busca.html">Buscar</a>
+</footer>
+</main>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

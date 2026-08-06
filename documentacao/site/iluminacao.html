@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iluminação — Kizuri Engine</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap">
+<aside>
+  <div class="brand">
+    <div class="logo">K</div>
+    <div><b>Kizuri Engine</b><small>Documentação · v0.26</small></div>
+  </div>
+  <div class="search"><input id="filter" type="text" placeholder="Filtrar páginas…"></div>
+  <nav id="toc">
+<div class="group">Introdução</div>
+<a href="index.html" class="">Bem-vindo</a>
+<a href="instalacao.html" class="">Instalação</a>
+<a href="primeiro-projeto.html" class="">Seu primeiro projeto</a>
+<a href="projeto.html" class="">Gerenciamento de projetos</a>
+<div class="group">Editor</div>
+<a href="interface.html" class="">Interface do editor</a>
+<a href="paineis.html" class="">Painéis do editor</a>
+<a href="viewport.html" class="">Viewport</a>
+<a href="content-browser.html" class="">Content Browser</a>
+<a href="project-settings.html" class="">Project Settings</a>
+<a href="hierarquia-inspetor.html" class="">Hierarquia e Inspetor</a>
+<a href="atalhos.html" class="">Atalhos de teclado</a>
+<a href="configuracoes.html" class="">Configurações</a>
+<div class="group">Componentes</div>
+<a href="transform.html" class="">Transform</a>
+<a href="camera.html" class="">Câmera</a>
+<a href="meshes-3d.html" class="">Malhas 3D</a>
+<a href="sprites-2d.html" class="">Sprites 2D</a>
+<a href="luzes.html" class="">Luzes</a>
+<a href="particulas.html" class="">Partículas</a>
+<a href="fisica-2d.html" class="">Física 2D</a>
+<a href="fisica-3d.html" class="">Física 3D</a>
+<a href="audio-source.html" class="">Áudio</a>
+<a href="ui.html" class="">Interface (UI)</a>
+<a href="tilemap.html" class="">Tilemap</a>
+<a href="animacao-2d.html" class="">Animação 2D</a>
+<a href="animacao-3d.html" class="">Animação 3D</a>
+<div class="group">Scripting C#</div>
+<a href="scripting.html" class="">Scripting C#</a>
+<a href="entity.html" class="">Entity (API)</a>
+<a href="scene.html" class="">Scene (API)</a>
+<a href="input.html" class="">Input (API)</a>
+<a href="time.html" class="">Time (API)</a>
+<a href="mathf.html" class="">Mathf, Rand e Vetores</a>
+<a href="save.html" class="">SaveSystem</a>
+<a href="fisica-api.html" class="">Física (API C#)</a>
+<a href="audio-api.html" class="">Áudio (API C#)</a>
+<a href="ui-api.html" class="">UI (API C#)</a>
+<div class="group">Gráficos</div>
+<a href="qualidade.html" class="">Qualidade e presets</a>
+<a href="reflexos.html" class="">Reflexos</a>
+<a href="iluminacao.html" class="active">Iluminação</a>
+<a href="ceu.html" class="">Céu</a>
+<a href="sombras.html" class="">Sombras</a>
+<a href="pos-processamento.html" class="">Pós-processamento</a>
+<div class="group">Distribuição</div>
+<a href="exportacao.html" class="">Exportar o jogo</a>
+<a href="recursos-embutidos.html" class="">Recursos embutidos (kzres://)</a>
+<a href="faq.html" class="">Perguntas frequentes</a>
+  </nav>
+</aside>
+<div class="overlay" id="overlay"></div>
+<main>
+<header class="top">
+  <button class="burger" id="burger" aria-label="Menu">☰</button>
+  <div class="crumbs"><span class="crumb">Gráficos</span><span class="sep">/</span><span>Iluminação</span></div>
+  <div class="toggles">
+    <a href="busca.html" class="btn">🔎 Buscar</a>
+    <button class="btn" id="themeToggle" title="Alternar tema">☀️</button>
+    <button class="btn" id="printBtn" title="Imprimir">🖨️</button>
+    <a href="index.html" class="btn">Início</a>
+  </div>
+</header>
+<nav class="toc"><div class="toc-title">Nesta página</div><a href="#luzes" class="t2">Luzes</a><a href="#ssao-ocluso-de-ambiente" class="t2">SSAO — oclusão de ambiente</a><a href="#ssgi-iluminao-global" class="t2">SSGI — iluminação global</a><a href="#ibl-iluminao-baseada-no-ambiente" class="t2">IBL — iluminação baseada no ambiente</a></nav>
+<article>
+<h1 id="iluminao">Iluminação</h1>
+<p>A iluminação da Kizuri é <strong>física</strong> (PBR) com luzes diretas, reflexos do ambiente (IBL) e iluminação indireta aproximada.</p>
+<h2 id="luzes">Luzes</h2>
+<p>Cada entidade pode ter uma luz:</p>
+<div class="tablewrap"><table><thead><tr><th>Tipo</th><th>Uso</th></tr></thead><tbody><tr><td><strong>Direcional</strong></td><td>O sol: ilumina tudo de uma direção, projeta sombras (CSM)</td></tr><tr><td><strong>Ponto</strong></td><td>Lâmpada: ilumina a partir de um ponto, com alcance</td></tr><tr><td><strong>Spot</strong></td><td>Holofote: cone com ângulo interno/externo</td></tr></tbody></table></div>
+<p>No Inspetor: cor, intensidade, alcance (ponto/spot) e cone (spot).</p>
+<h2 id="ssao-ocluso-de-ambiente">SSAO — oclusão de ambiente</h2>
+<p>Escurece cantos e frestas onde a luz não chega, dando "peso" aos objetos. Ajustes: <strong>amostras</strong> e <strong>raio</strong>.</p>
+<h2 id="ssgi-iluminao-global">SSGI — iluminação global</h2>
+<p>A <strong>luz indireta</strong>: o SSR marcha raios no hemisfério e coleta a <strong>cor</strong> dos objetos vizinhos, devolvendo aquela "luz que quica" entre superfícies — paredes coloridas tingem o ambiente, sombras ganham preenchimento.</p>
+<ul>
+<li>Ajuste: <strong>intensidade</strong> (exagere devagar; valores ~0,4 já fazem efeito)</li>
+</ul>
+<h2 id="ibl-iluminao-baseada-no-ambiente">IBL — iluminação baseada no ambiente</h2>
+<p>O céu (físico ou HDRI) vira uma fonte de luz para os materiais PBR: <strong>irradiância</strong> para o difuso e <strong>reflexos pré-filtrados</strong> para o especular. Ou seja: a cor do céu ilumina e reflete nos objetos automaticamente.</p>
+<div class="callout dica">Para a "hora mágica", baixe o sol (rotacione a luz direcional) — o céu físico muda para laranja/vermelho e a iluminação acompanha.</div>
+
+</article>
+<div class="pager">
+<a class="navbtn prev" href="reflexos.html"><small>← Anterior</small><span>Reflexos</span></a>
+<a class="navbtn next" href="ceu.html"><small>Próximo →</small><span>Céu</span></a>
+</div>
+<footer class="footer">
+  © Kizuri Studio · v0.26 · <a href="index.html">Início</a> · <a href="busca.html">Buscar</a>
+</footer>
+</main>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>

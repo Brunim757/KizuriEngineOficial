@@ -6,50 +6,39 @@ order: 1
 
 # Interface do editor
 
-O editor é dividido em um **dockspace** com painéis arrastáveis e
-redimensionáveis. O layout padrão é:
+O editor é organizado em **painéis** que você pode mover, agrupar em abas e
+mostrar/ocultar pelo menu **Janelas** (na barra de menus).
 
-```
-┌──────────────────┬─────────────────────┬─────────────────────┐
-│  HIERARQUIA      │   VIEWPORT          │   INSPETOR          │
-│                  │                     │                     │
-│  CONTENT         │   CONSOLE           │                     │
-│  BROWSER         │                     │                     │
-└──────────────────┴─────────────────────┴─────────────────────┘
-```
+## Visão geral
 
-| Painel | Função |
-|--------|--------|
-| **Hierarquia** | Árvore de entidades da cena + busca |
-| **Inspetor** | Propriedades da entidade selecionada |
-| **Viewport** | Pré-visualização em tempo real (2D/3D) |
-| **Content Browser** | Arquivos do projeto, com drag & drop |
-| **Console** | Logs da engine e dos scripts, com filtro |
-
-Você pode arrastar as abas para reorganizar. O layout persiste durante a
-sessão.
+| Painel | Para que serve |
+|---|---|
+| **Viewport** | A cena em 3D/2D, com gizmos de mover/rotacionar/escalar |
+| **Game View** | Mostra o jogo rodando durante o Play (separado do viewport de edição) |
+| **Hierarquia** | A lista de todas as entidades da cena, com busca |
+| **Inspetor** | Propriedades e componentes da entidade selecionada |
+| **Content Browser** | Arquivos do projeto (assets, scripts, cenas) |
+| **Console** | Mensagens, avisos e erros do editor e dos scripts |
+| **Profiler** | FPS, tempo de frame, draw calls e triângulos em gráfico |
+| **Material Editor** | Ajustar material com preview ao vivo em uma esfera |
+| **Animator** | Clips de animação: play/pause, loop, velocidade e timeline |
+| **Project Settings** | Configurações do projeto: gráficos, janela e editor |
 
 ## Barra de menus
 
-| Menu | Ações |
-|------|-------|
-| **Arquivo** | Novo/Abrir Projeto, Voltar ao Início, Exportar Jogo, Salvar Cena, Salvar Como, Carregar GameModule, Sair |
-| **Editar** | Desfazer (Ctrl+Z), Refazer (Ctrl+Y), Duplicar (Ctrl+D), Excluir (Del) |
-| **Cena** | Nova Cena, Abrir Cena, Cenas de demonstração 2D / 2.5D / 3D |
-| **Exibir** | Viewport 2D/3D, Fullscreen do viewport (F11), Configurações (Ctrl+,) |
-| **Ajuda** | Atalhos do editor |
+- **Arquivo** — projetos, cenas, exportar jogo, voltar ao Hub
+- **Editar** — desfazer/refazer, duplicar/excluir
+- **Cena** — salvar/abrir, cenas de demonstração, modo 2D/3D
+- **Exibir** — modo do viewport (2D/3D), fullscreen, Configurações
+- **Janelas** — mostrar/ocultar cada painel
+- **Ajuda** — versão, atalhos
 
-## Toolbar do viewport
+## Fluxo típico
 
-- Botões de **gizmo**: Mover / Rotacionar / Escalar (`W`/`E`/`R`);
-- Alternância **2D / 3D**;
-- **Play / Stop** (F5 / Shift+F5);
-- Ícone de **fullscreen** (F11).
+1. **Hierarquia** seleciona a entidade.
+2. **Viewport** mostra e edita (gizmos).
+3. **Inspetor** ajusta componentes.
+4. **Content Browser** traz assets para a cena (arraste e solte).
+5. **Play** testa; **Console** e **Profiler** acompanham o desempenho.
 
-## Dicas rápidas
-
-- **Clique** num objeto do viewport para selecionar (picking por raycast 3D /
-  ponto 2D);
-- **Botão direito arrastando** navega a câmera de edição;
-- A tela inicial (hub) aparece ao abrir o editor ou em **Arquivo → Voltar ao
-  Início**.
+Veja os detalhes de cada painel em [Painéis do editor](paineis.html).

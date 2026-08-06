@@ -1,76 +1,53 @@
 ---
 title: Perguntas frequentes
 group: Distribuição
-order: 2
+order: 3
 ---
 
 # Perguntas frequentes
 
-## A engine precisa do Content Pack para funcionar?
+## O jogo roda em qualquer PC?
 
-**Não.** Todos os padrões (modelos da demo 3D, céu, primitivas) estão
-**embutidos no executável** via `kzres://`. O Content Pack apenas enriquece as
-demos.
+A engine usa **OpenGL 3.3** — roda em qualquer placa de vídeo dos últimos
+~15 anos, incluindo iGPUs, máquinas virtuais e até Wine. Se o editor abrir,
+seu jogo roda.
 
-## Minha placa de vídeo é antiga. Perco alguma coisa?
+## Preciso saber C++ para fazer um jogo?
 
-Só o acabamento mais sofisticado de sombras, que exige uma placa mais nova.
-Tudo o resto — luzes, céu, partículas, personagens animados, 2D e UI —
-funciona em qualquer placa que rode o editor. O motor escolhe o melhor
-automaticamente.
+Não. O motor é em C++, mas você usa o **editor** e o **C#**. Tudo o que o
+jogo faz passa por scripts C# com API simples.
 
-## Preciso me preocupar com placa de vídeo?
+## Consigo fazer jogos 2D e 3D?
 
-Só se ela tiver **OpenGL 3.3** ou mais (qualquer GPU razoável dos últimos
-~15 anos). O motor ajusta a qualidade sozinho pelo seu hardware — em geral
-você não precisa mexer em nada.
+Sim, na mesma cena (2.5D). Câmera ortográfica para o 2D, perspectiva para o
+3D, e a engine compõe 3D → 2D → UI na ordem certa.
 
-## Como escrevo scripts?
+## Como fica o desempenho com todos os efeitos ligados?
 
-Em um projeto C# que referencia `Kizuri.Scripting`. No editor, **Arquivo →
-Carregar GameModule…** aponta para a DLL. No Play, o C# é recompilado e
-recarregado automaticamente.
+O preset **Ultra** liga tudo (reflexos, SSGI, nuvens, DOF...). Se precisar de
+mais FPS, desça o preset ou desligue os efeitos mais caros (MSAA, SSGI, SSR)
+em **Project Settings → Gráficos**. O **Profiler** mostra onde está o custo.
 
-## O que vejo no Play é o que sai no build?
+## Posso usar meus próprios modelos e texturas?
 
-**Sim.** O Play e o jogo exportado usam a câmera da própria cena, não a câmera
-livre de navegação do editor.
+Sim. **glTF (.glb/.gltf)** traz malha, material PBR e animações; **OBJ**
+para geometria simples; e imagens comuns para texturas. Arraste do Content
+Browser para o viewport.
 
-## As cenas são salvas em quê?
+## Meu jogo trava no Play. O que faço?
 
-JSON legível (`.kzscene`), incluindo mesh, material e texturas. Dá para editar
-no bloco de notas e versionar no git.
+1. Olhe o **Console** — os erros do script aparecem lá.
+2. Verifique se há **câmera principal** na cena (sem ela o 3D não renderiza).
+3. Verifique se o **.NET SDK** está instalado (o Play compila seu código).
+4. Se o viewport ficar preto, o diagnóstico aparece em `render_info.txt` ao
+   lado do editor.
 
-## Rotação: graus ou radianos?
+## Como distribuo meu jogo?
 
-- **Inspetor**: graus.
-- **API C#**: sempre **radianos** (converão `graus * MathF.PI / 180f`).
+**Arquivo → Exportar Jogo...** gera uma pasta executável autocontida. Basta
+compactar e distribuir.
 
-## Posso fazer 2.5D?
+## Onde fica o código do meu jogo?
 
-**Sim.** Uma cena com câmera de perspectiva **e** câmera ortográfica primária
-roda os passes 3D → 2D → UI. Há uma demo pronta no menu **Cena**.
-
-## Física em modo de edição?
-
-Não — física, queries, partículas e áudio só rodam no **Play** / jogo
-exportado. No modo de edição os corpos ficam parados no Transform.
-
-## Como troco de cena em runtime?
-
-`Scene.Load("Assets/Fase2.kzscene")` — o pedido é processado no fim do frame.
-
-## Como instancio uma prefab?
-
-`Scene.InstantiatePrefab("Assets/Inimigo.kzprefab", posicao, rotacao)` — a
-física e o `OnCreate` dos scripts rodam de verdade.
-
-## Como salvo o jogo?
-
-`SaveSystem.Set("chave", valor)` + `SaveSystem.Save()` grava um `save.json`;
-os `Get*` carregam automaticamente.
-
-## Consigo misturar 2D e 3D na mesma cena?
-
-Sim — cenas **2.5D** (fundo 3D, gameplay 2D, UI por cima) funcionam com duas
-câmeras. Há uma demonstração pronta no menu **Cena**.
+Em `Source/` dentro do projeto (arquivos `.cs`), compilados no Play e no
+export para `Kizuri.Scripting.dll`.

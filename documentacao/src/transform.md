@@ -6,57 +6,31 @@ order: 1
 
 # Transform
 
-Toda entidade tem um **Transform** — a posição, rotação e escala no mundo.
+Todo objeto da cena tem um **Transform** — onde ele está, como está
+orientado e o tamanho dele. É o primeiro componente de qualquer entidade.
 
-## Propriedades
+## Posição
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| **Translation** | `Vector3` | Posição local em unidades de mundo |
-| **Rotation** | `Vector3` (euler) | Rotação em **radianos** |
-| **Scale** | `Vector3` | Escala local (1,1,1 = 100%) |
+Posição no mundo (`X`, `Y`, `Z`). No modo 2D, use `X`/`Y` (e `Z` para a
+ordem de desenho, se precisar).
 
-No Inspetor a rotação é exibida em **graus**; no C#, sempre em **radianos**.
+## Rotação
+
+Ângulos em graus em cada eixo. A convenção é **euler**: `Y` (guinada) → `X`
+(inclinação) → `Z` (rolagem). Um cubo "vira" mexendo no `Y`.
+
+## Escala
+
+Tamanho em cada eixo. Escala negativa inverte (espelha). No 2D, `X`/`Y`
+controlam o tamanho do sprite.
 
 ## Hierarquia
 
-O transform é **local** quando a entidade tem pai. Movendo o pai, os filhos
-acompanham. A posição *mundial* soma a cadeia inteira de pais.
+Se uma entidade tem **pai**, o Transform dela é **relativo ao pai**: mover o
+pai move todos os filhos. Use a Hierarquia para arrastar uma entidade sobre
+outra.
 
-## Em C#
-
-```csharp
-Entity.SetPosition(new Vector3(1f, 0f, 0f));
-Entity.SetRotation(new Vector3(0f, 0f, 0.5f));  // radianos
-Entity.SetScale(new Vector3(2f, 2f, 2f));
-
-if (Entity.TryGetTransform(out var t)) { }
-if (Entity.TryGetWorldPosition(out var world)) { } // posição mundial
-Entity.LookAt(target);                              // encara um ponto
-```
-
-## No editor
-
-Use os gizmos (<kbd>W</kbd>/<kbd>E</kbd>/<kbd>R</kbd>) para editar o transform
-visualmente, ou digite valores no Inspetor.
-
-::: warn
-**Ordem TRS.** A matriz é `T · R · S`. Escalar um pai com filhos estica os
-filhos proporcionalmente.
+::: dica
+No viewport, use os **gizmos** (W/E/R) para editar posição/rotação/escala com
+o mouse. No código, veja as [API de transform](entity.html).
 :::
-
-## Rotação euler
-
-A rotação usa **euler** (pitch, yaw, roll em X, Y, Z). Em ângulos como -90°,
-é comum combinar dois eixos para efeitos de câmera — por exemplo, uma câmera
-olhando para frente no eixo -Z:
-
-```csharp
-cam.SetRotation(new Vector3(
-    -0.21f,   // pitch (rad) — olha um pouco para baixo
-    -1.571f,  // yaw (rad)   — -90°
-    0f));
-```
-
-Dica: use `Mathf.Deg2Rad`-style `float rad = Mathf.Sin/…` ou a constante
-`MathF.PI / 180f * graus`.

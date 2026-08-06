@@ -1,64 +1,49 @@
 ---
-title: Input
+title: Input (API)
 group: Scripting C#
-order: 5
+order: 4
 ---
 
-# Input
+# Input — API
 
-Leitura de teclado e mouse. Os códigos de tecla são os do **GLFW** (os mesmos
-da engine), expostos como enum `Key`.
+Leitura de **teclado** e **mouse** para controlar o jogo.
 
 ## Teclado
 
 ```csharp
-// pressionado AGORA (estado contínuo) — uso em movimento
-if (Input.IsKeyPressed(Key.A)) wish.X -= 1f;
-
-// verdadeiro SÓ no frame em que a tecla desceu (edge-detect, GetKeyDown)
-if (Input.IsKeyDown(Key.Space)) Pular();
-```
-
-### Enum Key
-
-```csharp
-Key.A .. Key.Z            // letras
-Key.D0 .. Key.D9          // números
-Key.Space, Key.Enter, Key.Tab, Key.Backspace, Key.Delete, Key.Escape
-Key.Up, Key.Down, Key.Left, Key.Right        // setas
-Key.F1 .. Key.F12
-Key.LeftShift, Key.RightShift, Key.LeftControl, Key.LeftAlt
-Key.LeftSuper, Key.RightSuper, …
-Key.Minus, Key.Equal, Key.Semicolon, Key.Comma, Key.Period, Key.Slash
+if (Input.IsKeyDown(KeyCode.Space)) Pular();
+if (Input.IsKeyPressed(KeyCode.Left)) MoverEsquerda();
 ```
 
 ## Mouse
 
 ```csharp
-if (Input.IsMouseButtonPressed(MouseButton.Left)) { }   // botão esquerdo
-if (Input.IsMouseButtonPressed(MouseButton.Right)) { }  // direito
-if (Input.IsMouseButtonPressed(MouseButton.Middle)) { } // meio
-
-var mouse = Input.GetMousePosition();  // Vector2
+if (Input.IsMousePressed(0)) Atirar();          // 0 = esquerdo, 1 = direito
+var (x, y) = Input.GetMousePosition();          // posição em pixels na janela
 ```
 
-## Combinações comuns
+## Eixo simples
+
+Para movimento, combine teclas:
 
 ```csharp
-// clicar SÓ uma vez (não repetido a cada frame segurando)
-if (Input.IsMouseButtonPressed(MouseButton.Left) && !_mouseDown)
-{
-    _mouseDown = true;
-    Atirar();
-}
-if (!Input.IsMouseButtonPressed(MouseButton.Left)) _mouseDown = false;
+float mover = 0f;
+if (Input.IsKeyDown(KeyCode.A)) mover -= 1f;
+if (Input.IsKeyDown(KeyCode.D)) mover += 1f;
+Entity.Move(mover * Time.deltaTime * velocidade, 0f, 0f);
 ```
 
-```csharp
-// movimento com WASD + setas
-var wish = Vector2.Zero;
-if (Input.IsKeyPressed(Key.A) || Input.IsKeyPressed(Key.Left))  wish.X -= 1f;
-if (Input.IsKeyPressed(Key.D) || Input.IsKeyPressed(Key.Right)) wish.X += 1f;
-if (Input.IsKeyPressed(Key.W) || Input.IsKeyPressed(Key.Up))    wish.Y += 1f;
-if (Input.IsKeyPressed(Key.S) || Input.IsKeyPressed(Key.Down))  wish.Y -= 1f;
-```
+## Códigos comuns
+
+| Código | Tecla |
+|---|---|
+| `KeyCode.Space` | Espaço |
+| `KeyCode.W/A/S/D` | WASD |
+| `KeyCode.Up/Down/Left/Right` | Setas |
+| `KeyCode.Enter` / `KeyCode.Escape` | Enter / Esc |
+| `KeyCode.Shift` / `KeyCode.Ctrl` | Shift / Ctrl |
+
+::: nota
+O mouse do **Play** acompanha o viewport (e o Game View) — os cliques de UI
+e do jogo funcionam na janela do editor.
+:::

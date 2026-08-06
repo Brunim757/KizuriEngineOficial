@@ -1,96 +1,42 @@
 ---
 title: SaveSystem
 group: Scripting C#
-order: 10
+order: 7
 ---
 
 # SaveSystem
 
-Persistência simples de jogo em um arquivo **JSON** (`save.json` no diretório
-de trabalho por padrão).
+Salve e carregue o progresso do jogador em **JSON**, sem depender da engine —
+é 100% gerenciado (puro C#).
 
-## Guardar valores
-
-```csharp
-SaveSystem.Set("score", 100);                      // int
-SaveSystem.Set("nome", "Kizuri");                  // string
-SaveSystem.Set("volume", 0.7f);                    // float
-SaveSystem.Set("som", true);                       // bool
-SaveSystem.Set("pos", new Vector3(1f, 2f, 3f));    // vetores
-SaveSystem.Set("ponto", new Vector2(5f, 0f));
-```
-
-## Gravar em disco
+## Salvar
 
 ```csharp
-SaveSystem.Save();   // escreve save.json
-```
-
-Chame ao passar de fase, no pause, ou ao fechar.
-
-## Ler (auto-carrega)
-
-Os `Get*` **carregam do disco automaticamente** na primeira consulta:
-
-```csharp
-var score  = SaveSystem.GetFloat("score", 0f);        // fallback se não existir
-var nome   = SaveSystem.GetString("nome", "sem nome");
-var volume = SaveSystem.GetFloat("volume", 1f);
-var som    = SaveSystem.GetBool("som", true);
-
-if (SaveSystem.Has("pos"))
+public class Progresso
 {
-    var pos = SaveSystem.GetVector3("pos");
-    jogador.SetPosition(pos);
+    public int Fase = 1;
+    public int Moedas = 0;
+    public string Nome = "";
 }
-var ponto = SaveSystem.GetVector2("ponto");
+
+// salvar num arquivo (o caminho é relativo ao jogo)
+SaveSystem.Save("save.json", new Progresso { Fase = 3, Moedas = 42 });
 ```
 
-## Outros arquivos
+## Carregar
 
 ```csharp
-SaveSystem.SetPath("jogos/fase1.save");   // muda o arquivo (limpa o cache)
+var p = SaveSystem.Load<Progresso>("save.json");
+if (p != null) Debug.Log($"Fase {p.Fase}, moedas {p.Moedas}");
 ```
 
-## Referência
+## O que funciona
 
-| Método | Descrição |
-|--------|-----------|
-| `Set(key, string/int/float/bool/Vector2/Vector3)` | Guarda um valor |
-| `Has(key)` | Existe a chave? |
-| `GetString(key, fallback)` | Lê string |
-| `GetInt(key, fallback)` | Lê int (aceita float salvo) |
-| `GetFloat(key, fallback)` | Lê float (aceita int salvo) |
-| `GetBool(key, fallback)` | Lê bool |
-| `GetVector2(key, fallback)` / `GetVector3(key, fallback)` | Lê vetor |
-| `Save()` | Grava em disco |
-| `Load()` | Recarrega do disco |
-| `SetPath(path)` | Muda o arquivo de save |
-| `FilePath` | Caminho atual |
+- Objetos simples com campos públicos (serializados automaticamente)
+- Listas e dicionários
+- Tipos básicos (int, float, string, bool)
 
-::: warn
-`Save()` grava o estado **atual** do cache. Depois de `Set`, lembre de chamar
-`Save()` — os valores não são persistidos sozinhos.
+::: dica
+Use `SaveSystem` para **checkpoints** e **configurações** do jogador. Para
+salvar a cena inteira (nível montado no editor), use arquivos `.kzscene`.
 :::
-
-## Exemplo de jogo
-
-```csharp
-// OnDestroy do jogador: salva a posição
-public override void OnDestroy()
-{
-    if (Entity.TryGetWorldPosition(out var p))
-    {
-        SaveSystem.Set("pos", p);
-        SaveSystem.Set("vidas", vidas);
-        SaveSystem.Save();
-    }
-}
-
-// Na abertura de uma fase, carregar a posição salva
-public override void OnCreate()
-{
-    if (SaveSystem.Has("pos"))
-        Entity.SetPosition(SaveSystem.GetVector3("pos"));
-}
-```

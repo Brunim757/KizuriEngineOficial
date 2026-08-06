@@ -1,53 +1,46 @@
 ---
-title: Qualidade gráfica
-group: Renderização
-order: 3
+title: Qualidade e presets
+group: Gráficos
+order: 1
 ---
 
-# Qualidade gráfica
+# Qualidade e presets
 
-Ajuste a aparência e o desempenho em **Configurações → Gráficos**
-(<kbd>Ctrl+,</kbd>). Tudo é aplicado **na hora**, sem reiniciar o editor.
+A Kizuri Engine roda 100% em **OpenGL 3.3** e entrega gráficos modernos sem
+precisar de placas especiais. Tudo é controlado por **presets** e ajustes em
+**Project Settings → Gráficos**.
 
 ## Presets
 
-| Preset | Uso |
-|--------|-----|
-| **Ultra** | Máximo de fidelidade (para máquinas fortes) |
-| **High** | Balanceado |
-| **Medium** | Bom meio-termo |
-| **Low** | Máquina fraca / integrada |
-| **Custom** | Você ajustou manualmente |
+| Preset | Para quem |
+|---|---|
+| **Ultra** | Máquinas boas: todas as features ligadas (reflexos, SSGI, nuvens, DOF...) |
+| **High** | Equilíbrio entre visual e desempenho |
+| **Medium** | Máquinas modestas |
+| **Low** | Qualquer coisa: quase tudo desligado, render mais barato |
+| **Custom** | Quando você muda algo manualmente (o preset vira Custom) |
 
-O editor já começa com o preset adequado ao seu hardware — em geral você não
-precisa mexer em nada.
+## O que cada grupo controla
 
-## Configurações
+- **Resolução interna** — renderiza numa resolução menor e amplia (mais FPS)
+- **MSAA** — suaviza bordas (1x, 2x, 4x, 8x)
+- **Sombras** — tamanho do shadow map e suavidade (PCSS)
+- **Iluminação** — SSAO (oclusão) e SSGI (luz indireta)
+- **Reflexos** — SSR (reflexos em espaço de tela) e espelhos
+- **Anti-aliasing** — TAA (temporal) e FXAA
+- **Atmosfera** — god rays, nuvens, lens flare
+- **Pós-processamento** — bloom, DOF, motion blur, exposição, tonemapping, cor
+- **Céu** — físico (Rayleigh/Mie) ou HDRI
 
-| Opção | O que faz |
-|-------|-----------|
-| **Resolução interna** | Renderiza em resolução menor e amplia (ganho grande de FPS); >1 = superamostragem |
-| **MSAA** | Suaviza as bordas (2x, 4x, 8x) |
-| **Shadow map (CSM)** | Resolução das sombras (512–4096) |
-| **Suavização de sombra** | Bordas de sombra mais suaves |
-| **Bloom** | Brilho dos objetos luminosos (limiar, intensidade, largura) |
-| **Tonemapping** | Acabamento de cor: ACES (cinematográfico) / Reinhard (suave) / Filmic (contraste) |
-| **SSAO** | Sombras de contato entre objetos (amostras, raio) |
-| **Exposição** | Brilho geral da imagem |
-| **VSync** | Trava ao refresh do monitor (evita "rasgo" de tela) |
-| **Névoa** | Atmosfera por distância (densidade) |
-| **Vinheta / Aberração / Grão** | Efeitos de câmera de filme |
+## Aplicado ao vivo
 
-## Ajuste automático
+Todos os ajustes são aplicados **em tempo real**, sem reiniciar o editor, e
+ficam salvos em `settings.json` ao lado do projeto.
 
-O editor escolhe padrões adequados pela **sua** placa de vídeo e depois aplica
-suas escolhas manuais por cima. As configurações ficam salvas e são mantidas
-entre sessões.
+::: dica
+Encontrou FPS baixo? Comece baixando o **preset** para Medium — o maior
+impacto no desempenho vem de MSAA, reflexos e SSGI.
+:::
 
-## Dicas de desempenho
-
-- **Resolução interna 0.75** é o ganho mais rápido em máquinas fracas;
-- **SSAO** e **bloom** são os efeitos que mais pesam — desligue no Low;
-- **Sombras em 2048** é um bom equilíbrio;
-- Se o jogo estiver lento, diminua primeiro o preset — **Low** costuma
-  resolver.
+Veja as páginas detalhadas: [Reflexos](reflexos.html), [Iluminação](iluminacao.html),
+[Céu](ceu.html), [Sombras](sombras.html) e [Pós-processamento](pos-processamento.html).

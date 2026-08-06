@@ -6,39 +6,42 @@ order: 1
 
 # Exportar o jogo
 
-O editor gera um **executável standalone** com a cena inicial e o assembly C#
-do jogo.
+O menu **Arquivo → Exportar Jogo...** gera uma pasta com o **jogo
+standalone**: executável + cena + assets + seu código compilado.
 
 ## Como exportar
 
-1. Deixe a cena inicial aberta (é ela que o jogo abre).
-2. **Arquivo → Exportar Jogo…**
+1. Tenha uma cena salva e defina-a como **cena inicial** (Arquivo → Definir
+   cena como inicial).
+2. **Arquivo → Exportar Jogo...**
 3. Escolha a pasta de destino.
-4. O exportador gera:
-   - O executável (`KizuriGame`) que abre a cena inicial;
-   - O assembly C# do jogo;
-   - O **Content Pack** (se ativado) com os assets ricos.
+4. Opcional: marque **embutir runtime .NET** (gera o executável com o
+   runtime do C# incluído — o jogador não precisa instalar nada).
 
-## O que o jogo roda
+## O que sai
 
-- Abre a **cena inicial** e roda o **GameModule** registrado;
-- Usa a **câmera da própria cena** — o que você viu no Play é o que sai;
-- Física, scripts, partículas e áudio rodam de verdade.
+```
+MinhaPasta/
+  KizuriGame.exe          ← o jogo
+  cena.kzscene            ← cena inicial
+  assets/...              ← modelos, texturas, áudios
+  Kizuri.Scripting.dll    ← seu código C# compilado
+```
 
-## Distribuição
+## Recursos embutidos
 
-- **Sem content**: o binário já embute os assets padrão (`kzres://`) — o jogo
-  funciona sozinho, só com a cena e o assembly;
-- **Com content**: copie a pasta `content/` junto para as demos/assets ricos.
+A engine embute os **assets padrão** (`kzres://`) no executável: modelos de
+demonstração, céu e fontes. Isso significa que o jogo não depende de pastas
+externas para as funções básicas — e você pode embutir os seus assets também.
 
-::: ok
-Como os padrões são embutidos, um jogo que só usa builtins e `kzres://`
-distribui um **único executável** (mais a DLL do jogo).
+## Publicação
+
+- A pasta exportada é autocontida: copie para qualquer máquina (com GPU
+  OpenGL 3.3) e rode.
+- Para distribuir para lojas ou sites, compacte a pasta em um `.zip`.
+
+::: dica
+Teste o export cedo: defina a cena inicial, exporte e rode o executável.
+Só a cena inicial é carregada automaticamente — o resto é carregado por
+`Scene.Load` no jogo.
 :::
-
-## Checklist final
-
-- [ ] Cena inicial salva e com a câmera primária configurada
-- [ ] GameModule registra todos os scripts usados
-- [ ] Testou o Play de ponta a ponta
-- [ ] (Opcional) Content Pack junto para os assets ricos

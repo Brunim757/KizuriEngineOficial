@@ -1,54 +1,43 @@
 ---
-title: Animação esquelética
+title: Animação 3D
 group: Componentes
-order: 8
+order: 13
 ---
 
-# Animação esquelética (skinning)
+# Animação 3D
 
-Toca **animações de um `.glb`/`.gltf`** em uma malha com skeleton — personagens
-e criaturas modelados em Blender etc. funcionam direto.
+A animação 3D é **esquelética (skinning)** via glTF: modelos `.glb`/`.gltf`
+com juntas e clips de animação rodam direto no editor e no jogo.
 
-## AnimatorComponent
+## Como usar
 
-| Campo | Descrição |
-|-------|-----------|
-| **MeshPath** | Fonte `.glb`/`.gltf` (o mesmo arquivo do MeshRenderer) |
-| **ClipName** | Animação atual (nome da `animation` no arquivo) |
-| **Playing** | Toca/pausa |
-| **Loop** | Repete ao fim |
-| **Speed** | Velocidade de reprodução |
-| **Time** | Posição na animação (segundos) |
+1. Adicione um **MeshRenderer** com um `.glb` animado (ex.: o Fox da demo).
+2. Adicione o componente **Animador** (mesmo caminho do modelo).
+3. No painel **Animator**, escolha o **clip**, play/pause, loop, velocidade e
+   arraste a **linha do tempo** para qualquer pose.
 
-## Configurando
+## Componente Animator
 
-1. Adicione **MeshRenderer** apontando para `Assets/Models/Personagem.glb`;
-2. Adicione **Animator** com o mesmo caminho;
-3. Escolha o **ClipName** (ex.: `"Run"`, `"Idle"` — os nomes vêm do arquivo).
+- **Clip** — nome da animação no arquivo
+- **Playing / Loop / Speed**
+- **Time** — posição atual (segundos)
 
-O renderer aplica a **skin** (matrizes de junta) no vertex shader — e também
-no **shader de sombra**, então a sombra "anda" junto com o personagem.
-
-## Em C#
+## No script
 
 ```csharp
-Entity.AddMeshRenderer("Assets/Models/Fox.glb");
 Entity.AddAnimator("Assets/Models/Fox.glb");
-if (Entity.PlayAnimation("Survey")) { }
-Entity.SetAnimationSpeed(1.5f);
+Entity.PlayAnimation("Survey");
+Entity.SetAnimationSpeed(0.5f);
 Entity.SetAnimationLoop(true);
-Entity.SetAnimationPlaying(true);
-Entity.SetAnimationTime(2f);
-var t = Entity.AnimationTime;
 ```
 
-## Sobre a skin
+## Dicas
 
-- `SkinData` suporta juntas, pesos por vértice e múltiplos **clips**;
-- O Fox de demonstração tem 19 juntas e ~8 animações — experimente na
-  [demonstração 3D](interface.html) (menu **Cena**).
+- A **sombra** acompanha a pose animada (o passe de sombra aplica o
+  skinning) — o Fox projeta sombra na pose atual.
+- O painel **Animator** (menu Janelas) tem o controle completo.
 
-::: info
-**Clip vazio = pose de repouso.** Deixe `ClipName` vazio para mostrar a malha
-na pose do arquivo sem animar.
+::: dica
+O Content Pack traz o **Fox** (skin + animações) e o **DamagedHelmet**
+(material PBR) — perfeitos para testar skinning e materiais.
 :::

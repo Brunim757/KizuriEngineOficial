@@ -6,46 +6,43 @@ order: 4
 
 # Content Browser
 
-O **Content Browser** mostra os arquivos da pasta atual do projeto. É a sua
-"caixa de assets".
+O painel **Content Browser** mostra os arquivos do projeto: modelos, texturas,
+áudios, cenas, prefabs e scripts.
 
-## Drag & drop
+## Atalhos de uso
 
-Arraste um asset direto para o **viewport** e a entidade nasce pronta:
+- **Clique** seleciona o arquivo; **duplo clique** abre (cena/prefab) ou mostra o preview
+- **Botão direito** abre o menu de contexto: Novo (Pasta, Script C#, Cena, Prefab), Renomear, Excluir
+- **Arraste um asset para o viewport** para criar a entidade:
+  - `.obj/.glb/.gltf` → **MeshRenderer**
+  - imagem (`.png/.jpg/...`) → **SpriteRenderer**
+- **Arraste um asset para um slot do Inspetor** (ex.: campo de textura) para aplicá-lo
 
-| Asset | O que cria |
-|-------|------------|
-| `.obj` / `.glb` / `.gltf` | Entidade com `MeshRenderer` + material extraído do modelo |
-| `.png` / `.jpg` | Entidade com `SpriteRenderer` usando a textura |
-| `.wav` / `.ogg` | Entidade com `AudioSource` |
-| `.kzprefab` | Entidade instanciada da prefab |
-
-## Ícones por tipo
-
-Cada tipo de arquivo tem um ícone colorido para reconhecimento rápido:
-modelos, texturas, áudio, prefabs, cenas.
-
-## Renomear e organizar
-
-- **Renomeie** assets e entidades diretamente (duplo clique no nome).
-- Crie pastas para organizar (`Assets/Models`, `Assets/Sounds`, …).
-
-## Campos de arquivo
-
-Nos componentes, os campos de caminho têm um botão **…** que abre o diálogo
-nativo de seleção (Windows). No Linux/macOS, digite o caminho manualmente.
-
-## Caminhos
-
-Todos os caminhos são **relativos ao projeto**:
+## Estrutura típica de um projeto
 
 ```
-Assets/Models/Cube.glb
-Assets/Textures/piso.png
-Assets/Sounds/tiro.wav
+MeuJogo/
+  MeuJogo.kzproj     ← arquivo do projeto
+  Assets/            ← seus arquivos (modelos, texturas, scripts, cenas)
+  Source/            ← código C# do jogo (compilado no Play)
 ```
 
-Também são aceitos:
+## Previews
 
-- `builtin:cube|plane|sphere|cylinder|cone|capsule|torus` — meshes geradas;
-- `kzres://…` — [recursos embutidos](recursos-embutidos.html).
+O Content Browser mostra **miniaturas reais** de imagens (com cache por
+caminho). Pastas gigantes não travam o editor: as miniaturas são geradas com
+orçamento por frame.
+
+## Importação
+
+A engine importa diretamente:
+
+- **Modelos**: `.obj`, `.glb`, `.gltf` (o glTF traz materiais PBR, skins e animações)
+- **Imagens**: `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tga`
+- **Céus**: `.hdr`, `.exr` (equirectangular)
+- **Áudio**: `.wav`, `.ogg`, `.mp3`
+- **Cenas**: `.kzscene` · **Prefabs**: `.kzprefab`
+
+::: dica
+Assets embutidos da engine usam o prefixo `kzres://` (ex.: `kzres://skies/sky_gradient.hdr`).
+:::

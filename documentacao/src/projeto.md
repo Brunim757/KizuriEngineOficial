@@ -1,74 +1,46 @@
 ---
-title: Projetos, cenas e prefabs
-group: Conceitos
-order: 1
+title: Gerenciamento de projetos
+group: Introdução
+order: 4
 ---
 
-# Projetos, cenas e prefabs
+# Gerenciamento de projetos
 
-Tudo na Kizuri gira em torno de três arquivos de texto legível (JSON):
+Um **projeto** é a pasta de um jogo: cenas, assets, scripts e o arquivo do
+projeto (`.kzproj`).
 
-| Formato | O que é |
-|---------|---------|
-| **`.kzproj`** | O **projeto** — modo padrão (2D/3D/Vazio) e configurações. |
-| **`.kzscene`** | Uma **cena** — a lista de entidades e componentes. |
-| **`.kzprefab`** | Uma **entidade reutilizável** — instanciada quantas vezes quiser. |
+## Hub
 
-## Projeto (.kzproj)
+O editor abre no **Hub** (tela inicial), onde você:
 
-É a raiz de tudo. Ao criar um projeto você escolhe o **modo**:
+- **Cria um novo projeto** (2D, 3D ou vazio)
+- **Abre um recente** (a lista fica salva)
+- **Abre um projeto** pelo caminho
 
-- **2D** — cenas novas nascem com câmera ortográfica + sprites + física 2D;
-- **3D** — cenas novas nascem com câmera de perspectiva + mesh;
-- **Vazio** — só uma câmera.
+## Estrutura do projeto
 
-O modo não é uma camisa de força: você pode misturar 2D e 3D na mesma cena
-(cenas **2.5D**). Ele só define o que vem pronto no primeiro frame.
-
-## Cena (.kzscene)
-
-Uma cena é uma lista de entidades, cada uma com seus componentes. O arquivo é
-JSON legível — dá para editar no bloco de notas e versionar no git:
-
-```json
-{
-  "entities": [
-    {
-      "id": "9f1c…",
-      "tag": "Jogador",
-      "parent": null,
-      "transform": { "t": [0, 0, 0], "r": [0, 0, 0], "s": [1, 1, 1] },
-      "components": [ … ]
-    }
-  ]
-}
+```
+MeuJogo/
+  MeuJogo.kzproj     ← arquivo do projeto (config + cena inicial)
+  Assets/            ← cenas, prefabs, modelos, texturas, áudios
+  Source/            ← scripts C# do jogo
 ```
 
-### Salvar e abrir
+## Abrir e salvar cenas
 
-- **Arquivo → Salvar Cena** (`Ctrl+S`) salva a cena atual.
-- **Arquivo → Salvar Cena Como…** salva em outro caminho.
-- **Arquivo → Abrir Cena…** / **Cena → Nova Cena** troca a cena.
-- No jogo, `Scene.Load("Assets/Fase2.kzscene")` troca de cena em runtime.
+- **Arquivo → Salvar Cena** / **Salvar Cena Como...** (`.kzscene`)
+- **Arquivo → Abrir Cena...** — cenas grandes carregam de forma
+  **incremental** (sem travar o editor, com barra de progresso)
+- **Arquivo → Definir cena como inicial** — a cena que o jogo carrega ao
+  abrir/exportar
 
-## Prefab (.kzprefab)
+## Prefabs
 
-Uma prefab é uma entidade (com toda a subárvore de filhos) salva como arquivo.
-Serve como "molde": o mesmo inimigo, o mesmo projétil, o mesmo item.
+No **Inspetor** (ou hierarquia), **botão direito → Salvar como Prefab**
+gera um `.kzprefab` reutilizável. Arraste o prefab para o viewport ou use
+`Scene.InstantiatePrefab` no código.
 
-Em runtime:
-
-```csharp
-// instancia na posição dada (a física e o OnCreate rodam de verdade)
-var inimigo = Scene.InstantiatePrefab("Assets/Inimigo.kzprefab", new Vector3(3f, 0f, 0f));
-
-// com rotação (euler, radianos)
-var tiro = Scene.InstantiatePrefab("Assets/Tiro.kzprefab", pos, rot);
-```
-
-::: info
-**Caminhos relativos.** Todos os caminhos de asset (texturas, meshes, clips,
-prefabs, cenas) são resolvidos **relativos ao projeto**. Ex.:
-`Assets/Models/Cube.glb`. Também são aceitos os pseudo-caminhos `builtin:*` e
-`kzres://*` (veja [Recursos embutidos](recursos-embutidos.html)).
+::: dica
+Troque de projeto quando quiser: **Arquivo → Voltar ao Início** leva você
+de volta ao Hub sem perder nada.
 :::

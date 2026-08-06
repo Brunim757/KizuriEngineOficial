@@ -1,79 +1,37 @@
 ---
-title: Sprites, círculos e texto 2D
+title: Sprites 2D
 group: Componentes
-order: 2
+order: 4
 ---
 
-# Sprites, círculos e texto 2D
+# Sprites 2D
 
-Os elementos 2D são desenhados **depois do mundo 3D e antes da interface**
-— por isso sprites aparecem na frente de objetos 3D e atrás dos menus.
+O componente **SpriteRenderer** desenha uma imagem 2D na cena.
 
-## SpriteRenderer
+## Como usar
 
-Um quadrado com textura ou cor sólida.
+1. Traga uma imagem para o **Content Browser**.
+2. **Arraste a imagem para o viewport** (cria a entidade com sprite) ou
+   arraste para o campo **Sprite** do componente.
+3. No Inspetor, ajuste a **cor** (tinta), a **ordem de desenho** e o **flip**.
 
-| Campo | Descrição |
-|-------|-----------|
-| **Color** | Cor RGBA (tinta sobre a textura; sem textura = cor sólida) |
-| **Texture** | Textura (`.png`/`.jpg`, caminho relativo) |
-| **Tiling** | Repetição da textura |
-| **SortingLayer** | Ordenação (menor desenha atrás) |
-| **FlipX / FlipY** | Inverte o sprite no espaço local |
+## Propriedades
 
-```csharp
-Entity.AddSprite("Assets/Textures/jogador.png");
-Entity.SetSpriteColor(1f, 1f, 1f, 1f);
-Entity.SetSpriteFlip(flipX: true, flipY: false);
-Entity.SetSortingLayer(5);
-```
+- **Sprite** — a textura
+- **Cor** — tint (branco = original, preto = só silhueta)
+- **FlipX / FlipY** — espelha no eixo (para personagens virando de lado)
+- **SortingLayer** — camada de desenho (maior desenha por cima)
+- **Tile** — repete a textura dentro do retângulo
 
-## CircleRenderer
+## Dicas
 
-Círculo desenhado por **SDF** — disco cheio ou anel com borda suavizada.
+- Para **animação de sprite** (folhas com quadros), veja
+  [Animação 2D](animacao-2d.html).
+- Para **tilemaps**, veja [Tilemap](tilemap.html).
+- Sprites usam a câmera **ortográfica principal** — veja [Câmera](camera.html).
 
-| Campo | Descrição |
-|-------|-----------|
-| **Color** | Cor RGBA |
-| **Thickness** | `1.0` = disco cheio; `<1` = anel |
-| **Fade** | Suavização da borda |
-| **SortingLayer** | Ordenação |
-
-```csharp
-var coin = Scene.CreateEntity("Moeda");
-coin.AddSprite();
-coin.SetSpriteColor(1f, 0.8f, 0.2f, 1f); // conveniente: use um sprite pequeno
-```
-
-## TextComponent
-
-Texto 2D (HUD, pontuação, diálogo) com a **fonte embutida** JetBrains Mono
-(atlas gerado via stb_truetype — nenhum arquivo de fonte externo).
-
-| Campo | Descrição |
-|-------|-----------|
-| **Text** | Conteúdo; `\n` quebra linha |
-| **FontSize** | Altura em pixels de tela |
-| **Color** | Cor RGBA |
-| **Alignment** | Esquerda / centro / direita |
-| **SortingLayer** | Ordenação |
-
-```csharp
-var hud = Scene.CreateEntity("HUD");
-hud.AddText("Pontos: 0", 32f);
-hud.SetText("Pontos: 100");
-hud.SetTextSize(48f);
-hud.SetTextColor(1f, 1f, 1f, 1f);
-hud.SetPosition(new Vector3(-8f, 5f, 0f));
-```
-
-## Ordenação (SortingLayer)
-
-Camadas menores são desenhadas **atrás**. Sirva-se de camadas negativas para
-fundos e positivas para elementos da frente:
-
-```
-SortingLayer -5  → fundo (desenhado primeiro)
-SortingLayer  0  → jogo
-SortingLayer  5  → HUD
-```
+::: nota
+A ordem de desenho no 2D respeita o `Z` do Transform + a **SortingLayer**:
+camadas maiores na frente, e dentro da mesma camada, `Z` menor desenha
+atrás.
+:::

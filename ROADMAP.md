@@ -396,4 +396,17 @@
   (`kz_material_set_height_map` / `kz_material_set_height_scale` no bridge)
 - [x] Câmera olhando de lado (Vt.z < 0.02) desliga o POM sem artefato
 
+### ✅ Céu atmosférico Rayleigh/Mie (scattering físico)
+- [x] Skybox procedural com **single-scattering**: marcha do raio de visão na
+  atmosfera + marcha da luz do sol até cada ponto, com transmitância e fases
+  de Rayleigh (azul) e Mie (haze/halo) — loops de TETO CONSTANTE, 100% GLSL 330
+- [x] Unidades NORMALIZADAS (raio do planeta = 1.0) com β e scale-height
+  re-escalados — sem estourar a precisão float32 na interseção raio-esfera
+- [x] Sol segue a luz direcional (o disco bate na mesma direção da sombra) +
+  disco HDR (>1 alimenta o bloom) + halo quente Mie + estrelas celulares no
+  lado noturno
+- [x] HDRI carregado = continua mostrando o ambiente do usuário; sem HDRI o
+  céu passa a ser o scattering (o pôr-do-sol laranja realista)
+- [x] Guardas anti-NaN no skybox
+
 ---

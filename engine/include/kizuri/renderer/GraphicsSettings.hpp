@@ -59,6 +59,12 @@ struct GraphicsSettings {
     // tira o aliasing/estrelinhas das silhuetas (100% 3.3, passe fullscreen).
     bool TAAEnabled = true;
 
+    // God rays / luz volumétrica em espaço de tela: marcha radial do pixel até
+    // a posição do sol na tela, acumulando a cor brilhante da cena (passos
+    // FIXOS, constante no shader — GLSL 330-safe).
+    bool GodRaysEnabled = false;
+    float GodRaysIntensity = 0.6f;
+
     // Exposição multiplicada antes do tonemap ACES (equivalente ao "EV").
     float Exposure = 1.0f;
 

@@ -1345,6 +1345,9 @@ void EditorLayer::DrawSettingsGraphics() {
     ImGui::Separator();
     customTweak |= ImGui::DragFloat("Exposição", &m_GraphicsSettings.Exposure, 0.01f, 0.1f, 8.0f);
     customTweak |= ImGui::Checkbox("Anti-aliasing temporal (TAA)", &m_GraphicsSettings.TAAEnabled);
+    customTweak |= ImGui::Checkbox("God rays (luz volumétrica)", &m_GraphicsSettings.GodRaysEnabled);
+    if (m_GraphicsSettings.GodRaysEnabled)
+        customTweak |= ImGui::DragFloat("Intensidade dos god rays", &m_GraphicsSettings.GodRaysIntensity, 0.01f, 0.0f, 3.0f);
     customTweak |= ImGui::Checkbox("VSync", &m_GraphicsSettings.VSync);
     ImGui::Separator();
     customTweak |= ImGui::Checkbox("Névoa (fog exponencial)", &m_GraphicsSettings.FogEnabled);

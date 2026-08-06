@@ -252,6 +252,11 @@ private:
     static bool s_TAAHistoryValid;
     static uint32_t s_TAACounter;
 
+    // God rays / luz volumétrica (espaço de tela): marcha radial até o sol na
+    // tela, acumulando o brilho da cena (loop de passos FIXOS, GLSL 330-safe).
+    static Ref<Shader> s_GodRaysShader;
+    static uint32_t s_GodRaysFBO, s_GodRaysColorBuffer;
+
     // Partículas: 1 VAO reaproveitado por todos os lotes do frame — buffer de quad estático
     // (attribs 0/1) + buffer de instância dinâmico, reescrito via glBufferSubData a cada lote.
     struct ParticleBatch { std::vector<ParticleInstance> Instances; bool Additive; Ref<Texture2D> Texture; };

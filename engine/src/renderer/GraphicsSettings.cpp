@@ -14,6 +14,7 @@ void GraphicsSettings::TuneToHardware() {
     MSAA = 4; ShadowMapSize = 2048; ShadowPCFRadius = 2; SSAOSamples = 32;
     BloomIterations = 4;
     ShadowSoftness = 0.6f;
+    GodRaysEnabled = false; GodRaysIntensity = 0.6f;
     SSREnabled = true; SSRMaxSteps = 24; SSRThickness = 0.12f; SSRIntensity = 0.6f;
     SSRMarchDistance = 20.0f;
     TAAEnabled = true;
@@ -50,6 +51,7 @@ void GraphicsSettings::Clamp() {
     SSRThickness = std::clamp(SSRThickness, 0.01f, 1.0f);
     SSRIntensity = std::clamp(SSRIntensity, 0.0f, 2.0f);
     SSRMarchDistance = std::clamp(SSRMarchDistance, 1.0f, 200.0f);
+    GodRaysIntensity = std::clamp(GodRaysIntensity, 0.0f, 3.0f);
     Exposure = std::clamp(Exposure, 0.1f, 8.0f);
     FogDensity = std::clamp(FogDensity, 0.0f, 0.2f);
     Vignette = std::clamp(Vignette, 0.0f, 1.0f);
@@ -64,6 +66,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
         case QualityPreset::Ultra:
             RenderScale = 1.0f; MSAA = 8; ShadowMapSize = 4096; ShadowPCFRadius = 3;
             ShadowSoftness = 0.7f;
+            GodRaysEnabled = true; GodRaysIntensity = 0.7f;
             BloomEnabled = true;  BloomThreshold = 1.2f; BloomIntensity = 0.45f;
             SSAOEnabled = true;   SSAOSamples = 64;      SSAORadius = 0.5f;
             SSREnabled = true;    SSRMaxSteps = 32;      SSRIntensity = 0.7f;
@@ -78,6 +81,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
         case QualityPreset::High:
             RenderScale = 1.0f; MSAA = 4; ShadowMapSize = 2048; ShadowPCFRadius = 2;
             ShadowSoftness = 0.6f;
+            GodRaysEnabled = true; GodRaysIntensity = 0.6f;
             BloomEnabled = true;  BloomThreshold = 1.2f; BloomIntensity = 0.45f;
             SSAOEnabled = true;   SSAOSamples = 32;      SSAORadius = 0.5f;
             SSREnabled = true;    SSRMaxSteps = 24;      SSRIntensity = 0.6f;
@@ -92,6 +96,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
         case QualityPreset::Medium:
             RenderScale = 1.0f; MSAA = 2; ShadowMapSize = 1024; ShadowPCFRadius = 1;
             ShadowSoftness = 0.5f;
+            GodRaysEnabled = false; GodRaysIntensity = 0.4f;
             BloomEnabled = true;  BloomThreshold = 1.2f; BloomIntensity = 0.35f;
             SSAOEnabled = true;   SSAOSamples = 16;      SSAORadius = 0.5f;
             SSREnabled = true;    SSRMaxSteps = 16;      SSRIntensity = 0.45f;
@@ -106,6 +111,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
         case QualityPreset::Low:
             RenderScale = 0.75f; MSAA = 1; ShadowMapSize = 1024; ShadowPCFRadius = 0;
             ShadowSoftness = 0.0f;
+            GodRaysEnabled = false; GodRaysIntensity = 0.0f;
             BloomEnabled = false; BloomThreshold = 1.2f; BloomIntensity = 0.0f;
             SSAOEnabled = false;  SSAOSamples = 8;       SSAORadius = 0.5f;
             SSREnabled = false;   SSRMaxSteps = 8;       SSRIntensity = 0.0f;
@@ -132,6 +138,8 @@ bool SaveGraphicsSettings(const std::string& path, const GraphicsSettings& setti
     j["shadow_map_size"] = settings.ShadowMapSize;
     j["shadow_pcf_radius"] = settings.ShadowPCFRadius;
     j["shadow_softness"] = settings.ShadowSoftness;
+    j["god_rays_enabled"] = settings.GodRaysEnabled;
+    j["god_rays_intensity"] = settings.GodRaysIntensity;
     j["bloom_enabled"] = settings.BloomEnabled;
     j["bloom_threshold"] = settings.BloomThreshold;
     j["bloom_intensity"] = settings.BloomIntensity;
@@ -173,6 +181,8 @@ bool LoadGraphicsSettings(const std::string& path, GraphicsSettings& out) {
         out.ShadowMapSize = j.value("shadow_map_size", out.ShadowMapSize);
         out.ShadowPCFRadius = j.value("shadow_pcf_radius", out.ShadowPCFRadius);
         out.ShadowSoftness = j.value("shadow_softness", out.ShadowSoftness);
+        out.GodRaysEnabled = j.value("god_rays_enabled", out.GodRaysEnabled);
+        out.GodRaysIntensity = j.value("god_rays_intensity", out.GodRaysIntensity);
         out.BloomEnabled = j.value("bloom_enabled", out.BloomEnabled);
         out.BloomThreshold = j.value("bloom_threshold", out.BloomThreshold);
         out.BloomIntensity = j.value("bloom_intensity", out.BloomIntensity);

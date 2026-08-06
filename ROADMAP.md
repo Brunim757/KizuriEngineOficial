@@ -419,4 +419,14 @@
 - [x] `ShadowSoftness` (0..1, 0 = desliga e cai no PCF simples) — presets,
   `settings.json` + UI no editor ("Penumbra (PCSS)")
 
+### ✅ God rays / luz volumétrica (espaço de tela)
+- [x] Marcha RADIAL do pixel até a posição do sol na tela, acumulando a cor
+  brilhante da cena com density/decay — loop de TETO CONSTANTE
+  (`#define GODRAY_MAX_STEPS 28`), 100% GLSL 330
+- [x] Sol segue a luz direcional; pass só roda com o sol (quase) dentro da
+  tela; meia resolução + blur horizontal pra suavizar; composto no composite
+  antes do tonemap com guarda anti-NaN
+- [x] `GodRaysEnabled` + `GodRaysIntensity` — presets (Ultra/High ligam),
+  `settings.json` + UI no editor
+
 ---

@@ -73,6 +73,9 @@ uint32_t Renderer3D::s_TAACompositeFBO = 0, Renderer3D::s_TAACompositeTex = 0;
 uint32_t Renderer3D::s_TAAHistoryFBO[2] = { 0, 0 }, Renderer3D::s_TAAHistoryTex[2] = { 0, 0 };
 bool Renderer3D::s_TAAHistoryValid = false;
 uint32_t Renderer3D::s_TAACounter = 0;
+
+Ref<Shader> Renderer3D::s_GodRaysShader;
+uint32_t Renderer3D::s_GodRaysFBO = 0, Renderer3D::s_GodRaysColorBuffer = 0;
 static float s_PostTime = 0.0f; // relógio do pós-processamento (grão de filme animado)
 
 std::vector<Renderer3D::ParticleBatch> Renderer3D::s_ParticleBatches;
@@ -862,6 +865,8 @@ uniform sampler2D u_AOTexture;
 uniform bool u_HasAO;
 uniform sampler2D u_SSRTexture;
 uniform bool u_HasSSR;
+uniform sampler2D u_GodRaysTexture;
+uniform bool u_HasGodRays;
 uniform float u_BloomIntensity;
 uniform float u_Exposure;
 uniform float u_Vignette;
@@ -899,6 +904,11 @@ void main() {
         if (any(isnan(ssr)) || any(isinf(ssr))) ssr = vec3(0.0);
         color += ssr;
     }
+    if (u_HasGodRays) {
+        vec3 gr = texture(u_GodRaysTexture, uv).rgb;
+        if (any(isnan(gr)) || any(isinf(gr))) gr = vec3(0.0);
+        color += gr;
+    }
     if (u_HasAO) color *= texture(u_AOTexture, uv).r;
     // Guarda final: NENHUM passe de pós pode produzir NaN/Inf e apagar a tela.
     if (any(isnan(color)) || any(isinf(color))) color = vec3(0.0);
@@ -917,6 +927,50 @@ void main() {
     }
 
     o_Color = vec4(color, 1.0);
+}
+)";
+
+// ---------------------------------------------------------------------
+// God rays / luz volumétrica em espaço de tela. Cada pixel marcha do próprio
+// ponto até a posição do SOL na tela (u_SunUV), acumulando a cor brilhante
+// da cena com atenuação (density/decay). O loop tem TETO CONSTANTE
+// (GODRAY_MAX_STEPS é #define fixo) — compila em GLSL 330 core em qualquer
+// driver. Limitação conhecida do método em espaço de tela: raios "atravessam"
+// obstáculos finos (sem depth-aware); o default deixa o efeito sutil.
+// ---------------------------------------------------------------------
+static const char* s_GodRaysFragmentSrc = R"(
+#version 330 core
+#define GODRAY_MAX_STEPS 28
+
+in vec2 v_TexCoord;
+out vec4 o_Color;
+
+uniform sampler2D u_SceneColor;
+uniform vec2 u_SunUV;        // posição do sol em UV [0,1]
+uniform float u_Density;
+uniform float u_Decay;
+uniform float u_Weight;
+uniform float u_Intensity;
+
+void main() {
+    vec2 delta = u_SunUV - v_TexCoord;
+    float dist = length(delta);
+    // Sol fora da tela ou colado no pixel: sem raios.
+    if (dist < 0.0001 || dist > 1.6) { o_Color = vec4(0.0); return; }
+
+    vec2 stepUV = delta / float(GODRAY_MAX_STEPS);
+    vec2 uv = v_TexCoord;
+    float illuminationDecay = 1.0;
+    vec3 sum = vec3(0.0);
+    for (int i = 0; i < GODRAY_MAX_STEPS; ++i) {
+        uv += stepUV;
+        if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) break;
+        vec3 c = texture(u_SceneColor, uv).rgb;
+        if (any(isnan(c)) || any(isinf(c))) c = vec3(0.0);
+        sum += c * u_Density * illuminationDecay;
+        illuminationDecay *= u_Decay;
+    }
+    o_Color = vec4(sum * u_Weight * u_Intensity, 1.0);
 }
 )";
 
@@ -1357,6 +1411,8 @@ void Renderer3D::Init() {
     s_SSRShader = CreateRef<Shader>("Renderer3D_SSR", s_FullscreenVertexSrc, s_SSRFragmentSrc);
     // TAA — anti-aliasing temporal (jitter + histórico com clamp de vizinhança).
     s_TAAShader = CreateRef<Shader>("Renderer3D_TAA", s_FullscreenVertexSrc, s_TAAFragmentSrc);
+    // God rays — luz volumétrica em espaço de tela (marcha radial fixa).
+    s_GodRaysShader = CreateRef<Shader>("Renderer3D_GodRays", s_FullscreenVertexSrc, s_GodRaysFragmentSrc);
     std::srand(2026u);
     s_SSAOKernel.resize(64);
     for (int i = 0; i < 64; ++i) {
@@ -1456,6 +1512,8 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         glDeleteTextures(1, &s_TAACompositeTex);
         glDeleteFramebuffers(2, s_TAAHistoryFBO);
         glDeleteTextures(2, s_TAAHistoryTex);
+        glDeleteFramebuffers(1, &s_GodRaysFBO);
+        glDeleteTextures(1, &s_GodRaysColorBuffer);
     }
 
     // --- Destino simples (o que os passes de pós amostram): cor HDR + depth textura ---
@@ -1587,6 +1645,22 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     s_TAAHistoryValid = false; // resolução/alvo mudou: histórico antigo é inválido
     s_TAACounter = 0;
+
+    // --- God rays: meia resolução, RGBA16F (cor brilhante acumulada) ---
+    uint32_t grW = glm::max(1u, width / 2), grH = glm::max(1u, height / 2);
+    glGenFramebuffers(1, &s_GodRaysFBO);
+    glGenTextures(1, &s_GodRaysColorBuffer);
+    glBindTexture(GL_TEXTURE_2D, s_GodRaysColorBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, (GLsizei)grW, (GLsizei)grH, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindFramebuffer(GL_FRAMEBUFFER, s_GodRaysFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_GodRaysColorBuffer, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        SetShaderDiagnostic("Framebuffer God rays INCOMPLETO");
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 // (Re)cria os 3 shadow maps se a resolução mudou (preset de qualidade pode
@@ -2319,6 +2393,45 @@ void Renderer3D::EndScene() {
         hasSSR = true;
     }
 
+    // --- Passe 1.8: God rays / luz volumétrica (meia resolução) — marcha
+    // radial do pixel até o sol na tela acumulando o brilho da cena ---
+    bool hasGodRays = false;
+    if (s_Settings.GodRaysEnabled && s_Settings.GodRaysIntensity > 0.001f) {
+        glm::vec3 sunDir = s_HasShadowCaster
+            ? glm::normalize(-s_ShadowCaster.Direction)
+            : glm::normalize(glm::vec3(0.3f, 1.0f, 0.2f));
+        glm::vec4 sunClip = s_Projection * (s_View * glm::vec4(sunDir, 0.0f));
+        if (sunClip.w > 0.0f) {
+            glm::vec2 sunNDC = glm::vec2(sunClip) / sunClip.w;
+            glm::vec2 sunUV = sunNDC * 0.5f + 0.5f;
+            // Só renderiza se o sol está (quase) dentro da tela.
+            if (sunUV.x >= -0.6f && sunUV.x <= 1.6f && sunUV.y >= -0.6f && sunUV.y <= 1.6f) {
+                uint32_t grW = glm::max(1u, internalW / 2), grH = glm::max(1u, internalH / 2);
+                glBindFramebuffer(GL_FRAMEBUFFER, s_GodRaysFBO);
+                glViewport(0, 0, (GLsizei)grW, (GLsizei)grH);
+                s_GodRaysShader->Bind();
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, s_HDRColorBuffer);
+                s_GodRaysShader->SetInt("u_SceneColor", 0);
+                s_GodRaysShader->SetFloat2("u_SunUV", sunUV);
+                s_GodRaysShader->SetFloat("u_Density", 0.15f);
+                s_GodRaysShader->SetFloat("u_Decay", 0.92f);
+                s_GodRaysShader->SetFloat("u_Weight", 0.045f);
+                s_GodRaysShader->SetFloat("u_Intensity", s_Settings.GodRaysIntensity);
+                RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
+
+                // Um passe de blur horizontal pra suavizar os raios.
+                s_BlurShader->Bind();
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, s_GodRaysColorBuffer);
+                s_BlurShader->SetInt("u_Image", 0);
+                s_BlurShader->SetInt("u_Horizontal", 1);
+                RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
+                hasGodRays = true;
+            }
+        }
+    }
+
     // --- Passe 2: bright-pass (meia resolução) — extrai o glow, se bloom ligado ---
     uint32_t bloomW = glm::max(1u, internalW / 2), bloomH = glm::max(1u, internalH / 2);
     int bloomReadIdx = 0;
@@ -2387,6 +2500,12 @@ void Renderer3D::EndScene() {
         glActiveTexture(GL_TEXTURE3);
         glBindTexture(GL_TEXTURE_2D, s_SSRColorBuffer);
         s_CompositeShader->SetInt("u_SSRTexture", 3);
+    }
+    s_CompositeShader->SetInt("u_HasGodRays", hasGodRays ? 1 : 0);
+    if (hasGodRays) {
+        glActiveTexture(GL_TEXTURE4);
+        glBindTexture(GL_TEXTURE_2D, s_GodRaysColorBuffer);
+        s_CompositeShader->SetInt("u_GodRaysTexture", 4);
     }
     RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
 
@@ -2458,6 +2577,7 @@ void Renderer3D::EndScene() {
             dump << "SSR: " << (s_Settings.SSREnabled ? "on" : "off") << "\n";
             dump << "TAA: " << (s_Settings.TAAEnabled ? "on" : "off") << "\n";
             dump << "PCSS (penumbra): " << s_Settings.ShadowSoftness << "\n";
+            dump << "God rays: " << (s_Settings.GodRaysEnabled ? "on" : "off") << "\n";
             dump << "Bloom: " << (s_Settings.BloomEnabled ? "on" : "off") << "\n";
             auto fbStatus = [](GLuint fbo) {
                 if (fbo == 0) return 0;

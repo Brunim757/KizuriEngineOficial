@@ -134,7 +134,8 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
             { "MetallicRoughnessMapPath", mat.MetallicRoughnessMapPath },
             { "EmissiveMapPath", mat.EmissiveMapPath },
             { "HeightMapPath", mat.HeightMapPath },
-            { "HeightScale", mat.HeightScale }
+            { "HeightScale", mat.HeightScale },
+            { "PlanarReflect", mat.PlanarReflect }
         };
     }
 
@@ -353,6 +354,7 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         mat.EmissiveMapPath = jm.value("EmissiveMapPath", "");
         mat.HeightMapPath = jm.value("HeightMapPath", "");
         mat.HeightScale = jm.value("HeightScale", 0.08f);
+        mat.PlanarReflect = jm.value("PlanarReflect", false);
         if (!mat.AlbedoMapPath.empty()) mat.AlbedoMap = Texture2D::Create(ResolveSerializedPath(mat.AlbedoMapPath));
         if (!mat.NormalMapPath.empty()) mat.NormalMap = Texture2D::Create(ResolveSerializedPath(mat.NormalMapPath));
         if (!mat.MetallicRoughnessMapPath.empty()) mat.MetallicRoughnessMap = Texture2D::Create(ResolveSerializedPath(mat.MetallicRoughnessMapPath));
@@ -600,6 +602,7 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         mat.EmissiveMapPath = jm.value("EmissiveMapPath", "");
         mat.HeightMapPath = jm.value("HeightMapPath", "");
         mat.HeightScale = jm.value("HeightScale", 0.08f);
+        mat.PlanarReflect = jm.value("PlanarReflect", false);
         mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.AlbedoMapPath));
         mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.NormalMapPath));
         mat.MetallicRoughnessMap = mat.MetallicRoughnessMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.MetallicRoughnessMapPath));

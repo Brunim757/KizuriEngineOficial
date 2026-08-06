@@ -429,4 +429,16 @@
 - [x] `GodRaysEnabled` + `GodRaysIntensity` — presets (Ultra/High ligam),
   `settings.json` + UI no editor
 
+### ✅ Reflexões planares (espelho real)
+- [x] Pré-passe: a cena é renderizada de NOVO numa câmera refletida na face do
+  espelho (posição espelhada + `view * reflectionMatrix`), com near plane
+  OBLÍQUO (Lengyel) pra geometria do outro lado do espelho não "vazar"
+- [x] O material espelhado (`PlanarReflect` no material, checkbox no Inspetor)
+  projeta o próprio fragmento na VP da câmera refletida e amostra a textura
+  RGBA16F — reflexo nítido sem tintar com o albedo; edge de Fresnel reforça a
+  borda; guarda anti-NaN
+- [x] O espelho não reflete a si mesmo (evita recursão); 1 espelho por frame;
+  câmera atrás do espelho desliga o passe
+- [x] Serialização `PlanarReflect` no `.kzscene`; 100% OpenGL 3.3 (FBO padrão)
+
 ---

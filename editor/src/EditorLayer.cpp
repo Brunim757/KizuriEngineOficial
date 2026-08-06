@@ -3534,6 +3534,7 @@ void EditorLayer::DrawInspector() {
                     uint32_t texID = mat.HeightMap->GetRendererID();
                     ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(64.0f, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
                 }
+                ImGui::Checkbox("Reflexão planar (espelho real)", &mat.PlanarReflect);
                 if (mat.NormalMap) {
                     uint32_t texID = mat.NormalMap->GetRendererID();
                     ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(64.0f, 64.0f), ImVec2(0, 1), ImVec2(1, 0));

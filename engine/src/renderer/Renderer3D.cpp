@@ -76,6 +76,11 @@ uint32_t Renderer3D::s_TAACounter = 0;
 
 Ref<Shader> Renderer3D::s_GodRaysShader;
 uint32_t Renderer3D::s_GodRaysFBO = 0, Renderer3D::s_GodRaysColorBuffer = 0;
+
+uint32_t Renderer3D::s_PlanarFBO = 0, Renderer3D::s_PlanarColor = 0, Renderer3D::s_PlanarDepth = 0;
+uint32_t Renderer3D::s_PlanarWidth = 0, Renderer3D::s_PlanarHeight = 0;
+glm::mat4 Renderer3D::s_ReflectionViewProjection = glm::mat4(1.0f);
+bool Renderer3D::s_HasPlanarReflection = false;
 static float s_PostTime = 0.0f; // relógio do pós-processamento (grão de filme animado)
 
 std::vector<Renderer3D::ParticleBatch> Renderer3D::s_ParticleBatches;
@@ -186,6 +191,12 @@ uniform float u_LightOuterCos[MAX_LIGHTS];
 uniform samplerCube u_IrradianceMap;
 uniform samplerCube u_PrefilterMap;
 uniform float u_MaxPrefilterLod;
+
+// Reflexão planar (espelho real): só o material marcado como espelho amostra
+// a textura da câmera refletida, projetando o próprio fragmento com a VP dela.
+uniform sampler2D u_PlanarReflectionMap;
+uniform bool u_IsPlanarMirror;
+uniform mat4 u_ReflectionViewProjection;
 
 const float PI = 3.14159265359;
 
@@ -443,9 +454,27 @@ void main() {
     vec3 F_ibl = FresnelSchlickRoughness(NdotV, F0, roughness);
     vec3 kD_ibl = (vec3(1.0) - F_ibl) * (1.0 - metallic);
     vec3 diffuseIBL = texture(u_IrradianceMap, N).rgb * albedo;
-    vec3 prefilteredColor = textureLod(u_PrefilterMap, R, roughness * u_MaxPrefilterLod).rgb;
     vec2 envBRDF = EnvBRDFApprox(NdotV, roughness);
-    vec3 specularIBL = prefilteredColor * (F_ibl * envBRDF.x + envBRDF.y);
+    vec3 specularIBL;
+    if (u_IsPlanarMirror && u_ReflectionViewProjection[3][3] != 0.0) {
+        // Espelho real: projeta o fragmento (que está NA face do espelho) na
+        // VP da câmera refletida e amostra a cena espelhada. Não usa o F0 do
+        // material (um espelho reflete sem tintar a cor da reflexão).
+        vec4 rclip = u_ReflectionViewProjection * vec4(v_FragPos, 1.0);
+        vec3 reflColor = vec3(0.0);
+        if (rclip.w > 0.0001) {
+            vec2 ruv = rclip.xy / rclip.w * 0.5 + 0.5;
+            ruv.y = 1.0 - ruv.y; // origem da textura do FBO
+            ruv = clamp(ruv, 0.001, 0.999);
+            reflColor = texture(u_PlanarReflectionMap, ruv).rgb;
+        }
+        if (any(isnan(reflColor)) || any(isinf(reflColor))) reflColor = vec3(0.0);
+        float edge = clamp(0.7 + 0.3 * pow(1.0 - NdotV, 3.0), 0.0, 1.0);
+        specularIBL = reflColor * edge;
+    } else {
+        vec3 prefilteredColor = textureLod(u_PrefilterMap, R, roughness * u_MaxPrefilterLod).rgb;
+        specularIBL = prefilteredColor * (F_ibl * envBRDF.x + envBRDF.y);
+    }
     vec3 ambient = (kD_ibl * diffuseIBL + specularIBL) * u_AO;
 
     // Emissivo soma direto (e, acima de 1.0, alimenta o bright-pass do bloom).
@@ -1663,6 +1692,169 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+// (Re)cria o FBO da reflexão planar (espelho real): cor RGBA16F + depth.
+// Resolução interna do frame (qualidade de espelho). Só é criado se há
+// material com PlanarReflect no frame (checado no EndScene).
+void Renderer3D::EnsurePlanarBuffers(uint32_t width, uint32_t height) {
+    if (s_PlanarFBO != 0 && width == s_PlanarWidth && height == s_PlanarHeight) return;
+    s_PlanarWidth = width;
+    s_PlanarHeight = height;
+
+    if (s_PlanarFBO != 0) {
+        glDeleteFramebuffers(1, &s_PlanarFBO);
+        glDeleteTextures(1, &s_PlanarColor);
+        glDeleteTextures(1, &s_PlanarDepth);
+    }
+    glGenFramebuffers(1, &s_PlanarFBO);
+    glGenTextures(1, &s_PlanarColor);
+    glBindTexture(GL_TEXTURE_2D, s_PlanarColor);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, (GLsizei)width, (GLsizei)height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glGenTextures(1, &s_PlanarDepth);
+    glBindTexture(GL_TEXTURE_2D, s_PlanarDepth);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, (GLsizei)width, (GLsizei)height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glBindFramebuffer(GL_FRAMEBUFFER, s_PlanarFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_PlanarColor, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, s_PlanarDepth, 0);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        SetShaderDiagnostic("Framebuffer reflexão planar INCOMPLETO");
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+// Reflete a cena vista pela câmera na face do espelho (pré-passe). Desenha o
+// skybox + todas as meshes (exceto o próprio espelho) com a câmera refletida,
+// numa projeção com near plane oblíquo na face do espelho (sem isso a geometria
+// abaixo do espelho "vaza" pro reflexo).
+void Renderer3D::RenderPlanarReflection(const glm::vec3& planePoint, const glm::vec3& planeNormal,
+                                        int mirrorIndex, uint32_t width, uint32_t height,
+                                        const glm::mat4& reflectView, const glm::mat4& reflectProj,
+                                        const glm::mat4& reflectVP, const glm::vec3& reflectCam) {
+    EnsurePlanarBuffers(width, height);
+    s_ReflectionViewProjection = reflectVP;
+    s_HasPlanarReflection = true;
+
+    glBindFramebuffer(GL_FRAMEBUFFER, s_PlanarFBO);
+    glViewport(0, 0, (GLsizei)width, (GLsizei)height);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Skybox (LEQUAL, sem escrita de profundidade).
+    glDepthFunc(GL_LEQUAL);
+    glDepthMask(GL_FALSE);
+    s_SkyboxShader->Bind();
+    s_SkyboxShader->SetMat4("u_View", glm::mat4(glm::mat3(reflectView)));
+    s_SkyboxShader->SetMat4("u_Projection", reflectProj);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, s_EnvironmentCubemap);
+    s_SkyboxShader->SetInt("u_EnvironmentMap", 0);
+    glm::vec3 sunDir = s_HasShadowCaster
+        ? glm::normalize(-s_ShadowCaster.Direction)
+        : glm::normalize(glm::vec3(0.3f, 1.0f, 0.2f));
+    s_SkyboxShader->SetFloat3("u_SunDirection", sunDir);
+    s_SkyboxShader->SetInt("u_AtmosphereSky", s_EnvironmentHDRIPath.empty() ? 1 : 0);
+    RenderCommand::DrawIndexed(s_CaptureCube->GetVertexArray(), s_CaptureCube->GetIndexCount());
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LESS);
+
+    // Meshes (sem o espelho, que não pode refletir a si mesmo).
+    if (!s_DrawList.empty()) {
+        s_MeshShader->Bind();
+        s_MeshShader->SetMat4("u_ViewProjection", reflectVP);
+        s_MeshShader->SetMat4("u_View", reflectView);
+        s_MeshShader->SetFloat3("u_ViewPos", reflectCam);
+        s_MeshShader->SetInt("u_HasShadow", s_HasShadowCaster ? 1 : 0);
+        s_MeshShader->SetInt("u_ShadowPCF", s_Settings.ShadowPCFRadius);
+        s_MeshShader->SetFloat("u_ShadowSoftness", s_Settings.ShadowSoftness);
+        if (s_HasShadowCaster) {
+            for (int c = 0; c < kCascadeCount; ++c) {
+                std::string idx = "[" + std::to_string(c) + "]";
+                s_MeshShader->SetMat4("u_LightSpaceMatrix" + idx, s_LightSpaceMatrix[c]);
+                s_MeshShader->SetFloat("u_CascadeSplits" + idx, s_CascadeSplits[c]);
+            }
+        }
+        for (int c = 0; c < kCascadeCount; ++c) {
+            glActiveTexture(GL_TEXTURE1 + c);
+            glBindTexture(GL_TEXTURE_2D, s_ShadowMap[c]);
+            s_MeshShader->SetInt("u_ShadowMap" + std::to_string(c), 1 + c);
+        }
+        glActiveTexture(GL_TEXTURE5);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, s_IrradianceCubemap);
+        s_MeshShader->SetInt("u_IrradianceMap", 5);
+        glActiveTexture(GL_TEXTURE6);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, s_PrefilterCubemap);
+        s_MeshShader->SetInt("u_PrefilterMap", 6);
+        s_MeshShader->SetFloat("u_MaxPrefilterLod", (float)(kPrefilterMipLevels - 1));
+
+        s_MeshShader->SetInt("u_FogEnabled", s_Settings.FogEnabled ? 1 : 0);
+        s_MeshShader->SetFloat3("u_FogColor",
+            glm::vec3(s_Settings.FogColor[0], s_Settings.FogColor[1], s_Settings.FogColor[2]));
+        s_MeshShader->SetFloat("u_FogDensity", s_Settings.FogDensity);
+
+        s_MeshShader->SetInt("u_LightCount", (int)s_LightList.size());
+        for (size_t i = 0; i < s_LightList.size(); ++i) {
+            const Light& l = s_LightList[i];
+            std::string idx = "[" + std::to_string(i) + "]";
+            s_MeshShader->SetInt("u_LightTypes" + idx, (int)l.Type);
+            s_MeshShader->SetFloat3("u_LightPositions" + idx, l.Position);
+            s_MeshShader->SetFloat3("u_LightDirections" + idx, l.Direction);
+            s_MeshShader->SetFloat3("u_LightColors" + idx, l.Color);
+            s_MeshShader->SetFloat("u_LightIntensities" + idx, l.Intensity);
+            s_MeshShader->SetFloat("u_LightRanges" + idx, l.Range);
+            s_MeshShader->SetFloat("u_LightInnerCos" + idx, glm::cos(glm::radians(l.InnerConeDeg)));
+            s_MeshShader->SetFloat("u_LightOuterCos" + idx, glm::cos(glm::radians(l.OuterConeDeg)));
+        }
+
+        // No reflexo, nenhum material é "espelho" (evita recursão infinita).
+        s_MeshShader->SetInt("u_IsPlanarMirror", 0);
+        for (int i = 0; i < (int)s_DrawList.size(); ++i) {
+            if (i == mirrorIndex) continue;
+            auto& cmd = s_DrawList[i];
+            s_MeshShader->SetMat4("u_Transform", cmd.Transform);
+            s_MeshShader->SetMat3("u_NormalMatrix", glm::mat3(glm::transpose(glm::inverse(cmd.Transform))));
+            s_MeshShader->SetFloat3("u_Albedo", cmd.Mat.Albedo);
+            s_MeshShader->SetFloat("u_Metallic", cmd.Mat.Metallic);
+            s_MeshShader->SetFloat("u_Roughness", cmd.Mat.Roughness);
+            s_MeshShader->SetFloat("u_AO", cmd.Mat.AO);
+
+            if (cmd.Joints.empty()) {
+                s_MeshShader->SetInt("u_Animated", 0);
+            } else {
+                s_MeshShader->SetInt("u_Animated", 1);
+                for (uint32_t j = 0; j < kMaxSkinJoints; ++j) {
+                    glm::mat4 m = (j < cmd.Joints.size()) ? cmd.Joints[j] : glm::mat4(1.0f);
+                    s_MeshShader->SetMat4("u_JointMatrices[" + std::to_string(j) + "]", m);
+                }
+            }
+
+            bool hasAlbedo = (bool)cmd.Mat.AlbedoMap;
+            s_MeshShader->SetInt("u_HasAlbedoMap", hasAlbedo ? 1 : 0);
+            if (hasAlbedo) { cmd.Mat.AlbedoMap->Bind(0); s_MeshShader->SetInt("u_AlbedoMap", 0); }
+            bool hasNormal = (bool)cmd.Mat.NormalMap;
+            s_MeshShader->SetInt("u_HasNormalMap", hasNormal ? 1 : 0);
+            if (hasNormal) { cmd.Mat.NormalMap->Bind(4); s_MeshShader->SetInt("u_NormalMap", 4); }
+            bool hasMR = (bool)cmd.Mat.MetallicRoughnessMap;
+            s_MeshShader->SetInt("u_HasMetallicRoughnessMap", hasMR ? 1 : 0);
+            if (hasMR) { cmd.Mat.MetallicRoughnessMap->Bind(7); s_MeshShader->SetInt("u_MetallicRoughnessMap", 7); }
+            bool hasEmissive = (bool)cmd.Mat.EmissiveMap;
+            s_MeshShader->SetInt("u_HasEmissiveMap", hasEmissive ? 1 : 0);
+            if (hasEmissive) { cmd.Mat.EmissiveMap->Bind(8); s_MeshShader->SetInt("u_EmissiveMap", 8); }
+            bool hasHeight = (bool)cmd.Mat.HeightMap;
+            s_MeshShader->SetInt("u_HasHeightMap", hasHeight ? 1 : 0);
+            s_MeshShader->SetFloat("u_HeightScale", cmd.Mat.HeightScale);
+            if (hasHeight) { cmd.Mat.HeightMap->Bind(9); s_MeshShader->SetInt("u_HeightMap", 9); }
+            s_MeshShader->SetFloat3("u_Emissive", cmd.Mat.Emissive);
+            s_MeshShader->SetFloat("u_EmissiveStrength", cmd.Mat.EmissiveStrength);
+
+            RenderCommand::DrawIndexed(cmd.MeshAsset->GetVertexArray(), cmd.MeshAsset->GetIndexCount());
+        }
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 // (Re)cria os 3 shadow maps se a resolução mudou (preset de qualidade pode
 // trocar entre 512..4096 em runtime sem reiniciar). Tamanho estático entre
 // frames (checagem barata no início do EndScene).
@@ -2113,6 +2305,51 @@ void Renderer3D::EndScene() {
         s_ViewProjection = s_Projection * s_View;
     }
 
+    // --- Pré-passe 0.5: reflexão planar (espelho real). Se alguma entidade do
+    // frame é um espelho, renderiza a cena refletida numa câmera espelhada e o
+    // material espelhado amostra essa textura no passe principal. ---
+    s_HasPlanarReflection = false;
+    int mirrorIndex = -1;
+    glm::vec3 mirrorPoint(0.0f), mirrorNormal(0.0f, 1.0f, 0.0f);
+    for (size_t i = 0; i < s_DrawList.size(); ++i) {
+        if (s_DrawList[i].Mat.PlanarReflect) { mirrorIndex = (int)i; break; }
+    }
+    if (mirrorIndex >= 0) {
+        const auto& mirror = s_DrawList[mirrorIndex];
+        mirrorPoint = glm::vec3(mirror.Transform[3]);
+        mirrorNormal = glm::normalize(glm::mat3(mirror.Transform) * glm::vec3(0.0f, 1.0f, 0.0f));
+        float side = glm::dot(mirrorNormal, s_CameraPos - mirrorPoint);
+        if (side > 0.001f) {
+            // Câmera refletida (posição + view) e projeção com near oblíquo.
+            glm::vec3 reflectCam = glm::reflect(s_CameraPos - mirrorPoint, mirrorNormal) + mirrorPoint;
+            glm::mat4 R(1.0f);
+            R[0] = { 1.0f - 2.0f*mirrorNormal.x*mirrorNormal.x, -2.0f*mirrorNormal.x*mirrorNormal.y, -2.0f*mirrorNormal.x*mirrorNormal.z, 0.0f };
+            R[1] = { -2.0f*mirrorNormal.y*mirrorNormal.x, 1.0f - 2.0f*mirrorNormal.y*mirrorNormal.y, -2.0f*mirrorNormal.y*mirrorNormal.z, 0.0f };
+            R[2] = { -2.0f*mirrorNormal.z*mirrorNormal.x, -2.0f*mirrorNormal.z*mirrorNormal.y, 1.0f - 2.0f*mirrorNormal.z*mirrorNormal.z, 0.0f };
+            float d = glm::dot(mirrorNormal, mirrorPoint);
+            R[3] = { -2.0f*mirrorNormal.x*d, -2.0f*mirrorNormal.y*d, -2.0f*mirrorNormal.z*d, 1.0f };
+            glm::mat4 reflectView = s_View * R;
+
+            // Near plane oblíquo na face do espelho (Lengyel): a geometria do
+            // outro lado do espelho é cortada em vez de "vazar" pro reflexo.
+            glm::vec4 planeWorld(mirrorNormal, -d);
+            glm::vec4 cp = glm::transpose(glm::inverse(s_View)) * planeWorld;
+            glm::mat4 reflectProj = s_Projection;
+            glm::vec4 q(
+                (glm::sign(cp.x) + reflectProj[2][0]) / reflectProj[0][0],
+                (glm::sign(cp.y) + reflectProj[2][1]) / reflectProj[1][1],
+                -1.0f,
+                (1.0f + reflectProj[2][2]) / reflectProj[3][2]);
+            glm::vec4 cvec = cp * (2.0f / glm::dot(cp, q));
+            reflectProj[2] = cvec - reflectProj[3];
+            glm::mat4 reflectVP = reflectProj * reflectView;
+
+            if (s_HasShadowCaster) ComputeCascades(s_ShadowCaster.Direction);
+            RenderPlanarReflection(mirrorPoint, mirrorNormal, mirrorIndex,
+                                   internalW, internalH, reflectView, reflectProj, reflectVP, reflectCam);
+        }
+    }
+
     // --- Passe 0: profundidade vista da luz, uma vez por cascata (só se há shadow caster) ---
     if (!s_DrawList.empty() && s_HasShadowCaster) {
         ComputeCascades(s_ShadowCaster.Direction);
@@ -2257,6 +2494,17 @@ void Renderer3D::EndScene() {
             }
             s_MeshShader->SetFloat3("u_Emissive", cmd.Mat.Emissive);
             s_MeshShader->SetFloat("u_EmissiveStrength", cmd.Mat.EmissiveStrength);
+
+            // Espelho real: só o material marcado amostra a textura da câmera
+            // refletida (os demais ficam com o caminho IBL/SSR normal).
+            bool isMirror = cmd.Mat.PlanarReflect && s_HasPlanarReflection;
+            s_MeshShader->SetInt("u_IsPlanarMirror", isMirror ? 1 : 0);
+            if (isMirror) {
+                s_MeshShader->SetMat4("u_ReflectionViewProjection", s_ReflectionViewProjection);
+                glActiveTexture(GL_TEXTURE10);
+                glBindTexture(GL_TEXTURE_2D, s_PlanarColor);
+                s_MeshShader->SetInt("u_PlanarReflectionMap", 10);
+            }
 
             RenderCommand::DrawIndexed(cmd.MeshAsset->GetVertexArray(), cmd.MeshAsset->GetIndexCount());
         }

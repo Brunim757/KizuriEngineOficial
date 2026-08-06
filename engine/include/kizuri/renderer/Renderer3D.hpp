@@ -77,6 +77,7 @@ struct Material {
     Ref<Texture2D> EmissiveMap;
     Ref<Texture2D> HeightMap; // parallax occlusion mapping (POM) — profundidade real de superfície
     float HeightScale = 0.08f; // intensidade do deslocamento de paralaxe (POM)
+    bool PlanarReflect = false; // espelho real: a cena é renderizada de novo numa câmera refletida na face da entidade
     // Caminhos serializáveis — é o que permite salvar/abrir cena com
     // textura de material (ver ComponentSerialization.hpp). Vazios = sem mapa.
     std::string AlbedoMapPath;
@@ -256,6 +257,23 @@ private:
     // tela, acumulando o brilho da cena (loop de passos FIXOS, GLSL 330-safe).
     static Ref<Shader> s_GodRaysShader;
     static uint32_t s_GodRaysFBO, s_GodRaysColorBuffer;
+
+    // Planar reflections (espelho real): a cena é renderizada de novo numa
+    // câmera refletida na face do espelho (pré-passe), e o material espelhado
+    // amostra essa textura. 100% OpenGL 3.3 (FBO + blit padrão).
+    static uint32_t s_PlanarFBO, s_PlanarColor, s_PlanarDepth;
+    static uint32_t s_PlanarWidth, s_PlanarHeight;
+    static glm::mat4 s_ReflectionViewProjection; // VP da câmera refletida (pro sampling no shader)
+    static bool s_HasPlanarReflection;
+
+    // (Re)cria o FBO da reflexão planar se a resolução mudou.
+    static void EnsurePlanarBuffers(uint32_t width, uint32_t height);
+    // Pré-passe do espelho real: desenha skybox + meshes (sem o espelho) com a
+    // câmera refletida e projeção com near plane oblíquo na face do espelho.
+    static void RenderPlanarReflection(const glm::vec3& planePoint, const glm::vec3& planeNormal,
+                                       int mirrorIndex, uint32_t width, uint32_t height,
+                                       const glm::mat4& reflectView, const glm::mat4& reflectProj,
+                                       const glm::mat4& reflectVP, const glm::vec3& reflectCam);
 
     // Partículas: 1 VAO reaproveitado por todos os lotes do frame — buffer de quad estático
     // (attribs 0/1) + buffer de instância dinâmico, reescrito via glBufferSubData a cada lote.

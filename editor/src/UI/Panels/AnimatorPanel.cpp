@@ -12,13 +12,15 @@ void AnimatorPanel::OnImGuiRender() {
         ImGui::End();
         return;
     }
-    if (!m_Ctx.SelectedEntity.HasComponent<kizuri::AnimatorComponent>()) {
+    // HasComponent/GetComponent não são const na Entity — copia para local.
+    kizuri::Entity sel = m_Ctx.SelectedEntity;
+    if (!sel.HasComponent<kizuri::AnimatorComponent>()) {
         ImGui::TextDisabled("A entidade selecionada não tem Animator.\n\nAdicione pelo Inspetor (Componente > Animador).");
         ImGui::End();
         return;
     }
 
-    auto& anim = m_Ctx.SelectedEntity.GetComponent<kizuri::AnimatorComponent>();
+    auto& anim = sel.GetComponent<kizuri::AnimatorComponent>();
 
     // Skin carregada sob demanda (path do .glb/.gltf).
     if (!anim.Skin && !anim.MeshPath.empty())

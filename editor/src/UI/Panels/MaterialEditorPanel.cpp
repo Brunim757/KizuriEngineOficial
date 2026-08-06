@@ -2,9 +2,11 @@
 #include <imgui.h>
 
 kizuri::Material* MaterialEditorPanel::TargetMaterial() {
-    if (!m_Ctx.SelectedEntity || !m_Ctx.ActiveScene) return nullptr;
-    if (!m_Ctx.SelectedEntity.HasComponent<kizuri::MeshRendererComponent>()) return nullptr;
-    return &m_Ctx.SelectedEntity.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial;
+    // HasComponent/GetComponent não são const na Entity — copia para local.
+    kizuri::Entity sel = m_Ctx.SelectedEntity;
+    if (!sel || !m_Ctx.ActiveScene) return nullptr;
+    if (!sel.HasComponent<kizuri::MeshRendererComponent>()) return nullptr;
+    return &sel.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial;
 }
 
 void MaterialEditorPanel::RenderPreview(uint32_t w, uint32_t h) {
@@ -55,8 +57,9 @@ void MaterialEditorPanel::RenderPreview(uint32_t w, uint32_t h) {
 void MaterialEditorPanel::OnUpdate(kizuri::Timestep ts) {
     (void)ts;
     if (!m_Visible) return;
-    if (!m_Ctx.ActiveScene || !m_Ctx.SelectedEntity) return;
-    if (!m_Ctx.SelectedEntity.HasComponent<kizuri::MeshRendererComponent>()) return;
+    kizuri::Entity sel = m_Ctx.SelectedEntity;
+    if (!m_Ctx.ActiveScene || !sel) return;
+    if (!sel.HasComponent<kizuri::MeshRendererComponent>()) return;
     RenderPreview(320, 240);
 }
 

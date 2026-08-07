@@ -49,6 +49,11 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
     }
 
     je["Tag"] = entity.GetName();
+    if (entity.HasComponent<TagComponent>()) {
+        auto& tag = entity.GetComponent<TagComponent>();
+        je["TagLayer"] = tag.Layer;
+        je["TagCollisionMask"] = tag.CollisionMask;
+    }
 
     if (entity.HasComponent<TransformComponent>()) {
         auto& tc = entity.GetComponent<TransformComponent>();
@@ -234,7 +239,7 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
         auto& ac = entity.GetComponent<AudioSourceComponent>();
         je["AudioSource"] = {
             { "ClipPath", ac.ClipPath }, { "Loop", ac.Loop }, { "PlayOnStart", ac.PlayOnStart },
-            { "Spatial", ac.Spatial }, { "Volume", ac.Volume },
+            { "Spatial", ac.Spatial }, { "Volume", ac.Volume }, { "Group", ac.Group },
             { "MinDistance", ac.MinDistance }, { "MaxDistance", ac.MaxDistance }
         };
     }
@@ -268,6 +273,8 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
 inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint64_t uuid) {
     std::string tag = je.value("Tag", "Entidade");
     Entity entity = scene.CreateEntityWithUUID(uuid, tag);
+    if (je.contains("TagLayer")) entity.GetComponent<TagComponent>().Layer = je.value("TagLayer", 0);
+    if (je.contains("TagCollisionMask")) entity.GetComponent<TagComponent>().CollisionMask = je.value("TagCollisionMask", 0xFFFFFFFFu);
 
     if (je.contains("Transform")) {
         auto& jt = je["Transform"];
@@ -478,6 +485,7 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         ac.PlayOnStart = ja.value("PlayOnStart", true);
         ac.Spatial = ja.value("Spatial", true);
         ac.Volume = ja.value("Volume", 1.0f);
+        ac.Group = ja.value("Group", 0);
         ac.MinDistance = ja.value("MinDistance", 1.0f);
         ac.MaxDistance = ja.value("MaxDistance", 50.0f);
     }
@@ -512,7 +520,10 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
 // Componente"). ID e Parent são ignorados de propósito — essa função nunca
 // mexe em identidade nem em hierarquia, só nos componentes de dados.
 inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
-    entity.GetComponent<TagComponent>().Tag = je.value("Tag", entity.GetName());
+    auto& tagc = entity.GetComponent<TagComponent>();
+    tagc.Tag = je.value("Tag", entity.GetName());
+    tagc.Layer = je.value("TagLayer", tagc.Layer);
+    tagc.CollisionMask = je.value("TagCollisionMask", tagc.CollisionMask);
 
     if (je.contains("Transform")) {
         auto& jt = je["Transform"];
@@ -747,6 +758,7 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         ac.PlayOnStart = ja.value("PlayOnStart", true);
         ac.Spatial = ja.value("Spatial", true);
         ac.Volume = ja.value("Volume", 1.0f);
+        ac.Group = ja.value("Group", 0);
         ac.MinDistance = ja.value("MinDistance", 1.0f);
         ac.MaxDistance = ja.value("MaxDistance", 50.0f);
     } else if (entity.HasComponent<AudioSourceComponent>()) {

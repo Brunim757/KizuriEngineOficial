@@ -21,6 +21,12 @@ struct ProjectConfig {
     std::string AssetDirectory = "Assets";
     std::string StartScenePath; // vazio = nenhuma cena inicial definida ainda
     std::string GameModulePath; // relativo ao projeto ou absoluto — auto-carrega ao abrir
+
+    // Build settings (usadas no exportar jogo / janela do executável).
+    std::string GameName;        // vazio = usa o nome do projeto
+    std::string Version = "1.0"; // versão exibida/gravada
+    int WindowWidth = 1280;      // resolução da janela do jogo
+    int WindowHeight = 720;
 };
 
 // Um projeto Kizuri é uma pasta com um arquivo .kzproj na raiz, uma pasta

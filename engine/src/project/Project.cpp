@@ -160,6 +160,10 @@ Ref<Project> Project::Load(const std::string& kzprojFilePath) {
     cfg.AssetDirectory = root.value("AssetDirectory", "Assets");
     cfg.StartScenePath = root.value("StartScenePath", "");
     cfg.GameModulePath = root.value("GameModulePath", "");
+    cfg.GameName = root.value("GameName", "");
+    cfg.Version = root.value("Version", "1.0");
+    cfg.WindowWidth = root.value("WindowWidth", 1280);
+    cfg.WindowHeight = root.value("WindowHeight", 720);
 
     KZ_CORE_INFO("Projeto carregado: {0}.", cfg.Name);
     GetActive() = project;
@@ -175,6 +179,10 @@ bool Project::Save() {
     root["AssetDirectory"] = m_Config.AssetDirectory;
     root["StartScenePath"] = m_Config.StartScenePath;
     root["GameModulePath"] = m_Config.GameModulePath;
+    root["GameName"] = m_Config.GameName;
+    root["Version"] = m_Config.Version;
+    root["WindowWidth"] = m_Config.WindowWidth;
+    root["WindowHeight"] = m_Config.WindowHeight;
 
     std::ofstream out(m_FilePath);
     if (!out.is_open()) {

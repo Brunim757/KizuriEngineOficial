@@ -29,6 +29,9 @@ internal static class KizuriNative
     // ---- Input --------------------------------------------------------------
     [DllImport(Lib)] internal static extern int kz_input_is_key_pressed(int key);
     [DllImport(Lib)] internal static extern int kz_input_is_key_down(int key);
+    [DllImport(Lib)] internal static extern int kz_input_is_action_pressed([MarshalAs(UnmanagedType.LPUTF8Str)] string action);
+    [DllImport(Lib)] internal static extern void kz_input_set_action_key([MarshalAs(UnmanagedType.LPUTF8Str)] string action, int key);
+    [DllImport(Lib)] internal static extern int kz_input_get_action_key([MarshalAs(UnmanagedType.LPUTF8Str)] string action);
     [DllImport(Lib)] internal static extern int kz_input_is_mouse_button_pressed(int button);
     [DllImport(Lib)] internal static extern void kz_input_get_mouse_position(out float x, out float y);
 
@@ -109,6 +112,10 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_material_set_metallic_roughness_map(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern int kz_material_set_height_map(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern void kz_material_set_height_scale(uint entity, float scale);
+    [DllImport(Lib)] internal static extern void kz_entity_set_layer(uint entity, int layer);
+    [DllImport(Lib)] internal static extern int kz_entity_get_layer(uint entity);
+    [DllImport(Lib)] internal static extern void kz_entity_set_collision_mask(uint entity, uint mask);
+    [DllImport(Lib)] internal static extern uint kz_entity_get_collision_mask(uint entity);
     [DllImport(Lib)] internal static extern void kz_material_set_emissive(uint entity, float r, float g, float b, float strength);
 
     // ---- UI (Canvas / Rect / Botão / Texto em espaço de tela) ------------------
@@ -128,6 +135,8 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_audio_play_one_shot_at([MarshalAs(UnmanagedType.LPUTF8Str)] string path, float volume, float x, float y, float z);
     [DllImport(Lib)] internal static extern void kz_audio_stop_all();
     [DllImport(Lib)] internal static extern void kz_audio_set_master_volume(float volume);
+    [DllImport(Lib)] internal static extern void kz_audio_set_group_volume(int group, float volume);
+    [DllImport(Lib)] internal static extern float kz_audio_get_group_volume(int group);
 
     // ---- Physics 2D ----------------------------------------------------------
     [DllImport(Lib)] internal static extern int kz_entity_get_rigidbody2d(uint entity, out int bodyType, out Math.Vector2 velocity);

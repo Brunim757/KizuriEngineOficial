@@ -1,5 +1,6 @@
 #pragma once
 #include <utility>
+#include <string>
 
 namespace kizuri {
 
@@ -36,6 +37,14 @@ public:
     static std::pair<float, float> GetMousePosition();
     static float GetMouseX();
     static float GetMouseY();
+
+    // ---- Input Actions (mapeia um nome de ação a uma tecla, com rebind) ----
+    // Ações permitem que o jogo não dependa da tecla física: use
+    // Input.IsActionPressed("Pular") e o jogador re-mapeia via
+    // Input.SetActionKey("Pular", Key.Space) (persistido pelo jogo).
+    static bool IsActionPressed(const std::string& action);
+    static void SetActionKey(const std::string& action, int keycode);
+    static int GetActionKey(const std::string& action); // -1 se não mapeada
 
 private:
     static void* s_Window;

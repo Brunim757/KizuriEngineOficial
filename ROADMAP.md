@@ -523,6 +523,30 @@
   pro jogador sem apertar Play
 - [x] Botão "Focar câmera": seleciona a câmera principal no Inspetor
 - [x] Render extra continua com TAA/MotionBlur desligados (ScopedTemporalOff)
-  pra não corromper o histórico do viewport
+
+### ✅ R2 — Tags & Layers (filtro de colisão)
+- [x] `TagComponent` ganhou `Layer` (0..15) + `CollisionMask` (bits das
+  camadas que colidem) — serializado no `.kzscene` e editável no Inspetor
+- [x] Box2D (2D): `b2Filter` com category/mask por entidade
+- [x] Bullet (3D): `setCollisionGroup/setCollisionMask`
+- [x] C#: `Entity.Layer`, `Entity.CollisionMask`,
+  `Entity.SetCollideWithLayers(params int[])`
+
+### ✅ R3 — Audio mixer
+- [x] Grupos de volume **SFX / Música / UI** (`AudioEngine::SetGroupVolume`)
+  aplicados como multiplicadores em Play/PlayOneShot/PlayOneShotAt
+- [x] `AudioSourceComponent.Group` (combo no Inspetor) + serializado
+- [x] C#: `Audio.MusicVolume`, `Audio.SFXVolume`, `Audio.UIVolume`
+
+### ✅ R4 — Build settings (export)
+- [x] `ProjectConfig`: `GameName`, `Version`, `WindowWidth/Height` — persistidos
+  no `.kzproj` e editáveis no modal Exportar Jogo
+- [x] Export grava `game.json`; o KizuriGame lê na abertura e usa o
+  nome + resolução da janela do jogo
+
+### ✅ R5 — Input Actions (rebind)
+- [x] `Input::IsActionPressed(name)` / `SetActionKey(name, key)` com mapa
+  nome->tecla + ações padrão de gameplay
+- [x] C#: `Input.IsActionPressed`, `Input.SetActionKey`, `Input.GetActionKey`
 
 ---

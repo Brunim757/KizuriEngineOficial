@@ -2491,6 +2491,15 @@ void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
     if (mode == ProjectMode::TwoD) m_ViewportMode = ViewportMode::Mode2D;
     else if (mode == ProjectMode::ThreeD) m_ViewportMode = ViewportMode::Mode3D;
 
+    // Build settings do projeto (nome/versão/resolução do export).
+    auto& cfg = project->GetConfig();
+    if (!cfg.GameName.empty())
+        strncpy(m_ExportGameName, cfg.GameName.c_str(), sizeof(m_ExportGameName) - 1);
+    if (!cfg.Version.empty())
+        strncpy(m_ExportVersion, cfg.Version.c_str(), sizeof(m_ExportVersion) - 1);
+    m_ExportWidth = cfg.WindowWidth > 0 ? cfg.WindowWidth : 1280;
+    m_ExportHeight = cfg.WindowHeight > 0 ? cfg.WindowHeight : 720;
+
     // Recria a cena com o conteúdo padrão do MODO do projeto (2D = câmera
     // ortográfica + sprites, 3D = perspectiva + cubo) — ou carrega a cena
     // inicial configurada, se houver.
@@ -2854,6 +2863,22 @@ void EditorLayer::ExportGame(const std::string& outputDir) {
                          "Caindo pra cópia do assembly compilado (o jogador vai precisar do .NET).");
     }
 
+    // Build settings do projeto (nome/versão/resolução).
+    req.GameName = m_ExportGameName;
+    req.Version = m_ExportVersion;
+    req.WindowWidth = m_ExportWidth;
+    req.WindowHeight = m_ExportHeight;
+
+    // Persiste no .kzproj ativo (se houver).
+    if (Project::GetActive()) {
+        auto& cfg = Project::GetActive()->GetConfig();
+        cfg.GameName = m_ExportGameName;
+        cfg.Version = m_ExportVersion;
+        cfg.WindowWidth = m_ExportWidth;
+        cfg.WindowHeight = m_ExportHeight;
+        Project::GetActive()->Save();
+    }
+
     std::string err;
     if (GameExporter::Export(req, err))
         KZ_CORE_INFO("Exportação concluída em: {0}", outputDir);
@@ -2893,6 +2918,19 @@ void EditorLayer::DrawExportModal() {
                 m_ExportDirBuffer[sizeof(m_ExportDirBuffer) - 1] = '\0';
             }
         }
+
+        ImGui::Spacing();
+        ImGui::TextDisabled("Build settings (janela do jogo):");
+        ImGui::SetNextItemWidth(-1.0f);
+        ImGui::InputText("Nome do jogo", m_ExportGameName, sizeof(m_ExportGameName));
+        ImGui::SetNextItemWidth(120.0f);
+        ImGui::InputText("Versão", m_ExportVersion, sizeof(m_ExportVersion));
+        ImGui::SetNextItemWidth(110.0f);
+        ImGui::InputInt("Largura", &m_ExportWidth);
+        ImGui::SetNextItemWidth(110.0f);
+        ImGui::InputInt("Altura", &m_ExportHeight);
+        m_ExportWidth = glm::max(320, m_ExportWidth);
+        m_ExportHeight = glm::max(240, m_ExportHeight);
 
         ImGui::Spacing();
         ImGui::TextDisabled("Cena: %s", m_ScenePath.c_str());
@@ -3392,11 +3430,21 @@ void EditorLayer::DrawInspector() {
     }
 
     if (m_SelectedEntity) {
-        auto& tag = m_SelectedEntity.GetComponent<TagComponent>().Tag;
+        auto& tagc = m_SelectedEntity.GetComponent<TagComponent>();
+        auto& tag = tagc.Tag;
         char buffer[256];
         strncpy(buffer, tag.c_str(), sizeof(buffer) - 1);
         buffer[sizeof(buffer) - 1] = '\0';
         if (ImGui::InputText("Nome", buffer, sizeof(buffer))) tag = std::string(buffer);
+
+        // Tags & Layers: camada de colisão + máscara (bits = camadas que colidem).
+        ImGui::SetNextItemWidth(70.0f);
+        ImGui::InputInt("Camada", &tagc.Layer);
+        ImGui::SetNextItemWidth(150.0f);
+        uint32_t mask = tagc.CollisionMask;
+        ImGui::InputScalar("Colide com (máscara)", ImGuiDataType_U32, &mask, nullptr, nullptr, "%08X", ImGuiInputTextFlags_CharsHexadecimal);
+        tagc.CollisionMask = mask;
+        ImGui::TextDisabled("Bit N = camada N. Ex.: 0xFFFFFFFF = todas; 0x0003 = camadas 0 e 1.");
 
         if (m_SelectedEntity.HasComponent<TransformComponent>()) {
             auto& tc = m_SelectedEntity.GetComponent<TransformComponent>();
@@ -3893,6 +3941,8 @@ void EditorLayer::DrawInspector() {
                 ImGui::Checkbox("Reproduzir ao iniciar", &ac.PlayOnStart);
                 ImGui::Checkbox("Áudio espacial (3D)", &ac.Spatial);
                 ImGui::DragFloat("Volume", &ac.Volume, 0.01f, 0.0f, 2.0f);
+                const char* groupNames[] = { "SFX", "Música", "UI" };
+                ImGui::Combo("Grupo (mixer)", &ac.Group, groupNames, 3);
                 if (ac.Spatial) {
                     ImGui::DragFloat("Distância mín.", &ac.MinDistance, 0.1f, 0.01f, ac.MaxDistance);
                     ImGui::DragFloat("Distância máx.", &ac.MaxDistance, 0.5f, ac.MinDistance, FLT_MAX);

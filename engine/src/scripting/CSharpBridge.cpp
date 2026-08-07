@@ -144,6 +144,17 @@ KZ_SCRIPT_API void kz_input_get_mouse_position(float* outX, float* outY) {
     if (outY) *outY = y;
 }
 
+// ---- Input Actions (nome -> tecla, com rebind) ----------------------------
+KZ_SCRIPT_API int kz_input_is_action_pressed(const char* action) {
+    return action ? (kizuri::Input::IsActionPressed(action) ? 1 : 0) : 0;
+}
+KZ_SCRIPT_API void kz_input_set_action_key(const char* action, int key) {
+    if (action) kizuri::Input::SetActionKey(action, key);
+}
+KZ_SCRIPT_API int kz_input_get_action_key(const char* action) {
+    return action ? kizuri::Input::GetActionKey(action) : -1;
+}
+
 // ---------------------------------------------------------------------------
 // Entities / scene
 // ---------------------------------------------------------------------------
@@ -513,6 +524,14 @@ KZ_SCRIPT_API void kz_audio_set_master_volume(float volume) {
     kizuri::AudioEngine::SetMasterVolume(volume);
 }
 
+// Audio mixer: grupos 0=SFX, 1=Música, 2=UI.
+KZ_SCRIPT_API void kz_audio_set_group_volume(int group, float volume) {
+    kizuri::AudioEngine::SetGroupVolume(group, volume);
+}
+KZ_SCRIPT_API float kz_audio_get_group_volume(int group) {
+    return kizuri::AudioEngine::GetGroupVolume(group);
+}
+
 KZ_SCRIPT_API int kz_entity_get_transform(uint32_t entity, float* outPosition, float* outRotation, float* outScale) {
     auto e = Resolve(entity);
     if (!e || !e.HasComponent<kizuri::TransformComponent>()) return 0;
@@ -698,6 +717,28 @@ KZ_SCRIPT_API void kz_material_set_height_scale(uint32_t entity, float scale) {
     auto e = Resolve(entity);
     if (!e || !e.HasComponent<kizuri::MeshRendererComponent>()) return;
     e.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial.HeightScale = scale;
+}
+
+// ---- Tags & Layers (filtro de colisão por camada) ------------------------
+KZ_SCRIPT_API void kz_entity_set_layer(uint32_t entity, int layer) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TagComponent>()) return;
+    e.GetComponent<kizuri::TagComponent>().Layer = layer;
+}
+KZ_SCRIPT_API int kz_entity_get_layer(uint32_t entity) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TagComponent>()) return 0;
+    return e.GetComponent<kizuri::TagComponent>().Layer;
+}
+KZ_SCRIPT_API void kz_entity_set_collision_mask(uint32_t entity, uint32_t mask) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TagComponent>()) return;
+    e.GetComponent<kizuri::TagComponent>().CollisionMask = mask;
+}
+KZ_SCRIPT_API uint32_t kz_entity_get_collision_mask(uint32_t entity) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TagComponent>()) return 0xFFFFFFFFu;
+    return e.GetComponent<kizuri::TagComponent>().CollisionMask;
 }
 
 KZ_SCRIPT_API void kz_material_set_emissive(uint32_t entity, float r, float g, float b, float strength) {

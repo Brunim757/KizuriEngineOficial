@@ -1,8 +1,10 @@
 #include <Kizuri.hpp>
 #include <kizuri/core/EntryPoint.hpp>
 #include <kizuri/project/Project.hpp>
+#include <nlohmann/json.hpp>
 #include <imgui.h>
 #include <filesystem>
+#include <fstream>
 
 using namespace kizuri;
 
@@ -137,6 +139,18 @@ public:
         spec.Width = 1600;
         spec.Height = 900;
         spec.VSync = true;
+
+        // Build settings (game.json) do export: nome + resolução da janela.
+        namespace fs = std::filesystem;
+        std::error_code ec;
+        std::ifstream f("game.json");
+        if (f.is_open()) {
+            nlohmann::json j;
+            try { f >> j; } catch (...) { return spec; }
+            if (j.contains("name") && j["name"].is_string()) spec.Name = j["name"].get<std::string>();
+            if (j.contains("width") && j["width"].is_number_integer()) spec.Width = j["width"].get<int>();
+            if (j.contains("height") && j["height"].is_number_integer()) spec.Height = j["height"].get<int>();
+        }
         return spec;
     }
 };

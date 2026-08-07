@@ -20,4 +20,21 @@ public static class Audio
 
 	// Volume mestre global (0..1) de todos os sons.
 	public static void SetMasterVolume(float volume) => Interop.KizuriNative.kz_audio_set_master_volume(volume);
+
+	// ---- Audio mixer: volumes por grupo (0=SFX, 1=Música, 2=UI) ----
+	public static float MusicVolume
+	{
+		get => Interop.KizuriNative.kz_audio_get_group_volume(1);
+		set => Interop.KizuriNative.kz_audio_set_group_volume(1, value);
+	}
+	public static float SFXVolume
+	{
+		get => Interop.KizuriNative.kz_audio_get_group_volume(0);
+		set => Interop.KizuriNative.kz_audio_set_group_volume(0, value);
+	}
+	public static float UIVolume
+	{
+		get => Interop.KizuriNative.kz_audio_get_group_volume(2);
+		set => Interop.KizuriNative.kz_audio_set_group_volume(2, value);
+	}
 }

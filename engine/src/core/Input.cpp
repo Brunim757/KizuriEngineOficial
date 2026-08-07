@@ -1,11 +1,27 @@
 #include "kizuri/core/Input.hpp"
 #include <GLFW/glfw3.h>
+#include <unordered_map>
 
 namespace kizuri {
 
 void* Input::s_Window = nullptr;
 
-void Input::SetContext(void* nativeWindow) { s_Window = nativeWindow; }
+// Input Actions: nome da ação -> código de tecla. O jogo pode rebindar em
+// runtime (SetActionKey) e persistir do jeito que quiser.
+static std::unordered_map<std::string, int> s_Actions;
+
+void Input::SetContext(void* nativeWindow) {
+    s_Window = nativeWindow;
+    // Ações padrão de gameplay (rebindáveis em runtime via SetActionKey).
+    s_Actions.try_emplace("Pular", Key::Space);
+    s_Actions.try_emplace("Esquerda", Key::A);
+    s_Actions.try_emplace("Direita", Key::D);
+    s_Actions.try_emplace("Cima", Key::W);
+    s_Actions.try_emplace("Baixo", Key::S);
+    s_Actions.try_emplace("Acao", Key::E);
+    s_Actions.try_emplace("Correr", Key::LeftShift);
+    s_Actions.try_emplace("Cancelar", Key::Escape);
+}
 
 bool Input::IsKeyPressed(int keycode) {
     auto* window = static_cast<GLFWwindow*>(s_Window);
@@ -30,5 +46,19 @@ std::pair<float, float> Input::GetMousePosition() {
 
 float Input::GetMouseX() { return GetMousePosition().first; }
 float Input::GetMouseY() { return GetMousePosition().second; }
+
+bool Input::IsActionPressed(const std::string& action) {
+    auto it = s_Actions.find(action);
+    if (it == s_Actions.end()) return false;
+    return IsKeyPressed(it->second);
+}
+void Input::SetActionKey(const std::string& action, int keycode) {
+    s_Actions[action] = keycode;
+}
+int Input::GetActionKey(const std::string& action) {
+    auto it = s_Actions.find(action);
+    if (it == s_Actions.end()) return -1;
+    return it->second;
+}
 
 } // namespace kizuri

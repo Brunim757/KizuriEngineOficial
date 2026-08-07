@@ -17,11 +17,13 @@ public:
     static void Shutdown();
 
     static SoundHandle LoadSound(const std::string& name, const std::string& path, bool stream = false);
-    static void Play(SoundHandle handle, bool loop = false, float volume = 1.0f);
-    static void PlayOneShot(const std::string& path, float volume = 1.0f);
+    // group: 0=SFX, 1=Música, 2=UI — o volume pedido é multiplicado pelo
+    // volume do grupo (Audio mixer).
+    static void Play(SoundHandle handle, bool loop = false, float volume = 1.0f, int group = 0);
+    static void PlayOneShot(const std::string& path, float volume = 1.0f, int group = 0);
     // One-shot POSICIONAL (3D): toca na posição do mundo, atenuado pela
     // distância ao listener. O pool interno desinicializa quando o som acaba.
-    static void PlayOneShotAt(const std::string& path, float volume, const glm::vec3& position);
+    static void PlayOneShotAt(const std::string& path, float volume, const glm::vec3& position, int group = 0);
     static void Stop(SoundHandle handle);
     static void StopAll(); // pra sair do Play: para e libera tudo, senão vazava (e continuava tocando!) entre sessões
     static void SetVolume(SoundHandle handle, float volume);
@@ -32,6 +34,11 @@ public:
     static bool IsSoundPlaying(SoundHandle handle);
 
     static void SetMasterVolume(float volume);
+
+    // Audio mixer: volumes por grupo (0=SFX, 1=Música, 2=UI). Aplicados como
+    // multiplicadores em Play/PlayOneShot.
+    static void SetGroupVolume(int group, float volume);
+    static float GetGroupVolume(int group);
 };
 
 } // namespace kizuri

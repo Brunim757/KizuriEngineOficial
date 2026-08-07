@@ -692,6 +692,17 @@ void Scene::RegisterPhysics2DEntity(Entity entity) {
         fixtureDef.restitution = cc2d.Restitution;
         body->CreateFixture(&fixtureDef);
     }
+
+    // Filtro de colisão por CAMADA (Tags & Layers): a entidade pertence a uma
+    // camada (Layer) e colide com as camadas marcadas em CollisionMask.
+    if (entity.HasComponent<TagComponent>()) {
+        auto& tag = entity.GetComponent<TagComponent>();
+        b2Filter filter;
+        filter.categoryBits = (uint16)(1u << (uint32_t)std::min(std::max(tag.Layer, 0), 15));
+        filter.maskBits = (uint16)tag.CollisionMask;
+        for (b2Fixture* f = body->GetFixtureList(); f; f = f->GetNext())
+            f->SetFilterData(filter);
+    }
 }
 
 void Scene::UnregisterPhysics2DEntity(Entity entity) {
@@ -858,6 +869,15 @@ void Scene::RegisterPhysics3DEntity(Entity entity) {
         body->setActivationState(DISABLE_DEACTIVATION);
     }
     body->setUserPointer(reinterpret_cast<void*>(static_cast<uintptr_t>(static_cast<uint32_t>(entity.GetHandle()))));
+
+    // Filtro de colisão por CAMADA (Tags & Layers) — grupo = bit da camada,
+    // máscara = camadas com as quais colide.
+    if (entity.HasComponent<TagComponent>()) {
+        auto& tag = entity.GetComponent<TagComponent>();
+        int group = 1 << std::min(std::max(tag.Layer, 0), 30);
+        body->setCollisionGroup(group);
+        body->setCollisionMask((int)tag.CollisionMask);
+    }
 
     m_PhysicsWorld3D->addRigidBody(body);
     rb3d.RuntimeBody = body;
@@ -1415,7 +1435,7 @@ void Scene::UpdateAudio(Timestep) {
             AudioEngine::SetSoundPosition3D(ac.Handle, glm::vec3(GetWorldTransform(Entity{ e, this })[3]));
 
         if (ac.PlayOnStart && !ac.HasStarted) {
-            AudioEngine::Play(ac.Handle, ac.Loop, ac.Volume);
+            AudioEngine::Play(ac.Handle, ac.Loop, ac.Volume, ac.Group);
             ac.HasStarted = true;
         }
     }

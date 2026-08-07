@@ -38,4 +38,19 @@ public static class Input
 		Interop.KizuriNative.kz_input_get_mouse_position(out var x, out var y);
 		return new Math.Vector2(x, y);
 	}
+
+	// ---- Input Actions (nome -> tecla, com rebind) ----
+	// Permite que o jogo não dependa da tecla física: mapeie "Pular" uma vez e
+	// use Input.IsActionPressed("Pular"). Rebinde com Input.SetActionKey.
+	public static bool IsActionPressed(string action)
+		=> Interop.KizuriNative.kz_input_is_action_pressed(action) != 0;
+
+	public static void SetActionKey(string action, Key key)
+		=> Interop.KizuriNative.kz_input_set_action_key(action, (int)key);
+
+	public static Key? GetActionKey(string action)
+	{
+		int k = Interop.KizuriNative.kz_input_get_action_key(action);
+		return k < 0 ? null : (Key)k;
+	}
 }

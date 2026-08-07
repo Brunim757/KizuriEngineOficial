@@ -178,6 +178,11 @@ private:
     bool m_RequestOpenExportPopup = false;
     char m_ExportDirBuffer[512] = "export";
     bool m_ExportSelfContained = true; // embute o runtime .NET via dotnet publish
+    // Build settings (export): nome/versão/resolução da janela do jogo.
+    char m_ExportGameName[128] = "MeuJogo";
+    char m_ExportVersion[32] = "1.0";
+    int m_ExportWidth = 1280;
+    int m_ExportHeight = 720;
     bool m_AutoCompileOnPlay = true;   // compila o assembly C# antes do Play (estilo Unity)
     bool m_ShowStats = true;           // overlay de estatísticas no viewport (FPS/draw calls/tris)
     float m_FpsSmoothed = 0.0f;        // FPS médio suavizado (Profiler do viewport)

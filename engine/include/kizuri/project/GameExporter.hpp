@@ -12,6 +12,9 @@ struct GameExportRequest {
     std::string GameModulePath;    // opcional (.dll/.so) — fallback quando não há projeto pra publicar
     std::string EngineBinDirectory; // pasta com KizuriGame + KizuriEngine (+ runtime MinGW)
     std::string GameName = "MeuJogo"; // nome do .exe final (sem extensão)
+    std::string Version = "1.0";      // gravado no game.json
+    int WindowWidth = 1280;           // janela do jogo
+    int WindowHeight = 720;
 
     // Se definido, o jogo é publicado via `dotnet publish --self-contained`
     // (embute o runtime .NET — o jogador não precisa instalar nada) em vez de

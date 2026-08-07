@@ -24,6 +24,9 @@ static std::unordered_map<SoundHandle, std::unique_ptr<LoadedSound>> s_Sounds;
 static std::unordered_map<std::string, SoundHandle> s_NameToHandle;
 static SoundHandle s_NextHandle = 1;
 
+// Volumes por grupo (Audio mixer): 0=SFX, 1=Música, 2=UI.
+static float s_GroupVolumes[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
 // Pool de one-shots POSICIONAIS. O end-callback roda na thread de áudio e
 // só MARCA o slot livre; a desinicialização do ma_sound fica pro main thread
 // (na próxima reutilização do slot) — uninit na thread de áudio é proibido.
@@ -71,21 +74,21 @@ SoundHandle AudioEngine::LoadSound(const std::string& name, const std::string& p
     return handle;
 }
 
-void AudioEngine::Play(SoundHandle handle, bool loop, float volume) {
+void AudioEngine::Play(SoundHandle handle, bool loop, float volume, int group) {
     auto it = s_Sounds.find(handle);
     if (it == s_Sounds.end()) return;
     ma_sound_set_looping(&it->second->Sound, loop ? MA_TRUE : MA_FALSE);
-    ma_sound_set_volume(&it->second->Sound, volume);
+    ma_sound_set_volume(&it->second->Sound, volume * GetGroupVolume(group));
     ma_sound_start(&it->second->Sound);
 }
 
-void AudioEngine::PlayOneShot(const std::string& path, float volume) {
+void AudioEngine::PlayOneShot(const std::string& path, float volume, int group) {
     if (!s_Initialized) return;
     ma_engine_play_sound(&s_Engine, path.c_str(), nullptr);
-    (void)volume; // miniaudio permite volume por grupo; simplificado aqui
+    (void)volume; (void)group; // miniaudio permite volume por grupo; simplificado aqui
 }
 
-void AudioEngine::PlayOneShotAt(const std::string& path, float volume, const glm::vec3& position) {
+void AudioEngine::PlayOneShotAt(const std::string& path, float volume, const glm::vec3& position, int group) {
     if (!s_Initialized) return;
 
     OneShotSound* slot = nullptr;
@@ -107,7 +110,7 @@ void AudioEngine::PlayOneShotAt(const std::string& path, float volume, const glm
     }
     slot->InUse = true;
     ma_sound_set_position(&slot->Sound, position.x, position.y, position.z);
-    ma_sound_set_volume(&slot->Sound, volume);
+    ma_sound_set_volume(&slot->Sound, volume * GetGroupVolume(group));
     ma_sound_set_end_callback(&slot->Sound, [](void* pUserData, ma_sound*) {
         static_cast<OneShotSound*>(pUserData)->InUse = false;
     }, slot);
@@ -168,6 +171,15 @@ bool AudioEngine::IsSoundPlaying(SoundHandle handle) {
 void AudioEngine::SetMasterVolume(float volume) {
     if (!s_Initialized) return;
     ma_engine_set_volume(&s_Engine, volume);
+}
+
+void AudioEngine::SetGroupVolume(int group, float volume) {
+    if (group < 0 || group > 3) return;
+    s_GroupVolumes[group] = volume < 0.0f ? 0.0f : volume;
+}
+float AudioEngine::GetGroupVolume(int group) {
+    if (group < 0 || group > 3) return 1.0f;
+    return s_GroupVolumes[group];
 }
 
 } // namespace kizuri

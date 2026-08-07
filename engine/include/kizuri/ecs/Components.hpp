@@ -24,6 +24,11 @@ struct IDComponent {
 
 struct TagComponent {
     std::string Tag;
+    // Camada de colisão (0..15): categoriza a entidade pra filtro de física.
+    int Layer = 0;
+    // Quais camadas colidem com esta (bitmask; bit N = camada N). Padrão:
+    // todas (0xFFFFFFFF). Para filtrar, desligue os bits que NÃO devem colidir.
+    uint32_t CollisionMask = 0xFFFFFFFFu;
 };
 
 // Relação pai/filho da entidade na cena. Guarda UUIDs em vez de
@@ -167,6 +172,7 @@ struct AudioSourceComponent {
     bool Spatial = true; // atenuação por distância + panorâmica 3D; false = volume/pan fixos (música/UI)
     float Volume = 1.0f;
     float MinDistance = 1.0f, MaxDistance = 50.0f;
+    int Group = 0; // Audio mixer: 0=SFX, 1=Música, 2=UI
 
     SoundHandle Handle = kInvalidSound; // estado runtime — não serializado
     bool HasStarted = false;

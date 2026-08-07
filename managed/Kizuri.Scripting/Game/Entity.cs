@@ -148,6 +148,25 @@ public readonly struct Entity
 		=> Interop.KizuriNative.kz_material_set_height_map(Handle, path) != 0;
 	public void SetMaterialHeightScale(float scale)
 		=> Interop.KizuriNative.kz_material_set_height_scale(Handle, scale);
+
+	// ---- Tags & Layers (filtro de colisão por camada) ----
+	public int Layer
+	{
+		get => Interop.KizuriNative.kz_entity_get_layer(Handle);
+		set => Interop.KizuriNative.kz_entity_set_layer(Handle, value);
+	}
+	public uint CollisionMask
+	{
+		get => Interop.KizuriNative.kz_entity_get_collision_mask(Handle);
+		set => Interop.KizuriNative.kz_entity_set_collision_mask(Handle, value);
+	}
+	// Desliga a colisão desta entidade com TODAS as camadas da lista (ex.: {1, 2}).
+	public void SetCollideWithLayers(params int[] layers)
+	{
+		uint mask = 0;
+		foreach (var l in layers) mask |= (1u << l);
+		CollisionMask = mask;
+	}
 	public void SetMaterialEmissive(float r, float g, float b, float strength = 1f)
 		=> Interop.KizuriNative.kz_material_set_emissive(Handle, r, g, b, strength);
 

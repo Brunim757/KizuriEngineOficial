@@ -401,11 +401,22 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
 
     std::ofstream readme(outDir / "LEIA-ME.txt");
     if (readme.is_open()) {
-        readme << "Jogo exportado pela Kizuri Engine\n"
-               << "---------------------------------\n"
+        readme << "Jogo exportado pela Kizuri Engine\n"               << "---------------------------------\n"
                << "Rode KizuriGame com Start.kzscene"
                << (moduleOutPath.empty() ? ".\n" : (" e " + moduleOutPath.generic_string() + ".\n"))
                << "No Windows: dê dois cliques em Jogar.bat\n";
+    }
+
+    // Build settings (game.json): lido pelo KizuriGame pra abrir a janela
+    // com o nome/resolução/versão definidos no export.
+    std::ofstream gjson(outDir / "game.json");
+    if (gjson.is_open()) {
+        gjson << "{\n"
+              << "  \"name\": \"" << request.GameName << "\",\n"
+              << "  \"version\": \"" << request.Version << "\",\n"
+              << "  \"width\": " << request.WindowWidth << ",\n"
+              << "  \"height\": " << request.WindowHeight << "\n"
+              << "}\n";
     }
 
     KZ_CORE_INFO("Jogo exportado para: {0}", outDir.string());

@@ -1342,16 +1342,22 @@ void EditorLayer::DrawSettings() {
 
 // Seção Gráficos das Configurações: qualidade, MSAA/SSAO/bloom/fog/HDRI.
 void EditorLayer::DrawSettingsGraphics() {
-    const char* presets[] = { "Ultra", "High", "Medium", "Low" };
+    // Combo SEMPRE visível (inclui "Custom" como item) — clicar num preset
+    // sempre re-aplica na hora (o antigo escondia o combo em Custom e clicar
+    // no preset já selecionado não fazia nada).
+    const char* presets[] = { "Ultra", "High", "Medium", "Low", "Custom" };
     int presetIdx = (int)m_GraphicsSettings.Preset;
     bool presetApplied = false;
-    if (presetIdx <= 3) {
-        if (ImGui::Combo("Qualidade", &presetIdx, presets, 4)) {
+    if (ImGui::Combo("Qualidade", &presetIdx, presets, 5)) {
+        if (presetIdx == 4) {
+            m_GraphicsSettings.Preset = kizuri::QualityPreset::Custom; // mantém valores atuais
+        } else {
             m_GraphicsSettings.ApplyPreset((kizuri::QualityPreset)presetIdx);
-            presetApplied = true;
+            kizuri::Renderer3D::SetGraphicsSettings(m_GraphicsSettings);
         }
-    } else {
-        ImGui::TextDisabled("Qualidade: Custom (ajustada manualmente)");
+        presetApplied = true;
+    } else if ((int)m_GraphicsSettings.Preset == 4) {
+        presetApplied = true; // já está em Custom: nenhum preset pra re-aplicar
     }
 
     bool customTweak = false;

@@ -92,8 +92,8 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             SSGIEnabled = true; SSGIIntensity = 0.5f;
             CloudsEnabled = true;
             LensFlareEnabled = true; LensFlareIntensity = 0.7f;
-            FXAAEnabled = false; Saturation = 1.0f; Contrast = 1.05f; BloomAnamorphic = 0.25f;
-            BloomEnabled = true;  BloomThreshold = 1.2f; BloomIntensity = 0.45f;
+            FXAAEnabled = false; Saturation = 1.0f; Contrast = 1.05f; BloomAnamorphic = 0.05f;
+            BloomEnabled = true;  BloomThreshold = 1.5f; BloomIntensity = 0.4f;
             SSAOEnabled = true;   SSAOSamples = 64;      SSAORadius = 0.5f;
             SSREnabled = true;    SSRMaxSteps = 32;      SSRIntensity = 0.7f;
             SSRThickness = 0.12f; SSRMarchDistance = 28.0f;
@@ -102,7 +102,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
             Vignette = 0.22f; ChromaticAberration = 0.0015f; FilmGrain = 0.015f;
-            BloomIterations = 8;
+            BloomIterations = 4;
             break;
         case QualityPreset::High:
             RenderScale = 1.0f; MSAA = 4; ShadowMapSize = 2048; ShadowPCFRadius = 2;
@@ -114,7 +114,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             CloudsEnabled = false;
             LensFlareEnabled = true; LensFlareIntensity = 0.6f;
             FXAAEnabled = false; Saturation = 1.0f; Contrast = 1.0f; BloomAnamorphic = 0.0f;
-            BloomEnabled = true;  BloomThreshold = 1.2f; BloomIntensity = 0.45f;
+            BloomEnabled = true;  BloomThreshold = 1.5f; BloomIntensity = 0.4f;
             SSAOEnabled = true;   SSAOSamples = 32;      SSAORadius = 0.5f;
             SSREnabled = true;    SSRMaxSteps = 24;      SSRIntensity = 0.6f;
             SSRThickness = 0.12f; SSRMarchDistance = 20.0f;
@@ -123,7 +123,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
             Vignette = 0.2f; ChromaticAberration = 0.0012f; FilmGrain = 0.012f;
-            BloomIterations = 5;
+            BloomIterations = 3;
             break;
         case QualityPreset::Medium:
             RenderScale = 1.0f; MSAA = 2; ShadowMapSize = 1024; ShadowPCFRadius = 1;
@@ -135,7 +135,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             CloudsEnabled = false;
             LensFlareEnabled = false; LensFlareIntensity = 0.4f;
             FXAAEnabled = false; Saturation = 0.95f; Contrast = 0.95f; BloomAnamorphic = 0.0f;
-            BloomEnabled = true;  BloomThreshold = 1.2f; BloomIntensity = 0.35f;
+            BloomEnabled = true;  BloomThreshold = 1.5f; BloomIntensity = 0.3f;
             SSAOEnabled = true;   SSAOSamples = 16;      SSAORadius = 0.5f;
             SSREnabled = true;    SSRMaxSteps = 16;      SSRIntensity = 0.45f;
             SSRThickness = 0.14f; SSRMarchDistance = 16.0f;

@@ -788,7 +788,7 @@ vec3 ComputeAtmosphere(vec3 rd) {
     // negativo quando sobe (aí o raio não atinge o planeta).
     float tPlanet = -b - sqrt(max(b * b, 0.0));
     float tMax = (tPlanet >= 0.0) ? tPlanet : tAtm;
-    if (tMax < 0.0001) return vec3(0.0); // abaixo do chão do planeta (opaco)
+    if (tMax < 0.0001) return vec3(0.02, 0.03, 0.05); // abaixo do horizonte: superfície escura (não preto puro — evita a faixa preta na junção com o grid/chão)
 
     // Passos ALTOS perto do horizonte: a densidade cai exponencialmente
     // (scale height ~0.00125) e, com passos grossos, cada pixel amostra o
@@ -2861,8 +2861,10 @@ void Renderer3D::EndScene() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (s_DrawGridFlag) {
+        // Grid SEM jitter do TAA: a VP sem jitter (s_MotionCurrVP) evita que
+        // as linhas de 1px tremam/piscarem frame a frame e o "horizonte preto".
         s_LineShader->Bind();
-        s_LineShader->SetMat4("u_ViewProjection", s_ViewProjection);
+        s_LineShader->SetMat4("u_ViewProjection", s_MotionCurrVP);
         RenderCommand::DrawLines(s_GridVAO, s_GridVertexCount);
     }
 

@@ -15,7 +15,6 @@
 #include "UI/Panels/ProfilerPanel.hpp"
 #include "UI/Panels/GameViewPanel.hpp"
 #include "UI/Panels/MaterialEditorPanel.hpp"
-#include "UI/Panels/AnimatorPanel.hpp"
 #include "UI/Panels/ProjectSettingsPanel.hpp"
 #include <kizuri/project/GameExporter.hpp>
 #include <kizuri/scripting/ScriptEngine.hpp>
@@ -119,7 +118,6 @@ void EditorLayer::OnAttach() {
     makePanel(std::make_unique<ProfilerPanel>(*m_PanelContext));
     makePanel(std::make_unique<GameViewPanel>(*m_PanelContext));
     makePanel(std::make_unique<MaterialEditorPanel>(*m_PanelContext));
-    makePanel(std::make_unique<AnimatorPanel>(*m_PanelContext));
     makePanel(std::make_unique<ProjectSettingsPanel>(*m_PanelContext));
 
     // Painéis que fazem sentido já abertos no layout padrão.
@@ -2263,12 +2261,21 @@ void EditorLayer::DrawDockspace() {
         // Mesma ideia na coluna esquerda: Hierarquia em cima, Content
         // Browser embaixo, cada um com sua área própria (não em abas).
         ImGuiID dockLeftBottomID = ImGui::DockBuilderSplitNode(dockLeftID, ImGuiDir_Down, 0.35f, nullptr, &dockLeftID);
+        // Coluna direita: Inspetor em cima, Profiler + Material embaixo.
+        ImGuiID dockRightBottomID = ImGui::DockBuilderSplitNode(dockRightID, ImGuiDir_Down, 0.35f, nullptr, &dockRightID);
+        // Área central: Viewport em cima, Console embaixo; Game View vira uma
+        // ABA ao lado do Viewport (não flutuando na tela).
+        ImGuiID dockCenterTopID = dockMainID;
 
         ImGui::DockBuilderDockWindow("Hierarquia", dockLeftID);
         ImGui::DockBuilderDockWindow("Content Browser", dockLeftBottomID);
-        ImGui::DockBuilderDockWindow("Viewport", dockMainID);
+        ImGui::DockBuilderDockWindow("Viewport", dockCenterTopID);
+        ImGui::DockBuilderDockWindow("Game View", dockCenterTopID);   // aba ao lado do viewport
         ImGui::DockBuilderDockWindow("Console", dockCenterBottomID);
         ImGui::DockBuilderDockWindow("Inspetor", dockRightID);
+        ImGui::DockBuilderDockWindow("Profiler", dockRightBottomID);
+        ImGui::DockBuilderDockWindow("Material Editor", dockRightBottomID); // aba com o Profiler
+        ImGui::DockBuilderDockWindow("Project Settings", dockRightBottomID); // aba (abre pelo menu)
 
         ImGui::DockBuilderFinish(dockspaceID);
     }

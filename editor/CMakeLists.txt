@@ -5,7 +5,6 @@ add_executable(KizuriEditor
     src/UI/Panels/ProfilerPanel.cpp
     src/UI/Panels/GameViewPanel.cpp
     src/UI/Panels/MaterialEditorPanel.cpp
-    src/UI/Panels/AnimatorPanel.cpp
     src/UI/Panels/ProjectSettingsPanel.cpp
 )
 target_link_libraries(KizuriEditor PRIVATE KizuriEngine)

@@ -29,6 +29,26 @@ public static class Scene
 	public static void Load(string scenePath)
 		=> Interop.KizuriNative.kz_scene_request_load(scenePath);
 
+	// ---- Instancing de malhas ----
+	// Desenha a MESMA malha em N transformadas num ÚNICO draw call (floresta,
+	// multidão, pedras...). 'transforms' é 16 floats por matriz (coluna-major,
+	// igual ao GL). Chame dentro de OnUpdate a cada frame.
+	public static void DrawInstanced(string meshSource, Math.Vector3 color, float[] transforms, int count)
+		=> Interop.KizuriNative.kz_scene_draw_instanced(meshSource, color.X, color.Y, color.Z, transforms, count);
+
+	// Constrói uma matriz de transformação (posição/escala, sem rotação) para
+	// usar com DrawInstanced. Retorna 16 floats (coluna-major).
+	public static float[] MakeTransform(float x, float y, float z, float scale = 1f)
+	{
+		return new float[]
+		{
+			scale, 0f, 0f, 0f,
+			0f, scale, 0f, 0f,
+			0f, 0f, scale, 0f,
+			x, y, z, 1f
+		};
+	}
+
 	// Entidade com CameraComponent marcada como Primary (0 se não houver).
 	public static Entity GetPrimaryCamera()
 		=> new(Interop.KizuriNative.kz_scene_get_primary_camera());

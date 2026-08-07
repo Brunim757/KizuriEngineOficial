@@ -549,4 +549,20 @@
   nome->tecla + ações padrão de gameplay
 - [x] C#: `Input.IsActionPressed`, `Input.SetActionKey`, `Input.GetActionKey`
 
+### ✅ R6 — Multi-seleção (editor)
+- [x] Ctrl+clique na Hierarquia seleciona várias entidades (destaque conjunto)
+- [x] Inspetor mostra "N entidades selecionadas" + "Excluir seleção"
+- [x] Excluir no menu opera em todas as selecionadas; seleção resetada com o estado
+
+### ✅ R7 — Profiler: GPU e memória
+- [x] Profiler mostra a GPU (renderer OpenGL) e a RAM do processo
+  (Linux via /proc/self/statm)
+
+### ✅ R8 — Instancing de malhas
+- [x] `Renderer3D::SubmitMeshInstances` — mesma malha/material em N transformadas
+  num ÚNICO draw call (uniform array + `gl_InstanceID`, 128/lote, GLSL 330-safe)
+- [x] Render no EndScene após as malhas; `u_Instanced` sincronizado nos passes
+- [x] C#: `Scene.DrawInstanced(mesh, cor, transforms, count)` +
+  `Scene.MakeTransform(x, y, z, scale)` (floresta/multidão em runtime)
+
 ---

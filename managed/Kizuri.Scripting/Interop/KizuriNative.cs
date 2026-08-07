@@ -48,6 +48,7 @@ internal static class KizuriNative
     // ---- Cena em runtime ------------------------------------------------------
     [DllImport(Lib)] internal static extern uint kz_scene_instantiate_prefab([MarshalAs(UnmanagedType.LPUTF8Str)] string path, float x, float y, float z);
     [DllImport(Lib)] internal static extern uint kz_scene_instantiate_prefab_rot([MarshalAs(UnmanagedType.LPUTF8Str)] string path, float x, float y, float z, float rx, float ry, float rz);
+    [DllImport(Lib)] internal static extern void kz_scene_draw_instanced([MarshalAs(UnmanagedType.LPUTF8Str)] string meshSource, float r, float g, float b, [In] float[] transformData, int count);
     [DllImport(Lib)] internal static extern void kz_scene_request_load([MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern uint kz_scene_get_primary_camera();
     [DllImport(Lib)] internal static extern uint kz_scene_find_entity([MarshalAs(UnmanagedType.LPUTF8Str)] string name);

@@ -22,6 +22,7 @@ uint32_t Renderer3D::s_GridVertexCount = 0;
 glm::mat4 Renderer3D::s_ViewProjection = glm::mat4(1.0f);
 
 std::vector<Renderer3D::DrawCommand> Renderer3D::s_DrawList;
+std::vector<Renderer3D::InstanceBatch> Renderer3D::s_InstanceBatches;
 std::vector<Light> Renderer3D::s_LightList;
 Light Renderer3D::s_ShadowCaster;
 bool Renderer3D::s_HasShadowCaster = false;
@@ -120,6 +121,9 @@ uniform mat4 u_Transform;
 uniform mat3 u_NormalMatrix;
 uniform bool u_Animated;
 uniform mat4 u_JointMatrices[64];
+uniform bool u_Instanced;
+uniform mat4 u_InstanceMatrices[128];
+uniform int u_InstanceCount;
 
 out vec3 v_FragPos;
 out vec3 v_Normal;
@@ -139,7 +143,10 @@ void main() {
         pos = vec3(skin * vec4(a_Position, 1.0));
         nrm = mat3(skin) * a_Normal;
     }
-    v_FragPos = vec3(u_Transform * vec4(pos, 1.0));
+    mat4 model = u_Transform;
+    if (u_Instanced && gl_InstanceID < u_InstanceCount)
+        model = model * u_InstanceMatrices[gl_InstanceID];
+    v_FragPos = vec3(model * vec4(pos, 1.0));
     v_Normal = u_NormalMatrix * nrm;
     v_TexCoord = a_TexCoord;
     gl_Position = u_ViewProjection * vec4(v_FragPos, 1.0);
@@ -2218,6 +2225,7 @@ void Renderer3D::RenderPlanarReflection(const glm::vec3& planePoint, const glm::
     if (!s_DrawList.empty()) {
         s_MeshShader->Bind();
         s_MeshShader->SetMat4("u_ViewProjection", reflectVP);
+        s_MeshShader->SetInt("u_Instanced", 0);
         s_MeshShader->SetMat4("u_View", reflectView);
         s_MeshShader->SetFloat3("u_ViewPos", reflectCam);
         s_MeshShader->SetInt("u_HasShadow", s_HasShadowCaster ? 1 : 0);
@@ -2707,6 +2715,7 @@ void Renderer3D::BeginScene(const PerspectiveCamera& camera) {
     s_CamNear = camera.GetNearClip();
     s_CamFar = camera.GetFarClip();
     s_DrawList.clear();
+    s_InstanceBatches.clear();
     s_LightList.clear();
     s_HasShadowCaster = false;
     s_DrawGridFlag = false;
@@ -2860,6 +2869,7 @@ void Renderer3D::EndScene() {
     if (!s_DrawList.empty()) {
         s_MeshShader->Bind();
         s_MeshShader->SetMat4("u_ViewProjection", s_ViewProjection);
+        s_MeshShader->SetInt("u_Instanced", 0);
         s_MeshShader->SetMat4("u_View", s_View);
         s_MeshShader->SetFloat3("u_ViewPos", s_CameraPos);
         s_MeshShader->SetInt("u_HasShadow", s_HasShadowCaster ? 1 : 0);
@@ -2975,6 +2985,56 @@ void Renderer3D::EndScene() {
 
             RenderCommand::DrawIndexed(cmd.MeshAsset->GetVertexArray(), cmd.MeshAsset->GetIndexCount());
         }
+    }
+
+    // --- Malhas INSTANCIADAS (floresta/multidão): mesma malha/material em N
+    // transformadas num único draw call (uniform array + gl_InstanceID). ---
+    if (!s_InstanceBatches.empty()) {
+        s_MeshShader->SetInt("u_Instanced", 1);
+        for (auto& batch : s_InstanceBatches) {
+            const Material& mat = batch.Mat;
+            s_MeshShader->SetMat4("u_Transform", glm::mat4(1.0f));
+            s_MeshShader->SetMat3("u_NormalMatrix", glm::mat3(1.0f));
+            s_MeshShader->SetFloat3("u_Albedo", mat.Albedo);
+            s_MeshShader->SetFloat("u_Metallic", mat.Metallic);
+            s_MeshShader->SetFloat("u_Roughness", mat.Roughness);
+            s_MeshShader->SetFloat("u_AO", mat.AO);
+            s_MeshShader->SetInt("u_Animated", 0);
+            bool hasAlbedo = (bool)mat.AlbedoMap;
+            s_MeshShader->SetInt("u_HasAlbedoMap", hasAlbedo ? 1 : 0);
+            if (hasAlbedo) { mat.AlbedoMap->Bind(0); s_MeshShader->SetInt("u_AlbedoMap", 0); }
+            bool hasNormal = (bool)mat.NormalMap;
+            s_MeshShader->SetInt("u_HasNormalMap", hasNormal ? 1 : 0);
+            if (hasNormal) { mat.NormalMap->Bind(4); s_MeshShader->SetInt("u_NormalMap", 4); }
+            bool hasMR = (bool)mat.MetallicRoughnessMap;
+            s_MeshShader->SetInt("u_HasMetallicRoughnessMap", hasMR ? 1 : 0);
+            if (hasMR) { mat.MetallicRoughnessMap->Bind(7); s_MeshShader->SetInt("u_MetallicRoughnessMap", 7); }
+            bool hasEmissive = (bool)mat.EmissiveMap;
+            s_MeshShader->SetInt("u_HasEmissiveMap", hasEmissive ? 1 : 0);
+            if (hasEmissive) { mat.EmissiveMap->Bind(8); s_MeshShader->SetInt("u_EmissiveMap", 8); }
+            bool hasHeight = (bool)mat.HeightMap;
+            s_MeshShader->SetInt("u_HasHeightMap", hasHeight ? 1 : 0);
+            s_MeshShader->SetFloat("u_HeightScale", mat.HeightScale);
+            if (hasHeight) { mat.HeightMap->Bind(9); s_MeshShader->SetInt("u_HeightMap", 9); }
+            s_MeshShader->SetFloat3("u_Emissive", mat.Emissive);
+            s_MeshShader->SetFloat("u_EmissiveStrength", mat.EmissiveStrength);
+            s_MeshShader->SetInt("u_IsPlanarMirror", 0);
+
+            // Desenha em blocos de até kMaxInstancesPerBatch.
+            const std::vector<glm::mat4>& T = batch.Transforms;
+            uint32_t done = 0;
+            while (done < (uint32_t)T.size()) {
+                uint32_t n = std::min((uint32_t)T.size() - done, kMaxInstancesPerBatch);
+                s_MeshShader->SetInt("u_InstanceCount", (int)n);
+                for (uint32_t i = 0; i < n; ++i)
+                    s_MeshShader->SetMat4("u_InstanceMatrices[" + std::to_string(i) + "]", T[done + i]);
+                glDrawElementsInstanced(GL_TRIANGLES, (GLsizei)batch.MeshAsset->GetIndexCount(),
+                                        GL_UNSIGNED_INT, nullptr, (GLsizei)n);
+                RenderCommand::AddInstancedStats(n);
+                done += n;
+            }
+        }
+        s_MeshShader->SetInt("u_Instanced", 0);
     }
 
     // Skybox por último — LEQUAL + sem escrita de profundidade, só aparece onde nada mais desenhou.
@@ -3463,6 +3523,17 @@ void Renderer3D::DrawGrid() {
 
 void Renderer3D::Submit(const Ref<Mesh>& mesh, const Material& material, const glm::mat4& transform) {
     s_DrawList.push_back({ mesh, material, transform, {} });
+}
+
+void Renderer3D::SubmitMeshInstances(const Ref<Mesh>& mesh, const Material& material,
+                                     const glm::mat4* transforms, uint32_t count) {
+    if (!mesh || !transforms || count == 0) return;
+    InstanceBatch batch;
+    batch.MeshAsset = mesh;
+    batch.Mat = material;
+    batch.Transforms.reserve(count);
+    for (uint32_t i = 0; i < count; ++i) batch.Transforms.push_back(transforms[i]);
+    s_InstanceBatches.push_back(std::move(batch));
 }
 
 void Renderer3D::SubmitSkinned(const Ref<Mesh>& mesh, const Material& material, const glm::mat4& transform,

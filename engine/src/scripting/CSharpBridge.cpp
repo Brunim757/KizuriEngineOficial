@@ -9,6 +9,7 @@
 #include "kizuri/ecs/Scene.hpp"
 #include "kizuri/ecs/Entity.hpp"
 #include "kizuri/ecs/Components.hpp"
+#include "kizuri/renderer/Renderer3D.hpp"
 #include "kizuri/audio/AudioEngine.hpp"
 #include "kizuri/project/Project.hpp"
 #include <btBulletDynamicsCommon.h>
@@ -228,6 +229,22 @@ KZ_SCRIPT_API uint32_t kz_scene_instantiate_prefab(const char* path, float x, fl
     kizuri::Entity entity = s_ActiveScene->Instantiate(kizuri::Project::ResolvePath(path), glm::vec3(x, y, z));
     if (!entity) return 0;
     return kizuri::scripting::RegisterEntityHandle(entity);
+}
+
+// Instancing de malhas: desenha a MESMA malha em N transformadas num único
+// draw call (floresta, multidão). transformData = 16 floats por matriz
+// (coluna-major, como o GL). Chamado todo frame dentro de OnUpdate.
+KZ_SCRIPT_API void kz_scene_draw_instanced(const char* meshSource, float r, float g, float b,
+                                          const float* transformData, int count) {
+    if (s_ActiveScene == nullptr || meshSource == nullptr || transformData == nullptr || count <= 0) return;
+    auto mesh = kizuri::Mesh::FromSource(kizuri::Project::ResolvePath(meshSource));
+    if (!mesh) return;
+    std::vector<glm::mat4> transforms((size_t)count);
+    for (int i = 0; i < count; ++i)
+        std::memcpy(&transforms[i], transformData + i * 16, sizeof(glm::mat4));
+    kizuri::Material mat;
+    mat.Albedo = { r, g, b };
+    kizuri::Renderer3D::SubmitMeshInstances(mesh, mat, transforms.data(), (uint32_t)count);
 }
 
 KZ_SCRIPT_API uint32_t kz_scene_instantiate_prefab_rot(const char* path, float x, float y, float z,

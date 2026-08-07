@@ -107,6 +107,7 @@ using DirectionalLight = Light; // alias de compatibilidade com código/serializ
 
 constexpr int kCascadeCount = 3; // faixas de distância do CSM: perto/média/longe
 constexpr uint32_t kMaxParticlesPerBatch = 4000; // cap do buffer de instância na GPU
+constexpr uint32_t kMaxInstancesPerBatch = 128;  // instâncias de malha por draw call (uniform array)
 
 // Dado por-partícula que vai pra GPU via instancing (glVertexAttribDivisor) — um draw call
 // desenha o lote inteiro. Layout tem que bater com o stride/offset usados em Init()/EndScene.
@@ -150,6 +151,12 @@ public:
     static void SubmitSkinned(const Ref<Mesh>& mesh, const Material& material, const glm::mat4& transform,
                               const glm::mat4* jointMatrices, uint32_t jointCount);
 
+    // Instancing de malhas: desenha a MESMA malha/material em N transformadas
+    // num ÚNICO draw call (floresta, multidão, pedras...). Internamente usa
+    // uniform array + gl_InstanceID (128 por lote; chamadas maiores dividem).
+    static void SubmitMeshInstances(const Ref<Mesh>& mesh, const Material& material,
+                                    const glm::mat4* transforms, uint32_t count);
+
     // Empilha um lote de partículas (billboards sempre de frente pra câmera, GPU-instanced —
     // um glDrawElementsInstanced por lote, não um draw call por partícula). Sem textura (nullptr)
     // usa um degradê radial procedural; recorta pra kMaxParticlesPerBatch se vier maior que isso.
@@ -167,6 +174,13 @@ private:
         std::vector<glm::mat4> Joints; // vazio = malha estática
     };
 
+    // Lote instanciado: mesma malha/material, N transformadas num draw call.
+    struct InstanceBatch {
+        Ref<Mesh> MeshAsset;
+        Material Mat;
+        std::vector<glm::mat4> Transforms;
+    };
+
     static Ref<Shader> s_MeshShader;
     static Ref<Shader> s_LineShader;
     static Ref<VertexArray> s_GridVAO;
@@ -174,6 +188,7 @@ private:
     static glm::mat4 s_ViewProjection;
 
     static std::vector<DrawCommand> s_DrawList;
+    static std::vector<InstanceBatch> s_InstanceBatches;
     static std::vector<Light> s_LightList;
     static Light s_ShadowCaster;   // 1ª luz Directional do frame; usada pro shadow map e pro céu/IBL
     static bool s_HasShadowCaster;

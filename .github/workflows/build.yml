@@ -1,7 +1,12 @@
 name: Build Kizuri Engine
 
 on:
+  # Manual (editor/CI de teste).
   workflow_dispatch:
+  # Push de tag vX.Y.Z -> compila e PUBLICA uma Release do GitHub.
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   build:
@@ -28,7 +33,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             xorg-dev libgl1-mesa-dev libxrandr-dev libxinerama-dev \
-            libxcursor-dev libxi-dev libx11-dev libasound2-dev ninja-build
+            libxcursor-dev libxi-dev libx11-dev libasound2-dev ninja-build zip
 
       - name: Instalar Ninja (Windows)
         if: matrix.os == 'windows-latest'
@@ -42,21 +47,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-kizuri-deps-
 
-      # Cache de compilação (ccache): guarda os .o por hash do arquivo-fonte,
-      # então cada run NÃO recompila a engine inteira do zero — só o que
-      # mudou. É o que corta a iteração de ~15-20min pra poucos minutos nas
-      # runs seguintes (o 1º build de cada OS ainda é completo).
       - name: Cache de compilação (ccache)
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           max-size: "1G"
           key: ${{ matrix.os }}
 
-      # Baixa os assets de DEMONSTRAÇÃO pra EMBUTIR no executável (kzres://):
-      # o editor/engine fica self-contained — a demo 3D usa Fox (skinned) +
-      # DamagedHelmet (PBR) embutidos, sem depender de arquivo externo. Se o
-      # download falhar, o build não quebra: o CMake só embute o que existe e
-      # as demos caem pros builtins.
       - name: Baixar assets de demonstração (embutir no exe)
         shell: bash
         run: |
@@ -75,24 +71,52 @@ jobs:
       - name: Compilar
         run: cmake --build build --config Release --parallel
 
-      - name: Empacotar artefatos
+      # ---- RELEASE (só em push de tag v*) -------------------------------
+      - name: Baixar Content Pack (CC0) — apenas no Linux
+        if: matrix.os == 'ubuntu-latest' && startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
-          mkdir -p dist
-          cp -r build/bin/* dist/ || true
+          set +e
+          mkdir -p content/models content/skies content/audio
+          manifest="content/MANIFEST.txt"
+          : > "$manifest"
+          dl() {
+            curl -fsSL --max-time 60 -o "$2" "$1" 2>/dev/null
+            if [ -s "$2" ]; then printf '%-28s %10s bytes\n' "$3" "$(wc -c < "$2")" >> "$manifest"; else rm -f "$2"; fi
+          }
+          base="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0"
+          dl "$base/Fox/glTF-Binary/Fox.glb"                    content/models/Fox.glb                    Fox.glb
+          dl "$base/DamagedHelmet/glTF-Binary/DamagedHelmet.glb" content/models/DamagedHelmet.glb            DamagedHelmet.glb
+          dl "$base/BoxAnimated/glTF-Binary/BoxAnimated.glb"    content/models/BoxAnimated.glb            BoxAnimated.glb
+          dl "$base/BrainStem/glTF-Binary/BrainStem.glb"        content/models/BrainStem.glb              BrainStem.glb
+          dl "$base/CesiumMan/glTF-Binary/CesiumMan.glb"        content/models/CesiumMan.glb              CesiumMan.glb
+          dl "$base/SimpleSkin/glTF-Binary/SimpleSkin.glb"      content/models/SimpleSkin.glb              SimpleSkin.glb
+          dl "$base/Character/glTF-Binary/Character.glb"        content/models/Character.glb              Character.glb
+          dl "$base/Duck/glTF-Binary/Duck.glb"                  content/models/Duck.glb                    Duck.glb
+          sky="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k"
+          dl "$sky/qwantani_puresky_1k.hdr"                     content/skies/qwantani_puresky_1k.hdr     qwantani_puresky_1k.hdr
+          dl "$sky/kloofendal_48d_partly_cloudy_puresky_1k.hdr" content/skies/kloofendal_1k.hdr          kloofendal_1k.hdr
+          dl "$sky/venice_sunset_1k.hdr"                        content/skies/venice_sunset_1k.hdr        venice_sunset_1k.hdr
+          echo "---- Content Pack: $(grep -c . "$manifest") arquivos ----" >> "$manifest"
+          cat "$manifest"
 
-      - name: Publicar artefatos de build
-        uses: actions/upload-artifact@v4
+      - name: Empacotar executáveis da engine
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          mkdir -p release
+          cp -r build/bin/* release/
+          if [ -d content ]; then cp -r content release/content; fi
+          (cd release && tar -a -c -f "../KizuriEngine-${{ matrix.os }}.zip" .)
+
+      - name: Publicar na Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
         with:
-          name: KizuriEngine-${{ matrix.os }}
-          path: dist/
-          if-no-files-found: warn
-          retention-days: 3
+          files: KizuriEngine-${{ matrix.os }}.zip
+          generate_release_notes: true
 
   # ------- Scripting C# (Kizuri.Scripting) -------
-  # O motor é C++ privado; o jogo é um assembly .NET. Este job valida que o
-  # assembly compila em ambos OS, e gera o artefato combinado (Kizuri.Scripting.dll
-  # + SampleGame.dll) que o editor/export exemplo usa pra vincular um jogo.
   managed:
     strategy:
       fail-fast: false
@@ -132,138 +156,14 @@ jobs:
           cp SampleGame/bin/Release/net10.0/SampleGame.runtimeconfig.json artifacts/ 2>/dev/null || true
           cp SampleGame/bin/Release/net10.0/SampleGame.deps.json artifacts/ 2>/dev/null || true
 
-      - name: Publicar artefato combinado managed
-        uses: actions/upload-artifact@v4
-        with:
-          name: Kizuri.Managed-${{ matrix.os }}
-          path: managed/artifacts/
-          if-no-files-found: warn
-          retention-days: 3
-
-  # ------- Empacotamento combinado -------
-  # Baixa os artefatos de build e managed de cada OS e gera um único zip
-  # organizado: bin/ com os executáveis + DLL da engine + runtime MinGW,
-  # e managed/ com o assembly Kizuri.Scripting.dll e seus deps.
-  package:
-    needs: [build, managed]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-          - os: ubuntu-latest
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - name: Checkout do repositório
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Download do artefato da engine
-        uses: actions/download-artifact@v4
-        with:
-          name: KizuriEngine-${{ matrix.os }}
-          path: staging/engine
-
-      - name: Download do artefato managed
-        uses: actions/download-artifact@v4
-        with:
-          name: Kizuri.Managed-${{ matrix.os }}
-          path: staging/managed
-
-      - name: Organizar estrutura
+      - name: Empacotar o assembly C# (release)
+        if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
-          mkdir -p dist/bin dist/managed
-          mv staging/engine/* dist/bin/
-          mv staging/managed/* dist/managed/
+          (cd artifacts && tar -a -c -f "../Kizuri.Managed-${{ matrix.os }}.zip" .)
 
-      # ---- Content Pack (assets CC0 reais, download na CI) -------------------
-      # Modelos glTF (glTF-Sample-Models/Khronos) e HDRIs (Poly Haven) entram
-      # no zip como conteúdo de exemplo USÁVEL: o BoxAnimated/Fox têm skin +
-      # animações (valida o Animator do editor) e os .hdr alimentam o céu
-      # HDRI/IBL. Tudo best-effort: se um download falhar, só falta aquele
-      # arquivo — nunca quebra o build. O MANIFEST registra o que veio.
-      - name: Baixar Content Pack (CC0)
-        shell: bash
-        run: |
-          set +e
-          mkdir -p dist/content/models dist/content/skies dist/content/audio
-          manifest="dist/content/MANIFEST.txt"
-          : > "$manifest"
-          dl() { # $1=url $2=destino $3=nome
-            if command -v curl >/dev/null 2>&1; then
-              curl -fsSL --max-time 60 -o "$2" "$1" 2>/dev/null
-            else
-              wget -q -O "$2" "$1" 2>/dev/null
-            fi
-            if [ -s "$2" ]; then
-              size=$(wc -c < "$2")
-              printf '%-28s %10s bytes\n' "$3" "$size" >> "$manifest"
-            else
-              rm -f "$2"
-            fi
-          }
-          base="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0"
-          dl "$base/Fox/glTF-Binary/Fox.glb"                    dist/content/models/Fox.glb                    Fox.glb
-          dl "$base/BoxAnimated/glTF-Binary/BoxAnimated.glb"    dist/content/models/BoxAnimated.glb            BoxAnimated.glb
-          dl "$base/BrainStem/glTF-Binary/BrainStem.glb"        dist/content/models/BrainStem.glb              BrainStem.glb
-          dl "$base/CesiumMan/glTF-Binary/CesiumMan.glb"        dist/content/models/CesiumMan.glb              CesiumMan.glb
-          dl "$base/RiggedFigure/glTF-Binary/RiggedFigure.glb"  dist/content/models/RiggedFigure.glb           RiggedFigure.glb
-          dl "$base/SimpleSkin/glTF-Binary/SimpleSkin.glb"      dist/content/models/SimpleSkin.glb              SimpleSkin.glb
-          dl "$base/ReciprocatingSaw/glTF-Binary/ReciprocatingSaw.glb" dist/content/models/ReciprocatingSaw.glb ReciprocatingSaw.glb
-          dl "$base/Character/glTF-Binary/Character.glb"        dist/content/models/Character.glb              Character.glb
-          dl "$base/DamagedHelmet/glTF-Binary/DamagedHelmet.glb" dist/content/models/DamagedHelmet.glb         DamagedHelmet.glb
-          dl "$base/Avocado/glTF-Binary/Avocado.glb"            dist/content/models/Avocado.glb                Avocado.glb
-          dl "$base/BoomBox/glTF-Binary/BoomBox.glb"            dist/content/models/BoomBox.glb                BoomBox.glb
-          dl "$base/Duck/glTF-Binary/Duck.glb"                  dist/content/models/Duck.glb                    Duck.glb
-          dl "$base/CesiumMilkTruck/glTF-Binary/CesiumMilkTruck.glb" dist/content/models/CesiumMilkTruck.glb    CesiumMilkTruck.glb
-          dl "$base/SimpleMaterials/glTF-Binary/SimpleMaterials.glb" dist/content/models/SimpleMaterials.glb    SimpleMaterials.glb
-          sky="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k"
-          dl "$sky/qwantani_puresky_1k.hdr"                     dist/content/skies/qwantani_puresky_1k.hdr     qwantani_puresky_1k.hdr
-          dl "$sky/kloofendal_48d_partly_cloudy_puresky_1k.hdr" dist/content/skies/kloofendal_1k.hdr          kloofendal_partly_cloudy_1k.hdr
-          dl "$sky/kloppenheim_06_puresky_1k.hdr"               dist/content/skies/kloppenheim_06_1k.hdr      kloppenheim_06_1k.hdr
-          dl "$sky/spruit_sunrise_1k.hdr"                       dist/content/skies/spruit_sunrise_1k.hdr       spruit_sunrise_1k.hdr
-          dl "$sky/venice_sunset_1k.hdr"                        dist/content/skies/venice_sunset_1k.hdr        venice_sunset_1k.hdr
-          dl "$sky/the_sky_is_on_fire_1k.hdr"                   dist/content/skies/the_sky_is_on_fire_1k.hdr   the_sky_is_on_fire_1k.hdr
-          dl "$sky/studio_small_03_1k.hdr"                      dist/content/skies/studio_small_03_1k.hdr      studio_small_03_1k.hdr
-          sky4="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k"
-          dl "$sky4/qwantani_puresky_4k.hdr"                    dist/content/skies/qwantani_puresky_4k.hdr     qwantani_puresky_4k.hdr
-          dl "$sky4/kloofendal_48d_partly_cloudy_puresky_4k.hdr" dist/content/skies/kloofendal_4k.hdr         kloofendal_partly_cloudy_4k.hdr
-          dl "$sky4/venice_sunset_4k.hdr"                       dist/content/skies/venice_sunset_4k.hdr        venice_sunset_4k.hdr
-          total=0; while read -r _ s _; do total=$((total + ${s:-0})); done < "$manifest"
-          echo "---- Content Pack: $(grep -c . "$manifest") arquivos, ~$((total/1024)) KB ----" >> "$manifest"
-          echo "Manifest:"
-          cat "$manifest"
-
-      # ---- Texturas PBR (ambientCG, CC0) — só no Ubuntu (precisa de unzip) ---
-      - name: Baixar texturas PBR (ambientCG)
-        if: matrix.os == 'ubuntu-latest'
-        shell: bash
-        run: |
-          set +e
-          for id in Wood049 Metal032 Bricks072 Concrete034 Planks016 Ground037 Bricks076 Rocks010 PavingStones034 Fabric048; do
-            for res in 2K; do
-              zip="dist/content/textures/${id}_${res}-JPG.zip"
-              mkdir -p dist/content/textures
-              curl -fsSL --max-time 120 -o "$zip" "https://ambientcg.com/get?file=${id}_${res}-JPG.zip" 2>/dev/null
-              if [ -s "$zip" ] && unzip -o -q "$zip" -d "dist/content/textures/${id}" 2>/dev/null; then
-                rm -f "$zip"
-                rm -f dist/content/textures/${id}/*_Preview* dist/content/textures/${id}/*_PreviewMat* 2>/dev/null
-                size=$(du -sk "dist/content/textures/${id}" | cut -f1)
-                echo "Textura PBR ${id}_${res}: ${size} KB" >> dist/content/MANIFEST.txt
-              else
-                rm -f "$zip"
-              fi
-            done
-          done
-          echo "--- Texturas PBR: $(ls dist/content/textures 2>/dev/null | wc -l) conjuntos ---" >> dist/content/MANIFEST.txt
-
-      - name: Publicar artefato combinado
-        uses: actions/upload-artifact@v4
+      - name: Publicar na Release (managed)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
         with:
-          name: Kizuri-${{ matrix.os }}
-          path: dist/
-          if-no-files-found: warn
-          retention-days: 3
+          files: managed/Kizuri.Managed-${{ matrix.os }}.zip

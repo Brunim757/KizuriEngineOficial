@@ -13,7 +13,7 @@ content/
   textures/  texturas PBR CC0 da ambientCG (albedo/normal/roughness/metalness)
   skies/     HDRIs equirectangulares CC0 (Poly Haven) pro ambiente IBL
   audio/     efeitos sonoros e músicas (futuro)
-  prefabs/   prefabs .kzprefab reutilizáveis (futuro)
+  prefabs/   prefabs .kzprefab reutilizáveis (Cubo, Personagem, Moeda, Inimigo)
 ```
 
 ## Regras

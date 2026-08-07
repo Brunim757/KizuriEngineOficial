@@ -76,31 +76,52 @@ jobs:
         run: cmake --build build --config Release --parallel
 
       # ---- RELEASE (só em push de tag v*) -------------------------------
-      - name: Baixar Content Pack (CC0) — apenas no Linux
-        if: matrix.os == 'ubuntu-latest' && startsWith(github.ref, 'refs/tags/v')
+      # Content Pack — Starter Pack CC0 (modelos glTF, HDRIs, texturas PBR).
+      # Baixado nas DUAS plataformas: é o que deixa a distribuição "pesada de
+      # verdade" (centenas de MB) como Unity/Unreal, não só o exe enxuto.
+      - name: Baixar Content Pack (CC0)
+        if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
           set +e
-          mkdir -p content/models content/skies content/audio
+          mkdir -p content/models content/skies content/textures content/Prefabs
           manifest="content/MANIFEST.txt"
           : > "$manifest"
           dl() {
             curl -fsSL --max-time 60 -o "$2" "$1" 2>/dev/null
-            if [ -s "$2" ]; then printf '%-28s %10s bytes\n' "$3" "$(wc -c < "$2")" >> "$manifest"; else rm -f "$2"; fi
+            if [ -s "$2" ]; then printf '%-32s %10s bytes
+' "$3" "$(wc -c < "$2")" >> "$manifest"; else rm -f "$2"; fi
           }
           base="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0"
+          # Modelos esqueléticos/animações
           dl "$base/Fox/glTF-Binary/Fox.glb"                    content/models/Fox.glb                    Fox.glb
-          dl "$base/DamagedHelmet/glTF-Binary/DamagedHelmet.glb" content/models/DamagedHelmet.glb            DamagedHelmet.glb
           dl "$base/BoxAnimated/glTF-Binary/BoxAnimated.glb"    content/models/BoxAnimated.glb            BoxAnimated.glb
           dl "$base/BrainStem/glTF-Binary/BrainStem.glb"        content/models/BrainStem.glb              BrainStem.glb
           dl "$base/CesiumMan/glTF-Binary/CesiumMan.glb"        content/models/CesiumMan.glb              CesiumMan.glb
+          dl "$base/RiggedFigure/glTF-Binary/RiggedFigure.glb"  content/models/RiggedFigure.glb           RiggedFigure.glb
           dl "$base/SimpleSkin/glTF-Binary/SimpleSkin.glb"      content/models/SimpleSkin.glb              SimpleSkin.glb
-          dl "$base/Character/glTF-Binary/Character.glb"        content/models/Character.glb              Character.glb
+          # Modelos PBR/materiais
+          dl "$base/DamagedHelmet/glTF-Binary/DamagedHelmet.glb" content/models/DamagedHelmet.glb         DamagedHelmet.glb
+          dl "$base/Avocado/glTF-Binary/Avocado.glb"            content/models/Avocado.glb                 Avocado.glb
+          dl "$base/BoomBox/glTF-Binary/BoomBox.glb"            content/models/BoomBox.glb                 BoomBox.glb
+          dl "$base/CesiumMilkTruck/glTF-Binary/CesiumMilkTruck.glb" content/models/CesiumMilkTruck.glb   CesiumMilkTruck.glb
+          dl "$base/SimpleMaterials/glTF-Binary/SimpleMaterials.glb" content/models/SimpleMaterials.glb   SimpleMaterials.glb
           dl "$base/Duck/glTF-Binary/Duck.glb"                  content/models/Duck.glb                    Duck.glb
+          dl "$base/Character/glTF-Binary/Character.glb"        content/models/Character.glb              Character.glb
+          dl "$base/ReciprocatingSaw/glTF-Binary/ReciprocatingSaw.glb" content/models/ReciprocatingSaw.glb ReciprocatingSaw.glb
+          # Céus HDRIs (1k e alguns 4k)
           sky="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k"
           dl "$sky/qwantani_puresky_1k.hdr"                     content/skies/qwantani_puresky_1k.hdr     qwantani_puresky_1k.hdr
           dl "$sky/kloofendal_48d_partly_cloudy_puresky_1k.hdr" content/skies/kloofendal_1k.hdr          kloofendal_1k.hdr
           dl "$sky/venice_sunset_1k.hdr"                        content/skies/venice_sunset_1k.hdr        venice_sunset_1k.hdr
+          dl "$sky/the_sky_is_on_fire_1k.hdr"                   content/skies/the_sky_is_on_fire_1k.hdr   the_sky_is_on_fire_1k.hdr
+          dl "$sky/studio_small_03_1k.hdr"                      content/skies/studio_small_03_1k.hdr      studio_small_03_1k.hdr
+          dl "$sky/spruit_sunrise_1k.hdr"                       content/skies/spruit_sunrise_1k.hdr       spruit_sunrise_1k.hdr
+          sky4="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k"
+          dl "$sky4/qwantani_puresky_4k.hdr"                    content/skies/qwantani_puresky_4k.hdr     qwantani_puresky_4k.hdr
+          dl "$sky4/venice_sunset_4k.hdr"                       content/skies/venice_sunset_4k.hdr        venice_sunset_4k.hdr
+          # Prefabs prontos (vêm do repo — commits em content/Prefabs)
+          if [ -d "content/Prefabs" ]; then cp content/Prefabs/*.kzprefab content/Prefabs/ 2>/dev/null || true; fi
           echo "---- Content Pack: $(grep -c . "$manifest") arquivos ----" >> "$manifest"
           cat "$manifest"
 

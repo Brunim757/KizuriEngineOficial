@@ -582,4 +582,17 @@
   descontinuada; seção Áudio (mixer) adicionada
 - [x] Requisitos mínimos/recomendados documentados (preset Médio padrão)
 
+### ✅ Starter Pack (peso "de engine de verdade")
+- [x] Content Pack EXPANDIDO nas Releases (ambas as plataformas): +modelos
+  glTF (RiggedFigure, ReciprocatingSaw, Avocado, BoomBox, CesiumMilkTruck,
+  SimpleMaterials) e +HDRIs (the_sky_is_on_fire, studio_small_03,
+  spruit_sunrise, kloppenheim_06, 4k) — distribuição passa de dezenas de MB
+  para centenas de MB
+- [x] **Prefabs prontos** commitados em `content/Prefabs/`: Cubo,
+  Personagem (cápsula + física), Moeda (emissiva) e Inimigo (física) — vão
+  junto no release, arraste pro viewport
+- [x] O peso "de engine" = engine + ferramentas (enxuto, C++ compilado) +
+  Content Pack volumoso (CC0); o core continua leve, o pacote distribuído é
+  que cresce como Unity/Unreal
+
 ---

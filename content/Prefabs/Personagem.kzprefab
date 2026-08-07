@@ -1,0 +1,29 @@
+{
+    "Prefab": [
+        {
+            "ID": 1,
+            "Tag": "Personagem",
+            "TagLayer": 0,
+            "TagCollisionMask": 4294967295,
+            "Transform": { "Translation": [0.0, 1.0, 0.0], "Rotation": [0.0, 0.0, 0.0], "Scale": [0.5, 0.8, 0.5] },
+            "MeshRenderer": {
+                "MeshSource": "builtin:capsule",
+                "Albedo": [0.2, 0.55, 0.9],
+                "Metallic": 0.0,
+                "Roughness": 0.4,
+                "AO": 1.0,
+                "Emissive": [0.0, 0.0, 0.0],
+                "EmissiveStrength": 0.0,
+                "AlbedoMapPath": "",
+                "NormalMapPath": "",
+                "MetallicRoughnessMapPath": "",
+                "EmissiveMapPath": "",
+                "HeightMapPath": "",
+                "HeightScale": 0.08,
+                "PlanarReflect": false
+            },
+            "Rigidbody3D": { "Type": 1, "Mass": 1.0 },
+            "SphereCollider3D": { "Radius": 0.5 }
+        }
+    ]
+}

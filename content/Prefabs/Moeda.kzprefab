@@ -1,0 +1,27 @@
+{
+    "Prefab": [
+        {
+            "ID": 1,
+            "Tag": "Moeda",
+            "TagLayer": 1,
+            "TagCollisionMask": 4294967295,
+            "Transform": { "Translation": [0.0, 0.3, 0.0], "Rotation": [0.0, 0.0, 90.0], "Scale": [0.6, 0.1, 0.6] },
+            "MeshRenderer": {
+                "MeshSource": "builtin:cylinder",
+                "Albedo": [0.9, 0.72, 0.1],
+                "Metallic": 1.0,
+                "Roughness": 0.25,
+                "AO": 1.0,
+                "Emissive": [0.9, 0.6, 0.05],
+                "EmissiveStrength": 0.8,
+                "AlbedoMapPath": "",
+                "NormalMapPath": "",
+                "MetallicRoughnessMapPath": "",
+                "EmissiveMapPath": "",
+                "HeightMapPath": "",
+                "HeightScale": 0.08,
+                "PlanarReflect": false
+            }
+        }
+    ]
+}

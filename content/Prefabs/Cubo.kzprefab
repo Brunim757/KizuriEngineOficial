@@ -1,0 +1,27 @@
+{
+    "Prefab": [
+        {
+            "ID": 1,
+            "Tag": "Cubo",
+            "TagLayer": 0,
+            "TagCollisionMask": 4294967295,
+            "Transform": { "Translation": [0.0, 0.5, 0.0], "Rotation": [0.0, 0.0, 0.0], "Scale": [1.0, 1.0, 1.0] },
+            "MeshRenderer": {
+                "MeshSource": "builtin:cube",
+                "Albedo": [0.75, 0.78, 0.82],
+                "Metallic": 0.1,
+                "Roughness": 0.6,
+                "AO": 1.0,
+                "Emissive": [0.0, 0.0, 0.0],
+                "EmissiveStrength": 0.0,
+                "AlbedoMapPath": "",
+                "NormalMapPath": "",
+                "MetallicRoughnessMapPath": "",
+                "EmissiveMapPath": "",
+                "HeightMapPath": "",
+                "HeightScale": 0.08,
+                "PlanarReflect": false
+            }
+        }
+    ]
+}

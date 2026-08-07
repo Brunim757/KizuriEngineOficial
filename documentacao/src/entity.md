@@ -70,6 +70,17 @@ Entity.SetLightColor(r, g, b);
 Entity.SetLightIntensity(x);
 ```
 
+## Tags & Layers (filtro de colisão)
+
+```csharp
+Entity.Layer = 1;                  // camada da entidade (0..15)
+Entity.CollisionMask = 0xFFFFFFFF; // camadas com que colide (bitmask)
+Entity.SetCollideWithLayers(1, 2); // colide só com as camadas 1 e 2
+```
+
+A física (2D e 3D) respeita a camada e a máscara: entidades de camadas
+diferentes que não se colidem atravessam umas às outras.
+
 ## Duplicar e instanciar
 
 ```csharp

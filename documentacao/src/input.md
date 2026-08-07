@@ -28,10 +28,27 @@ Para movimento, combine teclas:
 
 ```csharp
 float mover = 0f;
-if (Input.IsKeyDown(KeyCode.A)) mover -= 1f;
-if (Input.IsKeyDown(KeyCode.D)) mover += 1f;
+if (Input.IsKeyDown(Key.A)) mover -= 1f;
+if (Input.IsKeyDown(Key.D)) mover += 1f;
 Entity.Move(mover * Time.deltaTime * velocidade, 0f, 0f);
 ```
+
+## Input Actions (com rebind)
+
+Mapeie um **nome de ação** a uma tecla e use o nome no código — o jogo deixa
+de depender da tecla física e o jogador pode rebindar:
+
+```csharp
+// a partir do rebind (ou no início do jogo):
+Input.SetActionKey("Pular", Key.Space);
+
+// usar sempre pelo nome:
+if (Input.IsActionPressed("Pular")) Pular();
+if (Input.IsActionPressed("Esquerda")) Mover(-1f);
+```
+
+Ações padrão já existem: `Pular`, `Esquerda`, `Direita`, `Cima`, `Baixo`,
+`Acao`, `Correr`, `Cancelar`.
 
 ## Códigos comuns
 

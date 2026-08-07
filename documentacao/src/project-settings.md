@@ -20,7 +20,8 @@ Comece por um **preset** (Ultra, High, Medium, Low) e ajuste o que quiser:
 - **Atmosfera**: God rays, **nuvens volumétricas**, **lens flare**
 - **Pós**: bloom, bloom anamórfico, **DOF**, **motion blur**, exposição,
   tonemapping, saturação/contraste, vinheta e névoa
-- **HDRI do céu** — vazio = céu físico Rayleigh/Mie; um `.hdr` = ambiente
+- **HDRI do céu** — vazio = gradiente procedural; `.hdr` = ambiente;
+  "Céu atmosférico Rayleigh/Mie" liga o céu físico (raymarch, opcional)
 
 ::: dica
 Tudo é aplicado **ao vivo** e salvo em `settings.json` — não precisa reiniciar.

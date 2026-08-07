@@ -27,6 +27,15 @@ Entity.TryGetVelocity(out vx, out vy, out vz);
 Entity.SetVelocity(vx, vy, vz);
 ```
 
+## Filtro de colisão por camada
+
+```csharp
+Entity.Layer = 1;                  // "Jogador" fica na camada 1
+Entity.SetCollideWithLayers(0, 2); // colide com camadas 0 e 2 (não com 1)
+```
+
+A física 2D (Box2D) e 3D (Bullet) aplicam o filtro automaticamente.
+
 ## Colisões
 
 ```csharp

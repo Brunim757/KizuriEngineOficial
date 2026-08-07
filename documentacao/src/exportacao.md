@@ -14,8 +14,10 @@ standalone**: executável + cena + assets + seu código compilado.
 1. Tenha uma cena salva e defina-a como **cena inicial** (Arquivo → Definir
    cena como inicial).
 2. **Arquivo → Exportar Jogo...**
-3. Escolha a pasta de destino.
-4. Opcional: marque **embutir runtime .NET** (gera o executável com o
+3. Preencha as **build settings**: nome do jogo, versão e resolução da janela
+   (ficam salvas no projeto).
+4. Escolha a pasta de destino.
+5. Opcional: marque **embutir runtime .NET** (gera o executável com o
    runtime do C# incluído — o jogador não precisa instalar nada).
 
 ## O que sai
@@ -39,6 +41,12 @@ externas para as funções básicas — e você pode embutir os seus assets tamb
 - A pasta exportada é autocontida: copie para qualquer máquina (com GPU
   OpenGL 3.3) e rode.
 - Para distribuir para lojas ou sites, compacte a pasta em um `.zip`.
+
+## Releases (GitHub)
+
+A engine é publicada como **Release do GitHub**: ao criar uma tag `vX.Y.Z`
+e enviá-la (`git tag v0.27.1 && git push origin v0.27.1`), o CI compila e
+publica os pacotes: executáveis Windows/Linux + assembly C# + Content Pack.
 
 ::: dica
 Teste o export cedo: defina a cena inicial, exporte e rode o executável.

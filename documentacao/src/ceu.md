@@ -6,17 +6,32 @@ order: 4
 
 # Céu
 
-O céu da Kizuri é **físico** por padrão: espalhamento **Rayleigh** (azul) e
-**Mie** (haze e halos) com raios marchados na atmosfera. O resultado é um
-pôr-do-sol realista com disco do sol, halo quente e estrelas no lado noturno.
+O céu da Kizuri tem três modos, em ordem de prioridade:
 
-## Céu físico (padrão)
+1. **HDRI** — se você carregar um `.hdr`/`.exr`
+2. **Atmosférico Rayleigh/Mie** — se o modo físico estiver **ligado** (opcional)
+3. **Gradiente procedural** — o padrão (limpo, leve e estável em qualquer GPU)
 
-- **Azul no zênite**, brilho laranja no horizonte (haze)
+## Gradiente procedural (padrão)
+
+O céu padrão é um **gradiente procedural** (azul no zênite, brilho de
+pôr-do-sol no horizonte, estrelas à noite), gerado e embutido na engine.
+É leve e estável até em GPUs fracas/emuladores.
+
+## Céu atmosférico Rayleigh/Mie (opcional)
+
+Para um céu **físico** com espalhamento de luz real (pôr-do-sol laranja,
+halo do sol, estrelas profundas), ligue a opção **"Céu atmosférico
+Rayleigh/Mie"** em Configurações → Gráficos (ou Project Settings → Gráficos).
+
+::: aviso
+O Rayleigh/Mie é um **raymarch** pesado — pode gerar pontilhado/lentidão em
+GPUs fracas e emuladores (ex.: Winlator). Deixe **desligado** neles.
+:::
+
 - O **disco do sol** segue a **luz direcional** da cena — onde a luz aponta, o sol aparece
-- **Estrelas** aparecem suavemente no lado oposto ao sol
-- **Nuvens volumétricas**: raymarch com ruído 3D, iluminadas pelo sol
-  (ativável em Project Settings → Gráficos)
+- **Nuvens volumétricas**: camada suave iluminada pelo sol (ligável junto)
+- **Estrelas** aparecem no céu alto, no lado noturno
 
 ## Céu por HDRI
 
@@ -26,7 +41,7 @@ Para um ambiente específico (ou o seu próprio céu), carregue um arquivo
 1. Project Settings → Gráficos → campo **HDRI do céu**.
 2. Escolha o arquivo (botão "..."). O editor converte para cubemap e rebakeia
    a iluminação (IBL).
-3. Vazio = volta ao céu físico.
+3. Vazio = volta ao gradiente procedural.
 
 ::: dica
 O **pôr-do-sol** é gratuito: apenas deixe a luz direcional apontando baixa

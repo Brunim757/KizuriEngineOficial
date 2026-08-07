@@ -23,6 +23,17 @@ Audio.PlayOneShot("Assets/sons/moeda.wav");
 Audio.PlayOneShotAt("Assets/sons/explosao.wav", 0.7f, x, y, z);
 ```
 
+## Audio mixer (grupos)
+
+Volumes independentes por tipo — o AudioSource tem o campo **Grupo**
+(SFX, Música ou UI) e o one-shot entra no grupo SFX por padrão:
+
+```csharp
+Audio.MusicVolume = 0.7f;  // abaixa a música
+Audio.SFXVolume  = 1.0f;   // efeitos cheios
+Audio.UIVolume   = 0.9f;   // sons de menu
+```
+
 ## Global
 
 ```csharp

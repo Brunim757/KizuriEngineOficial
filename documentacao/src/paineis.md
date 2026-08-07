@@ -21,15 +21,17 @@ O coração do editor: mostra a cena ao vivo.
 
 ## Game View
 
-Mostra o **jogo** como o jogador vai ver, durante o **Play**. É renderizado em
-um framebuffer separado — você pode editar a cena no viewport enquanto observa
-o resultado da câmera do jogo aqui.
+Mostra a **câmera principal** da cena **ao vivo** — em edição E no Play. É
+renderizado em um framebuffer separado: edite no viewport e veja na hora como
+fica pro jogador, sem apertar Play. O botão **"Focar câmera"** seleciona a
+câmera principal no Inspetor.
 
 ## Hierarquia
 
 A árvore de entidades da cena, com busca por nome. Clique para selecionar,
-arraste para reordenar/parentar, botão direito para ações (duplicar, salvar
-prefab, excluir).
+**Ctrl+clique** para selecionar várias (multi-seleção), arraste para
+reordenar/parentar, botão direito para ações (duplicar, salvar prefab,
+excluir).
 
 ## Inspetor
 
@@ -51,7 +53,8 @@ Clique em uma mensagem para limpar ou acompanhar a execução.
 ## Profiler
 
 Acompanhe o desempenho em tempo real: **FPS**, **tempo de frame** (gráfico),
-**draw calls**, **triângulos** e **entidades**. Ótimo para encontrar gargalos.
+**draw calls**, **triângulos**, **entidades**, **GPU** e **RAM do processo**.
+Ótimo para encontrar gargalos.
 
 ## Material Editor
 

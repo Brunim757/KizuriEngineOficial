@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 #include <memory>
 #include <thread>
 #include <atomic>
@@ -58,6 +59,10 @@ private:
     void DrawColliderGizmo(); // wireframe dos colisores 2D/3D da entidade selecionada
     void DrawAllColliders();  // overlay de física debug: todos os colliders da cena
     void Reparent(kizuri::Entity child, kizuri::Entity newParent);
+    // Multi-seleção: consulta/resolve o conjunto de UUIDs selecionados.
+    bool IsEntityMultiSelected(kizuri::Entity entity) const;
+    std::vector<kizuri::Entity> GetMultiSelection() const;
+    void ClearMultiSelection();
 
     // Configurações da engine (Arquivo > Configurações): seções em sidebar —
     // Gráficos, Geral e Editor. Não é mais só a aba padrão do ImGui.
@@ -111,6 +116,9 @@ private:
     kizuri::Ref<kizuri::Scene> m_ActiveScene;
     kizuri::Ref<kizuri::Framebuffer> m_Framebuffer;
     kizuri::Entity m_SelectedEntity;
+    // Multi-seleção (Ctrl+clique na Hierarquia). m_SelectedEntity é a última
+    // da seleção; as demais ficam aqui (excluir/duplicar operam no conjunto).
+    std::unordered_set<kizuri::UUID> m_MultiSelection;
 
     // Carregamento ASSÍNCRONO de cena: projetos grandes não podem travar o
     // editor (janela congelada que não fecha). OpenScene() prepara o

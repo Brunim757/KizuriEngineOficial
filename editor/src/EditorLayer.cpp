@@ -613,6 +613,7 @@ void EditorLayer::OnUpdate(Timestep ts) {
             m_PendingLoadProgress = 1.0f;
             m_ActiveScene = m_PendingScene;
             m_SelectedEntity = {};
+            ClearMultiSelection();
             m_ScenePath = m_PendingScenePath;
             m_History.Clear();
             m_SceneLoading = false;
@@ -1729,6 +1730,7 @@ void EditorLayer::StartPlayInternal() {
     // Play usa a câmera da PRÓPRIA cena, exatamente como autorada (a câmera
     // livre do editor é só navegação) — igual Unity/Godot.
     m_SelectedEntity = {}; // handle da cena antiga não é válido na cópia
+    ClearMultiSelection();
     m_SceneState = SceneState::Play;
     m_ActiveScene->OnRuntimeStart();
 }
@@ -2118,10 +2120,20 @@ void EditorLayer::DrawDockspace() {
             if (copy) { m_SelectedEntity = copy; AutoSwitchViewportMode(); }
         }
         if (ImGui::MenuItem("Excluir entidade", "Del", false, editing && m_SelectedEntity)) {
-            Entity toDelete = m_SelectedEntity;
+            auto multi = GetMultiSelection();
+            if (multi.size() > 1) {
+                for (auto& e : multi) {
+                    m_History.Push(CreateRef<DeleteEntityCommand>(e));
+                    m_ActiveScene->DestroyEntity(e);
+                }
+            } else {
+                Entity toDelete = m_SelectedEntity;
+                m_History.Push(CreateRef<DeleteEntityCommand>(toDelete));
+                m_ActiveScene->DestroyEntity(toDelete);
+            }
             m_SelectedEntity = {};
-            m_History.Push(CreateRef<DeleteEntityCommand>(toDelete));
-            m_ActiveScene->DestroyEntity(toDelete);
+            ClearMultiSelection();
+            ClearMultiSelection();
         }
         ImGui::EndPopup();
     }
@@ -3338,18 +3350,45 @@ void EditorLayer::Reparent(Entity child, Entity newParent) {
     m_History.Push(CreateRef<ReparentCommand>(child.GetUUID(), oldParentId, newParentId));
 }
 
+bool EditorLayer::IsEntityMultiSelected(Entity entity) const {
+    return m_MultiSelection.find(entity.GetUUID()) != m_MultiSelection.end();
+}
+
+std::vector<Entity> EditorLayer::GetMultiSelection() const {
+    std::vector<Entity> out;
+    if (!m_ActiveScene) return out;
+    auto view = m_ActiveScene->GetRegistry().view<TagComponent>();
+    for (auto e : view) {
+        Entity entity{ e, m_ActiveScene.get() };
+        if (m_MultiSelection.find(entity.GetUUID()) != m_MultiSelection.end())
+            out.push_back(entity);
+    }
+    return out;
+}
+
+void EditorLayer::ClearMultiSelection() { m_MultiSelection.clear(); }
+
 void EditorLayer::DrawEntityNode(Entity entity, Entity& outEntityToDelete, bool editable) {
     auto& tag = entity.GetComponent<TagComponent>().Tag;
     auto children = entity.GetChildren();
 
-    ImGuiTreeNodeFlags flags = ((m_SelectedEntity == entity) ? ImGuiTreeNodeFlags_Selected : 0)
+    ImGuiTreeNodeFlags flags = (IsEntityMultiSelected(entity) ? ImGuiTreeNodeFlags_Selected : 0)
         | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
     bool isLeaf = children.empty();
     if (isLeaf) flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
     bool opened = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)entity, flags, "%s", tag.c_str());
     // Só o modo edição seleciona por clique — no Play a árvore é leitura.
+    // Ctrl+clique alterna a multi-seleção.
     if (editable && ImGui::IsItemClicked()) {
+        bool ctrl = ImGui::GetIO().KeyCtrl;
+        if (ctrl) {
+            auto it = m_MultiSelection.find(entity.GetUUID());
+            if (it != m_MultiSelection.end()) m_MultiSelection.erase(it);
+            else m_MultiSelection.insert(entity.GetUUID());
+        } else {
+            m_MultiSelection.clear();
+        }
         m_SelectedEntity = entity;
         AutoSwitchViewportMode(); // selecionar 3D/2D troca o modo do viewport
     }
@@ -3430,6 +3469,24 @@ void EditorLayer::DrawInspector() {
     }
 
     if (m_SelectedEntity) {
+        auto multi = GetMultiSelection();
+        if (multi.size() > 1) {
+            // Multi-seleção: não edita componente individual — mostra resumo.
+            ImGui::TextDisabled("%zu entidades selecionadas", multi.size());
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Excluir seleção")) {
+                for (auto& e : multi) {
+                    m_History.Push(CreateRef<DeleteEntityCommand>(e));
+                    m_ActiveScene->DestroyEntity(e);
+                }
+                m_SelectedEntity = {};
+                ClearMultiSelection();
+            }
+            ImGui::Separator();
+        } else {
+            ClearMultiSelection();
+        }
+
         auto& tagc = m_SelectedEntity.GetComponent<TagComponent>();
         auto& tag = tagc.Tag;
         char buffer[256];
@@ -4193,6 +4250,7 @@ void EditorLayer::OnImGuiRender() {
         if (delDown) {
             Entity toDelete = m_SelectedEntity;
             m_SelectedEntity = {};
+            ClearMultiSelection();
             m_History.Push(CreateRef<DeleteEntityCommand>(toDelete));
             m_ActiveScene->DestroyEntity(toDelete);
         }

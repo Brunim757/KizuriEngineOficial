@@ -2,6 +2,26 @@
 #include <imgui.h>
 #include <cmath>
 #include <cstdio>
+#include <fstream>
+#ifndef _WIN32
+#include <unistd.h>
+#endif
+
+// Memória RAM usada pelo processo (Linux via /proc/self/statm; Windows: sem
+// suporte simples, retorna -1 = n/d).
+static double ProcessRAMMB() {
+#ifdef _WIN32
+    return -1.0;
+#else
+    std::ifstream f("/proc/self/statm");
+    if (!f.is_open()) return -1.0;
+    long total = 0, resident = 0;
+    if (!(f >> total >> resident)) return -1.0;
+    (void)total;
+    long pageSize = sysconf(_SC_PAGESIZE);
+    return (double)resident * (double)pageSize / (1024.0 * 1024.0);
+#endif
+}
 
 void ProfilerPanel::PushSample(float frameMs) {
     m_FrameTimes.push_back(frameMs);
@@ -24,6 +44,11 @@ void ProfilerPanel::OnImGuiRender() {
     ImGui::Text("Triângulos: %u", kizuri::RenderCommand::GetFrameTriangles());
     if (m_Ctx.ActiveScene)
         ImGui::Text("Entidades: %u", (uint32_t)m_Ctx.ActiveScene->GetRegistry().view<kizuri::TransformComponent>().size());
+
+    double ramMB = ProcessRAMMB();
+    if (ramMB > 0.0)
+        ImGui::Text("RAM do processo: %.0f MB", ramMB);
+    ImGui::TextWrapped("GPU: %s", kizuri::GetOpenGLVersionString().c_str());
 
     ImGui::Separator();
     ImGui::TextDisabled("Tempo de frame (últimos %d frames)", kHistory);

@@ -62,20 +62,49 @@ public:
 
         m_Scene->OnUpdateRuntime(ts);
 
-        std::string nextScene;
-        if (m_Scene->PollPendingLoad(nextScene)) {
-            m_Scene->OnRuntimeStop();
-            AudioEngine::StopAll();
-            auto loaded = CreateRef<Scene>("Jogo");
-            if (SceneSerializer(loaded).Deserialize(Project::ResolvePath(nextScene))) {
-                loaded->OnViewportResize(m_ViewportWidth, m_ViewportHeight);
-                m_Scene = loaded;
-                m_Scene->OnRuntimeStart();
-                KZ_CORE_INFO("Cena trocada para: {0}", nextScene);
-            } else {
-                KZ_CORE_ERROR("Falha ao carregar cena: {0}", nextScene);
-                Application::Get().Close();
+        // Troca de cena com FADE: escurece, troca, clareia.
+        if (!m_SceneSwitching) {
+            std::string nextScene;
+            if (m_Scene->PollPendingLoad(nextScene)) {
+                m_PendingScenePath = nextScene;
+                m_SceneSwitching = true;
+                m_FadingOut = false;
+                m_FadeAlpha = 0.0f;
             }
+        }
+        if (m_SceneSwitching) {
+            if (!m_FadingOut) {
+                m_FadeAlpha += (float)ts * 3.0f;
+                if (m_FadeAlpha >= 1.0f) {
+                    m_FadeAlpha = 1.0f;
+                    m_Scene->OnRuntimeStop();
+                    AudioEngine::StopAll();
+                    auto loaded = CreateRef<Scene>("Jogo");
+                    if (SceneSerializer(loaded).Deserialize(Project::ResolvePath(m_PendingScenePath))) {
+                        loaded->OnViewportResize(m_ViewportWidth, m_ViewportHeight);
+                        m_Scene = loaded;
+                        m_Scene->OnRuntimeStart();
+                        KZ_CORE_INFO("Cena trocada para: {0}", m_PendingScenePath);
+                    } else {
+                        KZ_CORE_ERROR("Falha ao carregar cena: {0}", m_PendingScenePath);
+                        Application::Get().Close();
+                    }
+                    m_FadingOut = true;
+                }
+            } else {
+                m_FadeAlpha -= (float)ts * 3.0f;
+                if (m_FadeAlpha <= 0.0f) { m_FadeAlpha = 0.0f; m_SceneSwitching = false; }
+            }
+        }
+
+        // Overlay de fade (preto, cobre a tela).
+        if (m_FadeAlpha > 0.001f) {
+            float hw = (float)m_ViewportWidth * 0.5f, hh = (float)m_ViewportHeight * 0.5f;
+            kizuri::OrthographicCamera cam(-hw, hw, -hh, hh);
+            kizuri::Renderer2D::BeginScene(cam);
+            kizuri::Renderer2D::DrawQuad({ 0.0f, 0.0f }, { (float)m_ViewportWidth, (float)m_ViewportHeight },
+                                         { 0.0f, 0.0f, 0.0f, m_FadeAlpha });
+            kizuri::Renderer2D::EndScene();
         }
     }
 
@@ -101,6 +130,11 @@ private:
     std::string m_ModulePath;
     uint32_t m_ViewportWidth = 1600;
     uint32_t m_ViewportHeight = 900;
+    // Fade de troca de cena.
+    bool m_SceneSwitching = false;
+    bool m_FadingOut = false;
+    float m_FadeAlpha = 0.0f;
+    std::string m_PendingScenePath;
 };
 
 class GameApp : public Application {

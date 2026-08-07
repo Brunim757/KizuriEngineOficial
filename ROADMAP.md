@@ -565,4 +565,8 @@
 - [x] C#: `Scene.DrawInstanced(mesh, cor, transforms, count)` +
   `Scene.MakeTransform(x, y, z, scale)` (floresta/multidão em runtime)
 
+### ✅ R9 — Fade de troca de cena (jogo)
+- [x] KizuriGame escurece (fade in), troca a cena e clareia (fade out) —
+  troca via `Scene.Load` fica suave em vez de cortar seco
+
 ---

@@ -8,12 +8,11 @@ namespace kizuri {
 
 void GraphicsSettings::TuneToHardware() {
     // A engine roda SEMPRE em OpenGL 3.3 core (o caminho comprovado) — um
-    // único conjunto de valores, sem variação por versão. O AO clampado em
-    // 0.35 garante que o SSAO nunca escureça a cena mesmo se a estimativa
-    // quebrar num driver estranho.
-    MSAA = 4; ShadowMapSize = 2048; ShadowPCFRadius = 2; SSAOSamples = 32;
-    BloomIterations = 4;
-    ShadowSoftness = 0.6f;
+    // único conjunto de valores. Padrão conservador (Medium) pra abrir em
+    // qualquer máquina; o usuário sobe o preset se quiser.
+    MSAA = 2; ShadowMapSize = 1024; ShadowPCFRadius = 1; SSAOSamples = 16;
+    BloomIterations = 3;
+    ShadowSoftness = 0.5f;
     GodRaysEnabled = false; GodRaysIntensity = 0.6f;
     DOFEnabled = false; DOFFocusDistance = 10.0f; DOFFocusRange = 4.0f; DOFStrength = 1.0f;
     MotionBlurEnabled = false; MotionBlurIntensity = 0.5f;
@@ -25,6 +24,7 @@ void GraphicsSettings::TuneToHardware() {
     BloomAnamorphic = 0.0f;
     FogHeight = 0.0f; FogHeightFalloff = 0.0f;
     AtmosphereSky = false;
+    Preset = QualityPreset::Medium;
     SSREnabled = true; SSRMaxSteps = 24; SSRThickness = 0.12f; SSRIntensity = 0.6f;
     SSRMarchDistance = 20.0f;
     TAAEnabled = true;

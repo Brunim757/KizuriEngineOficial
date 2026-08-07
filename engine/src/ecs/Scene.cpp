@@ -1086,6 +1086,20 @@ void Scene::OnRuntimeStop() {
 
 void Scene::OnUpdateRuntime(Timestep ts) {
     KZ_TRACE_SCOPE("Scene::OnUpdateRuntime");
+    OnUpdateRuntimeLogic(ts);
+
+    // 3D primeiro, depois 2D por cima, UI por último. O passe 3D termina num
+    // composite de tela cheia — se o 2D rodasse antes (ordem antiga), o
+    // composite pintava por cima e engolia o 2D. Com 3D→2D→UI, uma cena
+    // híbrida (câmera perspectiva + câmera ortográfica primárias) vira o
+    // clássico 2.5D: fundo/mundo 3D + camada de jogo 2D + HUD de UI.
+    RenderScene3D(nullptr);
+    RenderScene2D(nullptr);
+    RenderUI();
+}
+
+void Scene::OnUpdateRuntimeLogic(Timestep ts) {
+    KZ_TRACE_SCOPE("Scene::OnUpdateRuntimeLogic");
     UpdateUIPointer(); // hit-test dos UIButton antes dos scripts (que leem WasClicked)
 
     m_Registry.view<NativeScriptComponent>().each([=](auto entityHandle, auto& nsc) {
@@ -1101,15 +1115,6 @@ void Scene::OnUpdateRuntime(Timestep ts) {
     UpdateSpriteAnimations(ts);
     UpdateAnimators(ts);
     UpdateAudio(ts);
-
-    // 3D primeiro, depois 2D por cima, UI por último. O passe 3D termina num
-    // composite de tela cheia — se o 2D rodasse antes (ordem antiga), o
-    // composite pintava por cima e engolia o 2D. Com 3D→2D→UI, uma cena
-    // híbrida (câmera perspectiva + câmera ortográfica primárias) vira o
-    // clássico 2.5D: fundo/mundo 3D + camada de jogo 2D + HUD de UI.
-    RenderScene3D(nullptr);
-    RenderScene2D(nullptr);
-    RenderUI();
 }
 
 void Scene::RenderRuntimeView() {
@@ -1118,6 +1123,16 @@ void Scene::RenderRuntimeView() {
     // que estiver vinculado (a "Game View" do editor). Aspecto segue o
     // m_ViewportWidth/Height setado pelo OnViewportResize do editor.
     RenderScene3D(nullptr);
+    RenderScene2D(nullptr);
+    RenderUI();
+}
+
+void Scene::RenderRuntimeWithEditorCamera(PerspectiveCamera& editorCamera) {
+    KZ_TRACE_SCOPE("Scene::RenderRuntimeWithEditorCamera");
+    // Viewport durante o Play: o mundo do jogo (já atualizado pela lógica)
+    // visto pela CÂMERA DO EDITOR — você voa pela cena enquanto o jogo roda.
+    // O passe 2D usa a câmera primária da própria cena (HUD/overlay).
+    RenderScene3D(&editorCamera);
     RenderScene2D(nullptr);
     RenderUI();
 }

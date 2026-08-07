@@ -16,10 +16,11 @@ private:
     void DrawGraphicsSection();
     void DrawGeneralSection();
     void DrawEditorSection();
+    void DrawAudioSection();
     void DrawAboutSection();
 
     const EditorContext& m_Ctx;
-    int m_Section = 0; // 0=Gráficos, 1=Geral, 2=Editor, 3=Sobre
+    int m_Section = 0; // 0=Gráficos, 1=Geral, 2=Editor, 3=Áudio, 4=Sobre
     char m_EnvHDRIPath[512] = "";
 
     void ApplyPreset();

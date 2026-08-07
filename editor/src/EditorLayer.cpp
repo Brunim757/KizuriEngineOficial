@@ -702,7 +702,12 @@ void EditorLayer::OnUpdate(Timestep ts) {
         }
         m_ActiveScene->SetUIMouseNDC(ndc, Input::IsMouseButtonPressed(Mouse::Left));
 
-        m_ActiveScene->OnUpdateRuntime(ts);
+        // Play: roda a LÓGICA do jogo uma vez e renderiza o VIEWPORT com a
+        // CÂMERA DO EDITOR — você voa pela cena enquanto o jogo roda (o
+        // GameView mostra a câmera do jogador). Navegação livre ativa.
+        UpdateEditorCamera(ts);
+        m_ActiveScene->OnUpdateRuntimeLogic(ts);
+        m_ActiveScene->RenderRuntimeWithEditorCamera(m_EditorCamera);
 
         std::string nextScene;
         if (m_ActiveScene->PollPendingLoad(nextScene)) {
@@ -2169,7 +2174,8 @@ void EditorLayer::DrawDockspace() {
         ImGui::Separator();
         if (ImGui::MenuItem("Fullscreen do viewport", "F11", m_ViewportMaximized)) m_ViewportMaximized = !m_ViewportMaximized;
         ImGui::Separator();
-        if (ImGui::MenuItem("Configurações...", "Ctrl+,")) m_ShowSettings = true;
+        if (ImGui::MenuItem("Project Settings...", "Ctrl+,"))
+            for (auto& p : m_Panels) if (std::string(p->GetTitle()) == "Project Settings") { p->SetVisible(true); break; }
         ImGui::EndPopup();
     }
 
@@ -2182,7 +2188,8 @@ void EditorLayer::DrawDockspace() {
             if (ImGui::MenuItem(panel->GetTitle(), nullptr, visible)) panel->SetVisible(!visible);
         }
         ImGui::Separator();
-        if (ImGui::MenuItem("Configurações...", "Ctrl+,")) m_ShowSettings = true;
+        if (ImGui::MenuItem("Project Settings...", "Ctrl+,"))
+            for (auto& p : m_Panels) if (std::string(p->GetTitle()) == "Project Settings") { p->SetVisible(true); break; }
         ImGui::EndPopup();
     }
 
@@ -4529,7 +4536,8 @@ void EditorLayer::OnImGuiRender() {
     }
 
     // Janela de configurações (Arquivo > Configurações).
-    DrawSettings();
+    // Configurações unificadas no painel Project Settings (menu Janelas).
+    // A janela antiga "Configurações" foi descontinuada (redundante).
 
     // Overlay de progresso do carregamento assíncrono de cena. A janela é
     // desenhada por último (fica por cima de tudo) e o loop de eventos segue

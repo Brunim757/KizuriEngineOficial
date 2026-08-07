@@ -16,6 +16,13 @@ Não há instalação de dependências — tudo vem junto.
 - **4 GB de RAM** (recomendado 8 GB)
 - Para scripts C#: **.NET SDK 8+** (o editor compila seu jogo no Play)
 
+### Recomendados
+
+- GPU dedicada (OpenGL 3.3+), **8 GB de RAM**, **i5/Ryzen 5**
+- Para todos os efeitos no **Ultra**: GPU com 4 GB de VRAM
+- O editor já abre no preset **Médio** por padrão — suba para Ultra/High se a
+  máquina aguentar, ou desça para Low em máquinas fracas
+
 ::: nota O motor funciona até em máquinas modestas
 O OpenGL 3.3 roda em iGPU, máquina virtual e até Wine. Se o editor abrir, ele roda.
 :::

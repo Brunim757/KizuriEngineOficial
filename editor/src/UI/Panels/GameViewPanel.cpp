@@ -4,11 +4,9 @@
 
 void GameViewPanel::OnUpdate(kizuri::Timestep ts) {
     (void)ts;
-    // Renderiza SEMPRE (edição E Play): o Game View mostra a visão da CÂMERA
-    // PRINCIPAL da cena ao vivo — edite no viewport e veja como fica pro
-    // jogador sem apertar Play. Mesmo tamanho/aspecto do viewport
-    // (Scene::RenderRuntimeView usa o m_ViewportWidth/Height).
-    if (!m_Visible || !m_Ctx.ActiveScene) return;
+    // Game View = a CÂMERA DO JOGADOR, só durante o Play. O viewport mostra
+    // a câmera do editor (voar pela cena); aqui é o que o jogador vê.
+    if (!m_Visible || !m_Ctx.IsPlay || !m_Ctx.ActiveScene) return;
     if (m_Ctx.ViewportSize.x < 1.0f || m_Ctx.ViewportSize.y < 1.0f) return;
 
     if (!m_Framebuffer)
@@ -37,7 +35,7 @@ void GameViewPanel::OnImGuiRender() {
         return;
     }
     if (!m_Framebuffer) {
-        ImGui::TextDisabled("Visão ao vivo da câmera principal da cena.");
+        ImGui::TextDisabled("Inicie o Play para ver a câmera do jogador aqui.");
         ImGui::End();
         return;
     }
@@ -47,7 +45,7 @@ void GameViewPanel::OnImGuiRender() {
     ImGui::Text("GAME");
     ImGui::PopStyleColor();
     ImGui::SameLine();
-    ImGui::TextDisabled("câmera principal %s", m_Ctx.IsPlay ? "(Play)" : "(edição, ao vivo)");
+    ImGui::TextDisabled("câmera do jogador (%s)", m_Ctx.IsPlay ? "Play" : "aguardando Play");
     ImGui::SameLine();
     if (ImGui::SmallButton("Focar câmera")) {
         // Seleciona a primeira câmera principal da cena para o Inspetor.

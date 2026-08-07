@@ -570,3 +570,16 @@
   troca via `Scene.Load` fica suave em vez de cortar seco
 
 ---
+## 🚧 v0.28 — Experiência & Produto (em andamento)
+
+- [x] **Preset padrão = Médio** (antes Ultra): abre em qualquer máquina;
+  suba o preset no editor se aguentar
+- [x] **Game View ≠ Viewport**: no Play o VIEWPORT usa a CÂMERA DO EDITOR
+  (voar pela cena) e o GAME VIEW mostra a câmera do JOGADOR — sem redundância;
+  Game View renderiza só no Play (o "ao vivo" em edição foi removido)
+- [x] **Configurações unificadas**: só existe o painel **Project Settings**
+  (menu Configurações... abre ele); a janela antiga "Configurações" foi
+  descontinuada; seção Áudio (mixer) adicionada
+- [x] Requisitos mínimos/recomendados documentados (preset Médio padrão)
+
+---

@@ -19,14 +19,32 @@ void ProjectSettingsPanel::Save() {
 
 void ProjectSettingsPanel::DrawSidebar() {
     ImGui::BeginChild("##ps_sidebar", ImVec2(140.0f, 0.0f), true);
-    const char* items[] = { "Gráficos", "Geral", "Editor", "Sobre" };
-    for (int i = 0; i < 4; ++i) {
+    const char* items[] = { "Gráficos", "Geral", "Editor", "Áudio", "Sobre" };
+    for (int i = 0; i < 5; ++i) {
         if (ImGui::Selectable(items[i], m_Section == i)) m_Section = i;
     }
     ImGui::Separator();
     ImGui::TextDisabled("Kizuri Engine");
     ImGui::EndChild();
     ImGui::SameLine();
+}
+
+void ProjectSettingsPanel::DrawAudioSection() {
+    ImGui::TextDisabled("Audio mixer");
+    ImGui::Separator();
+    static float master = 1.0f, music = 1.0f, sfx = 1.0f, ui = 1.0f;
+    bool changed = false;
+    changed |= ImGui::SliderFloat("Mestre", &master, 0.0f, 1.0f);
+    changed |= ImGui::SliderFloat("Música", &music, 0.0f, 1.0f);
+    changed |= ImGui::SliderFloat("SFX", &sfx, 0.0f, 1.0f);
+    changed |= ImGui::SliderFloat("UI", &ui, 0.0f, 1.0f);
+    if (changed) {
+        kizuri::AudioEngine::SetMasterVolume(master);
+        kizuri::AudioEngine::SetGroupVolume(0, sfx);
+        kizuri::AudioEngine::SetGroupVolume(1, music);
+        kizuri::AudioEngine::SetGroupVolume(2, ui);
+    }
+    ImGui::TextDisabled("Aplicado ao vivo. Em código: Audio.MusicVolume/SFXVolume/UIVolume.");
 }
 
 void ProjectSettingsPanel::DrawGraphicsSection() {
@@ -168,6 +186,7 @@ void ProjectSettingsPanel::OnImGuiRender() {
         case 0: DrawGraphicsSection(); break;
         case 1: DrawGeneralSection(); break;
         case 2: DrawEditorSection(); break;
+        case 3: DrawAudioSection(); break;
         default: DrawAboutSection(); break;
     }
     ImGui::EndChild();

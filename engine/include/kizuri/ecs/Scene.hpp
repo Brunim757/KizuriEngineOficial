@@ -93,11 +93,22 @@ public:
 
     void OnUpdateRuntime(Timestep ts);
 
+    // Só a LÓGICA do runtime (scripts, física, partículas, áudio) — sem
+    // renderizar. O editor usa isso no Play pra rodar o jogo UMA vez e
+    // desenhar em vários alvos (viewport com câmera do editor + Game View
+    // com a câmera do jogador).
+    void OnUpdateRuntimeLogic(Timestep ts);
+
     // Renderiza a cena do runtime (3D → 2D → UI) no framebuffer ATUALMENTE
     // VINCULADO, sem rodar lógica (física/scripts/partículas). Usado pelo
     // painel "Game View" do editor: o Play roda o update uma vez (no
     // viewport) e a aba do jogo só RE-renderiza a mesma cena pro FBO dela.
     void RenderRuntimeView();
+
+    // Renderiza a cena do runtime com uma câmera FORNECIDA (ex.: a câmera do
+    // editor) em vez da câmera primária — é o viewport durante o Play:
+    // você voa pela cena enquanto o jogo roda.
+    void RenderRuntimeWithEditorCamera(class PerspectiveCamera& editorCamera);
 
     void OnUpdateEditor3D(Timestep ts, class PerspectiveCamera& editorCamera);
     void OnUpdateEditor2D(Timestep ts, class OrthographicCamera& editorCamera);

@@ -870,15 +870,16 @@ void Scene::RegisterPhysics3DEntity(Entity entity) {
     }
     body->setUserPointer(reinterpret_cast<void*>(static_cast<uintptr_t>(static_cast<uint32_t>(entity.GetHandle()))));
 
-    // Filtro de colisão por CAMADA (Tags & Layers) — grupo = bit da camada,
-    // máscara = camadas com as quais colide.
+    // Filtro de colisão por CAMADA (Tags & Layers): usa a sobrecarga clássica
+    // addRigidBody(body, group, mask) — compatível com qualquer versão do Bullet.
     if (entity.HasComponent<TagComponent>()) {
         auto& tag = entity.GetComponent<TagComponent>();
-        int group = 1 << std::min(std::max(tag.Layer, 0), 30);
-        body->setGroupMask(group, (int)tag.CollisionMask);
+        short group = (short)(1 << std::min(std::max(tag.Layer, 0), 30));
+        short mask = (short)tag.CollisionMask;
+        m_PhysicsWorld3D->addRigidBody(body, group, mask);
+    } else {
+        m_PhysicsWorld3D->addRigidBody(body);
     }
-
-    m_PhysicsWorld3D->addRigidBody(body);
     rb3d.RuntimeBody = body;
 }
 

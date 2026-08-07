@@ -1,5 +1,9 @@
 name: Build Kizuri Engine
 
+# Necessário para o softprops/action-gh-release criar/publicar a Release.
+permissions:
+  contents: write
+
 on:
   # Manual (editor/CI de teste).
   workflow_dispatch:

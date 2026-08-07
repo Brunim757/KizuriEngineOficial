@@ -87,6 +87,7 @@ jobs:
           name: KizuriEngine-${{ matrix.os }}
           path: dist/
           if-no-files-found: warn
+          retention-days: 3
 
   # ------- Scripting C# (Kizuri.Scripting) -------
   # O motor é C++ privado; o jogo é um assembly .NET. Este job valida que o
@@ -137,6 +138,7 @@ jobs:
           name: Kizuri.Managed-${{ matrix.os }}
           path: managed/artifacts/
           if-no-files-found: warn
+          retention-days: 3
 
   # ------- Empacotamento combinado -------
   # Baixa os artefatos de build e managed de cada OS e gera um único zip
@@ -264,3 +266,4 @@ jobs:
           name: Kizuri-${{ matrix.os }}
           path: dist/
           if-no-files-found: warn
+          retention-days: 3

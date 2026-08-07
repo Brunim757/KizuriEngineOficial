@@ -582,6 +582,12 @@
   descontinuada; seção Áudio (mixer) adicionada
 - [x] Requisitos mínimos/recomendados documentados (preset Médio padrão)
 
+### ✅ Frustum culling (sistema de engine)
+- [x] Culling dos 6 planos (Gribb-Hartmann) no passe 3D: malhas fora da câmera
+  não são submetidas (AABB do mundo dos 8 cantos) — economiza vértices/pixels;
+  esqueletos não são culled (pose animada pode sair da AABB de repouso)
+- [x] Funciona no viewport (câmera do editor) e no Play (câmera primária)
+
 ### ✅ Starter Pack (peso "de engine de verdade")
 - [x] Content Pack EXPANDIDO nas Releases (ambas as plataformas): +modelos
   glTF (RiggedFigure, ReciprocatingSaw, Avocado, BoomBox, CesiumMilkTruck,

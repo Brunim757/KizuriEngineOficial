@@ -27,6 +27,27 @@ namespace kizuri {
 
 namespace {
 
+// Frustum culling (Gribb-Hartmann): extrai os 6 planos de uma VP (OpenGL,
+// clip z em [-1,1]) e testa um AABB usando o "positive vertex" por plano.
+bool AABBInFrustum(const glm::mat4& vp, const glm::vec3& min, const glm::vec3& max) {
+    auto row = [&](int r) { return glm::vec4(vp[0][r], vp[1][r], vp[2][r], vp[3][r]); };
+    glm::vec4 row1 = row(0), row2 = row(1), row3 = row(2), row4 = row(3);
+    glm::vec4 planes[6] = {
+        row4 + row1, row4 - row1, // esquerda, direita
+        row4 + row2, row4 - row2, // baixo, topo
+        row4 + row3, row4 - row3  // perto, longe
+    };
+    for (int i = 0; i < 6; ++i) {
+        const glm::vec4& p = planes[i];
+        glm::vec3 v(min.x, min.y, min.z);
+        if (p.x > 0.0f) v.x = max.x;
+        if (p.y > 0.0f) v.y = max.y;
+        if (p.z > 0.0f) v.z = max.z;
+        if (glm::dot(p, glm::vec4(v, 1.0f)) < 0.0f) return false;
+    }
+    return true;
+}
+
 struct ContactListener2D : public b2ContactListener {
     std::vector<std::pair<entt::entity, entt::entity>>* BeginQueue = nullptr;
     std::vector<std::pair<entt::entity, entt::entity>>* EndQueue = nullptr;
@@ -1459,6 +1480,31 @@ void Scene::UpdateAudio(Timestep) {
 void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
     KZ_TRACE_SCOPE("Scene::RenderScene3D");
 
+    // VP usada pro FRUSTUM CULLING (não desenhar o que está fora da câmera —
+    // sistema de engine de verdade). Esqueletos (skinned) NÃO são culled
+    // (a pose animada pode sair da AABB de repouso).
+    glm::mat4 cullVP = glm::mat4(0.0f);
+    bool cullCam = false;
+    if (overrideCamera) {
+        cullVP = overrideCamera->GetViewProjectionMatrix();
+        cullCam = true;
+    } else {
+        auto camView = m_Registry.view<TransformComponent, CameraComponent>();
+        for (auto e : camView) {
+            auto& camera = camView.get<CameraComponent>(e);
+            if (!camera.Primary || camera.Type != CameraComponent::ProjectionType::Perspective3D) continue;
+            glm::vec3 pos = glm::vec3(GetWorldTransform(Entity{ e, this })[3]);
+            const auto& tc = camView.get<TransformComponent>(e);
+            float aspect = m_ViewportHeight ? (float)m_ViewportWidth / (float)m_ViewportHeight : 16.0f / 9.0f;
+            PerspectiveCamera cam(camera.PerspectiveFOV, aspect, camera.NearClip, camera.FarClip);
+            cam.SetPosition(pos);
+            cam.SetRotation(glm::degrees(tc.Rotation.y), glm::degrees(tc.Rotation.x));
+            cullVP = cam.GetViewProjectionMatrix();
+            cullCam = true;
+            break;
+        }
+    }
+
     auto SubmitMeshes = [&]() {
         auto meshes = m_Registry.view<TransformComponent, MeshRendererComponent>();
         for (auto me : meshes) {
@@ -1473,9 +1519,27 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
                                               (uint32_t)animator->Skin->Joints.size());
                 else
                     Renderer3D::Submit(mr.MeshAsset, mr.MeshMaterial, world);
-            } else {
-                Renderer3D::Submit(mr.MeshAsset, mr.MeshMaterial, world);
+                continue;
             }
+
+            // Frustum culling: AABB do mundo (8 cantos transformados) fora da
+            // câmera => não submete (economiza vértices/pixels no passe 3D).
+            if (cullCam) {
+                glm::vec3 mn = mr.MeshAsset->GetBoundsMin(), mx = mr.MeshAsset->GetBoundsMax();
+                glm::vec3 corners[8] = {
+                    {mn.x,mn.y,mn.z},{mx.x,mn.y,mn.z},{mn.x,mx.y,mn.z},{mx.x,mx.y,mn.z},
+                    {mn.x,mn.y,mx.z},{mx.x,mn.y,mx.z},{mn.x,mx.y,mx.z},{mx.x,mx.y,mx.z}
+                };
+                glm::vec3 wmin(1e30f), wmax(-1e30f);
+                for (auto& c : corners) {
+                    glm::vec3 w = glm::vec3(world * glm::vec4(c, 1.0f));
+                    wmin = glm::min(wmin, w);
+                    wmax = glm::max(wmax, w);
+                }
+                if (!AABBInFrustum(cullVP, wmin, wmax)) continue;
+            }
+
+            Renderer3D::Submit(mr.MeshAsset, mr.MeshMaterial, world);
         }
     };
 

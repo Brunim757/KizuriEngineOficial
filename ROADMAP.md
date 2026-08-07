@@ -508,4 +508,21 @@
   Editor, Sobre): presets, MSAA/sombras/PBR/pós, HDRI do céu, janela,
   preferências do editor
 
----EOF
+---EOF## 🚧 v0.27 — Jogabilidade & Produto (em andamento)
+
+> Escopo completo (por rodadas, cada uma vira commit + CI): Game View ao vivo
+> em edição · Tags & Layers com filtro de colisão · Instancing de malhas ·
+> Input Actions com rebind · Build settings (nome/ícone/versão/resolução) ·
+> Prefabs aninhados + edição isolada · Multi-seleção + undo/redo · Audio
+> mixer · Terrain · Timeline/Sequencer · LODs/occlusion · Profiler GPU ·
+> loading entre cenas.
+
+### ✅ R1 — Game View ao vivo em edição
+- [x] O painel Game View renderiza SEMPRE (edição e Play): mostra a visão da
+  **câmera principal** da cena ao vivo — edite no viewport e veja como fica
+  pro jogador sem apertar Play
+- [x] Botão "Focar câmera": seleciona a câmera principal no Inspetor
+- [x] Render extra continua com TAA/MotionBlur desligados (ScopedTemporalOff)
+  pra não corromper o histórico do viewport
+
+---

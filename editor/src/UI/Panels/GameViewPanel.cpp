@@ -4,10 +4,11 @@
 
 void GameViewPanel::OnUpdate(kizuri::Timestep ts) {
     (void)ts;
-    // Só renderiza o jogo em modo Play, com o painel visível e o viewport com
-    // tamanho válido. Mesmo tamanho/aspecto do viewport (Scene::RenderRuntimeView
-    // usa o m_ViewportWidth/Height do OnViewportResize).
-    if (!m_Visible || !m_Ctx.IsPlay || !m_Ctx.ActiveScene) return;
+    // Renderiza SEMPRE (edição E Play): o Game View mostra a visão da CÂMERA
+    // PRINCIPAL da cena ao vivo — edite no viewport e veja como fica pro
+    // jogador sem apertar Play. Mesmo tamanho/aspecto do viewport
+    // (Scene::RenderRuntimeView usa o m_ViewportWidth/Height).
+    if (!m_Visible || !m_Ctx.ActiveScene) return;
     if (m_Ctx.ViewportSize.x < 1.0f || m_Ctx.ViewportSize.y < 1.0f) return;
 
     if (!m_Framebuffer)
@@ -36,7 +37,7 @@ void GameViewPanel::OnImGuiRender() {
         return;
     }
     if (!m_Framebuffer) {
-        ImGui::TextDisabled("Inicie o Play para ver o jogo aqui.");
+        ImGui::TextDisabled("Visão ao vivo da câmera principal da cena.");
         ImGui::End();
         return;
     }
@@ -46,7 +47,22 @@ void GameViewPanel::OnImGuiRender() {
     ImGui::Text("GAME");
     ImGui::PopStyleColor();
     ImGui::SameLine();
-    ImGui::TextDisabled("Play: %s", m_Ctx.IsPlay ? "rodando" : "parado");
+    ImGui::TextDisabled("câmera principal %s", m_Ctx.IsPlay ? "(Play)" : "(edição, ao vivo)");
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Focar câmera")) {
+        // Seleciona a primeira câmera principal da cena para o Inspetor.
+        if (m_Ctx.ActiveScene) {
+            auto cams = m_Ctx.ActiveScene->GetRegistry()
+                .view<kizuri::TransformComponent, kizuri::CameraComponent>();
+            for (auto e : cams) {
+                auto& cam = cams.get<kizuri::CameraComponent>(e);
+                if (cam.Primary && m_Ctx.SelectEntity) {
+                    m_Ctx.SelectEntity(kizuri::Entity{ e, m_Ctx.ActiveScene.get() });
+                    break;
+                }
+            }
+        }
+    }
 
     uint32_t texID = m_Framebuffer->GetColorAttachmentRendererID();
     ImVec2 avail = ImGui::GetContentRegionAvail();

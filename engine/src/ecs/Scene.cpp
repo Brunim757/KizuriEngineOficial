@@ -875,8 +875,7 @@ void Scene::RegisterPhysics3DEntity(Entity entity) {
     if (entity.HasComponent<TagComponent>()) {
         auto& tag = entity.GetComponent<TagComponent>();
         int group = 1 << std::min(std::max(tag.Layer, 0), 30);
-        body->setCollisionGroup(group);
-        body->setCollisionMask((int)tag.CollisionMask);
+        body->setGroupMask(group, (int)tag.CollisionMask);
     }
 
     m_PhysicsWorld3D->addRigidBody(body);

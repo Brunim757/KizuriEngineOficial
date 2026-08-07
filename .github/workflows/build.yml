@@ -89,8 +89,7 @@ jobs:
           : > "$manifest"
           dl() {
             curl -fsSL --max-time 60 -o "$2" "$1" 2>/dev/null
-            if [ -s "$2" ]; then printf '%-32s %10s bytes
-' "$3" "$(wc -c < "$2")" >> "$manifest"; else rm -f "$2"; fi
+            if [ -s "$2" ]; then printf '%-32s %10s bytes\n' "$3" "$(wc -c < "$2")" >> "$manifest"; else rm -f "$2"; fi
           }
           base="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0"
           # Modelos esqueléticos/animações

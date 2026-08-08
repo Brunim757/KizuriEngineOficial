@@ -20,6 +20,7 @@ class btCollisionShape;
 class btMotionState;
 class btPairCachingGhostObject;
 class btKinematicCharacterController;
+class btTriangleMesh;
 
 namespace kizuri {
 
@@ -188,9 +189,8 @@ private:
     btSequentialImpulseConstraintSolver* m_Solver = nullptr;
     std::vector<btCollisionShape*> m_PhysicsShapes3D;
     std::vector<btMotionState*> m_PhysicsMotionStates3D;
-    // Dados de altura dos heightfields de terreno (o shape referencia o
-    // ponteiro — precisa viver enquanto a cena existir).
-    std::vector<std::vector<float>> m_PhysicsHeightfieldData3D;
+    // Malhas CPU dos terrenos (o btTriangleMesh é referenciado pelo shape).
+    std::vector<btTriangleMesh*> m_PhysicsMeshes3D;
     // Character controllers (btKinematicCharacterController) por handle de entidade.
     std::unordered_map<uint32_t, btKinematicCharacterController*> m_CharacterControllers3D;
     std::vector<btPairCachingGhostObject*> m_CharacterGhosts3D;

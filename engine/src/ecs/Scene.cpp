@@ -17,7 +17,8 @@
 
 #include <box2d/box2d.h>
 #include <btBulletDynamicsCommon.h>
-#include <BulletCollision/CollisionShapes/btHeightfieldTerrainShape.h>
+#include <BulletCollision/CollisionShapes/btBvhTriangleMeshShape.h>
+#include <BulletCollision/CollisionShapes/btTriangleMesh.h>
 #include <BulletCollision/CollisionDispatch/btGhostObject.h>
 #include <BulletDynamics/Character/btKinematicCharacterController.h>
 #include <glm/gtc/random.hpp>
@@ -934,35 +935,27 @@ void Scene::RegisterPhysics3DEntity(Entity entity) {
 
     auto& transform = entity.GetComponent<TransformComponent>();
 
-    // Terreno: colisor é um heightfield (Bullet) — entidades/personagens
-    // andam sobre o relevo. O mesh gerado é a fonte das alturas.
+    // Terreno: colisor é a MESMA malha de triângulos do visual (BvhTriangle
+    // — não usa heightfield do Bullet: com localScaling + offset ele não
+    // colide, malha de triângulo é robusta e bate 1:1 com o relevo).
     bool isTerrain = entity.HasComponent<TerrainComponent>();
-    btVector3 originOffset(0.0f, 0.0f, 0.0f);
 
     btCollisionShape* shape = nullptr;
     if (isTerrain) {
         auto& terr = entity.GetComponent<TerrainComponent>();
         if (!terr.GeneratedMesh) terr.Regenerate();
         const auto& verts = terr.GeneratedMesh->GetVertices();
-        uint32_t grid = terr.Segments + 1;
-        if (terr.GeneratedMesh && verts.size() >= (size_t)grid * grid) {
-            std::vector<float> heights((size_t)grid * grid);
-            float mn = 1e30f, mx = -1e30f;
-            for (uint32_t i = 0; i < grid; ++i) {
-                for (uint32_t j = 0; j < grid; ++j) {
-                    heights[i + grid * j] = verts[i * grid + j].Position.y;
-                    mn = std::min(mn, heights[i + grid * j]);
-                    mx = std::max(mx, heights[i + grid * j]);
-                }
+        const auto& idxs = terr.GeneratedMesh->GetIndices();
+        if (verts.size() >= 3 && idxs.size() >= 3) {
+            auto* mesh = new btTriangleMesh();
+            for (size_t k = 0; k + 2 < idxs.size(); k += 3) {
+                const auto& a = verts[idxs[k]].Position;
+                const auto& b = verts[idxs[k + 1]].Position;
+                const auto& c = verts[idxs[k + 2]].Position;
+                mesh->addTriangle(btVector3(a.x, a.y, a.z), btVector3(b.x, b.y, b.z), btVector3(c.x, c.y, c.z));
             }
-            if (mx - mn < 1e-4f) mx = mn + 1.0f; // terreno plano ainda precisa de espessura
-            auto* hf = new btHeightfieldTerrainShape((int)grid, (int)grid, heights.data(), mn, mx, 1, false);
-            float spacing = terr.Size / (float)std::max(terr.Segments, 1u);
-            hf->setLocalScaling(btVector3(spacing, 1.0f, spacing));
-            m_PhysicsHeightfieldData3D.push_back(std::move(heights));
-            shape = hf;
-            // O heightfield é localizado no canto (0..size); a mesh é centrada.
-            originOffset = btVector3(-terr.Size * 0.5f, 0.0f, -terr.Size * 0.5f);
+            m_PhysicsMeshes3D.push_back(mesh);
+            shape = new btBvhTriangleMeshShape(mesh, true, true);
         } else {
             shape = new btBoxShape(btVector3(0.5f, 0.5f, 0.5f));
         }
@@ -988,7 +981,7 @@ void Scene::RegisterPhysics3DEntity(Entity entity) {
     rotation.setEulerZYX(transform.Rotation.z, transform.Rotation.y, transform.Rotation.x);
     btTransform startTransform;
     startTransform.setIdentity();
-    startTransform.setOrigin(btVector3(transform.Translation.x, transform.Translation.y, transform.Translation.z) + originOffset);
+    startTransform.setOrigin(btVector3(transform.Translation.x, transform.Translation.y, transform.Translation.z));
     startTransform.setRotation(rotation);
 
     auto* motionState = new btDefaultMotionState(startTransform);
@@ -1105,10 +1098,11 @@ void Scene::OnPhysics3DStop() {
 
     for (auto* motionState : m_PhysicsMotionStates3D) delete motionState;
     for (auto* shape : m_PhysicsShapes3D) delete shape;
+    for (auto* mesh : m_PhysicsMeshes3D) delete mesh;
     m_PhysicsMotionStates3D.clear();
     m_PhysicsShapes3D.clear();
+    m_PhysicsMeshes3D.clear();
     m_ActiveContacts3D.clear();
-    m_PhysicsHeightfieldData3D.clear();
 
     // Character controllers (ações do mundo + ghosts) — depois do world? Não:
     // remove as ações ANTES de apagar o world.

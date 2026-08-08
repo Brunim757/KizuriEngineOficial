@@ -15,8 +15,8 @@
 
 ## Política de versionamento (0.x.y)
 
-A versão da engine é `major.minor.patch` e o **major fica sempre 0** (não
-haverá major bump).
+A versão da engine é `major.minor.patch` e o **major fica sempre 0** até o
+minor chegar em `99` — quando seria `0.100`, vira **`1.0`**.
 
 - **Upgrade GRANDE** (sistema novo, ferramenta nova, feature marcante) →
   sobe o **minor** e zera o patch: `0.30.0` → `0.31.0`.
@@ -24,6 +24,8 @@ haverá major bump).
   `0.30.0` → `0.30.1`.
 - Features pequenas **acumulam** até formarem um upgrade grande — aí sobem o
   minor de uma vez (não sobe versão a cada mudança pequena).
+- O minor sobe de `0.x` até `0.99`; o próximo (seria `0.100`) vira **`1.0`**
+  (a "100" é a versão 1.0).
 
 ---
 

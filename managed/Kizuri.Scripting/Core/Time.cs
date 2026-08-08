@@ -20,6 +20,9 @@ public static class Time
 	public static float unscaledTime => (float)Interop.KizuriNative.kz_time_get_unscaled_time();
 	public static float unscaledDeltaTime => (float)Interop.KizuriNative.kz_time_delta_seconds();
 
+	// Quantos frames já rodaram desde o início (incrementa a cada frame).
+	public static ulong frameCount => Interop.KizuriNative.kz_time_get_frame();
+
 	// TimeScale global: 1.0 = normal, <1 = câmera lenta (0 = pausa). Escala o
 	// deltaSeconds recebido pelos scripts (o OnUpdate de cada Script). A
 	// física/partículas continuam com dt próprio — por isso 0 pausa os

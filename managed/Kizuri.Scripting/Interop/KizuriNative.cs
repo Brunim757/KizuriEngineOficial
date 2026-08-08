@@ -23,6 +23,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern double kz_time_delta_seconds();
     [DllImport(Lib)] internal static extern double kz_time_get_time();
     [DllImport(Lib)] internal static extern double kz_time_get_unscaled_time();
+    [DllImport(Lib)] internal static extern ulong kz_time_get_frame();
     [DllImport(Lib)] internal static extern void kz_set_time_scale(float scale);
     [DllImport(Lib)] internal static extern float kz_get_time_scale();
 
@@ -33,6 +34,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_input_set_action_key([MarshalAs(UnmanagedType.LPUTF8Str)] string action, int key);
     [DllImport(Lib)] internal static extern int kz_input_get_action_key([MarshalAs(UnmanagedType.LPUTF8Str)] string action);
     [DllImport(Lib)] internal static extern int kz_input_is_mouse_button_pressed(int button);
+    [DllImport(Lib)] internal static extern int kz_input_is_mouse_button_down(int button);
     [DllImport(Lib)] internal static extern void kz_input_get_mouse_position(out float x, out float y);
 
     // ---- Entities / scene ----------------------------------------------------

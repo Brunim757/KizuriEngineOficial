@@ -31,6 +31,7 @@ double s_UnscaledElapsed = 0.0;
 uint32_t s_NextHandle = 1;
 std::unordered_map<uint32_t, kizuri::UUID> s_Handles;
 std::unordered_map<kizuri::UUID, uint32_t> s_HandlesByUUID;
+uint64_t s_FrameCount = 0;
 
 kizuri::Entity Resolve(uint32_t handle) {
     if (s_ActiveScene == nullptr) return {};
@@ -77,9 +78,11 @@ KZ_SCRIPT_API void kz_set_time_delta(double seconds) {
     s_DeltaSeconds = seconds;
     s_Elapsed += seconds * s_TimeScale;
     s_UnscaledElapsed += seconds;
+    ++s_FrameCount;
 }
 
 KZ_SCRIPT_API double kz_time_get_time() { return s_Elapsed; }
+KZ_SCRIPT_API uint64_t kz_time_get_frame() { return s_FrameCount; }
 KZ_SCRIPT_API double kz_time_get_unscaled_time() { return s_UnscaledElapsed; }
 
 // ---------------------------------------------------------------------------
@@ -122,6 +125,19 @@ KZ_SCRIPT_API int kz_input_is_key_pressed(int key) {
 
 KZ_SCRIPT_API int kz_input_is_mouse_button_pressed(int button) {
     return kizuri::Input::IsMouseButtonPressed(button) ? 1 : 0;
+}
+
+// Edge-detect de mouse (GetMouseButtonDown): true só no frame do clique.
+std::unordered_map<int, bool>& PrevMouseButtonState() {
+    static std::unordered_map<int, bool> s_Prev;
+    return s_Prev;
+}
+KZ_SCRIPT_API int kz_input_is_mouse_button_down(int button) {
+    bool pressed = kizuri::Input::IsMouseButtonPressed(button);
+    bool& prev = PrevMouseButtonState()[button];
+    bool down = pressed && !prev;
+    prev = pressed;
+    return down ? 1 : 0;
 }
 
 // Edge-detect de tecla (GetKeyDown): true só no frame em que a tecla foi

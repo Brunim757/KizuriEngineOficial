@@ -1620,7 +1620,7 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
                     glm::vec2 p1 = glm::vec2(cmax) / cmax.w;
                     glm::vec2 screenPx = (p1 - p0) * 0.5f *
                         glm::vec2((float)m_ViewportWidth, (float)m_ViewportHeight);
-                    if (glm::length2(screenPx) < 1.0f) continue; // < ~1px
+                    if (glm::dot(screenPx, screenPx) < 1.0f) continue; // < ~1px
                 }
             }
 

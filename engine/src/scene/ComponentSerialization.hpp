@@ -16,10 +16,22 @@ inline std::string ResolveSerializedPath(const std::string& path) {
     return Project::ResolvePath(path);
 }
 
-// Material de um .glb/.gltf com texturas EMBUTIDAS não tem caminho de
-// arquivo (veio de memória via CreateFromMemory) — na recarga (Play/cópia/
-// save) os mapas se perdem e o objeto fica cinza. Reextrai do arquivo fonte
-// só os mapas que ainda estão vazios (preserva overrides manuais).
+inline void RestoreGLTFTextureMaps(MeshRendererComponent& mr) {
+    const std::string& src = mr.MeshSource;
+    if (src.find(".glb") == std::string::npos && src.find(".gltf") == std::string::npos) return;
+    Material restored = Mesh::ExtractMaterialFromGLTF(ResolveSerializedPath(src));
+    auto& mat = mr.MeshMaterial;
+    if (!mat.AlbedoMap && restored.AlbedoMap) mat.AlbedoMap = restored.AlbedoMap;
+    if (!mat.NormalMap && restored.NormalMap) mat.NormalMap = restored.NormalMap;
+    if (!mat.MetallicRoughnessMap && restored.MetallicRoughnessMap) mat.MetallicRoughnessMap = restored.MetallicRoughnessMap;
+    if (!mat.EmissiveMap && restored.EmissiveMap) mat.EmissiveMap = restored.EmissiveMap;
+    if (!mat.HeightMap && restored.HeightMap) mat.HeightMap = restored.HeightMap;
+}
+
+inline nlohmann::json Vec3ToJson(const glm::vec3& v) { return { v.x, v.y, v.z }; }
+inline nlohmann::json Vec4ToJson(const glm::vec4& v) { return { v.x, v.y, v.z, v.w }; }
+inline glm::vec3 JsonToVec3(const nlohmann::json& j) { return { j[0].get<float>(), j[1].get<float>(), j[2].get<float>() }; }
+inline glm::vec4 JsonToVec4(const nlohmann::json& j) { return { j[0].get<float>(), j[1].get<float>(), j[2].get<float>(), j[3].get<float>() }; }
 
 inline void ApplyTimelineJson(nlohmann::json::const_reference jtl, TimelineComponent& tl) {
     tl.Playing = jtl.value("Playing", true);
@@ -51,23 +63,6 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
         }
     }
 }
-
-inline void RestoreGLTFTextureMaps(MeshRendererComponent& mr) {
-    const std::string& src = mr.MeshSource;
-    if (src.find(".glb") == std::string::npos && src.find(".gltf") == std::string::npos) return;
-    Material restored = Mesh::ExtractMaterialFromGLTF(ResolveSerializedPath(src));
-    auto& mat = mr.MeshMaterial;
-    if (!mat.AlbedoMap && restored.AlbedoMap) mat.AlbedoMap = restored.AlbedoMap;
-    if (!mat.NormalMap && restored.NormalMap) mat.NormalMap = restored.NormalMap;
-    if (!mat.MetallicRoughnessMap && restored.MetallicRoughnessMap) mat.MetallicRoughnessMap = restored.MetallicRoughnessMap;
-    if (!mat.EmissiveMap && restored.EmissiveMap) mat.EmissiveMap = restored.EmissiveMap;
-    if (!mat.HeightMap && restored.HeightMap) mat.HeightMap = restored.HeightMap;
-}
-
-inline nlohmann::json Vec3ToJson(const glm::vec3& v) { return { v.x, v.y, v.z }; }
-inline nlohmann::json Vec4ToJson(const glm::vec4& v) { return { v.x, v.y, v.z, v.w }; }
-inline glm::vec3 JsonToVec3(const nlohmann::json& j) { return { j[0].get<float>(), j[1].get<float>(), j[2].get<float>() }; }
-inline glm::vec4 JsonToVec4(const nlohmann::json& j) { return { j[0].get<float>(), j[1].get<float>(), j[2].get<float>(), j[3].get<float>() }; }
 
 // Serializa uma única entidade (sem os filhos — quem chama decide se
 // percorre a hierarquia) para um objeto JSON, incluindo ID e Parent.
@@ -178,7 +173,7 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
 
     if (entity.HasComponent<LODComponent>()) {
         auto& lod = entity.GetComponent<LODComponent>();
-        json levels = json::array();
+        nlohmann::json levels = nlohmann::json::array();
         for (auto& l : lod.Levels)
             levels.push_back({ { "MeshSource", l.MeshSource }, { "Distance", l.Distance } });
         je["LOD"] = { { "DistanceMultiplier", lod.DistanceMultiplier }, { "Levels", levels } };
@@ -199,7 +194,7 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
 
     if (entity.HasComponent<TimelineComponent>()) {
         auto& tl = entity.GetComponent<TimelineComponent>();
-        json kf = json::array();
+        nlohmann::json kf = nlohmann::json::array();
         for (auto& k : tl.Keyframes)
             kf.push_back({ { "Time", k.Time }, { "Position", Vec3ToJson(k.Position) },
                            { "Rotation", Vec3ToJson(k.Rotation) }, { "Scale", Vec3ToJson(k.Scale) } });

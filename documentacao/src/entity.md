@@ -70,6 +70,23 @@ Entity.SetLightColor(r, g, b);
 Entity.SetLightIntensity(x);
 ```
 
+## Sistemas de engine (v0.28)
+
+```csharp
+// Character Controller (gravidade + chão por raycast)
+Entity.AddCharacterController(6f, -20f);
+Entity.MoveCharacter(dirX, dirZ);
+
+// Timeline (cutscene): keyframes de posição interpolados
+Entity.AddTimeline();
+Entity.AddTimelineKeyframe(0f, new Math.Vector3(0, 1, 0));
+Entity.AddTimelineKeyframe(3f, new Math.Vector3(5, 1, 0));
+Entity.PlayTimeline();
+```
+
+No editor: componentes **LOD** (malhas por distância), **Terreno** (heightmap
+procedural) e **Timeline** — veja o Inspetor.
+
 ## Tags & Layers (filtro de colisão)
 
 ```csharp

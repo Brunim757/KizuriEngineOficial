@@ -616,6 +616,10 @@
 - [x] Inspetor: transport (tocar/pausar/loop/velocidade/tempo) + lista de
   keyframes + "+ Keyframe (posição atual)"; serializado
 
+### ✅ Culling por tamanho de tela
+- [x] Além do frustum: objeto cuja AABB projetada cabe em ~1px não é
+  desenhado (detalhe irrelevante àquela distância)
+
 ### ✅ Starter Pack (peso "de engine de verdade")
 - [x] Content Pack EXPANDIDO nas Releases (ambas as plataformas): +modelos
   glTF (RiggedFigure, ReciprocatingSaw, Avocado, BoomBox, CesiumMilkTruck,

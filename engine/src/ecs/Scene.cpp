@@ -1610,6 +1610,18 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
                     wmax = glm::max(wmax, w);
                 }
                 if (!AABBInFrustum(cullVP, wmin, wmax)) continue;
+
+                // Culling por TAMANHO DE TELA: objeto cuja AABB projetada cabe
+                // em ~1px não é desenhado (detalhe irrelevante a essa distância).
+                glm::vec4 cmin = cullVP * glm::vec4(wmin, 1.0f);
+                glm::vec4 cmax = cullVP * glm::vec4(wmax, 1.0f);
+                if (cmin.w > 0.0f && cmax.w > 0.0f) {
+                    glm::vec2 p0 = glm::vec2(cmin) / cmin.w;
+                    glm::vec2 p1 = glm::vec2(cmax) / cmax.w;
+                    glm::vec2 screenPx = (p1 - p0) * 0.5f *
+                        glm::vec2((float)m_ViewportWidth, (float)m_ViewportHeight);
+                    if (glm::length2(screenPx) < 1.0f) continue; // < ~1px
+                }
             }
 
             // LOD (Level of Detail): troca a malha pela distância à câmera.

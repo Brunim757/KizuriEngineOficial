@@ -17,6 +17,9 @@
 
 #include <box2d/box2d.h>
 #include <btBulletDynamicsCommon.h>
+#include <BulletCollision/CollisionShapes/btHeightfieldTerrainShape.h>
+#include <BulletCollision/CollisionDispatch/btGhostObject.h>
+#include <BulletDynamics/Character/btKinematicCharacterController.h>
 #include <glm/gtc/random.hpp>
 #include <algorithm>
 #include <limits>
@@ -874,8 +877,39 @@ void Scene::RegisterPhysics3DEntity(Entity entity) {
 
     auto& transform = entity.GetComponent<TransformComponent>();
 
+    // Terreno: colisor é um heightfield (Bullet) — entidades/personagens
+    // andam sobre o relevo. O mesh gerado é a fonte das alturas.
+    bool isTerrain = entity.HasComponent<TerrainComponent>();
+    btVector3 originOffset(0.0f, 0.0f, 0.0f);
+
     btCollisionShape* shape = nullptr;
-    if (entity.HasComponent<BoxCollider3DComponent>()) {
+    if (isTerrain) {
+        auto& terr = entity.GetComponent<TerrainComponent>();
+        if (!terr.GeneratedMesh) terr.Regenerate();
+        const auto& verts = terr.GeneratedMesh->GetVertices();
+        uint32_t grid = terr.Segments + 1;
+        if (terr.GeneratedMesh && verts.size() >= (size_t)grid * grid) {
+            std::vector<float> heights((size_t)grid * grid);
+            float mn = 1e30f, mx = -1e30f;
+            for (uint32_t i = 0; i < grid; ++i) {
+                for (uint32_t j = 0; j < grid; ++j) {
+                    heights[i + grid * j] = verts[i * grid + j].Position.y;
+                    mn = std::min(mn, heights[i + grid * j]);
+                    mx = std::max(mx, heights[i + grid * j]);
+                }
+            }
+            if (mx - mn < 1e-4f) mx = mn + 1.0f; // terreno plano ainda precisa de espessura
+            auto* hf = new btHeightfieldTerrainShape((int)grid, (int)grid, heights.data(), mn, mx, 1, false);
+            float spacing = terr.Size / (float)std::max(terr.Segments, 1u);
+            hf->setLocalScaling(btVector3(spacing, 1.0f, spacing));
+            m_PhysicsHeightfieldData3D.push_back(std::move(heights));
+            shape = hf;
+            // O heightfield é localizado no canto (0..size); a mesh é centrada.
+            originOffset = btVector3(-terr.Size * 0.5f, 0.0f, -terr.Size * 0.5f);
+        } else {
+            shape = new btBoxShape(btVector3(0.5f, 0.5f, 0.5f));
+        }
+    } else if (entity.HasComponent<BoxCollider3DComponent>()) {
         auto& bc3d = entity.GetComponent<BoxCollider3DComponent>();
         shape = new btBoxShape(btVector3(bc3d.HalfExtents.x * transform.Scale.x,
                                           bc3d.HalfExtents.y * transform.Scale.y,
@@ -897,7 +931,7 @@ void Scene::RegisterPhysics3DEntity(Entity entity) {
     rotation.setEulerZYX(transform.Rotation.z, transform.Rotation.y, transform.Rotation.x);
     btTransform startTransform;
     startTransform.setIdentity();
-    startTransform.setOrigin(btVector3(transform.Translation.x, transform.Translation.y, transform.Translation.z));
+    startTransform.setOrigin(btVector3(transform.Translation.x, transform.Translation.y, transform.Translation.z) + originOffset);
     startTransform.setRotation(rotation);
 
     auto* motionState = new btDefaultMotionState(startTransform);
@@ -960,6 +994,42 @@ void Scene::OnPhysics3DStart() {
     auto view = m_Registry.view<Rigidbody3DComponent>();
     for (auto e : view)
         RegisterPhysics3DEntity(Entity{ e, this });
+
+    // Character controllers 3D (btKinematicCharacterController): cápsula que
+    // colide com paredes/subidas (step), escorrega em rampas e cai com
+    // gravidade — substitui o fallback cinemático por raycast.
+    auto ccView = m_Registry.view<TransformComponent, CharacterControllerComponent>();
+    for (auto e : ccView) {
+        Entity entity{ e, this };
+        auto& cc = entity.GetComponent<CharacterControllerComponent>();
+        auto& cct = entity.GetComponent<TransformComponent>();
+
+        auto* ghost = new btPairCachingGhostObject();
+        auto* capsule = new btCapsuleShape(cc.Radius, std::max(cc.Height - 2.0f * cc.Radius, 0.05f));
+        m_PhysicsShapes3D.push_back(capsule);
+        m_CharacterGhosts3D.push_back(ghost);
+
+        btTransform t;
+        t.setIdentity();
+        t.setOrigin(btVector3(cct.Translation.x, cct.Translation.y, cct.Translation.z));
+        ghost->setWorldTransform(t);
+        ghost->setCollisionShape(capsule);
+        ghost->setCollisionFlags(btCollisionObject::CF_CHARACTER_OBJECT);
+
+        short group = 1, mask = -1;
+        if (entity.HasComponent<TagComponent>()) {
+            auto& tag = entity.GetComponent<TagComponent>();
+            group = (short)(1 << std::min(std::max(tag.Layer, 0), 30));
+            mask = (short)tag.CollisionMask;
+        }
+        m_PhysicsWorld3D->addCollisionObject(ghost, group, mask);
+
+        auto* controller = new btKinematicCharacterController(ghost, capsule, cc.StepOffset, btVector3(0.0f, 1.0f, 0.0f));
+        controller->setGravity(btVector3(0.0f, cc.Gravity, 0.0f));
+        controller->setMaxSlope(glm::radians(50.0f));
+        m_PhysicsWorld3D->addAction(controller);
+        m_CharacterControllers3D[(uint32_t)e] = controller;
+    }
 }
 
 void Scene::OnPhysics3DStop() {
@@ -981,6 +1051,22 @@ void Scene::OnPhysics3DStop() {
     m_PhysicsMotionStates3D.clear();
     m_PhysicsShapes3D.clear();
     m_ActiveContacts3D.clear();
+    m_PhysicsHeightfieldData3D.clear();
+
+    // Character controllers (ações do mundo + ghosts) — depois do world? Não:
+    // remove as ações ANTES de apagar o world.
+    if (m_PhysicsWorld3D) {
+        for (auto& [handle, controller] : m_CharacterControllers3D) {
+            if (controller) m_PhysicsWorld3D->removeAction(controller);
+            delete controller;
+        }
+        m_CharacterControllers3D.clear();
+        for (auto* ghost : m_CharacterGhosts3D) {
+            if (ghost) m_PhysicsWorld3D->removeCollisionObject(ghost);
+            delete ghost;
+        }
+        m_CharacterGhosts3D.clear();
+    }
 
     delete m_PhysicsWorld3D; m_PhysicsWorld3D = nullptr;
     delete m_Solver; m_Solver = nullptr;
@@ -1558,7 +1644,31 @@ void Scene::UpdateCharacterControllers(Timestep ts) {
         auto& tc = view.get<TransformComponent>(e);
         auto& cc = view.get<CharacterControllerComponent>(e);
 
-        // Movimento horizontal pelo input (MoveCharacter) + gravidade.
+        // v2: controller físico do Bullet (colide com paredes/terreno/step).
+        auto it = m_CharacterControllers3D.find((uint32_t)e);
+        if (it != m_CharacterControllers3D.end() && it->second && m_PhysicsWorld3D) {
+            auto* controller = it->second;
+            // Sincroniza o ghost com o transform (permite SetPosition/teleporte
+            // vindo de script) antes de aplicar o movimento do frame.
+            btVector3 entPos(tc.Translation.x, tc.Translation.y, tc.Translation.z);
+            if (entPos.distance2(controller->getGhostObject()->getWorldTransform().getOrigin()) > 1e-6) {
+                btTransform gt;
+                gt.setIdentity();
+                gt.setOrigin(entPos);
+                controller->getGhostObject()->setWorldTransform(gt);
+                controller->warp(entPos);
+            }
+            btVector3 walk(cc.Input.x * cc.Speed, 0.0f, cc.Input.y * cc.Speed);
+            controller->setWalkDirection(walk);
+            const btVector3& o = controller->getGhostObject()->getWorldTransform().getOrigin();
+            tc.Translation = { o.x(), o.y(), o.z() };
+            cc.Grounded = controller->onGround();
+            cc.Velocity = { walk.x(), walk.y(), walk.z() };
+            continue;
+        }
+
+        // Fallback cinemático (sem física 3D iniciada / criado em runtime):
+        // movimento horizontal + gravidade + chão por raycast.
         cc.Velocity.x = cc.Input.x * cc.Speed;
         cc.Velocity.z = cc.Input.y * cc.Speed;
         cc.Velocity.y += cc.Gravity * (float)ts;

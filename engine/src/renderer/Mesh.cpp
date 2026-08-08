@@ -80,6 +80,7 @@ kizuri::Ref<kizuri::Texture2D> LoadGLTFTexture(const cgltf_texture_view& view) {
 namespace kizuri {
 
 Mesh::Mesh(const std::vector<Vertex3D>& vertices, const std::vector<uint32_t>& indices) {
+    m_Vertices = vertices;
     m_VertexArray = CreateRef<VertexArray>();
 
     auto vb = CreateRef<VertexBuffer>((float*)vertices.data(), (uint32_t)(vertices.size() * sizeof(Vertex3D)));

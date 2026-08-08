@@ -32,6 +32,10 @@ public:
     const Ref<VertexArray>& GetVertexArray() const { return m_VertexArray; }
     uint32_t GetIndexCount() const { return m_IndexCount; }
 
+    // Vértices no espaço local (mantidos em CPU além do buffer de GPU) —
+    // usado pelo editor/picking e pela física (heightmap do terreno).
+    const std::vector<Vertex3D>& GetVertices() const { return m_Vertices; }
+
     // AABB local, calculado uma vez no construtor — usado pelo picking por raio do editor.
     const glm::vec3& GetBoundsMin() const { return m_BoundsMin; }
     const glm::vec3& GetBoundsMax() const { return m_BoundsMax; }
@@ -63,6 +67,7 @@ public:
 
 private:
     Ref<VertexArray> m_VertexArray;
+    std::vector<Vertex3D> m_Vertices;
     uint32_t m_IndexCount = 0;
     glm::vec3 m_BoundsMin{ 0.0f };
     glm::vec3 m_BoundsMax{ 0.0f };

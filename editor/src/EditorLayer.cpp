@@ -4279,6 +4279,11 @@ void EditorLayer::DrawAddComponentButton() {
             auto& t = m_SelectedEntity.AddComponent<TerrainComponent>();
             if (!m_SelectedEntity.HasComponent<MeshRendererComponent>())
                 m_SelectedEntity.AddComponent<MeshRendererComponent>();
+            if (!m_SelectedEntity.HasComponent<Rigidbody3DComponent>()) {
+                // Colisor estático (heightfield) — personagens andam no terreno.
+                auto& rb = m_SelectedEntity.AddComponent<Rigidbody3DComponent>();
+                rb.Type = Rigidbody3DComponent::BodyType::Static;
+            }
             t.Regenerate();
             m_SelectedEntity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;
         }

@@ -27,6 +27,8 @@ minor chegar em `99` — quando seria `0.100`, vira **`1.0`**.
 - O minor sobe de `0.x` até `0.99`; o próximo (seria `0.100`) vira **`1.0`**
   (a "100" é a versão 1.0).
 
+> Changelog no Discord: só publicar quando o dono pedir — nunca automático.
+
 ---
 
 ## ✅ Base jogável (feito)

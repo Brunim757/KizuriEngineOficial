@@ -13,6 +13,18 @@
 > distribuído pra casa de centenas de MB a **~1GB** com um **Content Pack**
 > real (modelos glTF, texturas PBR, HDRIs de céu, áudios, prefabs).
 
+## Política de versionamento (0.x.y)
+
+A versão da engine é `major.minor.patch` e o **major fica sempre 0** (não
+haverá major bump).
+
+- **Upgrade GRANDE** (sistema novo, ferramenta nova, feature marcante) →
+  sobe o **minor** e zera o patch: `0.30.0` → `0.31.0`.
+- **Ajustes, correções e features pequenas** → sobem só o **patch**:
+  `0.30.0` → `0.30.1`.
+- Features pequenas **acumulam** até formarem um upgrade grande — aí sobem o
+  minor de uma vez (não sobe versão a cada mudança pequena).
+
 ---
 
 ## ✅ Base jogável (feito)

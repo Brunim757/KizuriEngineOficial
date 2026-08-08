@@ -132,6 +132,18 @@ struct LODComponent {
     float DistanceMultiplier = 1.0f; // escala todas as distâncias (tune)
 };
 
+// Terreno procedural: gera um mesh de heightmap (fbm) com Mesh::CreateTerrain.
+// Requer um MeshRenderer na mesma entidade (o mesh gerado é usado no lugar).
+struct TerrainComponent {
+    uint32_t Segments = 64;
+    float Size = 100.0f;
+    float HeightScale = 5.0f;
+    uint32_t Seed = 1;
+    Ref<Mesh> GeneratedMesh; // runtime — gerado sob demanda (não serializado)
+
+    void Regenerate() { GeneratedMesh = Mesh::CreateTerrain(Segments, Size, HeightScale, Seed); }
+};
+
 // Espelha kizuri::Light (Renderer3D.hpp) — entidade de luz de verdade na cena,
 // em vez do sol fixo/não editável que existia antes.
 struct LightComponent {

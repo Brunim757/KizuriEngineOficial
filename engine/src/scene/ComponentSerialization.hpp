@@ -167,6 +167,12 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
         je["LOD"] = { { "DistanceMultiplier", lod.DistanceMultiplier }, { "Levels", levels } };
     }
 
+    if (entity.HasComponent<TerrainComponent>()) {
+        auto& t = entity.GetComponent<TerrainComponent>();
+        je["Terrain"] = { { "Segments", t.Segments }, { "Size", t.Size },
+                          { "HeightScale", t.HeightScale }, { "Seed", t.Seed } };
+    }
+
     if (entity.HasComponent<CameraComponent>()) {
         auto& cc = entity.GetComponent<CameraComponent>();
         je["Camera"] = {
@@ -328,6 +334,22 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         entity.RemoveComponent<LODComponent>(); // LOD sem malha não faz sentido
     }
 
+    if (je.contains("Terrain")) {
+        auto& jt = je["Terrain"];
+        auto& t = entity.HasComponent<TerrainComponent>()
+            ? entity.GetComponent<TerrainComponent>()
+            : entity.AddComponent<TerrainComponent>();
+        t.Segments = jt.value("Segments", 64u);
+        t.Size = jt.value("Size", 100.0f);
+        t.HeightScale = jt.value("HeightScale", 5.0f);
+        t.Seed = jt.value("Seed", 1u);
+        t.Regenerate();
+        if (entity.HasComponent<MeshRendererComponent>())
+            entity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;
+    } else if (entity.HasComponent<TerrainComponent>()) {
+        entity.RemoveComponent<TerrainComponent>();
+    }
+
     if (je.contains("CircleRenderer")) {
         auto& jc = je["CircleRenderer"];
         auto& cr = entity.AddComponent<CircleRendererComponent>();
@@ -405,6 +427,18 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
     if (je.contains("LOD")) {
         auto& lod = entity.AddComponent<LODComponent>();
         ApplyLODJson(je["LOD"], lod);
+    }
+
+    if (je.contains("Terrain")) {
+        auto& jt = je["Terrain"];
+        auto& t = entity.AddComponent<TerrainComponent>();
+        t.Segments = jt.value("Segments", 64u);
+        t.Size = jt.value("Size", 100.0f);
+        t.HeightScale = jt.value("HeightScale", 5.0f);
+        t.Seed = jt.value("Seed", 1u);
+        t.Regenerate();
+        if (entity.HasComponent<MeshRendererComponent>())
+            entity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;
     }
 
     if (je.contains("Camera")) {
@@ -668,6 +702,22 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         ApplyLODJson(je["LOD"], lod);
     } else if (entity.HasComponent<LODComponent>() && !entity.HasComponent<MeshRendererComponent>()) {
         entity.RemoveComponent<LODComponent>(); // LOD sem malha não faz sentido
+    }
+
+    if (je.contains("Terrain")) {
+        auto& jt = je["Terrain"];
+        auto& t = entity.HasComponent<TerrainComponent>()
+            ? entity.GetComponent<TerrainComponent>()
+            : entity.AddComponent<TerrainComponent>();
+        t.Segments = jt.value("Segments", 64u);
+        t.Size = jt.value("Size", 100.0f);
+        t.HeightScale = jt.value("HeightScale", 5.0f);
+        t.Seed = jt.value("Seed", 1u);
+        t.Regenerate();
+        if (entity.HasComponent<MeshRendererComponent>())
+            entity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;
+    } else if (entity.HasComponent<TerrainComponent>()) {
+        entity.RemoveComponent<TerrainComponent>();
     }
 
     if (je.contains("CircleRenderer")) {

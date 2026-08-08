@@ -3801,6 +3801,24 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<LODComponent>();
         }
 
+        if (m_SelectedEntity.HasComponent<TerrainComponent>()) {
+            auto& t = m_SelectedEntity.GetComponent<TerrainComponent>();
+            if (DrawComponentHeader("Terreno (heightmap)", &removeThis)) {
+                bool changed = false;
+                changed |= ImGui::SliderInt("Segmentos", (int*)&t.Segments, 16, 200);
+                changed |= ImGui::DragFloat("Tamanho", &t.Size, 1.0f, 10.0f, 1000.0f);
+                changed |= ImGui::DragFloat("Elevação", &t.HeightScale, 0.1f, 0.0f, 50.0f);
+                changed |= ImGui::DragInt("Semente", (int*)&t.Seed, 1);
+                if (changed || ImGui::Button("Regenerar terreno")) {
+                    t.Regenerate();
+                    if (m_SelectedEntity.HasComponent<MeshRendererComponent>())
+                        m_SelectedEntity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;
+                }
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<TerrainComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<AnimatorComponent>()) {
             auto& ac = m_SelectedEntity.GetComponent<AnimatorComponent>();
             if (DrawComponentHeader("Animador (skinning)", &removeThis)) {
@@ -4166,6 +4184,13 @@ void EditorLayer::DrawAddComponentButton() {
         if (!m_SelectedEntity.HasComponent<LODComponent>() && ImGui::MenuItem("LOD (níveis de detalhe)")) {
             auto& lod = m_SelectedEntity.AddComponent<LODComponent>();
             lod.Levels.push_back({ "builtin:cube", 100.0f, nullptr });
+        }
+        if (!m_SelectedEntity.HasComponent<TerrainComponent>() && ImGui::MenuItem("Terreno (heightmap)")) {
+            auto& t = m_SelectedEntity.AddComponent<TerrainComponent>();
+            if (!m_SelectedEntity.HasComponent<MeshRendererComponent>())
+                m_SelectedEntity.AddComponent<MeshRendererComponent>();
+            t.Regenerate();
+            m_SelectedEntity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;
         }
         if (!m_SelectedEntity.HasComponent<LightComponent>() && ImGui::MenuItem("Light"))
             m_SelectedEntity.AddComponent<LightComponent>();

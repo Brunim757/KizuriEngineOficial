@@ -330,6 +330,74 @@ Ref<Mesh> Mesh::CreateTorus(uint32_t majorSeg, uint32_t minorSeg) {
     return CreateRef<Mesh>(vertices, indices);
 }
 
+// Terreno procedural: grade com elevação por fbm (ruído de valor), normais
+// calculadas por diferenças finitas. Rápido de gerar (uma vez por configuração).
+Ref<Mesh> Mesh::CreateTerrain(uint32_t segments, float size, float heightScale, uint32_t seed) {
+    segments = glm::clamp(segments, 2u, 256u);
+    std::vector<Vertex3D> vertices;
+    std::vector<uint32_t> indices;
+
+    // hash + ruído de valor 2D (para o heightmap ser determinístico).
+    auto hash = [&](float x, float z) {
+        uint32_t h = (uint32_t)(x * 127.1f + z * 311.7f) + seed * 7919u;
+        h = (h ^ (h >> 16)) * 0x45d9f3bu;
+        h = (h ^ (h >> 16)) * 0x45d9f3bu;
+        h = h ^ (h >> 16);
+        return (float)(h & 0xFFFF) / 65535.0f;
+    };
+    auto noise = [&](float x, float z) {
+        int ix = (int)std::floor(x), iz = (int)std::floor(z);
+        float fx = x - ix, fz = z - iz;
+        fx = fx * fx * (3.0f - 2.0f * fx);
+        fz = fz * fz * (3.0f - 2.0f * fz);
+        float n00 = hash((float)ix, (float)iz), n10 = hash((float)(ix + 1), (float)iz);
+        float n01 = hash((float)ix, (float)(iz + 1)), n11 = hash((float)(ix + 1), (float)(iz + 1));
+        return glm::mix(glm::mix(n00, n10, fx), glm::mix(n01, n11, fx), fz);
+    };
+    auto fbm = [&](float x, float z) {
+        float v = 0.0f, a = 0.5f, f = 1.0f;
+        for (int i = 0; i < 4; ++i) {
+            v += a * noise(x * f, z * f);
+            f *= 2.03f;
+            a *= 0.5f;
+        }
+        return v;
+    };
+
+    const float half = size * 0.5f;
+    std::vector<std::vector<float>> h(segments + 1, std::vector<float>(segments + 1));
+    for (uint32_t i = 0; i <= segments; ++i) {
+        for (uint32_t j = 0; j <= segments; ++j) {
+            float x = -half + size * (float)i / (float)segments;
+            float z = -half + size * (float)j / (float)segments;
+            h[i][j] = fbm(x * 0.05f, z * 0.05f) * heightScale;
+            // canto afunda pra parecer um "terreno" cercado (borda suave).
+            float edge = glm::clamp((half - std::max(std::abs(x), std::abs(z))) / (half * 0.2f), 0.0f, 1.0f);
+            h[i][j] *= edge;
+            vertices.push_back({ glm::vec3(x, h[i][j], z), glm::vec3(0.0f, 1.0f, 0.0f),
+                                 { (float)i / (float)segments, (float)j / (float)segments } });
+        }
+    }
+    // Normais por diferenças finitas.
+    for (uint32_t i = 0; i <= segments; ++i) {
+        for (uint32_t j = 0; j <= segments; ++j) {
+            float hL = h[i > 0 ? i - 1 : i][j], hR = h[i < segments ? i + 1 : i][j];
+            float hD = h[i][j > 0 ? j - 1 : j], hU = h[i][j < segments ? j + 1 : j];
+            float dx = (float)segments / size, dz = (float)segments / size;
+            glm::vec3 n = glm::normalize(glm::vec3((hL - hR) * dx, 2.0f, (hD - hU) * dz));
+            vertices[i * (segments + 1) + j].Normal = n;
+        }
+    }
+    for (uint32_t i = 0; i < segments; ++i) {
+        for (uint32_t j = 0; j < segments; ++j) {
+            uint32_t a0 = i * (segments + 1) + j, a1 = a0 + 1;
+            uint32_t b0 = a0 + (segments + 1), b1 = b0 + 1;
+            indices.insert(indices.end(), { a0, b0, a1, a1, b0, b1 });
+        }
+    }
+    return CreateRef<Mesh>(vertices, indices);
+}
+
 Ref<Mesh> Mesh::FromSource(const std::string& source) {
     if (source == "builtin:cube")     return CreateCube();
     if (source == "builtin:plane")    return CreatePlane();

@@ -43,6 +43,10 @@ public:
     static Ref<Mesh> CreateCone(uint32_t sectors = 32);
     static Ref<Mesh> CreateCapsule(uint32_t sectors = 24, uint32_t stacks = 12);
     static Ref<Mesh> CreateTorus(uint32_t majorSeg = 48, uint32_t minorSeg = 24);
+    // Terreno procedural (heightmap de fbm): grade de Segments+1 x Segments+1,
+    // Size unidades de lado, elevação até HeightScale, com Seed fixo.
+    static Ref<Mesh> CreateTerrain(uint32_t segments = 64, float size = 100.0f,
+                                   float heightScale = 5.0f, uint32_t seed = 1);
     static Ref<Mesh> LoadFromOBJ(const std::string& path);
     static Ref<Mesh> LoadFromGLTF(const std::string& path); // .glb/.gltf via cgltf
     static Ref<Mesh> LoadFromGLTFMemory(const void* data, std::size_t size); // .glb em memória (embutido)

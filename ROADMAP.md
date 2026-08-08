@@ -595,6 +595,13 @@
   níveis) e menu Adicionar Componente
 - [x] Sem níveis = comportamento normal; esqueletos ignoram LOD
 
+### ✅ Terrain (heightmap procedural)
+- [x] `Mesh::CreateTerrain`: grade de fbm com normais por diferenças finitas,
+  borda suave — determinístico pela semente
+- [x] `TerrainComponent` (Segmentos/Tamanho/Elevação/Semente): mesh gerado sob
+  demanda e usado no lugar do MeshRenderer; "Regenerar" no Inspetor
+- [x] Serializado no `.kzscene` + menu Adicionar Componente
+
 ### ✅ Starter Pack (peso "de engine de verdade")
 - [x] Content Pack EXPANDIDO nas Releases (ambas as plataformas): +modelos
   glTF (RiggedFigure, ReciprocatingSaw, Avocado, BoomBox, CesiumMilkTruck,

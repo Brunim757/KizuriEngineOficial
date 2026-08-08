@@ -1554,6 +1554,12 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
                 if (idx < (int)lod->Levels.size() && lod->Levels[idx].MeshAsset)
                     mesh = lod->Levels[idx].MeshAsset;
             }
+
+            // Terreno: mesh de heightmap gerado sob demanda.
+            if (auto* terr = m_Registry.try_get<TerrainComponent>(me); terr) {
+                if (!terr->GeneratedMesh) terr->Regenerate();
+                if (terr->GeneratedMesh) mesh = terr->GeneratedMesh;
+            }
             Renderer3D::Submit(mesh, mr.MeshMaterial, world);
         }
     };

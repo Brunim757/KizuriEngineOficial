@@ -30,7 +30,7 @@ OUT = os.path.join(BASE, "site")
 
 SITE_TITLE = "Kizuri Engine"
 SITE_SUBTITLE = "Documentação"
-VERSION = "v0.30"
+VERSION = "v0.31"
 GROUPS = ["Introdução", "Editor", "Componentes", "Scripting C#", "Gráficos",
           "Distribuição"]
 

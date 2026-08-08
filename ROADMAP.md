@@ -694,3 +694,19 @@ minor chegar em `99` — quando seria `0.100`, vira **`1.0`**.
   releases **v0.29.0** e **v0.30.0** publicadas (ambas as plataformas)
 
 ---
+## ✅ v0.31 — Mundo & Física (upgrade grande)
+
+- [x] **Colisor de terreno (heightfield do Bullet)**: Rigidbody3D +
+  TerrainComponent vira um `btHeightfieldTerrainShape` — personagens e
+  objetos andam no relevo (a física respeita o heightmap)
+- [x] **Character Controller v2**: `btKinematicCharacterController` (cápsula)
+  — colide com PAREDES, sobe degraus (step), escorrega em rampas e aplica
+  gravidade; fallback cinemático por raycast preservado
+- [x] `Mesh::GetVertices()` — vértices em CPU (fonte das alturas do terreno)
+- [x] **Física em runtime via C#**: `Scene.OverlapBox3D(center, half)`,
+  `Scene.OverlapSphereAll3D(center, radius)` (TODAS as entidades na área)
+- [x] **Demonstração Física 3D**: terreno heightfield + caixas/esferas
+  dinâmicas caindo no relevo (menu Arquivo + toolbar); editor cria terreno
+  com Rigidbody3D estático no menu Adicionar Componente
+
+---

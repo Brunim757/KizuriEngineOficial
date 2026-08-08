@@ -19,6 +19,7 @@ if (Input.IsKeyPressed(KeyCode.Left)) MoverEsquerda();
 
 ```csharp
 if (Input.IsMousePressed(0)) Atirar();          // 0 = esquerdo, 1 = direito
+if (Input.IsMouseButtonDown(MouseButton.Left)) Salto(); // só no frame do clique
 var (x, y) = Input.GetMousePosition();          // posição em pixels na janela
 ```
 

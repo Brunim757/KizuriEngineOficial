@@ -15,6 +15,7 @@ Time.deltaTime;            // tempo do último frame (segundos)
 Time.time;                 // tempo total de jogo
 Time.unscaledTime;         // tempo real (ignora TimeScale)
 Time.unscaledDeltaTime;    // delta real (ignora TimeScale)
+Time.frameCount;           // quantos frames já rodaram (util p/ alternar a cada N frames)
 ```
 
 ## Escala de tempo

@@ -35,6 +35,17 @@ Scene.Load("Assets/Cenas/fase2.kzscene"); // carregamento diferido/assíncrono
 var cam = Scene.GetPrimaryCamera();
 ```
 
+## Buscar entidades
+
+```csharp
+// Primeira entidade com o nome dado
+var inimigo = Scene.Find("Inimigo");
+
+// Todas as entidades que têm o Tag "Inimigo" (Tags & Layers)
+Entity[] horda = Scene.EntitiesWithTag("Inimigo");
+foreach (var e in horda) { ... }
+```
+
 ## Consultas (raycasts)
 
 ```csharp

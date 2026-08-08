@@ -649,3 +649,32 @@
 - [x] Release v0.28.1 publicada (ambas as plataformas)
 
 ---
+## ✅ v0.29 — Scripting de jogo (API C# + runtime)
+
+- [x] **`Scene.EntitiesWithTag(tag)`**: todas as entidades com o Tag dado
+  (filtro por Tag & Layers em runtime)
+- [x] **Hierarquia em runtime**: `Entity.Parent`, `Entity.ChildCount`,
+  `Entity.GetChild(index)` e `Entity.GetChild(nome)`
+- [x] **`Entity.Active` (set/get)** — estilo GameObject.SetActive: entidade
+  inativa NÃO é desenhada nem atualizada (render 3D/2D/UI, animações de
+  sprite/esqueleto, timeline, character controller, física 2D/3D, áudio e
+  scripts); filhos herdam o estado (ativa só se ela e todos os pais forem)
+- [x] **`Entity.Position`** (getter local) — espelho do SetPosition
+- [x] Inspetor: checkbox **"Ativo"** ao lado do nome
+- [x] Serializado no `.kzscene` (e sobrevive a Play/snapshot/undo/prefab)
+
+## ✅ v0.30 — Câmera de jogo, Input e Tempo
+
+- [x] **`CameraFollowComponent`**: câmera segue um alvo pelo NOME com lerp
+  exponencial (Suavidade), offset atrás do alvo, opção de **girar com o
+  alvo** e **offset em espaço mundo** — roda no runtime (Play/GameView)
+- [x] Serializado + Inspetor (**Camera Follow**) + menu Adicionar Componente
+- [x] C#: `Entity.AddCameraFollow/SetCameraFollowTarget/SetCameraFollowOffset/
+  SetCameraFollowSmoothness`
+- [x] **`Input.IsMouseButtonDown`** — true só no frame do clique (edge)
+- [x] **`Time.frameCount`** — contador de frames do runtime
+- [x] C++ validado localmente no Termux (clang -fsyntax-only: Scene,
+  CSharpBridge, EditorLayer — 0 erros); C# e release aguardam CI (repo
+  privado bloqueia o Actions por billing)
+
+---

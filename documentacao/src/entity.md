@@ -13,11 +13,22 @@ UI. No script, `Entity` é a entidade que tem o script anexado.
 
 ```csharp
 Entity.Name;                    // nome (get/set)
-Entity.Position;                // Vector3
+Entity.Position;                // posição LOCAL (get/set)
+Entity.Active;                  // ativa/inativa (bool, get/set)
+Entity.Parent;                  // entidade pai (ou Invalid se raiz)
+Entity.ChildCount;              // quantos filhos diretos
+Entity.GetChild(0);             // filho no índice
+Entity.GetChild("Olho");        // filho pelo nome
 Entity.GetEulerAngles();        // rotação em graus (Vector3)
 Entity.Scale;                   // Vector3
 Entity.TryGetWorldPosition();   // posição de mundo (respeita o pai)
 ```
+
+::: nota Entidade inativa (`Active = false`)
+Não é desenhada nem atualizada: animações, timeline, física, áudio e scripts
+ficam pausados, e os filhos herdam o estado (ativa só se ela e TODOS os pais
+forem). Igual ao `SetActive` do GameObject.
+:::
 
 ## Transform
 
@@ -86,6 +97,19 @@ Entity.PlayTimeline();
 
 No editor: componentes **LOD** (malhas por distância), **Terreno** (heightmap
 procedural) e **Timeline** — veja o Inspetor.
+
+## Câmera de jogo (v0.30)
+
+```csharp
+// Câmera segue a entidade com o nome dado, com suavidade e offset
+Entity.AddCameraFollow("Jogador", new Math.Vector3(0f, 3f, -6f), 8f);
+Entity.SetCameraFollowTarget("Jogador");   // troca de alvo em runtime
+Entity.SetCameraFollowOffset(new Math.Vector3(0f, 2f, -4f));
+Entity.SetCameraFollowSmoothness(5f);
+```
+
+No editor: componente **Camera Follow** (Inspetor) com offset, suavidade,
+"gira com o alvo" e offset em espaço mundo.
 
 ## Tags & Layers (filtro de colisão)
 

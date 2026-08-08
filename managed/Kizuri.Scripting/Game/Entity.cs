@@ -165,6 +165,27 @@ public readonly struct Entity
 	public void SetCamera(float fovDeg, float nearClip = 0.01f, float farClip = 1000f)
 		=> Interop.KizuriNative.kz_camera_set_params(Handle, fovDeg, nearClip, farClip);
 
+	// ---- Câmera que segue um alvo ----
+	// Adiciona follow: a câmera se move suavemente atrás da entidade com o
+	// nome dado (offset padrão atrás do alvo). Chame AddCamera antes.
+	public bool AddCameraFollow(string targetName, Math.Vector3 offset = default, float smoothness = 8f)
+	{
+		bool ok = Interop.KizuriNative.kz_entity_add_camera_follow(Handle, targetName) != 0;
+		if (!ok) return false;
+		Interop.KizuriNative.kz_camera_follow_set_offset(Handle, offset.X, offset.Y, offset.Z);
+		Interop.KizuriNative.kz_camera_follow_set_smoothness(Handle, smoothness);
+		return true;
+	}
+
+	public void SetCameraFollowTarget(string targetName)
+		=> Interop.KizuriNative.kz_camera_follow_set_target(Handle, targetName);
+
+	public void SetCameraFollowOffset(Math.Vector3 offset)
+		=> Interop.KizuriNative.kz_camera_follow_set_offset(Handle, offset.X, offset.Y, offset.Z);
+
+	public void SetCameraFollowSmoothness(float smoothness)
+		=> Interop.KizuriNative.kz_camera_follow_set_smoothness(Handle, smoothness);
+
 	// Luz dinâmica: type 0=Direcional (direção = rotação da entidade),
 	// 1=Ponto, 2=Spot (cones em graus). A 1ª direcional da cena projeta sombra;
 	// pontos/spot projetam se castsShadow=true.

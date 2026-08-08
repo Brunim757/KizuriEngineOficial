@@ -264,6 +264,19 @@ struct CameraComponent {
     bool FixedAspectRatio = false;
 };
 
+// Câmera que segue um alvo (estilo "câmera de jogo"): a entidade com este
+// componente (e CameraComponent) se move suavemente atrás do alvo a cada
+// frame. O alvo é referenciado pelo NOME (Tag) — resolvido em runtime.
+struct CameraFollowComponent {
+    std::string TargetName;            // nome do alvo (TagComponent)
+    glm::vec3 Offset = { 0.0f, 3.0f, -6.0f }; // deslocamento da câmera
+    float Smoothness = 8.0f;           // velocidade do lerp (0 = teleporta)
+    bool FollowRotation = true;        // gira o yaw junto com o alvo
+    bool UseWorldOffset = false;       // offset em espaço MUNDO (senão gira com o alvo)
+    glm::vec3 m_CurrentPos = { 0.0f, 3.0f, -6.0f }; // estado interno (não serializado)
+    bool m_HasStart = false;
+};
+
 // Animador esquelético: toca uma AnimationClip de um .glb/.gltf (skinning).
 // MeshPath deve apontar pro mesmo arquivo do MeshRenderer. Skin/Time são
 // estado runtime; o resto é serializado (a skin é reparseada no load).

@@ -3603,6 +3603,24 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<CameraComponent>();
         }
 
+        if (m_SelectedEntity.HasComponent<CameraFollowComponent>()) {
+            auto& cf = m_SelectedEntity.GetComponent<CameraFollowComponent>();
+            if (DrawComponentHeader("Camera Follow", &removeThis)) {
+                char targetBuf[256];
+                strncpy(targetBuf, cf.TargetName.c_str(), sizeof(targetBuf) - 1);
+                targetBuf[sizeof(targetBuf) - 1] = '\0';
+                if (ImGui::InputText("Alvo (nome)", targetBuf, sizeof(targetBuf)))
+                    cf.TargetName = std::string(targetBuf);
+                ImGui::DragFloat3("Offset", &cf.Offset.x, 0.05f);
+                ImGui::DragFloat("Suavidade", &cf.Smoothness, 0.1f, 0.0f, 60.0f);
+                ImGui::Checkbox("Gira com o alvo", &cf.FollowRotation);
+                ImGui::Checkbox("Offset em espaço mundo", &cf.UseWorldOffset);
+                ImGui::TextDisabled("A câmera segue a entidade com esse nome no Play.");
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<CameraFollowComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<UICanvasComponent>()) {
             auto& uc = m_SelectedEntity.GetComponent<UICanvasComponent>();
             if (DrawComponentHeader("UI Canvas", &removeThis)) {
@@ -4244,6 +4262,8 @@ void EditorLayer::DrawAddComponentButton() {
             m_SelectedEntity.AddComponent<CircleRendererComponent>();
         if (!m_SelectedEntity.HasComponent<CameraComponent>() && ImGui::MenuItem("Camera"))
             m_SelectedEntity.AddComponent<CameraComponent>();
+        if (!m_SelectedEntity.HasComponent<CameraFollowComponent>() && ImGui::MenuItem("Camera Follow (segue alvo)"))
+            m_SelectedEntity.AddComponent<CameraFollowComponent>();
         if (!m_SelectedEntity.HasComponent<MeshRendererComponent>() && ImGui::MenuItem("Mesh Renderer")) {
             m_SelectedEntity.AddComponent<MeshRendererComponent>();
         }

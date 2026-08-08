@@ -72,6 +72,10 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_entity_add_text(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string text, float fontSize);
     [DllImport(Lib)] internal static extern int kz_entity_add_audio(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string clipPath, int loop, int playOnStart);
     [DllImport(Lib)] internal static extern int kz_entity_add_camera(uint entity, int projectionType);
+    [DllImport(Lib)] internal static extern int kz_entity_add_camera_follow(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string targetName);
+    [DllImport(Lib)] internal static extern void kz_camera_follow_set_target(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string targetName);
+    [DllImport(Lib)] internal static extern void kz_camera_follow_set_offset(uint entity, float x, float y, float z);
+    [DllImport(Lib)] internal static extern void kz_camera_follow_set_smoothness(uint entity, float smoothness);
     [DllImport(Lib)] internal static extern void kz_camera_set_params(uint entity, float fovDeg, float nearClip, float farClip);
     [DllImport(Lib)] internal static extern int kz_entity_add_circle_collider2d(uint entity, float radius, float density, float friction, float restitution);
     [DllImport(Lib)] internal static extern void kz_entity_set_sorting_layer(uint entity, int layer);

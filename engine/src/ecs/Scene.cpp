@@ -1154,6 +1154,7 @@ void Scene::OnUpdateRuntimeLogic(Timestep ts) {
     FlushCollisionEvents();
 
     UpdateTimelines(ts);
+    UpdateCameraFollowers(ts);
     UpdateCharacterControllers(ts);
     UpdateParticleSystems(ts);
     UpdateSpriteAnimations(ts);
@@ -1577,6 +1578,62 @@ void Scene::UpdateCharacterControllers(Timestep ts) {
         }
 
         tc.Translation = newPos;
+    }
+}
+
+// Avança as câmeras com CameraFollowComponent: segue o alvo (pelo nome) com
+// lerp exponencial. Roda a cada frame no runtime (Play/GameView).
+void Scene::UpdateCameraFollowers(Timestep ts) {
+    auto view = m_Registry.view<TransformComponent, CameraComponent, CameraFollowComponent>();
+    if (view.begin() == view.end()) return;
+
+    // Resolve o alvo pelo nome uma única vez por frame (poucos followers).
+    std::unordered_map<std::string, entt::entity> byName;
+    auto tags = m_Registry.view<TagComponent>();
+    for (auto te : tags) {
+        const auto& name = tags.get<TagComponent>(te).Tag;
+        if (!name.empty()) byName.emplace(name, te);
+    }
+
+    float dt = (float)ts;
+    for (auto e : view) {
+        if (!IsEntityActive(Entity{ e, this })) continue; // inativa não segue
+        auto& tc = view.get<TransformComponent>(e);
+        auto& cc = view.get<CameraFollowComponent>(e);
+
+        auto it = byName.find(cc.TargetName);
+        if (it == byName.end() || it->second == e) {
+            cc.m_HasStart = false;
+            continue; // sem alvo — só espera
+        }
+
+        Entity target{ it->second, this };
+        glm::mat4 targetWorld = GetWorldTransform(target);
+        glm::vec3 targetPos = glm::vec3(targetWorld[3]);
+
+        float targetYaw = 0.0f;
+        if (cc.FollowRotation) {
+            glm::vec3 tpos, teuler;
+            DecomposeTransform(targetWorld, tpos, teuler);
+            targetYaw = teuler.y;
+        }
+
+        glm::vec3 desired;
+        if (cc.UseWorldOffset || !cc.FollowRotation) {
+            desired = targetPos + cc.Offset;
+        } else {
+            // Offset gira junto com o alvo (fica sempre "atrás" dele).
+            float cy = glm::cos(targetYaw), sy = glm::sin(targetYaw);
+            glm::vec3 local = { cc.Offset.x, cc.Offset.y, cc.Offset.z };
+            desired = targetPos + glm::vec3(cy * local.x + sy * local.z, local.y, -sy * local.x + cy * local.z);
+        }
+
+        float t = cc.Smoothness > 0.0001f ? 1.0f - glm::exp(-cc.Smoothness * dt) : 1.0f;
+        if (!cc.m_HasStart) { cc.m_CurrentPos = desired; cc.m_HasStart = true; }
+        else cc.m_CurrentPos = glm::mix(cc.m_CurrentPos, desired, glm::clamp(t, 0.0f, 1.0f));
+
+        tc.Translation = cc.m_CurrentPos;
+        if (cc.FollowRotation) tc.Rotation.y = targetYaw;
     }
 }
 

@@ -426,6 +426,34 @@ KZ_SCRIPT_API int kz_entity_add_camera(uint32_t entity, int projectionType) {
     return 1;
 }
 
+KZ_SCRIPT_API int kz_entity_add_camera_follow(uint32_t entity, const char* targetName) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& cf = e.AddOrReplaceComponent<kizuri::CameraFollowComponent>();
+    cf.TargetName = (targetName != nullptr) ? targetName : "";
+    cf.m_HasStart = false;
+    return 1;
+}
+
+KZ_SCRIPT_API void kz_camera_follow_set_target(uint32_t entity, const char* targetName) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::CameraFollowComponent>()) return;
+    e.GetComponent<kizuri::CameraFollowComponent>().TargetName = (targetName != nullptr) ? targetName : "";
+    e.GetComponent<kizuri::CameraFollowComponent>().m_HasStart = false;
+}
+
+KZ_SCRIPT_API void kz_camera_follow_set_offset(uint32_t entity, float x, float y, float z) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::CameraFollowComponent>()) return;
+    e.GetComponent<kizuri::CameraFollowComponent>().Offset = { x, y, z };
+}
+
+KZ_SCRIPT_API void kz_camera_follow_set_smoothness(uint32_t entity, float smoothness) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::CameraFollowComponent>()) return;
+    e.GetComponent<kizuri::CameraFollowComponent>().Smoothness = smoothness;
+}
+
 KZ_SCRIPT_API int kz_entity_add_circle_collider2d(uint32_t entity, float radius,
                                                   float density, float friction, float restitution) {
     auto e = Resolve(entity);

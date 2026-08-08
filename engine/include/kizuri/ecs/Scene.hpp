@@ -87,6 +87,9 @@ public:
     // flag Active ligado. Inativa não é desenhada nem atualizada.
     bool IsEntityActive(Entity entity);
 
+    // Avança as câmeras com CameraFollowComponent atrás do alvo (runtime).
+    void UpdateCameraFollowers(Timestep ts);
+
     glm::mat4 GetWorldTransform(Entity entity);
 
     Entity PickEntity(const glm::vec3& rayOrigin, const glm::vec3& rayDir);

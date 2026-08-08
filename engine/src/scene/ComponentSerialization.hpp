@@ -215,6 +215,17 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
         };
     }
 
+    if (entity.HasComponent<CameraFollowComponent>()) {
+        auto& cf = entity.GetComponent<CameraFollowComponent>();
+        je["CameraFollow"] = {
+            { "TargetName", cf.TargetName },
+            { "Offset", Vec3ToJson(cf.Offset) },
+            { "Smoothness", cf.Smoothness },
+            { "FollowRotation", cf.FollowRotation },
+            { "UseWorldOffset", cf.UseWorldOffset }
+        };
+    }
+
     if (entity.HasComponent<UICanvasComponent>()) {
         auto& uc = entity.GetComponent<UICanvasComponent>();
         je["UICanvas"] = { { "OrthoSize", uc.OrthoSize } };
@@ -519,6 +530,16 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         cc.NearClip = jc.value("NearClip", 0.01f);
         cc.FarClip = jc.value("FarClip", 1000.0f);
         cc.Primary = jc.value("Primary", true);
+    }
+
+    if (je.contains("CameraFollow")) {
+        auto& jf = je["CameraFollow"];
+        auto& cf = entity.AddComponent<CameraFollowComponent>();
+        cf.TargetName = jf.value("TargetName", "");
+        cf.Offset = JsonToVec3(jf["Offset"]);
+        cf.Smoothness = jf.value("Smoothness", 8.0f);
+        cf.FollowRotation = jf.value("FollowRotation", true);
+        cf.UseWorldOffset = jf.value("UseWorldOffset", false);
     }
 
     if (je.contains("UICanvas")) {
@@ -837,6 +858,21 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         cc.Primary = jc.value("Primary", true);
     } else if (entity.HasComponent<CameraComponent>()) {
         entity.RemoveComponent<CameraComponent>();
+    }
+
+    if (je.contains("CameraFollow")) {
+        auto& jf = je["CameraFollow"];
+        auto& cf = entity.HasComponent<CameraFollowComponent>()
+            ? entity.GetComponent<CameraFollowComponent>()
+            : entity.AddComponent<CameraFollowComponent>();
+        cf.TargetName = jf.value("TargetName", "");
+        cf.Offset = JsonToVec3(jf["Offset"]);
+        cf.Smoothness = jf.value("Smoothness", 8.0f);
+        cf.FollowRotation = jf.value("FollowRotation", true);
+        cf.UseWorldOffset = jf.value("UseWorldOffset", false);
+        cf.m_HasStart = false;
+    } else if (entity.HasComponent<CameraFollowComponent>()) {
+        entity.RemoveComponent<CameraFollowComponent>();
     }
 
     if (je.contains("Rigidbody2D")) {

@@ -125,6 +125,7 @@ private:
     void RenderScene3D(class PerspectiveCamera* overrideCamera = nullptr);
     void Render2DEntities();
     void SubmitLights();
+    void UpdateCharacterControllers(Timestep ts); // cinematico (gravidade + chão)
     void UpdateParticleSystems(Timestep ts);
     void SubmitParticleSystems();
     void UpdateSpriteAnimations(Timestep ts);

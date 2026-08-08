@@ -149,6 +149,14 @@ public readonly struct Entity
 	public void SetMaterialHeightScale(float scale)
 		=> Interop.KizuriNative.kz_material_set_height_scale(Handle, scale);
 
+	// ---- Character controller (cinemático) ----
+	// Adiciona o controlador (gravidade + chão por raycast). Passe o input de
+	// movimento todo frame com MoveCharacter.
+	public void AddCharacterController(float speed = 6f, float gravity = -20f)
+		=> Interop.KizuriNative.kz_entity_add_character_controller(Handle, speed, gravity);
+	public void MoveCharacter(float fwdX, float fwdZ)
+		=> Interop.KizuriNative.kz_entity_move_character(Handle, fwdX, fwdZ);
+
 	// ---- Tags & Layers (filtro de colisão por camada) ----
 	public int Layer
 	{

@@ -173,6 +173,13 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
                           { "HeightScale", t.HeightScale }, { "Seed", t.Seed } };
     }
 
+    if (entity.HasComponent<CharacterControllerComponent>()) {
+        auto& cc = entity.GetComponent<CharacterControllerComponent>();
+        je["CharacterController"] = { { "Speed", cc.Speed }, { "Gravity", cc.Gravity },
+                                      { "Radius", cc.Radius }, { "Height", cc.Height },
+                                      { "StepOffset", cc.StepOffset } };
+    }
+
     if (entity.HasComponent<CameraComponent>()) {
         auto& cc = entity.GetComponent<CameraComponent>();
         je["Camera"] = {
@@ -350,6 +357,20 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         entity.RemoveComponent<TerrainComponent>();
     }
 
+    if (je.contains("CharacterController")) {
+        auto& jc = je["CharacterController"];
+        auto& cc = entity.HasComponent<CharacterControllerComponent>()
+            ? entity.GetComponent<CharacterControllerComponent>()
+            : entity.AddComponent<CharacterControllerComponent>();
+        cc.Speed = jc.value("Speed", 6.0f);
+        cc.Gravity = jc.value("Gravity", -20.0f);
+        cc.Radius = jc.value("Radius", 0.4f);
+        cc.Height = jc.value("Height", 1.8f);
+        cc.StepOffset = jc.value("StepOffset", 0.3f);
+    } else if (entity.HasComponent<CharacterControllerComponent>()) {
+        entity.RemoveComponent<CharacterControllerComponent>();
+    }
+
     if (je.contains("CircleRenderer")) {
         auto& jc = je["CircleRenderer"];
         auto& cr = entity.AddComponent<CircleRendererComponent>();
@@ -439,6 +460,16 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         t.Regenerate();
         if (entity.HasComponent<MeshRendererComponent>())
             entity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;
+    }
+
+    if (je.contains("CharacterController")) {
+        auto& jc = je["CharacterController"];
+        auto& cc = entity.AddComponent<CharacterControllerComponent>();
+        cc.Speed = jc.value("Speed", 6.0f);
+        cc.Gravity = jc.value("Gravity", -20.0f);
+        cc.Radius = jc.value("Radius", 0.4f);
+        cc.Height = jc.value("Height", 1.8f);
+        cc.StepOffset = jc.value("StepOffset", 0.3f);
     }
 
     if (je.contains("Camera")) {
@@ -718,6 +749,20 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
             entity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;
     } else if (entity.HasComponent<TerrainComponent>()) {
         entity.RemoveComponent<TerrainComponent>();
+    }
+
+    if (je.contains("CharacterController")) {
+        auto& jc = je["CharacterController"];
+        auto& cc = entity.HasComponent<CharacterControllerComponent>()
+            ? entity.GetComponent<CharacterControllerComponent>()
+            : entity.AddComponent<CharacterControllerComponent>();
+        cc.Speed = jc.value("Speed", 6.0f);
+        cc.Gravity = jc.value("Gravity", -20.0f);
+        cc.Radius = jc.value("Radius", 0.4f);
+        cc.Height = jc.value("Height", 1.8f);
+        cc.StepOffset = jc.value("StepOffset", 0.3f);
+    } else if (entity.HasComponent<CharacterControllerComponent>()) {
+        entity.RemoveComponent<CharacterControllerComponent>();
     }
 
     if (je.contains("CircleRenderer")) {

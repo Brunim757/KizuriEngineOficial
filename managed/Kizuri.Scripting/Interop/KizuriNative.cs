@@ -113,6 +113,8 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_material_set_metallic_roughness_map(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern int kz_material_set_height_map(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern void kz_material_set_height_scale(uint entity, float scale);
+    [DllImport(Lib)] internal static extern void kz_entity_add_character_controller(uint entity, float speed, float gravity);
+    [DllImport(Lib)] internal static extern void kz_entity_move_character(uint entity, float x, float z);
     [DllImport(Lib)] internal static extern void kz_entity_set_layer(uint entity, int layer);
     [DllImport(Lib)] internal static extern int kz_entity_get_layer(uint entity);
     [DllImport(Lib)] internal static extern void kz_entity_set_collision_mask(uint entity, uint mask);

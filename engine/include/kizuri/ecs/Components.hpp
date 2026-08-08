@@ -144,6 +144,20 @@ struct TerrainComponent {
     void Regenerate() { GeneratedMesh = Mesh::CreateTerrain(Segments, Size, HeightScale, Seed); }
 };
 
+// Character controller (v1, cinemático): movimento horizontal pelo input
+// (MoveCharacter), gravidade e detecção de chão por raycast 3D. Não colide
+// com paredes (v1) — use um Rigidbody/collider para isso.
+struct CharacterControllerComponent {
+    float Speed = 6.0f;
+    float Gravity = -20.0f;
+    float Radius = 0.4f;
+    float Height = 1.8f;
+    float StepOffset = 0.3f;
+    bool Grounded = false;             // runtime
+    glm::vec2 Input = { 0.0f, 0.0f };  // runtime (MoveCharacter)
+    glm::vec3 Velocity{ 0.0f };        // runtime
+};
+
 // Espelha kizuri::Light (Renderer3D.hpp) — entidade de luz de verdade na cena,
 // em vez do sol fixo/não editável que existia antes.
 struct LightComponent {

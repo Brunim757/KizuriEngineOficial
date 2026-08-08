@@ -736,6 +736,21 @@ KZ_SCRIPT_API void kz_material_set_height_scale(uint32_t entity, float scale) {
     e.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial.HeightScale = scale;
 }
 
+// ---- Character controller (cinemático) ------------------------------------
+KZ_SCRIPT_API void kz_entity_add_character_controller(uint32_t entity, float speed, float gravity) {
+    auto e = Resolve(entity);
+    if (!e) return;
+    auto& cc = e.AddComponent<kizuri::CharacterControllerComponent>();
+    cc.Speed = speed;
+    cc.Gravity = gravity;
+}
+KZ_SCRIPT_API void kz_entity_move_character(uint32_t entity, float x, float z) {
+    auto e = Resolve(entity);
+    if (!e) return;
+    if (auto* cc = e.GetScene()->GetRegistry().try_get<kizuri::CharacterControllerComponent>(e.GetHandle()))
+        cc->Input = { x, z };
+}
+
 // ---- Tags & Layers (filtro de colisão por camada) ------------------------
 KZ_SCRIPT_API void kz_entity_set_layer(uint32_t entity, int layer) {
     auto e = Resolve(entity);

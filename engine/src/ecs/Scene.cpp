@@ -1132,6 +1132,7 @@ void Scene::OnUpdateRuntimeLogic(Timestep ts) {
     UpdatePhysics3D(ts);
     FlushCollisionEvents();
 
+    UpdateCharacterControllers(ts);
     UpdateParticleSystems(ts);
     UpdateSpriteAnimations(ts);
     UpdateAnimators(ts);
@@ -1474,6 +1475,38 @@ void Scene::UpdateAudio(Timestep) {
             AudioEngine::Play(ac.Handle, ac.Loop, ac.Volume, ac.Group);
             ac.HasStarted = true;
         }
+    }
+}
+
+void Scene::UpdateCharacterControllers(Timestep ts) {
+    KZ_TRACE_SCOPE("Scene::UpdateCharacterControllers");
+    auto view = m_Registry.view<TransformComponent, CharacterControllerComponent>();
+    for (auto e : view) {
+        auto& tc = view.get<TransformComponent>(e);
+        auto& cc = view.get<CharacterControllerComponent>(e);
+
+        // Movimento horizontal pelo input (MoveCharacter) + gravidade.
+        cc.Velocity.x = cc.Input.x * cc.Speed;
+        cc.Velocity.z = cc.Input.y * cc.Speed;
+        cc.Velocity.y += cc.Gravity * (float)ts;
+        if (cc.Velocity.y < -40.0f) cc.Velocity.y = -40.0f;
+
+        glm::vec3 newPos = tc.Translation + cc.Velocity * (float)ts;
+
+        // Detecção de chão: raio do topo do corpo até abaixo dos pés.
+        Entity hit; glm::vec3 hitPoint; float frac = 0.0f;
+        glm::vec3 start = tc.Translation + glm::vec3(0.0f, cc.Height * 0.5f + 0.1f, 0.0f);
+        glm::vec3 end   = tc.Translation + glm::vec3(0.0f, -cc.Height * 0.5f - 0.15f, 0.0f);
+        if (Raycast3D(start, end, hit, hitPoint, frac)) {
+            cc.Grounded = true;
+            newPos.y = hitPoint.y + 0.01f;
+            cc.Velocity.y = 0.0f;
+        } else {
+            cc.Grounded = false;
+            if (newPos.y < 0.0f) newPos.y = 0.0f;
+        }
+
+        tc.Translation = newPos;
     }
 }
 

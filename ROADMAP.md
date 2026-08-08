@@ -602,6 +602,13 @@
   demanda e usado no lugar do MeshRenderer; "Regenerar" no Inspetor
 - [x] Serializado no `.kzscene` + menu Adicionar Componente
 
+### ✅ Character Controller (cinemático)
+- [x] `CharacterControllerComponent`: velocidade, gravidade, raio, altura,
+  passo — movimento horizontal via `MoveCharacter` + chão por raycast 3D
+- [x] C#: `Entity.AddCharacterController()` / `Entity.MoveCharacter(x, z)`;
+  serializado + Inspetor + menu Adicionar Componente
+- [x] v1 sem colisão com paredes (use Rigidbody/collider para isso)
+
 ### ✅ Starter Pack (peso "de engine de verdade")
 - [x] Content Pack EXPANDIDO nas Releases (ambas as plataformas): +modelos
   glTF (RiggedFigure, ReciprocatingSaw, Avocado, BoomBox, CesiumMilkTruck,

@@ -3801,6 +3801,20 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<LODComponent>();
         }
 
+        if (m_SelectedEntity.HasComponent<CharacterControllerComponent>()) {
+            auto& cc = m_SelectedEntity.GetComponent<CharacterControllerComponent>();
+            if (DrawComponentHeader("Character Controller", &removeThis)) {
+                ImGui::DragFloat("Velocidade", &cc.Speed, 0.1f, 0.0f, 50.0f);
+                ImGui::DragFloat("Gravidade", &cc.Gravity, 0.5f, -80.0f, 0.0f);
+                ImGui::DragFloat("Raio", &cc.Radius, 0.01f, 0.1f, 2.0f);
+                ImGui::DragFloat("Altura", &cc.Height, 0.05f, 0.5f, 5.0f);
+                ImGui::DragFloat("Passo", &cc.StepOffset, 0.01f, 0.0f, 1.0f);
+                ImGui::TextDisabled("Movimento: script usa MoveCharacter(x, z). Chão por raycast.");
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<CharacterControllerComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<TerrainComponent>()) {
             auto& t = m_SelectedEntity.GetComponent<TerrainComponent>();
             if (DrawComponentHeader("Terreno (heightmap)", &removeThis)) {
@@ -4185,6 +4199,8 @@ void EditorLayer::DrawAddComponentButton() {
             auto& lod = m_SelectedEntity.AddComponent<LODComponent>();
             lod.Levels.push_back({ "builtin:cube", 100.0f, nullptr });
         }
+        if (!m_SelectedEntity.HasComponent<CharacterControllerComponent>() && ImGui::MenuItem("Character Controller"))
+            m_SelectedEntity.AddComponent<CharacterControllerComponent>();
         if (!m_SelectedEntity.HasComponent<TerrainComponent>() && ImGui::MenuItem("Terreno (heightmap)")) {
             auto& t = m_SelectedEntity.AddComponent<TerrainComponent>();
             if (!m_SelectedEntity.HasComponent<MeshRendererComponent>())

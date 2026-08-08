@@ -119,6 +119,19 @@ struct MeshRendererComponent {
     std::string MeshSource; // serializável: "builtin:cube|plane|sphere" ou caminho .obj/.glb/.gltf
 };
 
+// LOD (Level of Detail): várias versões da mesma malha, trocadas pela
+// distância à câmera. Levels[0] = maior detalhe (usado de perto); o último
+// nível cobre as distâncias maiores. Sem níveis = comportamento normal.
+struct LODComponent {
+    struct Level {
+        std::string MeshSource; // serializável
+        float Distance = 50.0f; // passa pra este nível a partir desta distância
+        Ref<Mesh> MeshAsset;
+    };
+    std::vector<Level> Levels;
+    float DistanceMultiplier = 1.0f; // escala todas as distâncias (tune)
+};
+
 // Espelha kizuri::Light (Renderer3D.hpp) — entidade de luz de verdade na cena,
 // em vez do sol fixo/não editável que existia antes.
 struct LightComponent {

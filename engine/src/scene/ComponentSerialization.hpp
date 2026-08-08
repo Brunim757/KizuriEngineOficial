@@ -20,6 +20,21 @@ inline std::string ResolveSerializedPath(const std::string& path) {
 // arquivo (veio de memória via CreateFromMemory) — na recarga (Play/cópia/
 // save) os mapas se perdem e o objeto fica cinza. Reextrai do arquivo fonte
 // só os mapas que ainda estão vazios (preserva overrides manuais).
+
+inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod) {
+    lod.DistanceMultiplier = jlod.value("DistanceMultiplier", 1.0f);
+    lod.Levels.clear();
+    if (jlod.contains("Levels") && jlod["Levels"].is_array()) {
+        for (auto& jl : jlod["Levels"]) {
+            LODComponent::Level l;
+            l.MeshSource = jl.value("MeshSource", "");
+            l.Distance = jl.value("Distance", 50.0f);
+            if (!l.MeshSource.empty()) l.MeshAsset = Mesh::FromSource(ResolveSerializedPath(l.MeshSource));
+            lod.Levels.push_back(std::move(l));
+        }
+    }
+}
+
 inline void RestoreGLTFTextureMaps(MeshRendererComponent& mr) {
     const std::string& src = mr.MeshSource;
     if (src.find(".glb") == std::string::npos && src.find(".gltf") == std::string::npos) return;
@@ -142,6 +157,14 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
             { "HeightScale", mat.HeightScale },
             { "PlanarReflect", mat.PlanarReflect }
         };
+    }
+
+    if (entity.HasComponent<LODComponent>()) {
+        auto& lod = entity.GetComponent<LODComponent>();
+        json levels = json::array();
+        for (auto& l : lod.Levels)
+            levels.push_back({ { "MeshSource", l.MeshSource }, { "Distance", l.Distance } });
+        je["LOD"] = { { "DistanceMultiplier", lod.DistanceMultiplier }, { "Levels", levels } };
     }
 
     if (entity.HasComponent<CameraComponent>()) {
@@ -296,6 +319,15 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         if (!sc.TexturePath.empty()) sc.Texture = Texture2D::Create(ResolveSerializedPath(sc.TexturePath));
     }
 
+    if (je.contains("LOD")) {
+        auto& lod = entity.HasComponent<LODComponent>()
+            ? entity.GetComponent<LODComponent>()
+            : entity.AddComponent<LODComponent>();
+        ApplyLODJson(je["LOD"], lod);
+    } else if (entity.HasComponent<LODComponent>() && !entity.HasComponent<MeshRendererComponent>()) {
+        entity.RemoveComponent<LODComponent>(); // LOD sem malha não faz sentido
+    }
+
     if (je.contains("CircleRenderer")) {
         auto& jc = je["CircleRenderer"];
         auto& cr = entity.AddComponent<CircleRendererComponent>();
@@ -368,6 +400,11 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         if (!mat.EmissiveMapPath.empty()) mat.EmissiveMap = Texture2D::Create(ResolveSerializedPath(mat.EmissiveMapPath));
         if (!mat.HeightMapPath.empty()) mat.HeightMap = Texture2D::Create(ResolveSerializedPath(mat.HeightMapPath));
         RestoreGLTFTextureMaps(mr); // texturas embutidas no .glb voltam na recarga
+    }
+
+    if (je.contains("LOD")) {
+        auto& lod = entity.AddComponent<LODComponent>();
+        ApplyLODJson(je["LOD"], lod);
     }
 
     if (je.contains("Camera")) {
@@ -622,6 +659,15 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         RestoreGLTFTextureMaps(mr); // texturas embutidas no .glb voltam na recarga
     } else if (entity.HasComponent<MeshRendererComponent>()) {
         entity.RemoveComponent<MeshRendererComponent>();
+    }
+
+    if (je.contains("LOD")) {
+        auto& lod = entity.HasComponent<LODComponent>()
+            ? entity.GetComponent<LODComponent>()
+            : entity.AddComponent<LODComponent>();
+        ApplyLODJson(je["LOD"], lod);
+    } else if (entity.HasComponent<LODComponent>() && !entity.HasComponent<MeshRendererComponent>()) {
+        entity.RemoveComponent<LODComponent>(); // LOD sem malha não faz sentido
     }
 
     if (je.contains("CircleRenderer")) {

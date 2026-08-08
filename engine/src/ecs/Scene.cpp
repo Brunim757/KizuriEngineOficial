@@ -1484,9 +1484,11 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
     // sistema de engine de verdade). Esqueletos (skinned) NÃO são culled
     // (a pose animada pode sair da AABB de repouso).
     glm::mat4 cullVP = glm::mat4(0.0f);
+    glm::vec3 camPos(0.0f);
     bool cullCam = false;
     if (overrideCamera) {
         cullVP = overrideCamera->GetViewProjectionMatrix();
+        camPos = overrideCamera->GetPosition();
         cullCam = true;
     } else {
         auto camView = m_Registry.view<TransformComponent, CameraComponent>();
@@ -1500,6 +1502,7 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
             cam.SetPosition(pos);
             cam.SetRotation(glm::degrees(tc.Rotation.y), glm::degrees(tc.Rotation.x));
             cullVP = cam.GetViewProjectionMatrix();
+            camPos = pos;
             cullCam = true;
             break;
         }
@@ -1539,7 +1542,19 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
                 if (!AABBInFrustum(cullVP, wmin, wmax)) continue;
             }
 
-            Renderer3D::Submit(mr.MeshAsset, mr.MeshMaterial, world);
+            // LOD (Level of Detail): troca a malha pela distância à câmera.
+            Ref<Mesh> mesh = mr.MeshAsset;
+            if (auto* lod = m_Registry.try_get<LODComponent>(me); lod && !lod->Levels.empty()) {
+                float dist = glm::distance(glm::vec3(world[3]), camPos) * lod->DistanceMultiplier;
+                int idx = 0;
+                for (int i = 0; i < (int)lod->Levels.size(); ++i) {
+                    if (dist >= lod->Levels[i].Distance) idx = i;
+                    else break;
+                }
+                if (idx < (int)lod->Levels.size() && lod->Levels[idx].MeshAsset)
+                    mesh = lod->Levels[idx].MeshAsset;
+            }
+            Renderer3D::Submit(mesh, mr.MeshMaterial, world);
         }
     };
 

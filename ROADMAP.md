@@ -588,6 +588,13 @@
   esqueletos não são culled (pose animada pode sair da AABB de repouso)
 - [x] Funciona no viewport (câmera do editor) e no Play (câmera primária)
 
+### ✅ LOD — Level of Detail (sistema de engine)
+- [x] `LODComponent`: vários níveis (malha + distância), trocados pela
+  distância à câmera no passe 3D; `DistanceMultiplier` pra afinar tudo
+- [x] Serializado no `.kzscene`, UI no Inspetor (adicionar/remover/ordenar
+  níveis) e menu Adicionar Componente
+- [x] Sem níveis = comportamento normal; esqueletos ignoram LOD
+
 ### ✅ Starter Pack (peso "de engine de verdade")
 - [x] Content Pack EXPANDIDO nas Releases (ambas as plataformas): +modelos
   glTF (RiggedFigure, ReciprocatingSaw, Avocado, BoomBox, CesiumMilkTruck,

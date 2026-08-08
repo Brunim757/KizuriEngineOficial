@@ -3767,6 +3767,40 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<MeshRendererComponent>();
         }
 
+        // LOD (Level of Detail): malhas por distância. Só tem efeito junto de
+        // um MeshRenderer.
+        if (m_SelectedEntity.HasComponent<LODComponent>()) {
+            auto& lod = m_SelectedEntity.GetComponent<LODComponent>();
+            if (DrawComponentHeader("LOD (níveis de detalhe)", &removeThis)) {
+                ImGui::DragFloat("Multiplicador de distância", &lod.DistanceMultiplier, 0.01f, 0.1f, 10.0f);
+                ImGui::TextDisabled("Distâncias crescentes; índice 0 = mais detalhe.");
+                int toRemove = -1;
+                for (int i = 0; i < (int)lod.Levels.size(); ++i) {
+                    auto& l = lod.Levels[i];
+                    char buf[512];
+                    strncpy(buf, l.MeshSource.c_str(), sizeof(buf) - 1); buf[sizeof(buf) - 1] = '\0';
+                    ImGui::PushID(i);
+                    if (ImGui::InputText("Malha", buf, sizeof(buf))) {
+                        l.MeshSource = buf;
+                        l.MeshAsset = l.MeshSource.empty() ? nullptr : Mesh::FromSource(l.MeshSource);
+                    }
+                    if (ImGui::DragFloat("A partir de (distância)", &l.Distance, 1.0f, 0.0f, 10000.0f))
+                        std::sort(lod.Levels.begin(), lod.Levels.end(),
+                                  [](auto& a, auto& b) { return a.Distance < b.Distance; });
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("X")) toRemove = i;
+                    ImGui::PopID();
+                    ImGui::Separator();
+                }
+                if (toRemove >= 0 && toRemove < (int)lod.Levels.size())
+                    lod.Levels.erase(lod.Levels.begin() + toRemove);
+                if (ImGui::Button("+ Adicionar nível"))
+                    lod.Levels.push_back({ "builtin:cube", 100.0f, nullptr });
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<LODComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<AnimatorComponent>()) {
             auto& ac = m_SelectedEntity.GetComponent<AnimatorComponent>();
             if (DrawComponentHeader("Animador (skinning)", &removeThis)) {
@@ -4127,8 +4161,11 @@ void EditorLayer::DrawAddComponentButton() {
         if (!m_SelectedEntity.HasComponent<CameraComponent>() && ImGui::MenuItem("Camera"))
             m_SelectedEntity.AddComponent<CameraComponent>();
         if (!m_SelectedEntity.HasComponent<MeshRendererComponent>() && ImGui::MenuItem("Mesh Renderer")) {
-            auto& mr = m_SelectedEntity.AddComponent<MeshRendererComponent>();
-            mr.MeshAsset = Mesh::CreateCube();
+            m_SelectedEntity.AddComponent<MeshRendererComponent>();
+        }
+        if (!m_SelectedEntity.HasComponent<LODComponent>() && ImGui::MenuItem("LOD (níveis de detalhe)")) {
+            auto& lod = m_SelectedEntity.AddComponent<LODComponent>();
+            lod.Levels.push_back({ "builtin:cube", 100.0f, nullptr });
         }
         if (!m_SelectedEntity.HasComponent<LightComponent>() && ImGui::MenuItem("Light"))
             m_SelectedEntity.AddComponent<LightComponent>();

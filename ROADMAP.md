@@ -708,5 +708,7 @@ minor chegar em `99` — quando seria `0.100`, vira **`1.0`**.
 - [x] **Demonstração Física 3D**: terreno heightfield + caixas/esferas
   dinâmicas caindo no relevo (menu Arquivo + toolbar); editor cria terreno
   com Rigidbody3D estático no menu Adicionar Componente
+- [x] C++ validado (clang -fsyntax-only) + CI completo passou; **release
+  v0.31.0 publicada** (ambas as plataformas)
 
 ---

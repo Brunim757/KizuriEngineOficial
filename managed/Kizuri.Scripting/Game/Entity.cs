@@ -200,6 +200,15 @@ public readonly struct Entity
 	public bool AddMeshRenderer(string meshSource = "builtin:cube")
 		=> Interop.KizuriNative.kz_entity_add_mesh_renderer(Handle, meshSource) != 0;
 
+	// Terreno procedural (heightmap fbm): gera o mesh e aplica no
+	// MeshRenderer da entidade. Regenera com novos parâmetros quando chamar de novo.
+	public bool AddTerrain(uint segments = 64, float size = 100f, float heightScale = 5f, uint seed = 1)
+		=> Interop.KizuriNative.kz_entity_add_terrain(Handle, segments, size, heightScale, seed) != 0;
+
+	// Regenera o heightmap de um terreno existente (mesma entidade).
+	public bool RegenerateTerrain(uint segments, float size, float heightScale, uint seed)
+		=> Interop.KizuriNative.kz_terrain_regenerate(Handle, segments, size, heightScale, seed) != 0;
+
 	public void SetLightColor(float r, float g, float b)
 		=> Interop.KizuriNative.kz_light_set_color(Handle, r, g, b);
 	public void SetLightIntensity(float intensity)

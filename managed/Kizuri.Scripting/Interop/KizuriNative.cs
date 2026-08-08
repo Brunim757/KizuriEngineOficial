@@ -83,6 +83,8 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_entity_set_sorting_layer(uint entity, int layer);
     [DllImport(Lib)] internal static extern int kz_entity_add_light(uint entity, int type, float r, float g, float b, float intensity, float range, float innerConeDeg, float outerConeDeg, int castsShadow);
     [DllImport(Lib)] internal static extern int kz_entity_add_mesh_renderer(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string meshSource);
+    [DllImport(Lib)] internal static extern int kz_entity_add_terrain(uint entity, uint segments, float size, float heightScale, uint seed);
+    [DllImport(Lib)] internal static extern int kz_terrain_regenerate(uint entity, uint segments, float size, float heightScale, uint seed);
 
     // ---- Animação esquelética (skinning) -------------------------------------
     [DllImport(Lib)] internal static extern int kz_entity_add_animator(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string meshPath);

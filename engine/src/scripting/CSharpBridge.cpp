@@ -807,6 +807,37 @@ KZ_SCRIPT_API int kz_entity_add_mesh_renderer(uint32_t entity, const char* meshS
     return 1;
 }
 
+// Terreno procedural: adiciona TerrainComponent + MeshRenderer e gera o
+// heightmap (Mesh::CreateTerrain). Regenera quando chamado de novo.
+KZ_SCRIPT_API int kz_entity_add_terrain(uint32_t entity, uint32_t segments, float size, float heightScale, uint32_t seed) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& tc = e.AddOrReplaceComponent<kizuri::TerrainComponent>();
+    tc.Segments = segments; tc.Size = size; tc.HeightScale = heightScale; tc.Seed = seed;
+    tc.Regenerate();
+    if (!e.HasComponent<kizuri::MeshRendererComponent>()) {
+        auto& mc = e.AddComponent<kizuri::MeshRendererComponent>();
+        mc.MeshSource = "builtin:plane";
+        mc.MeshAsset = tc.GeneratedMesh;
+        mc.MeshMaterial = {};
+    } else {
+        e.GetComponent<kizuri::MeshRendererComponent>().MeshAsset = tc.GeneratedMesh;
+    }
+    return 1;
+}
+
+// Regenera o heightmap de um terreno existente (muda a semente/formato).
+KZ_SCRIPT_API int kz_terrain_regenerate(uint32_t entity, uint32_t segments, float size, float heightScale, uint32_t seed) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TerrainComponent>()) return 0;
+    auto& tc = e.GetComponent<kizuri::TerrainComponent>();
+    tc.Segments = segments; tc.Size = size; tc.HeightScale = heightScale; tc.Seed = seed;
+    tc.Regenerate();
+    if (e.HasComponent<kizuri::MeshRendererComponent>())
+        e.GetComponent<kizuri::MeshRendererComponent>().MeshAsset = tc.GeneratedMesh;
+    return 1;
+}
+
 KZ_SCRIPT_API void kz_material_set_albedo(uint32_t entity, float r, float g, float b) {
     auto e = Resolve(entity);
     if (!e || !e.HasComponent<kizuri::MeshRendererComponent>()) return;

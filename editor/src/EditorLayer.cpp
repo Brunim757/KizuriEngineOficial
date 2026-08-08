@@ -382,6 +382,89 @@ void EditorLayer::CreateDemoScene3D() {
     KZ_CORE_INFO("Cena de demonstração 3D criada.");
 }
 
+// Cena de demonstração FÍSICA 3D (v0.31): terreno com colisor heightfield do
+// Bullet + caixas/esferas/cápsulas dinâmicas caindo no relevo. Aperte Play e
+// voe pelo viewport (câmera do editor) pra ver a física resolver o contato.
+void EditorLayer::CreateDemoScene3DPhysics() {
+    if (m_SceneState != SceneState::Edit) return;
+
+    m_ActiveScene = CreateRef<Scene>("Demonstração Física 3D");
+    m_ScenePath.clear();
+    m_SelectedEntity = {};
+    m_ViewportMode = ViewportMode::Mode3D;
+
+    Entity camera = m_ActiveScene->CreateEntity("Câmera Principal");
+    auto& cc = camera.AddComponent<CameraComponent>();
+    cc.Type = CameraComponent::ProjectionType::Perspective3D;
+    cc.Primary = true;
+    cc.PerspectiveFOV = 55.0f;
+    auto& camT = camera.GetComponent<TransformComponent>();
+    camT.Translation = { 0.0f, 22.0f, 26.0f };
+    camT.Rotation = { glm::radians(-38.0f), 0.0f, 0.0f };
+
+    Entity sun = m_ActiveScene->CreateEntity("Sol");
+    auto& lc = sun.AddComponent<LightComponent>();
+    lc.Type = LightType::Directional;
+    lc.Color = { 1.0f, 0.95f, 0.85f };
+    lc.Intensity = 2.2f;
+    sun.GetComponent<TransformComponent>().Rotation = { glm::radians(55.0f), glm::radians(35.0f), 0.0f };
+
+    // Terreno (heightmap procedural) + colisor estático — o coração da demo.
+    Entity terrain = m_ActiveScene->CreateEntity("Terreno");
+    auto& tm = terrain.AddComponent<MeshRendererComponent>();
+    tm.MeshSource = "builtin:plane";
+    tm.MeshMaterial.Albedo = { 0.32f, 0.38f, 0.26f };
+    tm.MeshMaterial.Roughness = 0.95f;
+    auto& terr = terrain.AddComponent<TerrainComponent>();
+    terr.Segments = 64;
+    terr.Size = 60.0f;
+    terr.HeightScale = 6.0f;
+    terr.Seed = 42;
+    terr.Regenerate();
+    tm.MeshAsset = terr.GeneratedMesh;
+    auto& trb = terrain.AddComponent<Rigidbody3DComponent>();
+    trb.Type = Rigidbody3DComponent::BodyType::Static;
+
+    // Objetos dinâmicos caindo no relevo (Bullet resolve o contato).
+    for (int i = 0; i < 6; ++i) {
+        Entity box = m_ActiveScene->CreateEntity("Caixa " + std::to_string(i + 1));
+        auto& bm = box.AddComponent<MeshRendererComponent>();
+        bm.MeshSource = "builtin:cube";
+        bm.MeshAsset = Mesh::FromSource("builtin:cube");
+        bm.MeshMaterial.Albedo = { 0.25f + (float)i * 0.1f, 0.35f, 0.8f - (float)i * 0.05f };
+        bm.MeshMaterial.Roughness = 0.4f;
+        auto& bt = box.GetComponent<TransformComponent>();
+        bt.Translation = { -14.0f + (float)i * 5.6f, 16.0f + (float)(i % 3) * 4.0f, -8.0f + (float)(i % 2) * 16.0f };
+        bt.Rotation = { glm::radians((float)(i * 23)), glm::radians((float)(i * 37)), 0.0f };
+        box.AddComponent<Rigidbody3DComponent>().Type = Rigidbody3DComponent::BodyType::Dynamic;
+        box.AddComponent<BoxCollider3DComponent>().HalfExtents = { 0.5f, 0.5f, 0.5f };
+    }
+    for (int i = 0; i < 4; ++i) {
+        Entity sphere = m_ActiveScene->CreateEntity("Esfera " + std::to_string(i + 1));
+        auto& sm = sphere.AddComponent<MeshRendererComponent>();
+        sm.MeshSource = "builtin:sphere";
+        sm.MeshAsset = Mesh::FromSource("builtin:sphere");
+        sm.MeshMaterial.Albedo = { 0.9f, 0.45f, 0.2f };
+        sm.MeshMaterial.Metallic = 0.6f;
+        sm.MeshMaterial.Roughness = 0.3f;
+        auto& st = sphere.GetComponent<TransformComponent>();
+        st.Translation = { -8.0f + (float)i * 5.2f, 20.0f + (float)(i % 2) * 3.0f, 4.0f };
+        sphere.AddComponent<Rigidbody3DComponent>().Type = Rigidbody3DComponent::BodyType::Dynamic;
+        sphere.AddComponent<SphereCollider3DComponent>().Radius = 0.6f;
+    }
+
+    auto settings = Renderer3D::GetGraphicsSettings();
+    settings.FogEnabled = true;
+    settings.FogDensity = 0.012f;
+    Renderer3D::SetGraphicsSettings(settings);
+
+    m_EditorCamPos = { 0.0f, 22.0f, 26.0f };
+    m_EditorCamYaw = 0.0f;
+    m_EditorCamPitch = -38.0f;
+    m_SelectedEntity = terrain;
+    KZ_CORE_INFO("Cena de demonstração Física 3D criada (terreno + colisor).");
+}
+
 void EditorLayer::OnDetach() {
     // Não pode fechar o editor com a thread de build do C# viva (o
     // destruidor de std::thread chamaria std::terminate). Espera terminar.
@@ -1633,6 +1716,8 @@ void EditorLayer::DrawSettingsEditor() {
     ImGui::SameLine();
     if (ImGui::Button("Criar demonstração 3D")) CreateDemoScene3D();
     ImGui::SameLine();
+    if (ImGui::Button("Criar demo Física 3D")) CreateDemoScene3DPhysics();
+    ImGui::SameLine();
     if (ImGui::Button("Criar demonstração 2.5D")) CreateDemoScene2_5D();
 }
 
@@ -2171,6 +2256,8 @@ void EditorLayer::DrawDockspace() {
             CreateDemoScene2_5D();
         if (ImGui::MenuItem("Cena de Demonstração 3D...", nullptr, false, m_SceneState == SceneState::Edit))
             CreateDemoScene3D();
+        if (ImGui::MenuItem("Cena de Demonstração Física 3D...", nullptr, false, m_SceneState == SceneState::Edit))
+            CreateDemoScene3DPhysics();
         ImGui::EndPopup();
     }
 

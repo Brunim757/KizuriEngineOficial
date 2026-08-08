@@ -91,6 +91,10 @@ private:
     // Cena de demonstração 2.5D: mundo 3D de fundo + camada de jogo 2D na
     // frente + UI (prova a composição 3D -> 2D -> UI com as duas câmeras).
     void CreateDemoScene2_5D();
+    // Cena de demonstração Física 3D: terreno com colisor heightfield +
+    // caixas/esferas dinâmicas caindo no relevo (Bullet). Play + voar no
+    // viewport. Prova o sistema novo da v0.31.
+    void CreateDemoScene3DPhysics();
 
     // Cria uma entidade a partir de um arquivo de asset (soltado do Content
     // Browser no viewport): .obj -> MeshRenderer, imagem -> SpriteRenderer.

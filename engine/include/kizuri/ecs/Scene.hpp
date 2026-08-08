@@ -126,6 +126,7 @@ private:
     void Render2DEntities();
     void SubmitLights();
     void UpdateCharacterControllers(Timestep ts); // cinematico (gravidade + chão)
+    void UpdateTimelines(Timestep ts);             // keyframes de transform (cutscene)
     void UpdateParticleSystems(Timestep ts);
     void SubmitParticleSystems();
     void UpdateSpriteAnimations(Timestep ts);

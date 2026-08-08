@@ -157,6 +157,14 @@ public readonly struct Entity
 	public void MoveCharacter(float fwdX, float fwdZ)
 		=> Interop.KizuriNative.kz_entity_move_character(Handle, fwdX, fwdZ);
 
+	// ---- Timeline (keyframes de transform / cutscene) ----
+	public void AddTimeline() => Interop.KizuriNative.kz_entity_add_timeline(Handle);
+	public void PlayTimeline(bool play = true) => Interop.KizuriNative.kz_timeline_play(Handle, play ? 1 : 0);
+	public void StopTimeline() => Interop.KizuriNative.kz_timeline_play(Handle, 0);
+	public void SetTimelineTime(float t) => Interop.KizuriNative.kz_timeline_set_time(Handle, t);
+	public void AddTimelineKeyframe(float time, Math.Vector3 position)
+		=> Interop.KizuriNative.kz_timeline_add_keyframe(Handle, time, position.X, position.Y, position.Z);
+
 	// ---- Tags & Layers (filtro de colisão por camada) ----
 	public int Layer
 	{

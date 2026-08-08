@@ -158,6 +158,29 @@ struct CharacterControllerComponent {
     glm::vec3 Velocity{ 0.0f };        // runtime
 };
 
+// Timeline (cutscene simples): keyframes de Transform (posição/rotação/escala)
+// interpolados linearmente ao longo do tempo. Toca no runtime (e no preview
+// do editor). Rotação em euler (graus).
+struct TimelineComponent {
+    struct Keyframe {
+        float Time = 0.0f;
+        glm::vec3 Position{ 0.0f };
+        glm::vec3 Rotation{ 0.0f };
+        glm::vec3 Scale{ 1.0f };
+    };
+    std::vector<Keyframe> Keyframes;
+    bool Playing = true;
+    bool Loop = true;
+    float Time = 0.0f;
+    float Speed = 1.0f;
+
+    float Duration() const {
+        float d = 0.0f;
+        for (auto& k : Keyframes) d = std::max(d, k.Time);
+        return d;
+    }
+};
+
 // Espelha kizuri::Light (Renderer3D.hpp) — entidade de luz de verdade na cena,
 // em vez do sol fixo/não editável que existia antes.
 struct LightComponent {

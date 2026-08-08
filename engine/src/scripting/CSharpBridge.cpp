@@ -751,6 +751,36 @@ KZ_SCRIPT_API void kz_entity_move_character(uint32_t entity, float x, float z) {
         cc->Input = { x, z };
 }
 
+// ---- Timeline (keyframes de transform / cutscene) -------------------------
+KZ_SCRIPT_API void kz_entity_add_timeline(uint32_t entity) {
+    auto e = Resolve(entity);
+    if (e) e.AddComponent<kizuri::TimelineComponent>();
+}
+KZ_SCRIPT_API void kz_timeline_play(uint32_t entity, bool play) {
+    auto e = Resolve(entity);
+    if (!e) return;
+    if (auto* tl = e.GetScene()->GetRegistry().try_get<kizuri::TimelineComponent>(e.GetHandle()))
+        tl->Playing = play;
+}
+KZ_SCRIPT_API void kz_timeline_set_time(uint32_t entity, float time) {
+    auto e = Resolve(entity);
+    if (!e) return;
+    if (auto* tl = e.GetScene()->GetRegistry().try_get<kizuri::TimelineComponent>(e.GetHandle()))
+        tl->Time = time;
+}
+KZ_SCRIPT_API void kz_timeline_add_keyframe(uint32_t entity, float time, float px, float py, float pz) {
+    auto e = Resolve(entity);
+    if (!e) return;
+    if (auto* tl = e.GetScene()->GetRegistry().try_get<kizuri::TimelineComponent>(e.GetHandle())) {
+        kizuri::TimelineComponent::Keyframe k;
+        k.Time = time;
+        k.Position = { px, py, pz };
+        tl->Keyframes.push_back(k);
+        std::sort(tl->Keyframes.begin(), tl->Keyframes.end(),
+                  [](auto& a, auto& b) { return a.Time < b.Time; });
+    }
+}
+
 // ---- Tags & Layers (filtro de colisão por camada) ------------------------
 KZ_SCRIPT_API void kz_entity_set_layer(uint32_t entity, int layer) {
     auto e = Resolve(entity);

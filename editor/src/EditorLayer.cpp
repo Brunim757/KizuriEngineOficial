@@ -3801,6 +3801,44 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<LODComponent>();
         }
 
+        if (m_SelectedEntity.HasComponent<TimelineComponent>()) {
+            auto& tl = m_SelectedEntity.GetComponent<TimelineComponent>();
+            if (DrawComponentHeader("Timeline (cutscene)", &removeThis)) {
+                if (ImGui::Button(tl.Playing ? "Pausar" : "Tocar")) tl.Playing = !tl.Playing;
+                ImGui::SameLine();
+                ImGui::Checkbox("Loop", &tl.Loop);
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(90.0f);
+                ImGui::DragFloat("Velocidade", &tl.Speed, 0.01f, 0.0f, 8.0f);
+                float dur = tl.Duration();
+                if (dur > 0.0f)
+                    ImGui::SliderFloat("Tempo", &tl.Time, 0.0f, dur);
+                int toRemove = -1;
+                for (int i = 0; i < (int)tl.Keyframes.size(); ++i) {
+                    auto& k = tl.Keyframes[i];
+                    ImGui::PushID(i);
+                    ImGui::Text("K%d  t=%.2f  (%.1f, %.1f, %.1f)", i, k.Time, k.Position.x, k.Position.y, k.Position.z);
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("X")) toRemove = i;
+                    ImGui::PopID();
+                }
+                if (toRemove >= 0 && toRemove < (int)tl.Keyframes.size())
+                    tl.Keyframes.erase(tl.Keyframes.begin() + toRemove);
+                if (ImGui::Button("+ Keyframe (posição atual)")) {
+                    auto& tc = m_SelectedEntity.GetComponent<TransformComponent>();
+                    TimelineComponent::Keyframe k;
+                    k.Time = tl.Time + 1.0f;
+                    k.Position = tc.Translation;
+                    tl.Keyframes.push_back(k);
+                    std::sort(tl.Keyframes.begin(), tl.Keyframes.end(),
+                              [](auto& a, auto& b) { return a.Time < b.Time; });
+                }
+                ImGui::TextDisabled("Interpola posição/rotação/escala entre keyframes.");
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<TimelineComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<CharacterControllerComponent>()) {
             auto& cc = m_SelectedEntity.GetComponent<CharacterControllerComponent>();
             if (DrawComponentHeader("Character Controller", &removeThis)) {
@@ -4201,6 +4239,8 @@ void EditorLayer::DrawAddComponentButton() {
         }
         if (!m_SelectedEntity.HasComponent<CharacterControllerComponent>() && ImGui::MenuItem("Character Controller"))
             m_SelectedEntity.AddComponent<CharacterControllerComponent>();
+        if (!m_SelectedEntity.HasComponent<TimelineComponent>() && ImGui::MenuItem("Timeline (cutscene)"))
+            m_SelectedEntity.AddComponent<TimelineComponent>();
         if (!m_SelectedEntity.HasComponent<TerrainComponent>() && ImGui::MenuItem("Terreno (heightmap)")) {
             auto& t = m_SelectedEntity.AddComponent<TerrainComponent>();
             if (!m_SelectedEntity.HasComponent<MeshRendererComponent>())

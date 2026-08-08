@@ -1132,6 +1132,7 @@ void Scene::OnUpdateRuntimeLogic(Timestep ts) {
     UpdatePhysics3D(ts);
     FlushCollisionEvents();
 
+    UpdateTimelines(ts);
     UpdateCharacterControllers(ts);
     UpdateParticleSystems(ts);
     UpdateSpriteAnimations(ts);
@@ -1161,6 +1162,7 @@ void Scene::RenderRuntimeWithEditorCamera(PerspectiveCamera& editorCamera) {
 
 void Scene::OnUpdateEditor3D(Timestep ts, PerspectiveCamera& editorCamera) {
     KZ_TRACE_SCOPE("Scene::OnUpdateEditor3D");
+    UpdateTimelines(ts);        // preview de timeline no viewport
     UpdateSpriteAnimations(ts); // preview de animação no viewport, mesmo em edição
     UpdateAnimators(ts);        // idem pros esqueletos
     // Modo 3D do viewport: malhas + grid via câmera livre do editor. O
@@ -1475,6 +1477,41 @@ void Scene::UpdateAudio(Timestep) {
             AudioEngine::Play(ac.Handle, ac.Loop, ac.Volume, ac.Group);
             ac.HasStarted = true;
         }
+    }
+}
+
+void Scene::UpdateTimelines(Timestep ts) {
+    KZ_TRACE_SCOPE("Scene::UpdateTimelines");
+    auto view = m_Registry.view<TransformComponent, TimelineComponent>();
+    for (auto e : view) {
+        auto& tc = view.get<TransformComponent>(e);
+        auto& tl = view.get<TimelineComponent>(e);
+        if (tl.Playing && !tl.Keyframes.empty()) {
+            tl.Time += (float)ts * tl.Speed;
+            float dur = tl.Duration();
+            if (dur > 0.0f && tl.Time > dur) tl.Time = tl.Loop ? glm::mod(tl.Time, dur) : dur;
+        }
+        if (tl.Keyframes.empty()) continue;
+
+        // Interpolação linear entre os 2 keyframes vizinhos.
+        glm::vec3 pos = tl.Keyframes[0].Position;
+        glm::vec3 rot = tl.Keyframes[0].Rotation;
+        glm::vec3 scl = tl.Keyframes[0].Scale;
+        for (size_t i = 0; i + 1 < tl.Keyframes.size(); ++i) {
+            const auto& a = tl.Keyframes[i];
+            const auto& b = tl.Keyframes[i + 1];
+            if (tl.Time >= a.Time && tl.Time <= b.Time) {
+                float t = (b.Time - a.Time) > 0.0001f ? (tl.Time - a.Time) / (b.Time - a.Time) : 0.0f;
+                t = glm::clamp(t, 0.0f, 1.0f);
+                pos = glm::mix(a.Position, b.Position, t);
+                rot = glm::mix(a.Rotation, b.Rotation, t);
+                scl = glm::mix(a.Scale, b.Scale, t);
+                break;
+            }
+        }
+        tc.Translation = pos;
+        tc.Rotation = rot;
+        tc.Scale = scl;
     }
 }
 

@@ -609,6 +609,13 @@
   serializado + Inspetor + menu Adicionar Componente
 - [x] v1 sem colisão com paredes (use Rigidbody/collider para isso)
 
+### ✅ Timeline (cutscene / animação de transform)
+- [x] `TimelineComponent`: keyframes de posição/rotação/escala interpolados
+  linearmente, play/pause/loop/velocidade — roda no Play e no preview do editor
+- [x] C#: `AddTimeline`, `PlayTimeline`, `SetTimelineTime`, `AddTimelineKeyframe`
+- [x] Inspetor: transport (tocar/pausar/loop/velocidade/tempo) + lista de
+  keyframes + "+ Keyframe (posição atual)"; serializado
+
 ### ✅ Starter Pack (peso "de engine de verdade")
 - [x] Content Pack EXPANDIDO nas Releases (ambas as plataformas): +modelos
   glTF (RiggedFigure, ReciprocatingSaw, Avocado, BoomBox, CesiumMilkTruck,

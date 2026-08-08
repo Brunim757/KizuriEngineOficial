@@ -21,6 +21,23 @@ inline std::string ResolveSerializedPath(const std::string& path) {
 // save) os mapas se perdem e o objeto fica cinza. Reextrai do arquivo fonte
 // só os mapas que ainda estão vazios (preserva overrides manuais).
 
+inline void ApplyTimelineJson(nlohmann::json::const_reference jtl, TimelineComponent& tl) {
+    tl.Playing = jtl.value("Playing", true);
+    tl.Loop = jtl.value("Loop", true);
+    tl.Time = jtl.value("Time", 0.0f);
+    tl.Speed = jtl.value("Speed", 1.0f);
+    tl.Keyframes.clear();
+    if (jtl.contains("Keyframes") && jtl["Keyframes"].is_array()) {
+        for (auto& jk : jtl["Keyframes"]) {
+            TimelineComponent::Keyframe k;
+            k.Time = jk.value("Time", 0.0f);
+            k.Position = jk.contains("Position") ? JsonToVec3(jk["Position"]) : glm::vec3(0.0f);
+            k.Rotation = jk.contains("Rotation") ? JsonToVec3(jk["Rotation"]) : glm::vec3(0.0f);
+            k.Scale = jk.contains("Scale") ? JsonToVec3(jk["Scale"]) : glm::vec3(1.0f);
+            tl.Keyframes.push_back(std::move(k));
+        }
+    }
+}
 inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod) {
     lod.DistanceMultiplier = jlod.value("DistanceMultiplier", 1.0f);
     lod.Levels.clear();
@@ -178,6 +195,16 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
         je["CharacterController"] = { { "Speed", cc.Speed }, { "Gravity", cc.Gravity },
                                       { "Radius", cc.Radius }, { "Height", cc.Height },
                                       { "StepOffset", cc.StepOffset } };
+    }
+
+    if (entity.HasComponent<TimelineComponent>()) {
+        auto& tl = entity.GetComponent<TimelineComponent>();
+        json kf = json::array();
+        for (auto& k : tl.Keyframes)
+            kf.push_back({ { "Time", k.Time }, { "Position", Vec3ToJson(k.Position) },
+                           { "Rotation", Vec3ToJson(k.Rotation) }, { "Scale", Vec3ToJson(k.Scale) } });
+        je["Timeline"] = { { "Playing", tl.Playing }, { "Loop", tl.Loop },
+                           { "Time", tl.Time }, { "Speed", tl.Speed }, { "Keyframes", kf } };
     }
 
     if (entity.HasComponent<CameraComponent>()) {
@@ -357,6 +384,15 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         entity.RemoveComponent<TerrainComponent>();
     }
 
+    if (je.contains("Timeline")) {
+        auto& tl = entity.HasComponent<TimelineComponent>()
+            ? entity.GetComponent<TimelineComponent>()
+            : entity.AddComponent<TimelineComponent>();
+        ApplyTimelineJson(je["Timeline"], tl);
+    } else if (entity.HasComponent<TimelineComponent>()) {
+        entity.RemoveComponent<TimelineComponent>();
+    }
+
     if (je.contains("CharacterController")) {
         auto& jc = je["CharacterController"];
         auto& cc = entity.HasComponent<CharacterControllerComponent>()
@@ -460,6 +496,11 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         t.Regenerate();
         if (entity.HasComponent<MeshRendererComponent>())
             entity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;
+    }
+
+    if (je.contains("Timeline")) {
+        auto& tl = entity.AddComponent<TimelineComponent>();
+        ApplyTimelineJson(je["Timeline"], tl);
     }
 
     if (je.contains("CharacterController")) {
@@ -749,6 +790,15 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
             entity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;
     } else if (entity.HasComponent<TerrainComponent>()) {
         entity.RemoveComponent<TerrainComponent>();
+    }
+
+    if (je.contains("Timeline")) {
+        auto& tl = entity.HasComponent<TimelineComponent>()
+            ? entity.GetComponent<TimelineComponent>()
+            : entity.AddComponent<TimelineComponent>();
+        ApplyTimelineJson(je["Timeline"], tl);
+    } else if (entity.HasComponent<TimelineComponent>()) {
+        entity.RemoveComponent<TimelineComponent>();
     }
 
     if (je.contains("CharacterController")) {

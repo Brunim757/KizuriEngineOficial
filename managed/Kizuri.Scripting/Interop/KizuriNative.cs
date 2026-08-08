@@ -115,6 +115,10 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_material_set_height_scale(uint entity, float scale);
     [DllImport(Lib)] internal static extern void kz_entity_add_character_controller(uint entity, float speed, float gravity);
     [DllImport(Lib)] internal static extern void kz_entity_move_character(uint entity, float x, float z);
+    [DllImport(Lib)] internal static extern void kz_entity_add_timeline(uint entity);
+    [DllImport(Lib)] internal static extern void kz_timeline_play(uint entity, int play);
+    [DllImport(Lib)] internal static extern void kz_timeline_set_time(uint entity, float time);
+    [DllImport(Lib)] internal static extern void kz_timeline_add_keyframe(uint entity, float time, float px, float py, float pz);
     [DllImport(Lib)] internal static extern void kz_entity_set_layer(uint entity, int layer);
     [DllImport(Lib)] internal static extern int kz_entity_get_layer(uint entity);
     [DllImport(Lib)] internal static extern void kz_entity_set_collision_mask(uint entity, uint mask);

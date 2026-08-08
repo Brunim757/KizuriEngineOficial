@@ -87,8 +87,8 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             RenderScale = 1.0f; MSAA = 8; ShadowMapSize = 4096; ShadowPCFRadius = 3;
             ShadowSoftness = 0.7f;
             GodRaysEnabled = true; GodRaysIntensity = 0.7f;
-            DOFEnabled = true; DOFFocusDistance = 10.0f; DOFFocusRange = 5.0f; DOFStrength = 1.2f;
-            MotionBlurEnabled = true; MotionBlurIntensity = 0.5f;
+            DOFEnabled = false; DOFFocusDistance = 10.0f; DOFFocusRange = 5.0f; DOFStrength = 1.2f;
+            MotionBlurEnabled = false; MotionBlurIntensity = 0.5f;
             SSGIEnabled = true; SSGIIntensity = 0.5f;
             CloudsEnabled = true;
             LensFlareEnabled = true; LensFlareIntensity = 0.7f;
@@ -102,14 +102,14 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             FogEnabled = false;   FogDensity = 0.012f;
             FogColor[0] = 0.55f;  FogColor[1] = 0.6f;  FogColor[2] = 0.66f;
             Vignette = 0.22f; ChromaticAberration = 0.0015f; FilmGrain = 0.015f;
-            BloomIterations = 4;
+            BloomIterations = 3;
             break;
         case QualityPreset::High:
             RenderScale = 1.0f; MSAA = 4; ShadowMapSize = 2048; ShadowPCFRadius = 2;
             ShadowSoftness = 0.6f;
             GodRaysEnabled = true; GodRaysIntensity = 0.6f;
-            DOFEnabled = true; DOFFocusDistance = 10.0f; DOFFocusRange = 4.0f; DOFStrength = 1.0f;
-            MotionBlurEnabled = true; MotionBlurIntensity = 0.4f;
+            DOFEnabled = false; DOFFocusDistance = 10.0f; DOFFocusRange = 4.0f; DOFStrength = 1.0f;
+            MotionBlurEnabled = false; MotionBlurIntensity = 0.4f;
             SSGIEnabled = true; SSGIIntensity = 0.4f;
             CloudsEnabled = false;
             LensFlareEnabled = true; LensFlareIntensity = 0.6f;

@@ -1,6 +1,8 @@
 #include "ProjectSettingsPanel.hpp"
 #include <imgui.h>
 #include <cstring>
+#include <kizuri/core/FileDialog.hpp>
+#include <kizuri/project/Project.hpp>
 
 void ProjectSettingsPanel::ApplyPreset() {
     if (!m_Ctx.Graphics) return;
@@ -121,8 +123,24 @@ void ProjectSettingsPanel::DrawGraphicsSection() {
     ImGui::TextDisabled("Rayleigh/Mie é raymarch físico — pode pesar em GPUs fracas/emuladores.");
     if (m_EnvHDRIPath[0] == '\0')
         std::strncpy(m_EnvHDRIPath, kizuri::Renderer3D::GetEnvironmentHDRIPath().c_str(), sizeof(m_EnvHDRIPath) - 1);
+    ImGui::SetNextItemWidth(ImGui::CalcItemWidth() - 30.0f);
     if (ImGui::InputText("HDRI do céu", m_EnvHDRIPath, sizeof(m_EnvHDRIPath))) {
         kizuri::Renderer3D::SetEnvironmentHDRIPath(m_EnvHDRIPath);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("...")) {
+        std::string picked = kizuri::FileDialog::OpenFile("HDRI (céu)", "*.hdr;*.exr");
+        if (!picked.empty()) {
+            std::string rel = kizuri::Project::MakeRelativePath(picked);
+            std::strncpy(m_EnvHDRIPath, rel.c_str(), sizeof(m_EnvHDRIPath) - 1);
+            m_EnvHDRIPath[sizeof(m_EnvHDRIPath) - 1] = '\0';
+            kizuri::Renderer3D::SetEnvironmentHDRIPath(m_EnvHDRIPath);
+        }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Limpar")) {
+        m_EnvHDRIPath[0] = '\0';
+        kizuri::Renderer3D::SetEnvironmentHDRIPath("");
     }
 
     if (changed) { g.Preset = kizuri::QualityPreset::Custom; Save(); }

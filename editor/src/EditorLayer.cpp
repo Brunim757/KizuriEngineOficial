@@ -31,18 +31,29 @@
 
 using namespace kizuri;
 
+// Localiza um arquivo do Content Pack no disco. O zip da Release é
+// "exe + content/" lado a lado, então o caminho certo é relativo ao
+// diretório de trabalho ("content/..."); em builds de dev o conteúdo costuma
+// ficar um nível acima ("../content/..."). Tenta os dois — nunca quebra.
+static std::string FindContentFile(const std::string& relative) {
+    std::string a = "content/" + relative;
+    if (std::filesystem::exists(a)) return a;
+    std::string b = "../content/" + relative;
+    if (std::filesystem::exists(b)) return b;
+    return "";
+}
+
 // Escolhe a fonte de um asset de DEMONSTRAÇÃO com prioridade:
 //   1. Embutido no executável (kzres://) — sempre funciona, mesmo sem o
 //      Content Pack no disco e mesmo se o usuário apagar o arquivo externo.
-//   2. Content Pack no disco (../content) — asset mais rico quando presente.
+//   2. Content Pack no disco (content/ ou ../content) — asset mais rico
+//      quando presente.
 //   3. String vazia → a demo cai pros builtins (malhas procedurais).
 // É isso que deixa o editor/engine "pesado de verdade": os padrões usados
 // nas demonstrações vêm EMBUTIDOS, a função nunca quebra por falta de arquivo.
 static std::string PickDemoAsset(const char* kzresName, const char* contentRelative) {
     if (HasEmbeddedResource(kzresName)) return std::string("kzres://") + kzresName;
-    std::string disk = "../content/" + std::string(contentRelative);
-    if (std::filesystem::exists(disk)) return disk;
-    return "";
+    return FindContentFile(contentRelative);
 }
 
 // Decompõe uma matriz de transformação em translação/rotação(euler,
@@ -225,8 +236,6 @@ void EditorLayer::CreateDemoScene3D() {
     m_ScenePath.clear();
     m_SelectedEntity = {};
 
-    const std::string contentDir = "../content";
-
     Entity camera = m_ActiveScene->CreateEntity("Câmera Principal");
     auto& cc = camera.AddComponent<CameraComponent>();
     cc.Type = CameraComponent::ProjectionType::Perspective3D;
@@ -275,8 +284,8 @@ void EditorLayer::CreateDemoScene3D() {
     // sempre disponível) → procedural. Se apagarem o arquivo externo, o
     // embutido assume — o céu nunca deixa de funcionar.
     Renderer3D::SetEnvironmentHDRIPath("");
-    std::string hdri = contentDir + "/skies/qwantani_puresky_1k.hdr";
-    if (std::filesystem::exists(hdri)) {
+    std::string hdri = FindContentFile("skies/qwantani_puresky_1k.hdr");
+    if (!hdri.empty()) {
         Renderer3D::SetEnvironmentHDRIPath(hdri);
         KZ_CORE_INFO("Demo 3D: céu HDRI do content pack carregado ({0}).", hdri);
     } else if (HasEmbeddedResource("skies/sky_gradient.hdr")) {

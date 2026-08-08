@@ -14,11 +14,17 @@ precisar de placas especiais. Tudo é controlado por **presets** e ajustes em
 
 | Preset | Para quem |
 |---|---|
-| **Ultra** | Máquinas boas: todas as features ligadas (reflexos, SSGI, nuvens, DOF...) |
+| **Ultra** | Máquinas boas: todas as features ligadas (reflexos, SSGI, nuvens...) |
 | **High** | Equilíbrio entre visual e desempenho |
-| **Medium** | Máquinas modestas |
+| **Medium** | Máquinas modestas (preset padrão) |
 | **Low** | Qualquer coisa: quase tudo desligado, render mais barato |
 | **Custom** | Quando você muda algo manualmente (o preset vira Custom) |
+
+::: nota
+**DOF** e **motion blur** não vêm ligados nos presets High/Ultra — o foco
+fixo borra demais a câmera livre do editor. Ative pelas caixas em
+Project Settings → Gráficos se quiser o visual cinematográfico.
+:::
 
 ## O que cada grupo controla
 

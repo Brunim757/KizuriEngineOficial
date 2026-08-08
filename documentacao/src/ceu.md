@@ -14,9 +14,15 @@ O céu da Kizuri tem três modos, em ordem de prioridade:
 
 ## Gradiente procedural (padrão)
 
-O céu padrão é um **gradiente procedural** (azul no zênite, brilho de
-pôr-do-sol no horizonte, estrelas à noite), gerado e embutido na engine.
-É leve e estável até em GPUs fracas/emuladores.
+O céu padrão é um **gradiente** (azul no zênite, horizonte claro e quente,
+chão suave), embutido na engine como `kzres://skies/sky_gradient.hdr`.
+Leve e estável até em GPUs fracas/emuladores.
+
+::: dica
+Nas demonstrações (ex.: Demonstração 3D) o editor prefere o **HDRI do
+Content Pack** quando a pasta `content/` está ao lado do executável; sem
+ela, usa o gradiente embutido — o céu nunca deixa de funcionar.
+:::
 
 ## Céu atmosférico Rayleigh/Mie (opcional)
 
@@ -39,9 +45,10 @@ Para um ambiente específico (ou o seu próprio céu), carregue um arquivo
 `.hdr`/`.exr` **equirectangular** no campo **HDRI do céu**:
 
 1. Project Settings → Gráficos → campo **HDRI do céu**.
-2. Escolha o arquivo (botão "..."). O editor converte para cubemap e rebakeia
+2. Escolha o arquivo no botão **"..."** (abre o diálogo nativo do sistema) —
+   ou digite o caminho direto. O editor converte para cubemap e rebakeia
    a iluminação (IBL).
-3. Vazio = volta ao gradiente procedural.
+3. **Limpar** = volta ao gradiente procedural.
 
 ::: dica
 O **pôr-do-sol** é gratuito: apenas deixe a luz direcional apontando baixa

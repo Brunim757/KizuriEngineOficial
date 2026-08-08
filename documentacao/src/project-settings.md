@@ -21,10 +21,17 @@ Comece por um **preset** (Ultra, High, Medium, Low) e ajuste o que quiser:
 - **Pós**: bloom, bloom anamórfico, **DOF**, **motion blur**, exposição,
   tonemapping, saturação/contraste, vinheta e névoa
 - **HDRI do céu** — vazio = gradiente procedural; `.hdr` = ambiente;
-  "Céu atmosférico Rayleigh/Mie" liga o céu físico (raymarch, opcional)
+  botões **"..."** (escolher arquivo no sistema) e **Limpar** (voltar ao
+  gradiente); "Céu atmosférico Rayleigh/Mie" liga o céu físico (raymarch, opcional)
 
 ::: dica
 Tudo é aplicado **ao vivo** e salvo em `settings.json` — não precisa reiniciar.
+:::
+
+::: nota
+**DOF** e **motion blur** ficam **desligados por padrão** nos presets High e
+Ultra — em câmera livre do editor eles borram a cena inteira (foco fixo). Ligue
+as caixas se quiser o look cinematográfico.
 :::
 
 ## Geral

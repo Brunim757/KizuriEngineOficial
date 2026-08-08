@@ -26,7 +26,8 @@ Entity.SetMaterialAlbedoMap("kzres://textures/...");
 ## Prioridade de carregamento
 
 1. **Embutido** (`kzres://`) — sempre disponível
-2. **Content Pack** (`content/`) — se o arquivo existir ao lado do jogo
+2. **Content Pack** — se o arquivo existir em `content/` (ao lado do
+   executável/jogo) ou `../content/`
 3. **Builtins** — primitivas (`builtin:cube` etc.)
 
 Ou seja: o Content Pack **enriquece** se estiver presente, mas nunca é

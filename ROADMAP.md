@@ -634,3 +634,18 @@
   que cresce como Unity/Unreal
 
 ---
+## ✅ v0.28.1 — Céu, presets e correções de Release (patch)
+
+- [x] **Demo 3D passa a achar o Content Pack** em `content/` e `../content/`
+  (antes só `../content`) — no zip da Release o HDRI nunca carregava e o céu
+  caía sempre no gradiente embutido
+- [x] **Gradiente embutido regerado**: zênite azul, horizonte claro quente,
+  chão suave (antes azul-escuro + chão quase preto)
+- [x] **Botão "..." restaurado** no HDRI do céu (Project Settings → Gráficos):
+  abre o diálogo nativo de arquivo; botão **Limpar** volta ao gradiente
+- [x] **Presets High/Ultra sem DOF e motion blur por padrão** — o foco fixo
+  borrava o viewport de câmera livre (e o Play parecia "voltar ao Medium")
+- [x] **Bloom Ultra** com menos iterações (4 → 3): glow mais contido
+- [x] Release v0.28.1 publicada (ambas as plataformas)
+
+---

@@ -3523,6 +3523,11 @@ void EditorLayer::DrawInspector() {
         buffer[sizeof(buffer) - 1] = '\0';
         if (ImGui::InputText("Nome", buffer, sizeof(buffer))) tag = std::string(buffer);
 
+        // Ativo/inativo (estilo GameObject.SetActive) — inativa não desenha
+        // nem atualiza (ela e os filhos herdam).
+        auto& idc = m_SelectedEntity.GetComponent<IDComponent>();
+        ImGui::Checkbox("Ativo", &idc.Active);
+
         // Tags & Layers: camada de colisão + máscara (bits = camadas que colidem).
         ImGui::SetNextItemWidth(70.0f);
         ImGui::InputInt("Camada", &tagc.Layer);

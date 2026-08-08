@@ -52,6 +52,14 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_scene_request_load([MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern uint kz_scene_get_primary_camera();
     [DllImport(Lib)] internal static extern uint kz_scene_find_entity([MarshalAs(UnmanagedType.LPUTF8Str)] string name);
+    [DllImport(Lib)] internal static extern int kz_scene_count_entities_with_tag([MarshalAs(UnmanagedType.LPUTF8Str)] string tag);
+    [DllImport(Lib)] internal static extern int kz_scene_get_entities_with_tag([MarshalAs(UnmanagedType.LPUTF8Str)] string tag, [Out] uint[] handles, int maxCount);
+    [DllImport(Lib)] internal static extern int kz_entity_get_position(uint entity, out Math.Vector3 position);
+    [DllImport(Lib)] internal static extern int kz_entity_get_parent(uint entity, out uint parent);
+    [DllImport(Lib)] internal static extern int kz_entity_get_child_count(uint entity);
+    [DllImport(Lib)] internal static extern int kz_entity_get_child(uint entity, int index, out uint child);
+    [DllImport(Lib)] internal static extern void kz_entity_set_active(uint entity, int active);
+    [DllImport(Lib)] internal static extern int kz_entity_is_active(uint entity);
     [DllImport(Lib)] internal static extern int kz_entity_get_name(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] System.Text.StringBuilder buffer, int bufferSize);
     [DllImport(Lib)] internal static extern void kz_entity_set_name(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string name);
     [DllImport(Lib)] internal static extern int kz_particle_set_texture(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);

@@ -57,6 +57,19 @@ public static class Scene
 	public static Entity Find(string name)
 		=> new(Interop.KizuriNative.kz_scene_find_entity(name));
 
+	// Todas as entidades que têm o Tag dado (Tags & Layers do Inspetor).
+	// Vazio se nenhuma. Ex.: marcar inimigos com "Inimigo" e agrupá-los no script.
+	public static Entity[] EntitiesWithTag(string tag)
+	{
+		int count = Interop.KizuriNative.kz_scene_count_entities_with_tag(tag);
+		if (count <= 0) return System.Array.Empty<Entity>();
+		var handles = new uint[count];
+		int got = Interop.KizuriNative.kz_scene_get_entities_with_tag(tag, handles, count);
+		var result = new Entity[got];
+		for (int i = 0; i < got; ++i) result[i] = new Entity(handles[i]);
+		return result;
+	}
+
 	// Duplica a entidade (com toda a subárvore) e devolve a cópia, com um
 	// leve deslocamento pra não nascer em cima do original.
 	public static Entity Duplicate(Entity entity)

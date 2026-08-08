@@ -66,9 +66,10 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
 
 // Serializa uma única entidade (sem os filhos — quem chama decide se
 // percorre a hierarquia) para um objeto JSON, incluindo ID e Parent.
-inline nlohmann::json SerializeEntityJson(Entity entity) {
+ inline nlohmann::json SerializeEntityJson(Entity entity) {
     nlohmann::json je;
     je["ID"] = (uint64_t)entity.GetUUID();
+    je["Active"] = entity.GetComponent<IDComponent>().Active;
 
     if (entity.HasComponent<RelationshipComponent>()) {
         auto& rel = entity.GetComponent<RelationshipComponent>();
@@ -331,6 +332,7 @@ inline nlohmann::json SerializeEntityJson(Entity entity) {
 inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint64_t uuid) {
     std::string tag = je.value("Tag", "Entidade");
     Entity entity = scene.CreateEntityWithUUID(uuid, tag);
+    if (je.contains("Active")) entity.GetComponent<IDComponent>().Active = je.value("Active", true);
     if (je.contains("TagLayer")) entity.GetComponent<TagComponent>().Layer = je.value("TagLayer", 0);
     if (je.contains("TagCollisionMask")) entity.GetComponent<TagComponent>().CollisionMask = je.value("TagCollisionMask", 0xFFFFFFFFu);
 

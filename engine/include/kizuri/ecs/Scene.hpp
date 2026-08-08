@@ -83,6 +83,10 @@ public:
     void SetParent(Entity child, Entity newParent);
     Entity GetEntityByUUID(UUID id);
 
+    // True se a entidade está ATIVA: ela mesma e TODOS os ancestrais têm o
+    // flag Active ligado. Inativa não é desenhada nem atualizada.
+    bool IsEntityActive(Entity entity);
+
     glm::mat4 GetWorldTransform(Entity entity);
 
     Entity PickEntity(const glm::vec3& rayOrigin, const glm::vec3& rayDir);

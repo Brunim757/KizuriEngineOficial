@@ -20,6 +20,10 @@ namespace kizuri {
 // IDComponent — é a base para hierarquia, prefabs e serialização.
 struct IDComponent {
     UUID ID;
+    // Ativo/inativo (estilo GameObject.SetActive). Entidade inativa não é
+    // desenhada nem atualizada (animações/timeline/scripts), e os filhos
+    // herdam o estado (uma entidade é ativa só se ela E todos os pais forem).
+    bool Active = true;
 };
 
 struct TagComponent {

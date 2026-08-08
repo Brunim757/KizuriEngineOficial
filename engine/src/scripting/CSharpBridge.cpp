@@ -284,6 +284,93 @@ KZ_SCRIPT_API uint32_t kz_scene_find_entity(const char* name) {
     return 0;
 }
 
+// Quantas entidades têm o mesmo Tag (pré-consulta pra alocar o buffer).
+KZ_SCRIPT_API int kz_scene_count_entities_with_tag(const char* tag) {
+    if (s_ActiveScene == nullptr || tag == nullptr) return 0;
+    int count = 0;
+    auto view = s_ActiveScene->GetRegistry().view<kizuri::TagComponent>();
+    for (auto e : view) {
+        if (view.get<kizuri::TagComponent>(e).Tag == tag) ++count;
+    }
+    return count;
+}
+
+// Preenche 'outHandles' (até maxCount) com as entidades que têm o Tag dado.
+// Devolve quantas foram escritas. 'outHandles' pode ser null quando maxCount==0.
+KZ_SCRIPT_API int kz_scene_get_entities_with_tag(const char* tag, uint32_t* outHandles, int maxCount) {
+    if (s_ActiveScene == nullptr || tag == nullptr || maxCount <= 0) return 0;
+    int written = 0;
+    auto view = s_ActiveScene->GetRegistry().view<kizuri::TagComponent>();
+    for (auto e : view) {
+        if (view.get<kizuri::TagComponent>(e).Tag != tag) continue;
+        if (outHandles != nullptr) {
+            outHandles[written] = kizuri::scripting::RegisterEntityHandle(kizuri::Entity{ e, s_ActiveScene });
+        }
+        ++written;
+        if (written >= maxCount) break;
+    }
+    return written;
+}
+
+// Posição LOCAL (Translation do TransformComponent) da entidade.
+KZ_SCRIPT_API int kz_entity_get_position(uint32_t entity, float* outXYZ) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TransformComponent>()) return 0;
+    const auto& tc = e.GetComponent<kizuri::TransformComponent>();
+    if (outXYZ != nullptr) {
+        outXYZ[0] = tc.Translation.x;
+        outXYZ[1] = tc.Translation.y;
+        outXYZ[2] = tc.Translation.z;
+    }
+    return 1;
+}
+
+// Pai (handle) da entidade; devolve 0 se for raiz.
+KZ_SCRIPT_API int kz_entity_get_parent(uint32_t entity, uint32_t* outParent) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::RelationshipComponent>()) return 0;
+    kizuri::UUID parent = e.GetComponent<kizuri::RelationshipComponent>().Parent;
+    if (!parent) return 0;
+    kizuri::Entity p = s_ActiveScene->GetEntityByUUID(parent);
+    if (!p) return 0;
+    if (outParent != nullptr) *outParent = kizuri::scripting::RegisterEntityHandle(p);
+    return 1;
+}
+
+// Quantos filhos diretos a entidade tem.
+KZ_SCRIPT_API int kz_entity_get_child_count(uint32_t entity) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::RelationshipComponent>()) return 0;
+    return (int)e.GetComponent<kizuri::RelationshipComponent>().Children.size();
+}
+
+// Filho no índice dado; devolve 0 se o índice for inválido.
+KZ_SCRIPT_API int kz_entity_get_child(uint32_t entity, int index, uint32_t* outChild) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::RelationshipComponent>() || index < 0) return 0;
+    const auto& rel = e.GetComponent<kizuri::RelationshipComponent>();
+    if ((size_t)index >= rel.Children.size()) return 0;
+    kizuri::Entity child = s_ActiveScene->GetEntityByUUID(rel.Children[(size_t)index]);
+    if (!child) return 0;
+    if (outChild != nullptr) *outChild = kizuri::scripting::RegisterEntityHandle(child);
+    return 1;
+}
+
+// Liga/desliga a entidade (estilo GameObject.SetActive). Inativa não é
+// desenhada nem atualizada; os filhos herdam o estado.
+KZ_SCRIPT_API void kz_entity_set_active(uint32_t entity, int active) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::IDComponent>()) return;
+    e.GetComponent<kizuri::IDComponent>().Active = (active != 0);
+}
+
+// True se a entidade está ativa NA PRÁTICA (ela e todos os ancestrais).
+KZ_SCRIPT_API int kz_entity_is_active(uint32_t entity) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    return s_ActiveScene->IsEntityActive(e) ? 1 : 0;
+}
+
 KZ_SCRIPT_API uint32_t kz_scene_duplicate_entity(uint32_t entity) {
     auto e = Resolve(entity);
     if (!e) return 0;

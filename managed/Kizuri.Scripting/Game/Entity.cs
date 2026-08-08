@@ -25,6 +25,15 @@ public readonly struct Entity
 	public bool IsValid => Handle != 0;
 	public uint Id => Handle;
 
+	// Ativa/inativa a entidade (estilo GameObject.SetActive). Inativa não é
+	// desenhada nem atualizada; os filhos herdam o estado (uma entidade é
+	// ativa na prática só se ela e todos os pais forem).
+	public bool Active
+	{
+		get => Interop.KizuriNative.kz_entity_is_active(Handle) != 0;
+		set => Interop.KizuriNative.kz_entity_set_active(Handle, value ? 1 : 0);
+	}
+
 	// Nome (Tag) da entidade — lê e renomeia em runtime.
 	public string Name
 	{
@@ -66,6 +75,50 @@ public readonly struct Entity
 
 	public void SetPosition(Math.Vector3 position)
 		=> Interop.KizuriNative.kz_transform_set_position(Handle, position.X, position.Y, position.Z);
+
+	// Posição LOCAL (Translation) atual — o getter do SetPosition.
+	public Math.Vector3 Position
+	{
+		get
+		{
+			if (Interop.KizuriNative.kz_entity_get_position(Handle, out var pos) != 0) return pos;
+			return Math.Vector3.Zero;
+		}
+	}
+
+	// ---- Hierarquia em runtime ----
+
+	// Pai da entidade (Entity.Invalid se for raiz).
+	public Entity Parent
+	{
+		get
+		{
+			if (Interop.KizuriNative.kz_entity_get_parent(Handle, out uint p) != 0) return new Entity(p);
+			return Entity.Invalid;
+		}
+	}
+
+	// Quantidade de filhos DIRETOS.
+	public int ChildCount => Interop.KizuriNative.kz_entity_get_child_count(Handle);
+
+	// Filho direto no índice (Entity.Invalid se fora do range).
+	public Entity GetChild(int index)
+	{
+		if (Interop.KizuriNative.kz_entity_get_child(Handle, index, out uint child) != 0) return new Entity(child);
+		return Entity.Invalid;
+	}
+
+	// Filho direto com o nome dado (varre só os filhos diretos). Invalid se não achar.
+	public Entity GetChild(string name)
+	{
+		int count = ChildCount;
+		for (int i = 0; i < count; ++i)
+		{
+			var c = GetChild(i);
+			if (c.IsValid && c.Name == name) return c;
+		}
+		return Entity.Invalid;
+	}
 
 	// Rotação em radianos (euler) e escala — controle completo do Transform em runtime.
 	public void SetRotation(Math.Vector3 rotation)

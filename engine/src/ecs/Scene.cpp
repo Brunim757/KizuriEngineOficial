@@ -424,6 +424,7 @@ void Scene::UpdateUIPointer() {
 
     auto canvases = m_Registry.view<TransformComponent, UICanvasComponent>();
     for (auto ce : canvases) {
+        if (!IsEntityActive(Entity{ ce, this })) continue; // canvas inativo não clica
         auto& cv = canvases.get<UICanvasComponent>(ce);
         glm::vec2 uiPoint{ m_UIMouseNDC.x * cv.OrthoSize * aspect, m_UIMouseNDC.y * cv.OrthoSize };
 
@@ -432,6 +433,7 @@ void Scene::UpdateUIPointer() {
         while (!stack.empty()) {
             entt::entity e = stack.back();
             stack.pop_back();
+            if (!IsEntityActive(Entity{ e, this })) continue; // UI inativa não clica
             CollectUIChildren(e, stack);
 
             auto* btn = m_Registry.try_get<UIButtonComponent>(e);
@@ -454,6 +456,7 @@ void Scene::RenderUI() {
     float aspect = m_ViewportHeight ? (float)m_ViewportWidth / (float)m_ViewportHeight : 16.0f / 9.0f;
 
     for (auto ce : canvases) {
+        if (!IsEntityActive(Entity{ ce, this })) continue; // canvas inativo não desenha
         auto& cv = canvases.get<UICanvasComponent>(ce);
         OrthographicCamera uiCam(-cv.OrthoSize * aspect, cv.OrthoSize * aspect, -cv.OrthoSize, cv.OrthoSize);
         Renderer2D::BeginScene(uiCam);
@@ -463,6 +466,7 @@ void Scene::RenderUI() {
         while (!stack.empty()) {
             entt::entity e = stack.back();
             stack.pop_back();
+            if (!IsEntityActive(Entity{ e, this })) continue; // UI inativa não desenha
             CollectUIChildren(e, stack);
 
             auto* rect = m_Registry.try_get<UIRectComponent>(e);
@@ -506,6 +510,14 @@ Entity Scene::GetEntityByUUID(UUID id) {
     auto it = m_EntityMap.find(id);
     if (it == m_EntityMap.end()) return {};
     return Entity{ it->second, this };
+}
+
+bool Scene::IsEntityActive(Entity entity) {
+    for (Entity walker = entity; walker; walker = walker.GetParent()) {
+        if (!walker.HasComponent<IDComponent>()) continue;
+        if (!walker.GetComponent<IDComponent>().Active) return false;
+    }
+    return true;
 }
 
 void Scene::SetParent(Entity child, Entity newParent) {
@@ -834,6 +846,14 @@ void Scene::UpdatePhysics2D(Timestep ts) {
             if (!body) continue;
         }
 
+        // Entidade inativa: corpo sai da simulação (setEnabled=false); ao
+        // reativar, volta sozinho.
+        if (!IsEntityActive(entity)) {
+            if (body->IsEnabled()) body->SetEnabled(false);
+            continue;
+        }
+        if (!body->IsEnabled()) body->SetEnabled(true);
+
         // Dynamic: corpo manda. Kinematic/Static: Transform manda (scripts
         // podem mover com SetLinearVelocity ou SetTransform).
         if (rb2d.Type == Rigidbody2DComponent::BodyType::Dynamic) {
@@ -987,6 +1007,7 @@ void Scene::UpdatePhysics3D(Timestep ts) {
             if (!body) continue;
         }
         if (rb3d.Type == Rigidbody3DComponent::BodyType::Static) continue;
+        if (!IsEntityActive(entity)) continue; // inativa não sincroniza (corpo dorme)
 
         btTransform bt;
         body->getMotionState()->getWorldTransform(bt);
@@ -1124,7 +1145,7 @@ void Scene::OnUpdateRuntimeLogic(Timestep ts) {
     UpdateUIPointer(); // hit-test dos UIButton antes dos scripts (que leem WasClicked)
 
     m_Registry.view<NativeScriptComponent>().each([=](auto entityHandle, auto& nsc) {
-        (void)entityHandle;
+        if (!IsEntityActive(Entity{ entityHandle, this })) return; // inativa não roda script
         if (nsc.Instance) nsc.Instance->OnUpdate(ts);
     });
 
@@ -1267,6 +1288,7 @@ void Scene::Render2DEntities() {
 
     for (const Item& it : items) {
         Entity e{ it.entity, this };
+        if (!IsEntityActive(e)) continue; // inativa não desenha (nem filhos)
         switch (it.priority) {
         case 0: {
             auto& sprite = m_Registry.get<SpriteRendererComponent>(it.entity);
@@ -1338,6 +1360,7 @@ void Scene::Render2DEntities() {
 void Scene::UpdateSpriteAnimations(Timestep ts) {
     auto view = m_Registry.view<SpriteAnimationComponent>();
     for (auto e : view) {
+        if (!IsEntityActive(Entity{ e, this })) continue; // inativa não anima
         auto& anim = view.get<SpriteAnimationComponent>(e);
         if (!anim.Playing || anim.TotalFrames <= 1) continue;
         anim.FrameTimer += (float)ts;
@@ -1356,7 +1379,8 @@ void Scene::UpdateSpriteAnimations(Timestep ts) {
 // Avança o relógio dos animadores esqueléticos. Roda também em modo edição
 // (preview no viewport), igual às animações de sprite.
 void Scene::UpdateAnimators(Timestep ts) {
-    m_Registry.view<AnimatorComponent>().each([=](auto, auto& ac) {
+    m_Registry.view<AnimatorComponent>().each([&](auto e, auto& ac) {
+        if (!IsEntityActive(Entity{ e, this })) return; // inativa não anima
         // Skin carregada sob demanda (a 1ª vez em que a entidade existe).
         if (!ac.Skin) {
             if (ac.MeshPath.empty()) return;
@@ -1381,6 +1405,7 @@ void Scene::SubmitLights() {
         return;
     }
     for (auto e : lights) {
+        if (!IsEntityActive(Entity{ e, this })) continue; // luz inativa não ilumina
         auto& lc = lights.get<LightComponent>(e);
         glm::mat4 world = GetWorldTransform(Entity{ e, this });
         Light l;
@@ -1400,6 +1425,7 @@ void Scene::SubmitLights() {
 void Scene::UpdateParticleSystems(Timestep ts) {
     auto view = m_Registry.view<TransformComponent, ParticleSystemComponent>();
     for (auto e : view) {
+        if (!IsEntityActive(Entity{ e, this })) continue; // inativa não emite
         auto& pc = view.get<ParticleSystemComponent>(e);
         if (!pc.Playing) continue;
         glm::vec3 emitterPos = glm::vec3(GetWorldTransform(Entity{ e, this })[3]);
@@ -1433,6 +1459,7 @@ void Scene::UpdateParticleSystems(Timestep ts) {
 void Scene::SubmitParticleSystems() {
     auto view = m_Registry.view<ParticleSystemComponent>();
     for (auto e : view) {
+        if (!IsEntityActive(Entity{ e, this })) continue; // inativa não desenha
         auto& pc = view.get<ParticleSystemComponent>(e);
         if (pc.ActiveParticles.empty()) continue;
         std::vector<ParticleInstance> instances;
@@ -1463,6 +1490,10 @@ void Scene::UpdateAudio(Timestep) {
     for (auto e : view) {
         auto& ac = view.get<AudioSourceComponent>(e);
         if (ac.ClipPath.empty()) continue;
+        if (!IsEntityActive(Entity{ e, this })) {
+            if (ac.Handle != kInvalidSound && ac.HasStarted) AudioEngine::Stop(ac.Handle); // inativa não toca
+            continue;
+        }
 
         if (ac.Handle == kInvalidSound) {
             ac.Handle = AudioEngine::LoadSound(Project::ResolvePath(ac.ClipPath), ac.ClipPath, false);
@@ -1484,6 +1515,7 @@ void Scene::UpdateTimelines(Timestep ts) {
     KZ_TRACE_SCOPE("Scene::UpdateTimelines");
     auto view = m_Registry.view<TransformComponent, TimelineComponent>();
     for (auto e : view) {
+        if (!IsEntityActive(Entity{ e, this })) continue; // inativa não anima timeline
         auto& tc = view.get<TransformComponent>(e);
         auto& tl = view.get<TimelineComponent>(e);
         if (tl.Playing && !tl.Keyframes.empty()) {
@@ -1519,6 +1551,7 @@ void Scene::UpdateCharacterControllers(Timestep ts) {
     KZ_TRACE_SCOPE("Scene::UpdateCharacterControllers");
     auto view = m_Registry.view<TransformComponent, CharacterControllerComponent>();
     for (auto e : view) {
+        if (!IsEntityActive(Entity{ e, this })) continue; // inativo não se move
         auto& tc = view.get<TransformComponent>(e);
         auto& cc = view.get<CharacterControllerComponent>(e);
 
@@ -1581,6 +1614,7 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
     auto SubmitMeshes = [&]() {
         auto meshes = m_Registry.view<TransformComponent, MeshRendererComponent>();
         for (auto me : meshes) {
+            if (!IsEntityActive(Entity{ me, this })) continue; // inativa não desenha
             auto& mr = meshes.get<MeshRendererComponent>(me);
             if (!mr.MeshAsset) continue;
             glm::mat4 world = GetWorldTransform(Entity{ me, this });

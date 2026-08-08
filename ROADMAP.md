@@ -673,8 +673,8 @@
   SetCameraFollowSmoothness`
 - [x] **`Input.IsMouseButtonDown`** — true só no frame do clique (edge)
 - [x] **`Time.frameCount`** — contador de frames do runtime
-- [x] C++ validado localmente no Termux (clang -fsyntax-only: Scene,
-  CSharpBridge, EditorLayer — 0 erros); C# e release aguardam CI (repo
-  privado bloqueia o Actions por billing)
+- [x] **`Entity.AddTerrain`/`RegenerateTerrain`** — terreno procedural em runtime
+- [x] C++ validado localmente (clang -fsyntax-only) e CI completo passou;
+  releases **v0.29.0** e **v0.30.0** publicadas (ambas as plataformas)
 
 ---

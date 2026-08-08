@@ -66,6 +66,10 @@ public:
     // OverlapSphere 3D: true se alguma entidade com collider tocar a esfera
     // (só durante o Play). Devolve uma entidade atingida.
     bool OverlapSphere3D(const glm::vec3& center, float radius, Entity& outEntity);
+    // Caixa (AABB) centrada em 'center' com metades 'halfExtents' tocando algo.
+    bool OverlapBox3D(const glm::vec3& center, const glm::vec3& halfExtents, Entity& outEntity);
+    // TODAS as entidades tocadas pela esfera (área de dano, sensor).
+    bool OverlapSphereAll3D(const glm::vec3& center, float radius, std::vector<Entity>& outEntities);
 
     // Duplica 'source' e toda a subárvore dela, com UUIDs novos (e um leve
     // deslocamento pra não nascer em cima do original). Devolve a raiz nova.

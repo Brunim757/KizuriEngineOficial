@@ -1165,6 +1165,39 @@ KZ_SCRIPT_API int kz_physics3d_overlap_sphere(float x, float y, float z, float r
     return 1;
 }
 
+// Overlap BOX 3D (AABB centrada em xyz com metades hx/hy/hz).
+KZ_SCRIPT_API int kz_physics3d_overlap_box(float x, float y, float z,
+                                           float hx, float hy, float hz,
+                                           uint32_t* outHitEntity) {
+    if (s_ActiveScene == nullptr) return 0;
+    kizuri::Entity hit;
+    if (!s_ActiveScene->OverlapBox3D({ x, y, z }, { hx, hy, hz }, hit)) return 0;
+    if (outHitEntity) *outHitEntity = kizuri::scripting::RegisterEntityHandle(hit);
+    return 1;
+}
+
+// Quantas entidades a esfera toca (pré-consulta pra alocar o buffer).
+KZ_SCRIPT_API int kz_physics3d_overlap_sphere_count(float x, float y, float z, float radius) {
+    if (s_ActiveScene == nullptr) return 0;
+    std::vector<kizuri::Entity> hits;
+    s_ActiveScene->OverlapSphereAll3D({ x, y, z }, radius, hits);
+    return (int)hits.size();
+}
+
+// Preenche o buffer com as entidades tocadas pela esfera (até maxCount).
+KZ_SCRIPT_API int kz_physics3d_overlap_sphere_fill(float x, float y, float z, float radius,
+                                                  uint32_t* outHandles, int maxCount) {
+    if (s_ActiveScene == nullptr || maxCount <= 0) return 0;
+    std::vector<kizuri::Entity> hits;
+    s_ActiveScene->OverlapSphereAll3D({ x, y, z }, radius, hits);
+    int written = 0;
+    for (auto& e : hits) {
+        if (written >= maxCount) break;
+        outHandles[written++] = kizuri::scripting::RegisterEntityHandle(e);
+    }
+    return written;
+}
+
 // --- Nome da entidade (Tag) ---
 KZ_SCRIPT_API int kz_entity_get_name(uint32_t entity, char* outBuffer, int bufferSize) {
     auto e = Resolve(entity);

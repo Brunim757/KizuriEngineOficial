@@ -108,6 +108,9 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_rigidbody3d_set_angular_velocity(uint entity, float wx, float wy, float wz);
     [DllImport(Lib)] internal static extern int kz_physics3d_raycast(float x0, float y0, float z0, float x1, float y1, float z1, out float hitX, out float hitY, out float hitZ, out float fraction, out uint hitEntity);
     [DllImport(Lib)] internal static extern int kz_physics3d_overlap_sphere(float x, float y, float z, float radius, out uint hitEntity);
+    [DllImport(Lib)] internal static extern int kz_physics3d_overlap_box(float x, float y, float z, float hx, float hy, float hz, out uint hitEntity);
+    [DllImport(Lib)] internal static extern int kz_physics3d_overlap_sphere_count(float x, float y, float z, float radius);
+    [DllImport(Lib)] internal static extern int kz_physics3d_overlap_sphere_fill(float x, float y, float z, float radius, [Out] uint[] handles, int maxCount);
 
     // ---- Mutação de componentes em runtime ------------------------------------
     [DllImport(Lib)] internal static extern int kz_sprite_set_texture(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);

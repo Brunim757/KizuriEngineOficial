@@ -353,6 +353,63 @@ bool Scene::OverlapSphere3D(const glm::vec3& center, float radius, Entity& outEn
     return true;
 }
 
+bool Scene::OverlapBox3D(const glm::vec3& center, const glm::vec3& halfExtents, Entity& outEntity) {
+    if (m_PhysicsWorld3D == nullptr) return false;
+
+    btBoxShape box(btVector3(halfExtents.x, halfExtents.y, halfExtents.z));
+    btCollisionObject obj;
+    obj.setCollisionShape(&box);
+    btTransform tr;
+    tr.setIdentity();
+    tr.setOrigin(btVector3(center.x, center.y, center.z));
+    obj.setWorldTransform(tr);
+    obj.setCollisionFlags(btCollisionObject::CF_NO_CONTACT_RESPONSE);
+    m_PhysicsWorld3D->addCollisionObject(&obj);
+
+    OverlapSphereCallback cb;
+    m_PhysicsWorld3D->contactTest(&obj, cb);
+    m_PhysicsWorld3D->removeCollisionObject(&obj);
+
+    if (cb.Best == entt::null) return false;
+    outEntity = Entity{ cb.Best, this };
+    return true;
+}
+
+// Coleta TODAS as entidades que tocam a forma fantasma (sensor de área).
+struct OverlapCollectCallback : public btCollisionWorld::ContactResultCallback {
+    std::vector<entt::entity> Hits;
+
+    btScalar addSingleResult(btManifoldPoint&, const btCollisionObjectWrapper*,
+                             int, int, const btCollisionObjectWrapper* otherWrap, int, int) override {
+        void* up = otherWrap->getCollisionObject()->getUserPointer();
+        if (up) Hits.push_back(static_cast<entt::entity>(reinterpret_cast<uintptr_t>(up)));
+        return 0.0f;
+    }
+};
+
+bool Scene::OverlapSphereAll3D(const glm::vec3& center, float radius, std::vector<Entity>& outEntities) {
+    outEntities.clear();
+    if (m_PhysicsWorld3D == nullptr) return false;
+
+    btSphereShape sphere(radius);
+    btCollisionObject obj;
+    obj.setCollisionShape(&sphere);
+    btTransform tr;
+    tr.setIdentity();
+    tr.setOrigin(btVector3(center.x, center.y, center.z));
+    obj.setWorldTransform(tr);
+    obj.setCollisionFlags(btCollisionObject::CF_NO_CONTACT_RESPONSE);
+    m_PhysicsWorld3D->addCollisionObject(&obj);
+
+    OverlapCollectCallback cb;
+    m_PhysicsWorld3D->contactTest(&obj, cb);
+    m_PhysicsWorld3D->removeCollisionObject(&obj);
+
+    outEntities.reserve(cb.Hits.size());
+    for (auto h : cb.Hits) outEntities.push_back(Entity{ h, this });
+    return !outEntities.empty();
+}
+
 Entity Scene::DuplicateEntity(Entity source) {
     if (!source) return {};
 

@@ -119,6 +119,30 @@ public static class Scene
 		return true;
 	}
 
+	// Overlap BOX 3D (AABB): true se alguma entidade tocar a caixa.
+	public static bool OverlapBox3D(Math.Vector3 center, Math.Vector3 halfExtents, out Entity hit)
+	{
+		hit = Entity.Invalid;
+		uint handle = 0;
+		if (Interop.KizuriNative.kz_physics3d_overlap_box(center.X, center.Y, center.Z,
+			halfExtents.X, halfExtents.Y, halfExtents.Z, out handle) == 0)
+			return false;
+		hit = new Entity(handle);
+		return true;
+	}
+
+	// TODAS as entidades tocadas pela esfera (área de dano/sensor). Vazio se nenhuma.
+	public static Entity[] OverlapSphereAll3D(Math.Vector3 center, float radius)
+	{
+		int count = Interop.KizuriNative.kz_physics3d_overlap_sphere_count(center.X, center.Y, center.Z, radius);
+		if (count <= 0) return System.Array.Empty<Entity>();
+		var handles = new uint[count];
+		int got = Interop.KizuriNative.kz_physics3d_overlap_sphere_fill(center.X, center.Y, center.Z, radius, handles, count);
+		var result = new Entity[got];
+		for (int i = 0; i < got; ++i) result[i] = new Entity(handles[i]);
+		return result;
+	}
+
 	// OverlapCircle 2D: true se algum collider tocar o círculo (só no Play).
 	// Devolve a entidade mais próxima.
 	public static bool OverlapCircle2D(Math.Vector2 center, float radius, out Entity hit)

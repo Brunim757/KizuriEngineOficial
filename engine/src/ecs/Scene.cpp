@@ -1239,6 +1239,7 @@ void Scene::RenderScene2D(OrthographicCamera* overrideCamera) {
     for (auto e : camView) {
         auto& camera = camView.get<CameraComponent>(e);
         if (!camera.Primary || camera.Type != CameraComponent::ProjectionType::Orthographic2D) continue;
+        if (!IsEntityActive(Entity{ e, this })) continue; // câmera inativa não renderiza
 
         glm::vec3 pos, euler;
         DecomposeTransform(GetWorldTransform(Entity{ e, this }), pos, euler);
@@ -1479,6 +1480,7 @@ void Scene::UpdateAudio(Timestep) {
     for (auto e : camView) {
         auto& camera = camView.get<CameraComponent>(e);
         if (!camera.Primary || camera.Type != CameraComponent::ProjectionType::Perspective3D) continue;
+        if (!IsEntityActive(Entity{ e, this })) continue; // câmera inativa não é listener
         glm::mat4 world = GetWorldTransform(Entity{ e, this });
         glm::vec3 pos = glm::vec3(world[3]);
         glm::vec3 forward = glm::normalize(glm::mat3(world) * glm::vec3(0.0f, 0.0f, -1.0f));
@@ -1655,6 +1657,7 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
         for (auto e : camView) {
             auto& camera = camView.get<CameraComponent>(e);
             if (!camera.Primary || camera.Type != CameraComponent::ProjectionType::Perspective3D) continue;
+            if (!IsEntityActive(Entity{ e, this })) continue;
             glm::vec3 pos = glm::vec3(GetWorldTransform(Entity{ e, this })[3]);
             const auto& tc = camView.get<TransformComponent>(e);
             float aspect = m_ViewportHeight ? (float)m_ViewportWidth / (float)m_ViewportHeight : 16.0f / 9.0f;
@@ -1751,6 +1754,7 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
     for (auto e : camView) {
         auto& camera = camView.get<CameraComponent>(e);
         if (!camera.Primary || camera.Type != CameraComponent::ProjectionType::Perspective3D) continue;
+        if (!IsEntityActive(Entity{ e, this })) continue; // câmera inativa não renderiza
 
         // Posição pelo transform MUNDIAL (respeita pai). Orientação pelo
         // euler LOCAL do TransformComponent — NÃO decompor a matriz composta

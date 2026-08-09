@@ -177,6 +177,12 @@ public:
     // Grid de referência do editor (plano XZ) — não entra no jogo exportado nem no shadow map.
     static void DrawGrid();
 
+    // Linhas de DEPURAÇÃO com teste de profundidade (gizmos de collider etc.).
+    // Desenhadas dentro do passe HDR, depois das malhas — ocultadas por
+    // geometria mais próxima e no topo da superfície do próprio objeto.
+    struct DebugLine { glm::vec3 From; glm::vec3 To; glm::vec3 Color; };
+    static void SubmitDebugLine(const glm::vec3& from, const glm::vec3& to, const glm::vec3& color);
+
 private:
     struct DrawCommand {
         Ref<Mesh> MeshAsset;
@@ -196,10 +202,13 @@ private:
     static Ref<Shader> s_LineShader;
     static Ref<VertexArray> s_GridVAO;
     static uint32_t s_GridVertexCount;
+    static Ref<VertexArray> s_DebugVAO;
+    static Ref<VertexBuffer> s_DebugVBO;
     static glm::mat4 s_ViewProjection;
 
     static std::vector<DrawCommand> s_DrawList;
     static std::vector<InstanceBatch> s_InstanceBatches;
+    static std::vector<DebugLine> s_DebugLines;
     static std::vector<Light> s_LightList;
     static Light s_ShadowCaster;   // 1ª luz Directional do frame; usada pro shadow map e pro céu/IBL
     static bool s_HasShadowCaster;

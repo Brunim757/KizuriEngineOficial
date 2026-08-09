@@ -19,10 +19,13 @@ Ref<Shader> Renderer3D::s_MeshShader;
 Ref<Shader> Renderer3D::s_LineShader;
 Ref<VertexArray> Renderer3D::s_GridVAO;
 uint32_t Renderer3D::s_GridVertexCount = 0;
+Ref<VertexArray> Renderer3D::s_DebugVAO;
+Ref<VertexBuffer> Renderer3D::s_DebugVBO;
 glm::mat4 Renderer3D::s_ViewProjection = glm::mat4(1.0f);
 
 std::vector<Renderer3D::DrawCommand> Renderer3D::s_DrawList;
 std::vector<Renderer3D::InstanceBatch> Renderer3D::s_InstanceBatches;
+std::vector<Renderer3D::DebugLine> Renderer3D::s_DebugLines;
 std::vector<Light> Renderer3D::s_LightList;
 Light Renderer3D::s_ShadowCaster;
 bool Renderer3D::s_HasShadowCaster = false;
@@ -3096,6 +3099,39 @@ void Renderer3D::EndScene() {
         glDepthMask(GL_TRUE);
     }
 
+    // Linhas de DEPURAÇÃO (gizmos de collider do editor): desenhadas depois
+    // das malhas com teste de profundidade — ficam sobre a superfície do
+    // próprio objeto, mas são ocultadas por geometria mais próxima (em vez de
+    // flutuar por cima de tudo como um overlay de tela).
+    if (!s_DebugLines.empty()) {
+        struct LineVertex { glm::vec3 Position; glm::vec3 Color; };
+        std::vector<LineVertex> verts;
+        verts.reserve(s_DebugLines.size() * 2);
+        for (auto& l : s_DebugLines) {
+            verts.push_back({ l.From, l.Color });
+            verts.push_back({ l.To, l.Color });
+        }
+        if (!s_DebugVAO) {
+            const uint32_t kMaxDebugVerts = 8192u * 2u; // teto de SubmitDebugLine
+            s_DebugVAO = CreateRef<VertexArray>();
+            s_DebugVBO = CreateRef<VertexBuffer>(kMaxDebugVerts * (uint32_t)sizeof(LineVertex));
+            s_DebugVBO->SetLayout({
+                { ShaderDataType::Float3, "a_Position" },
+                { ShaderDataType::Float3, "a_Color" },
+            });
+            s_DebugVAO->AddVertexBuffer(s_DebugVBO);
+        }
+        s_DebugVBO->SetData(verts.data(), (uint32_t)(verts.size() * sizeof(LineVertex)));
+        glDepthFunc(GL_LEQUAL);
+        glDepthMask(GL_TRUE);
+        s_LineShader->Bind();
+        // VP SEM jitter (s_MotionCurrVP), como o grid — evita o tremido de 1px.
+        s_LineShader->SetMat4("u_ViewProjection", s_MotionCurrVP);
+        RenderCommand::DrawLines(s_DebugVAO, (uint32_t)verts.size());
+        glDepthFunc(GL_LESS);
+        s_DebugLines.clear();
+    }
+
     // Resolve MSAA -> destino simples (cor + profundidade). Sem MSAA a cena
     // já foi renderizada direto no s_HDRFBO, não precisa de blit.
     if (s_CurrentMSAA > 1) {
@@ -3521,6 +3557,11 @@ void Renderer3D::EndScene() {
 
 void Renderer3D::DrawGrid() {
     s_DrawGridFlag = true;
+}
+
+void Renderer3D::SubmitDebugLine(const glm::vec3& from, const glm::vec3& to, const glm::vec3& color) {
+    if (s_DebugLines.size() >= 8192) return; // teto — nunca trava o frame
+    s_DebugLines.push_back({ from, to, color });
 }
 
 void Renderer3D::Submit(const Ref<Mesh>& mesh, const Material& material, const glm::mat4& transform) {

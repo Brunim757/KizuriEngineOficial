@@ -1261,43 +1261,51 @@ void EditorLayer::DrawColliderGizmo() {
         }
         if (m_SelectedEntity.HasComponent<BoxCollider2DComponent>()) {
             auto& col = m_SelectedEntity.GetComponent<BoxCollider2DComponent>();
-            glm::vec3 c = pos + glm::vec3(col.Offset.x, col.Offset.y, 0.0f);
+            glm::mat4 world = m_ActiveScene->GetWorldTransform(m_SelectedEntity);
             glm::vec3 h(col.Size.x * 0.5f, col.Size.y * 0.5f, 0.0f);
-            glm::vec3 corners[4] = {
-                c + glm::vec3(-h.x, -h.y, 0), c + glm::vec3(h.x, -h.y, 0),
-                c + glm::vec3(h.x, h.y, 0), c + glm::vec3(-h.x, h.y, 0),
-            };
+            glm::vec3 corners[4];
+            for (int i = 0; i < 4; ++i) {
+                glm::vec3 s(((i & 1) ? h.x : -h.x), ((i & 2) ? h.y : -h.y), 0.0f);
+                corners[i] = glm::vec3(world * glm::vec4(s + glm::vec3(col.Offset.x, col.Offset.y, 0.0f), 1.0f));
+            }
             for (int i = 0; i < 4; ++i) Line(corners[i], corners[(i + 1) % 4]);
         }
     } else {
-        glm::vec3 scale = m_SelectedEntity.GetComponent<TransformComponent>().Scale;
+        // 3D: linhas com TESTE DE PROFUNDIDADE (não flutuam por cima do objeto)
+        // e rotação pelo transform mundial (o wireframe abraça a malha mesmo
+        // com o corpo rotacionado).
+        glm::mat4 world = m_ActiveScene->GetWorldTransform(m_SelectedEntity);
+        const glm::vec3 dbgColor(120.0f / 255.0f, 220.0f / 255.0f, 120.0f / 255.0f);
+        auto SubmitLine = [&](const glm::vec3& a, const glm::vec3& b) {
+            kizuri::Renderer3D::SubmitDebugLine(a, b, dbgColor);
+        };
+
         if (m_SelectedEntity.HasComponent<SphereCollider3DComponent>()) {
             auto& col = m_SelectedEntity.GetComponent<SphereCollider3DComponent>();
-            float r = col.Radius * scale.x;
-            ImVec2 center;
-            if (Project(pos, center)) {
-                glm::vec3 rx = pos + glm::vec3(r, 0, 0), ry = pos + glm::vec3(0, r, 0), rz = pos + glm::vec3(0, 0, r);
-                ImVec2 px, py, pz;
-                if (Project(rx, px) && Project(ry, py) && Project(rz, pz)) {
-                    float a = glm::length(glm::vec2(px.x - center.x, px.y - center.y));
-                    float b = glm::length(glm::vec2(py.x - center.x, py.y - center.y));
-                    float c = glm::length(glm::vec2(pz.x - center.x, pz.y - center.y));
-                    dl->AddCircle(center, a, color, 48, 1.5f);
-                    dl->AddCircle(center, b, color, 48, 1.5f);
-                    dl->AddCircle(center, c, color, 48, 1.5f);
+            const int segs = 24;
+            auto ring = [&](const glm::vec3& n0, const glm::vec3& n1) {
+                glm::vec3 prev = glm::vec3(world * glm::vec4(n0 * col.Radius + n1 * col.Radius, 1.0f));
+                for (int i = 1; i <= segs; ++i) {
+                    float t = (float)i / (float)segs * 3.14159265f * 2.0f;
+                    glm::vec3 p = glm::vec3(world * glm::vec4((n0 * cosf(t) + n1 * sinf(t)) * col.Radius, 1.0f));
+                    SubmitLine(prev, p);
+                    prev = p;
                 }
-            }
+            };
+            ring({ 1,0,0 }, { 0,1,0 }); // XZ -> círculo no plano YZ? (X,Y) no plano Z
+            ring({ 1,0,0 }, { 0,0,1 }); // plano XZ
+            ring({ 0,1,0 }, { 0,0,1 }); // plano YZ
         }
         if (m_SelectedEntity.HasComponent<BoxCollider3DComponent>()) {
             auto& col = m_SelectedEntity.GetComponent<BoxCollider3DComponent>();
-            glm::vec3 h = col.HalfExtents * scale;
+            glm::vec3 h = col.HalfExtents;
             glm::vec3 corners[8];
             for (int i = 0; i < 8; ++i) {
                 glm::vec3 s((i & 1) ? h.x : -h.x, (i & 2) ? h.y : -h.y, (i & 4) ? h.z : -h.z);
-                corners[i] = pos + s;
+                corners[i] = glm::vec3(world * glm::vec4(s, 1.0f));
             }
             const int edges[12][2] = { {0,1},{1,3},{3,2},{2,0}, {4,5},{5,7},{7,6},{6,4}, {0,4},{1,5},{2,6},{3,7} };
-            for (auto& e : edges) Line(corners[e[0]], corners[e[1]]);
+            for (auto& e : edges) SubmitLine(corners[e[0]], corners[e[1]]);
         }
     }
 }
@@ -1325,7 +1333,7 @@ void EditorLayer::DrawAllColliders() {
     };
 
     auto& registry = m_ActiveScene->GetRegistry();
-    registry.view<kizuri::TransformComponent>().each([&](auto entityHandle, const kizuri::TransformComponent& tc) {
+    registry.view<kizuri::TransformComponent>().each([&](auto entityHandle, const kizuri::TransformComponent&) {
         kizuri::Entity e{ entityHandle, m_ActiveScene.get() };
         glm::vec3 pos = glm::vec3(m_ActiveScene->GetWorldTransform(e)[3]);
 
@@ -1339,36 +1347,43 @@ void EditorLayer::DrawAllColliders() {
             }
         }
         if (const auto* b2 = m_ActiveScene->GetRegistry().try_get<kizuri::BoxCollider2DComponent>(entityHandle)) {
-            glm::vec3 c = pos + glm::vec3(b2->Offset.x, b2->Offset.y, 0.0f);
+            glm::mat4 world = m_ActiveScene->GetWorldTransform(e);
             glm::vec3 h(b2->Size.x * 0.5f, b2->Size.y * 0.5f, 0.0f);
-            glm::vec3 corners[4] = {
-                c + glm::vec3(-h.x, -h.y, 0), c + glm::vec3(h.x, -h.y, 0),
-                c + glm::vec3(h.x, h.y, 0), c + glm::vec3(-h.x, h.y, 0),
-            };
+            glm::vec3 corners[4];
+            for (int i = 0; i < 4; ++i) {
+                glm::vec3 s(((i & 1) ? h.x : -h.x), ((i & 2) ? h.y : -h.y), 0.0f);
+                corners[i] = glm::vec3(world * glm::vec4(s + glm::vec3(b2->Offset.x, b2->Offset.y, 0.0f), 1.0f));
+            }
             for (int i = 0; i < 4; ++i) Line(corners[i], corners[(i + 1) % 4]);
         }
         if (const auto* s3 = m_ActiveScene->GetRegistry().try_get<kizuri::SphereCollider3DComponent>(entityHandle)) {
-            float r = s3->Radius * tc.Scale.x;
-            ImVec2 center;
-            if (Project(pos, center)) {
-                glm::vec3 rx = pos + glm::vec3(r, 0, 0), ry = pos + glm::vec3(0, r, 0), rz = pos + glm::vec3(0, 0, r);
-                ImVec2 px, py, pz;
-                if (Project(rx, px) && Project(ry, py) && Project(rz, pz)) {
-                    dl->AddCircle(center, glm::length(glm::vec2(px.x - center.x, px.y - center.y)), color, 32, 1.0f);
-                    dl->AddCircle(center, glm::length(glm::vec2(py.x - center.x, py.y - center.y)), color, 32, 1.0f);
-                    dl->AddCircle(center, glm::length(glm::vec2(pz.x - center.x, pz.y - center.y)), color, 32, 1.0f);
+            glm::mat4 world = m_ActiveScene->GetWorldTransform(e);
+            const glm::vec3 dbg(120.0f / 255.0f, 220.0f / 255.0f, 120.0f / 255.0f);
+            const int segs = 24;
+            auto ring = [&](const glm::vec3& n0, const glm::vec3& n1) {
+                glm::vec3 prev = glm::vec3(world * glm::vec4(n0 * s3->Radius + n1 * s3->Radius, 1.0f));
+                for (int i = 1; i <= segs; ++i) {
+                    float t = (float)i / (float)segs * 3.14159265f * 2.0f;
+                    glm::vec3 p = glm::vec3(world * glm::vec4((n0 * cosf(t) + n1 * sinf(t)) * s3->Radius, 1.0f));
+                    kizuri::Renderer3D::SubmitDebugLine(prev, p, dbg);
+                    prev = p;
                 }
-            }
+            };
+            ring({ 1,0,0 }, { 0,1,0 });
+            ring({ 1,0,0 }, { 0,0,1 });
+            ring({ 0,1,0 }, { 0,0,1 });
         }
         if (const auto* b3 = m_ActiveScene->GetRegistry().try_get<kizuri::BoxCollider3DComponent>(entityHandle)) {
-            glm::vec3 h = b3->HalfExtents * tc.Scale;
+            glm::mat4 world = m_ActiveScene->GetWorldTransform(e);
+            const glm::vec3 dbg(120.0f / 255.0f, 220.0f / 255.0f, 120.0f / 255.0f);
+            glm::vec3 h = b3->HalfExtents;
             glm::vec3 corners[8];
             for (int i = 0; i < 8; ++i) {
                 glm::vec3 s((i & 1) ? h.x : -h.x, (i & 2) ? h.y : -h.y, (i & 4) ? h.z : -h.z);
-                corners[i] = pos + s;
+                corners[i] = glm::vec3(world * glm::vec4(s, 1.0f));
             }
             const int edges[12][2] = { {0,1},{1,3},{3,2},{2,0}, {4,5},{5,7},{7,6},{6,4}, {0,4},{1,5},{2,6},{3,7} };
-            for (auto& e : edges) Line(corners[e[0]], corners[e[1]]);
+            for (auto& e : edges) kizuri::Renderer3D::SubmitDebugLine(corners[e[0]], corners[e[1]], dbg);
         }
     });
 }

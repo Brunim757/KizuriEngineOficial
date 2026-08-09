@@ -1416,6 +1416,11 @@ void main() {
 // ---------------------------------------------------------------------
 static const char* s_SSAOFragmentSrc = R"(
 #version 330 core
+// Teto FIXO de amostras (mesmo padrão do SSR): GLSL 330 core exige loops de
+// contagem determinável em compile-time — o loop antigo ia até u_SampleCount
+// (uniform) e o driver do GT 610/Fermi rejeitava o shader => tela preta.
+#define SSAO_MAX_SAMPLES 64
+
 in vec2 v_TexCoord;
 out float o_AO;
 
@@ -1452,7 +1457,8 @@ void main() {
     mat3 TBN = mat3(tangent, bitangent, normal);
 
     float occlusion = 0.0;
-    for (int i = 0; i < u_SampleCount; ++i) {
+    for (int i = 0; i < SSAO_MAX_SAMPLES; ++i) {
+        if (i >= u_SampleCount) continue; // só os taps EFETIVOS variam (loop unrollável)
         vec3 samplePos = TBN * u_Samples[i];
         samplePos = fragPos + samplePos * u_Radius;
 
@@ -1466,7 +1472,7 @@ void main() {
         float rangeCheck = smoothstep(0.0, 1.0, u_Radius / abs(fragPos.z - ReconstructViewPos(offset.xy, sampleDepth).z));
         occlusion += (sampleDepth >= offset.z + 0.03 ? 1.0 : 0.0) * rangeCheck;
     }
-    occlusion = 1.0 - occlusion / float(u_SampleCount);
+    occlusion = 1.0 - occlusion / max(float(u_SampleCount), 1.0);
     // Teto de escurecimento: mesmo que a estimativa de oclusão quebre (ex.:
     // reconstrução de profundidade imprecisa em algumas GPUs, que dava ~0.1
     // e escurecia a cena ~10x), o AO nunca passa de 0.35 — o efeito fica
@@ -3149,7 +3155,7 @@ void Renderer3D::EndScene() {
 
     // --- Passe 1.5: SSAO (do depth resolvido), meia resolução + blur ---
     bool hasAO = false;
-    if (s_Settings.SSAOEnabled) {
+    if (s_Settings.SSAOEnabled && s_SSAOShader && s_SSAOShader->IsValid()) {
         EnsureSSAOBuffers(internalW, internalH);
 
         glBindFramebuffer(GL_FRAMEBUFFER, s_SSAOFBO);
@@ -3446,7 +3452,7 @@ void Renderer3D::EndScene() {
         glBindTexture(GL_TEXTURE_2D, s_TAAHistoryTex[histRead]);
         s_TAAShader->SetInt("u_History", 1);
         s_TAAShader->SetFloat2("u_InvResolution", glm::vec2(1.0f / (float)internalW, 1.0f / (float)internalH));
-        s_TAAShader->SetFloat("u_HistoryWeight", 0.1f);
+        s_TAAShader->SetFloat("u_HistoryWeight", 0.9f);
         s_TAAShader->SetInt("u_UseHistory", s_TAAHistoryValid ? 1 : 0);
         RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
         finalInput = s_TAAHistoryTex[histWrite];

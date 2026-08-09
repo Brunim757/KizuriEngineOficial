@@ -11,6 +11,7 @@
 #include <utility>
 
 class b2World;
+class b2Body;
 class btDiscreteDynamicsWorld;
 class btDefaultCollisionConfiguration;
 class btCollisionDispatcher;
@@ -155,6 +156,7 @@ private:
     void RegisterPhysics2DEntity(Entity entity);
     void UnregisterPhysics2DEntity(Entity entity);
     void BuildTilemapColliders();
+    void RebuildDirtyTilemapColliders();
 
     void OnPhysics3DStart();
     void OnPhysics3DStop();
@@ -175,6 +177,8 @@ private:
 
     b2World* m_PhysicsWorld2D = nullptr;
     void* m_ContactListener2D = nullptr; // ContactListener2D* (Box2D)
+    // Corpos estáticos gerados pelos tilemaps (para rebuild em runtime).
+    std::vector<b2Body*> m_TilemapBodies2D;
 
     // Estado do mouse pra UI (preenchido pelo host via SetUIMouseNDC).
     glm::vec2 m_UIMouseNDC{ 0.0f };

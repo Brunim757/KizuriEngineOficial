@@ -115,6 +115,9 @@ struct TilemapComponent {
     // Valores de tile (1-based, os mesmos usados em Tiles) que geram
     // collider estático Box2D no Play — a base pra níveis de platformer.
     std::vector<uint32_t> SolidTileValues; // serializável
+
+    // Rebuilda os colliders no próximo frame (mudou tile/sólidos em runtime).
+    bool CollidersDirty = false; // runtime — não serializado
 };
 
 struct MeshRendererComponent {

@@ -848,9 +848,28 @@ void Scene::BuildTilemapColliders() {
                 b2PolygonShape shape;
                 shape.SetAsBox(hw, hh);
                 body->CreateFixture(&shape, 0.0f);
+                m_TilemapBodies2D.push_back(body);
             }
         }
     }
+}
+
+// Rebuilda os colliders de tilemap que mudaram em runtime (SetTile/
+// AddSolidTile marcam CollidersDirty). Remove os corpos antigos e recria.
+void Scene::RebuildDirtyTilemapColliders() {
+    if (!m_PhysicsWorld2D) return;
+    bool dirty = false;
+    m_Registry.view<TilemapComponent>().each([&](auto, TilemapComponent& tm) {
+        if (tm.CollidersDirty) dirty = true;
+    });
+    if (!dirty) return;
+
+    for (auto* b : m_TilemapBodies2D) m_PhysicsWorld2D->DestroyBody(b);
+    m_TilemapBodies2D.clear();
+    BuildTilemapColliders();
+    m_Registry.view<TilemapComponent>().each([&](auto, TilemapComponent& tm) {
+        tm.CollidersDirty = false;
+    });
 }
 
 void Scene::OnPhysics2DStart() {
@@ -891,6 +910,7 @@ void Scene::UpdatePhysics2D(Timestep ts) {
     if (!m_PhysicsWorld2D) return;
 
     constexpr int32_t velocityIterations = 8, positionIterations = 3;
+    RebuildDirtyTilemapColliders(); // tilemaps mudados em runtime (SetTile)
     m_PhysicsWorld2D->Step(ts, velocityIterations, positionIterations);
 
     auto view = m_Registry.view<Rigidbody2DComponent>();

@@ -127,6 +127,25 @@ public readonly struct Entity
 	public void SetScale(Math.Vector3 scale)
 		=> Interop.KizuriNative.kz_transform_set_scale(Handle, scale.X, scale.Y, scale.Z);
 
+	// Leituras atuais (espelho dos setters).
+	public Math.Vector3 Rotation
+	{
+		get
+		{
+			if (Interop.KizuriNative.kz_entity_get_rotation(Handle, out var rot) != 0) return rot;
+			return Math.Vector3.Zero;
+		}
+	}
+
+	public Math.Vector3 Scale
+	{
+		get
+		{
+			if (Interop.KizuriNative.kz_entity_get_scale(Handle, out var s) != 0) return s;
+			return Math.Vector3.One;
+		}
+	}
+
 	// Posição MUNDIAL (respeita hierarquia de pais) e LookAt (encara um ponto).
 	public bool TryGetWorldPosition(out Math.Vector3 position)
 	{
@@ -330,6 +349,38 @@ public readonly struct Entity
 	// Textura da partícula (vazio = degradê radial procedural).
 	public bool SetParticleTexture(string path)
 		=> Interop.KizuriNative.kz_particle_set_texture(Handle, path) != 0;
+
+	// ---- Configuração de partículas em runtime ----
+	public bool SetParticleRate(float rate) => Interop.KizuriNative.kz_particle_set_rate(Handle, rate) != 0;
+	public bool SetParticleLifetime(float min, float max) => Interop.KizuriNative.kz_particle_set_lifetime(Handle, min, max) != 0;
+	public bool SetParticleVelocity(Math.Vector3 min, Math.Vector3 max)
+		=> Interop.KizuriNative.kz_particle_set_velocity(Handle, min.X, min.Y, min.Z, max.X, max.Y, max.Z) != 0;
+	public bool SetParticleGravity(Math.Vector3 gravity)
+		=> Interop.KizuriNative.kz_particle_set_gravity(Handle, gravity.X, gravity.Y, gravity.Z) != 0;
+	public bool SetParticleColors(Math.Vector4 start, Math.Vector4 end)
+		=> Interop.KizuriNative.kz_particle_set_colors(Handle, start.X, start.Y, start.Z, start.W, end.X, end.Y, end.Z, end.W) != 0;
+	public bool SetParticleSize(float start, float end) => Interop.KizuriNative.kz_particle_set_size(Handle, start, end) != 0;
+	// Aditivo (fogo/faísca) vs alpha blend (fumaça).
+	public bool SetParticleAdditive(bool additive) => Interop.KizuriNative.kz_particle_set_additive(Handle, additive ? 1 : 0) != 0;
+
+	// ---- Animação de sprite 2D (sprite sheet) em runtime ----
+	public bool AddSpriteAnimation(string sheetPath, float fps = 12f, int totalFrames = 1,
+	                               int framesPerRow = 1, bool loop = true)
+		=> Interop.KizuriNative.kz_entity_add_sprite_animation(Handle, sheetPath, (int)fps, totalFrames, framesPerRow, loop ? 1 : 0) != 0;
+	public void PlaySpriteAnimation(bool play = true) => Interop.KizuriNative.kz_sprite_animation_play(Handle, play ? 1 : 0);
+	public void SetSpriteAnimationFPS(float fps) => Interop.KizuriNative.kz_sprite_animation_set_fps(Handle, fps);
+
+	// ---- Tilemap em runtime (nível de platformer procedimental) ----
+	// atlasPath = folha com atlasCols x atlasRows tiles; cria o mapa mapW x mapH.
+	public bool AddTilemap(string atlasPath, int atlasCols, int atlasRows, int mapW, int mapH,
+	                       float tileW = 1f, float tileH = 1f)
+		=> Interop.KizuriNative.kz_entity_add_tilemap(Handle, atlasPath, atlasCols, atlasRows, mapW, mapH, tileW, tileH) != 0;
+	// tileValue 1-based do atlas (0 = vazio). y=0 é a linha de cima do mapa.
+	public bool SetTile(int x, int y, int tileValue)
+		=> Interop.KizuriNative.kz_tilemap_set_tile(Handle, x, y, tileValue) != 0;
+	// Marca um valor de tile como SÓLIDO (gera collider Box2D estático no Play).
+	public bool AddSolidTile(int tileValue)
+		=> Interop.KizuriNative.kz_tilemap_add_solid_tile(Handle, tileValue) != 0;
 
 	// Camada de ordenação 2D (menor desenha atrás). Aplica a qualquer
 	// componente 2D da entidade (sprite/círculo/texto/animação/tilemap).

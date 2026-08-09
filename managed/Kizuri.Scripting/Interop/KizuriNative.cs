@@ -45,6 +45,8 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_transform_set_position(uint entity, float x, float y, float z);
     [DllImport(Lib)] internal static extern void kz_transform_set_rotation(uint entity, float x, float y, float z);
     [DllImport(Lib)] internal static extern void kz_transform_set_scale(uint entity, float x, float y, float z);
+    [DllImport(Lib)] internal static extern int kz_entity_get_rotation(uint entity, out Math.Vector3 rotation);
+    [DllImport(Lib)] internal static extern int kz_entity_get_scale(uint entity, out Math.Vector3 scale);
     [DllImport(Lib)] internal static extern void kz_entity_set_parent(uint child, uint parent);
 
     // ---- Cena em runtime ------------------------------------------------------
@@ -65,6 +67,19 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_entity_get_name(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] System.Text.StringBuilder buffer, int bufferSize);
     [DllImport(Lib)] internal static extern void kz_entity_set_name(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string name);
     [DllImport(Lib)] internal static extern int kz_particle_set_texture(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
+    [DllImport(Lib)] internal static extern int kz_particle_set_rate(uint entity, float rate);
+    [DllImport(Lib)] internal static extern int kz_particle_set_lifetime(uint entity, float min, float max);
+    [DllImport(Lib)] internal static extern int kz_particle_set_velocity(uint entity, float mnx, float mny, float mnz, float mxx, float mxy, float mxz);
+    [DllImport(Lib)] internal static extern int kz_particle_set_gravity(uint entity, float x, float y, float z);
+    [DllImport(Lib)] internal static extern int kz_particle_set_colors(uint entity, float r, float g, float b, float a, float er, float eg, float eb, float ea);
+    [DllImport(Lib)] internal static extern int kz_particle_set_size(uint entity, float start, float end);
+    [DllImport(Lib)] internal static extern int kz_particle_set_additive(uint entity, int additive);
+    [DllImport(Lib)] internal static extern int kz_entity_add_sprite_animation(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string sheetPath, int fps, int totalFrames, int framesPerRow, int loop);
+    [DllImport(Lib)] internal static extern int kz_sprite_animation_play(uint entity, int play);
+    [DllImport(Lib)] internal static extern int kz_sprite_animation_set_fps(uint entity, float fps);
+    [DllImport(Lib)] internal static extern int kz_entity_add_tilemap(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string atlasPath, int atlasCols, int atlasRows, int mapW, int mapH, float tileW, float tileH);
+    [DllImport(Lib)] internal static extern int kz_tilemap_set_tile(uint entity, int x, int y, int tileValue);
+    [DllImport(Lib)] internal static extern int kz_tilemap_add_solid_tile(uint entity, int tileValue);
     [DllImport(Lib)] internal static extern int kz_entity_get_world_position(uint entity, out float x, out float y, out float z);
     [DllImport(Lib)] internal static extern void kz_entity_look_at(uint entity, float tx, float ty, float tz);
     [DllImport(Lib)] internal static extern uint kz_scene_duplicate_entity(uint entity);

@@ -760,6 +760,22 @@ KZ_SCRIPT_API void kz_transform_set_scale(uint32_t entity, float x, float y, flo
     e.GetComponent<kizuri::TransformComponent>().Scale = { x, y, z };
 }
 
+KZ_SCRIPT_API int kz_entity_get_rotation(uint32_t entity, float* outXYZ) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TransformComponent>()) return 0;
+    const auto& r = e.GetComponent<kizuri::TransformComponent>().Rotation;
+    if (outXYZ) { outXYZ[0] = r.x; outXYZ[1] = r.y; outXYZ[2] = r.z; }
+    return 1;
+}
+
+KZ_SCRIPT_API int kz_entity_get_scale(uint32_t entity, float* outXYZ) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TransformComponent>()) return 0;
+    const auto& s = e.GetComponent<kizuri::TransformComponent>().Scale;
+    if (outXYZ) { outXYZ[0] = s.x; outXYZ[1] = s.y; outXYZ[2] = s.z; }
+    return 1;
+}
+
 // ---------------------------------------------------------------------------
 // Luz — cria/atualiza LightComponent em runtime (a direção da direcional/
 // spot é derivada da rotação do Transform, igual ao editor)
@@ -1221,6 +1237,126 @@ KZ_SCRIPT_API int kz_particle_set_texture(uint32_t entity, const char* path) {
     auto& pc = e.GetComponent<kizuri::ParticleSystemComponent>();
     pc.TexturePath = path;
     pc.Texture = pc.TexturePath.empty() ? nullptr : kizuri::Texture2D::Create(kizuri::Project::ResolvePath(path));
+    return 1;
+}
+
+// ---- Configuração de partículas em runtime (o emissor já precisa existir) ----
+KZ_SCRIPT_API int kz_particle_set_rate(uint32_t entity, float rate) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::ParticleSystemComponent>()) return 0;
+    e.GetComponent<kizuri::ParticleSystemComponent>().EmissionRate = rate;
+    return 1;
+}
+KZ_SCRIPT_API int kz_particle_set_lifetime(uint32_t entity, float min, float max) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::ParticleSystemComponent>()) return 0;
+    auto& pc = e.GetComponent<kizuri::ParticleSystemComponent>();
+    pc.LifetimeMin = min; pc.LifetimeMax = std::max(max, min);
+    return 1;
+}
+KZ_SCRIPT_API int kz_particle_set_velocity(uint32_t entity,
+                                           float mnx, float mny, float mnz,
+                                           float mxx, float mxy, float mxz) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::ParticleSystemComponent>()) return 0;
+    auto& pc = e.GetComponent<kizuri::ParticleSystemComponent>();
+    pc.VelocityMin = { mnx, mny, mnz };
+    pc.VelocityMax = { mxx, mxy, mxz };
+    return 1;
+}
+KZ_SCRIPT_API int kz_particle_set_gravity(uint32_t entity, float x, float y, float z) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::ParticleSystemComponent>()) return 0;
+    e.GetComponent<kizuri::ParticleSystemComponent>().Gravity = { x, y, z };
+    return 1;
+}
+KZ_SCRIPT_API int kz_particle_set_colors(uint32_t entity,
+                                         float r, float g, float b, float a,
+                                         float er, float eg, float eb, float ea) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::ParticleSystemComponent>()) return 0;
+    auto& pc = e.GetComponent<kizuri::ParticleSystemComponent>();
+    pc.StartColor = { r, g, b, a };
+    pc.EndColor = { er, eg, eb, ea };
+    return 1;
+}
+KZ_SCRIPT_API int kz_particle_set_size(uint32_t entity, float start, float end) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::ParticleSystemComponent>()) return 0;
+    auto& pc = e.GetComponent<kizuri::ParticleSystemComponent>();
+    pc.StartSize = start; pc.EndSize = end;
+    return 1;
+}
+KZ_SCRIPT_API int kz_particle_set_additive(uint32_t entity, int additive) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::ParticleSystemComponent>()) return 0;
+    e.GetComponent<kizuri::ParticleSystemComponent>().Additive = (additive != 0);
+    return 1;
+}
+
+// ---- Animação de sprite 2D em runtime ----
+KZ_SCRIPT_API int kz_entity_add_sprite_animation(uint32_t entity, const char* sheetPath,
+                                                 int fps, int totalFrames, int framesPerRow, int loop) {
+    auto e = Resolve(entity);
+    if (!e || sheetPath == nullptr) return 0;
+    auto& sac = e.AddOrReplaceComponent<kizuri::SpriteAnimationComponent>();
+    sac.SheetPath = sheetPath;
+    sac.SheetTexture = kizuri::Texture2D::Create(kizuri::Project::ResolvePath(sheetPath));
+    sac.FPS = (float)fps;
+    sac.TotalFrames = (uint32_t)std::max(totalFrames, 1);
+    sac.FramesPerRow = (uint32_t)std::max(framesPerRow, 1);
+    sac.Loop = (loop != 0);
+    sac.Playing = true;
+    return 1;
+}
+KZ_SCRIPT_API int kz_sprite_animation_play(uint32_t entity, int play) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::SpriteAnimationComponent>()) return 0;
+    e.GetComponent<kizuri::SpriteAnimationComponent>().Playing = (play != 0);
+    return 1;
+}
+KZ_SCRIPT_API int kz_sprite_animation_set_fps(uint32_t entity, float fps) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::SpriteAnimationComponent>()) return 0;
+    e.GetComponent<kizuri::SpriteAnimationComponent>().FPS = fps;
+    return 1;
+}
+
+// ---- Tilemap em runtime ----
+KZ_SCRIPT_API int kz_entity_add_tilemap(uint32_t entity, const char* atlasPath,
+                                        int atlasCols, int atlasRows,
+                                        int mapW, int mapH, float tileW, float tileH) {
+    auto e = Resolve(entity);
+    if (!e || atlasPath == nullptr || mapW <= 0 || mapH <= 0) return 0;
+    auto& tm = e.AddOrReplaceComponent<kizuri::TilemapComponent>();
+    tm.AtlasPath = atlasPath;
+    tm.AtlasTexture = kizuri::Texture2D::Create(kizuri::Project::ResolvePath(atlasPath));
+    tm.AtlasColumns = (uint32_t)std::max(atlasCols, 1);
+    tm.AtlasRows = (uint32_t)std::max(atlasRows, 1);
+    tm.MapWidth = (uint32_t)mapW;
+    tm.MapHeight = (uint32_t)mapH;
+    tm.TileSize = { tileW, tileH };
+    tm.Tiles.assign((size_t)mapW * mapH, 0);
+    return 1;
+}
+KZ_SCRIPT_API int kz_tilemap_set_tile(uint32_t entity, int x, int y, int tileValue) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TilemapComponent>()) return 0;
+    auto& tm = e.GetComponent<kizuri::TilemapComponent>();
+    if (x < 0 || y < 0 || (uint32_t)x >= tm.MapWidth || (uint32_t)y >= tm.MapHeight) return 0;
+    tm.Tiles[(size_t)y * tm.MapWidth + (size_t)x] = (uint32_t)std::max(tileValue, 0);
+    tm.CollidersDirty = true;
+    return 1;
+}
+KZ_SCRIPT_API int kz_tilemap_add_solid_tile(uint32_t entity, int tileValue) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TilemapComponent>() || tileValue <= 0) return 0;
+    auto& tm = e.GetComponent<kizuri::TilemapComponent>();
+    auto it = std::find(tm.SolidTileValues.begin(), tm.SolidTileValues.end(), (uint32_t)tileValue);
+    if (it == tm.SolidTileValues.end()) {
+        tm.SolidTileValues.push_back((uint32_t)tileValue);
+        tm.CollidersDirty = true;
+    }
     return 1;
 }
 

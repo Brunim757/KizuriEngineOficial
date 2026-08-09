@@ -1066,7 +1066,15 @@ void main() {
         if (any(isnan(lf)) || any(isinf(lf))) lf = vec3(0.0);
         color += lf;
     }
-    if (u_HasAO) color *= texture(u_AOTexture, uv).r;
+    if (u_HasAO) {
+        // SSAO multiplica a cena INTEIRA — se o passe sair preto/lixo/NaN
+        // (ex.: driver Fermi do GT 610 renderiza AO 0 mesmo compilando),
+        // color *= 0 apagava a tela. Guarda: valor inválido/escuro => 1.0
+        // (sem oclusão) e clamp no mesmo teto do shader (0.35..1.0).
+        float ao = texture(u_AOTexture, uv).r;
+        if (isnan(ao) || isinf(ao) || ao < 0.05) ao = 1.0;
+        color *= clamp(ao, 0.35, 1.0);
+    }
     // Guarda final: NENHUM passe de pós pode produzir NaN/Inf e apagar a tela.
     if (any(isnan(color)) || any(isinf(color))) color = vec3(0.0);
     color *= u_Exposure;

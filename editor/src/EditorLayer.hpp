@@ -201,7 +201,7 @@ private:
     bool m_AutoCompileOnPlay = true;   // compila o assembly C# antes do Play (estilo Unity)
     bool m_ShowStats = true;           // overlay de estatísticas no viewport (FPS/draw calls/tris)
     float m_FpsSmoothed = 0.0f;        // FPS médio suavizado (Profiler do viewport)
-    bool m_ShowColliders = true;       // overlay de física: desenha TODOS os colliders da cena
+    bool m_ShowColliders = false;      // overlay de física: desenha TODOS os colliders da cena (debug)
     int m_ThumbBudget = 0;             // thumbnails novos permitidos neste frame (anti-trava)
 
     // Preferências do editor (configuráveis em Configurações > Editor).

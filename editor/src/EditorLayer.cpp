@@ -1866,8 +1866,24 @@ void EditorLayer::DrawGizmo() {
     float snapAmount = (m_GizmoOperation == ImGuizmo::OPERATION::ROTATE) ? m_GizmoSnapRotation : m_GizmoSnapTranslation;
     float snapValues[3] = { snapAmount, snapAmount, snapAmount };
 
+    // No modo 2D, o eixo Z do gizmo fica de perfil pra câmera ortográfica
+    // (que olha reto por Z) e o cone/seta desse eixo achata numa mancha
+    // triangular colorida, com as linhas dos outros eixos em leque — era
+    // esse o "triângulo verde" bugado no viewport 2D. Em 2D só faz sentido
+    // manipular X/Y (translate) ou rotação em Z (rotate); então filtramos
+    // a operação pros eixos relevantes em vez de usar o enum cheio de 3D.
+    ImGuizmo::OPERATION op = m_GizmoOperation;
+    if (m_ViewportMode == ViewportMode::Mode2D) {
+        if (m_GizmoOperation == ImGuizmo::TRANSLATE)
+            op = (ImGuizmo::OPERATION)(ImGuizmo::TRANSLATE_X | ImGuizmo::TRANSLATE_Y);
+        else if (m_GizmoOperation == ImGuizmo::SCALE)
+            op = (ImGuizmo::OPERATION)(ImGuizmo::SCALE_X | ImGuizmo::SCALE_Y);
+        else if (m_GizmoOperation == ImGuizmo::ROTATE)
+            op = ImGuizmo::ROTATE_Z;
+    }
+
     ImGuizmo::Manipulate(glm::value_ptr(view), glm::value_ptr(proj),
-                          m_GizmoOperation, ImGuizmo::LOCAL,
+                          op, ImGuizmo::LOCAL,
                           glm::value_ptr(worldTransform), nullptr,
                           snap ? snapValues : nullptr);
 

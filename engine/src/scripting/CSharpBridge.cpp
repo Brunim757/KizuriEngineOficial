@@ -223,6 +223,24 @@ KZ_SCRIPT_API void kz_transform_set_position(uint32_t entity, float x, float y, 
     tc.Translation = glm::vec3(x, y, z);
 }
 
+// Posição MUNDIAL: converte pra local automaticamente se houver pai.
+KZ_SCRIPT_API void kz_entity_set_world_position(uint32_t entity, float x, float y, float z) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::TransformComponent>()) return;
+    glm::vec3 desired(x, y, z);
+    auto* rel = s_ActiveScene->GetRegistry().try_get<kizuri::RelationshipComponent>(e.GetHandle());
+    if (rel && rel->Parent) {
+        kizuri::Entity parent = s_ActiveScene->GetEntityByUUID(rel->Parent);
+        if (parent) {
+            glm::mat4 parentWorld = s_ActiveScene->GetWorldTransform(parent);
+            glm::vec4 local = glm::inverse(parentWorld) * glm::vec4(desired, 1.0f);
+            e.GetComponent<kizuri::TransformComponent>().Translation = glm::vec3(local);
+            return;
+        }
+    }
+    e.GetComponent<kizuri::TransformComponent>().Translation = desired;
+}
+
 KZ_SCRIPT_API void kz_entity_set_parent(uint32_t child, uint32_t parent) {
     auto c = Resolve(child);
     if (!c) return;

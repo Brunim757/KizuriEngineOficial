@@ -43,6 +43,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_entity_has_component(uint entity, int componentType);
     [DllImport(Lib)] internal static extern int kz_entity_get_transform(uint entity, out Math.Vector3 position, out Math.Vector3 rotation, out Math.Vector3 scale);
     [DllImport(Lib)] internal static extern void kz_transform_set_position(uint entity, float x, float y, float z);
+    [DllImport(Lib)] internal static extern void kz_entity_set_world_position(uint entity, float x, float y, float z);
     [DllImport(Lib)] internal static extern void kz_transform_set_rotation(uint entity, float x, float y, float z);
     [DllImport(Lib)] internal static extern void kz_transform_set_scale(uint entity, float x, float y, float z);
     [DllImport(Lib)] internal static extern int kz_entity_get_rotation(uint entity, out Math.Vector3 rotation);

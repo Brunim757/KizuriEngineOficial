@@ -83,6 +83,11 @@ public readonly struct Entity
 	public void SetPosition(Math.Vector3 position)
 		=> Interop.KizuriNative.kz_transform_set_position(Handle, position.X, position.Y, position.Z);
 
+	// Posição MUNDIAL (converte pra local se houver pai) — coloca em
+	// coordenadas de mundo independente da hierarquia.
+	public void SetWorldPosition(Math.Vector3 position)
+		=> Interop.KizuriNative.kz_entity_set_world_position(Handle, position.X, position.Y, position.Z);
+
 	// Posição LOCAL (Translation) atual — o getter do SetPosition.
 	public Math.Vector3 Position
 	{

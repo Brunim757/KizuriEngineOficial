@@ -178,6 +178,36 @@ public readonly struct Entity
 	public void LookAt(Math.Vector3 target)
 		=> Interop.KizuriNative.kz_entity_look_at(Handle, target.X, target.Y, target.Z);
 
+	// Direção para a frente (convenção da câmera: yaw em Rotation.Y,
+	// pitch em Rotation.X). Útil pra mover "pra onde olha".
+	public Math.Vector3 GetForward()
+	{
+		var r = Rotation;
+		float cy = (float)System.Math.Cos(r.Y), sy = (float)System.Math.Sin(r.Y);
+		float cp = (float)System.Math.Cos(r.X), sp = (float)System.Math.Sin(r.X);
+		return new Math.Vector3(cy * cp, sp, sy * cp);
+	}
+
+	// Direita (perpendicular no plano XZ).
+	public Math.Vector3 GetRight()
+	{
+		var r = Rotation;
+		return new Math.Vector3(-(float)System.Math.Sin(r.Y), 0f, (float)System.Math.Cos(r.Y));
+	}
+
+	// Move ao longo da própria frente/direita (sem depender de rotação de câmera).
+	public void MoveForward(float distance)
+	{
+		var f = GetForward();
+		SetPosition(Position + new Math.Vector3(f.X * distance, f.Y * distance, f.Z * distance));
+	}
+
+	public void MoveRight(float distance)
+	{
+		var r = GetRight();
+		SetPosition(Position + new Math.Vector3(r.X * distance, 0f, r.Z * distance));
+	}
+
 	// Parenta 'this' a 'parent' (ou destaca, com SetParent() sem argumento).
 	public void SetParent(Entity parent)
 		=> Interop.KizuriNative.kz_entity_set_parent(Handle, parent.Handle);

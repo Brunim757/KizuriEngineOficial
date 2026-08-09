@@ -564,6 +564,106 @@ void EditorLayer::CreateDemoScene2D() {
     KZ_CORE_INFO("Cena de demonstração 2D criada.");
 }
 
+// Cena de demonstração FÍSICA 2D (Box2D de verdade): rampa, dominós, pirâmide
+// e círculos rolando — aperte Play pra ver a física resolver tudo.
+void EditorLayer::CreateDemoScene2DPhysics() {
+    if (m_SceneState != SceneState::Edit) return;
+    m_ActiveScene = CreateRef<Scene>("Demonstração Física 2D");
+    m_ScenePath.clear();
+    m_SelectedEntity = {};
+    m_ViewportMode = ViewportMode::Mode2D;
+    m_Editor2DZoom = 9.0f;
+    m_Editor2DCamPos = { 0.0f, 0.0f };
+    m_Editor2DFirstMouseLook = true;
+
+    Entity camera = m_ActiveScene->CreateEntity("Câmera 2D");
+    auto& cc = camera.AddComponent<CameraComponent>();
+    cc.Type = CameraComponent::ProjectionType::Orthographic2D;
+    cc.Primary = true;
+    cc.OrthoSize = 9.0f;
+
+    auto MakeStaticBox = [&](const std::string& name, float x, float y, float w, float h, float rotDeg,
+                             glm::vec4 color) {
+        Entity e = m_ActiveScene->CreateEntity(name);
+        auto& s = e.AddComponent<SpriteRendererComponent>();
+        s.Color = color;
+        auto& t = e.GetComponent<TransformComponent>();
+        t.Translation = { x, y, 0.0f };
+        t.Scale = { w, h, 1.0f };
+        t.Rotation.z = glm::radians(rotDeg);
+        auto& rb = e.AddComponent<Rigidbody2DComponent>();
+        rb.Type = Rigidbody2DComponent::BodyType::Static;
+        auto& col = e.AddComponent<BoxCollider2DComponent>();
+        col.Size = { w, h };
+        return e;
+    };
+    auto MakeDynamicBox = [&](const std::string& name, float x, float y, float w, float h, float rotDeg,
+                              glm::vec4 color) {
+        Entity e = m_ActiveScene->CreateEntity(name);
+        auto& s = e.AddComponent<SpriteRendererComponent>();
+        s.Color = color;
+        auto& t = e.GetComponent<TransformComponent>();
+        t.Translation = { x, y, 0.0f };
+        t.Scale = { w, h, 1.0f };
+        t.Rotation.z = glm::radians(rotDeg);
+        e.AddComponent<Rigidbody2DComponent>().Type = Rigidbody2DComponent::BodyType::Dynamic;
+        auto& col = e.AddComponent<BoxCollider2DComponent>();
+        col.Size = { w, h };
+        return e;
+    };
+    auto MakeCircle = [&](const std::string& name, float x, float y, float r, glm::vec4 color) {
+        Entity e = m_ActiveScene->CreateEntity(name);
+        auto& s = e.AddComponent<CircleRendererComponent>();
+        s.Color = color;
+        auto& t = e.GetComponent<TransformComponent>();
+        t.Translation = { x, y, 0.0f };
+        t.Scale = { r * 2.0f, r * 2.0f, 1.0f };
+        e.AddComponent<Rigidbody2DComponent>().Type = Rigidbody2DComponent::BodyType::Dynamic;
+        auto& col = e.AddComponent<CircleCollider2DComponent>();
+        col.Radius = r;
+        return e;
+    };
+
+    // Chão + paredes + rampas (estáticos).
+    MakeStaticBox("Chão", 0.0f, -8.5f, 26.0f, 1.0f, 0.0f, { 0.28f, 0.32f, 0.38f, 1.0f });
+    MakeStaticBox("Parede Esquerda", -13.0f, 0.0f, 1.0f, 17.0f, 0.0f, { 0.20f, 0.22f, 0.26f, 1.0f });
+    MakeStaticBox("Parede Direita", 13.0f, 0.0f, 1.0f, 17.0f, 0.0f, { 0.20f, 0.22f, 0.26f, 1.0f });
+    MakeStaticBox("Rampa Esquerda", -7.0f, -3.0f, 7.0f, 0.6f, 18.0f, { 0.45f, 0.40f, 0.34f, 1.0f });
+    MakeStaticBox("Rampa Direita", 7.0f, -4.0f, 6.0f, 0.6f, -15.0f, { 0.45f, 0.40f, 0.34f, 1.0f });
+
+    // Dominós que tombam em cadeia.
+    for (int i = 0; i < 8; ++i)
+        MakeDynamicBox("Dominó " + std::to_string(i + 1), -9.5f + i * 1.1f, -5.5f, 0.25f, 1.6f, 0.0f,
+                       { 0.85f, 0.55f, 0.2f, 1.0f });
+
+    // Círculos rolando da rampa esquerda.
+    for (int i = 0; i < 4; ++i)
+        MakeCircle("Bola " + std::to_string(i + 1), -9.0f + i * 1.2f, 3.0f + i * 0.8f, 0.45f,
+                   { 0.3f, 0.55f, 0.85f, 1.0f });
+
+    // Pirâmide de caixas.
+    MakeDynamicBox("Pirâmide 1", 6.5f, -6.5f, 1.0f, 1.0f, 0.0f, { 0.55f, 0.75f, 0.35f, 1.0f });
+    MakeDynamicBox("Pirâmide 2", 5.5f, -5.5f, 1.0f, 1.0f, 0.0f, { 0.55f, 0.75f, 0.35f, 1.0f });
+    MakeDynamicBox("Pirâmide 3", 7.5f, -5.5f, 1.0f, 1.0f, 0.0f, { 0.55f, 0.75f, 0.35f, 1.0f });
+    MakeDynamicBox("Pirâmide 4", 6.5f, -4.5f, 1.0f, 1.0f, 0.0f, { 0.6f, 0.8f, 0.4f, 1.0f });
+
+    // Círculos caindo sobre a pirâmide.
+    for (int i = 0; i < 3; ++i)
+        MakeCircle("Bola extra " + std::to_string(i + 1), 4.5f + i * 2.0f, 2.0f + i * 1.5f, 0.5f,
+                   { 0.9f, 0.45f, 0.3f, 1.0f });
+
+    Entity title = m_ActiveScene->CreateEntity("Título");
+    auto& tc = title.AddComponent<TextComponent>();
+    tc.Text = "Demonstração Física 2D — aperte Play";
+    tc.FontSize = 32.0f;
+    tc.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    tc.SortingLayer = 5;
+    title.GetComponent<TransformComponent>().Translation = { -8.5f, 7.8f, 0.0f };
+
+    m_SelectedEntity = {};
+    KZ_CORE_INFO("Cena de demonstração Física 2D criada (dominós, rampa, pirâmide).");
+}
+
 // Cena de demonstração 2.5D — mundo 3D de fundo, gameplay 2D na frente e UI
 // por cima: uma cena com as DUAS câmeras primárias (perspectiva + ortográfica).
 // No Play a engine roda 3D -> 2D -> UI, então sprites aparecem sobre o 3D.
@@ -1729,6 +1829,8 @@ void EditorLayer::DrawSettingsEditor() {
     ImGui::Separator();
     if (ImGui::Button("Criar demonstração 2D")) CreateDemoScene2D();
     ImGui::SameLine();
+    if (ImGui::Button("Criar demo Física 2D")) CreateDemoScene2DPhysics();
+    ImGui::SameLine();
     if (ImGui::Button("Criar demonstração 3D")) CreateDemoScene3D();
     ImGui::SameLine();
     if (ImGui::Button("Criar demo Física 3D")) CreateDemoScene3DPhysics();
@@ -2267,6 +2369,8 @@ void EditorLayer::DrawDockspace() {
         ImGui::Separator();
         if (ImGui::MenuItem("Cena de Demonstração 2D...", nullptr, false, m_SceneState == SceneState::Edit))
             CreateDemoScene2D();
+        if (ImGui::MenuItem("Cena de Demonstração Física 2D...", nullptr, false, m_SceneState == SceneState::Edit))
+            CreateDemoScene2DPhysics();
         if (ImGui::MenuItem("Cena de Demonstração 2.5D...", nullptr, false, m_SceneState == SceneState::Edit))
             CreateDemoScene2_5D();
         if (ImGui::MenuItem("Cena de Demonstração 3D...", nullptr, false, m_SceneState == SceneState::Edit))

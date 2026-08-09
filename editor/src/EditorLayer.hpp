@@ -88,6 +88,9 @@ private:
     void CreateDemoScene3D();
     // Cena de demonstração 2D: sprites, física Box2D, partículas, texto e UI.
     void CreateDemoScene2D();
+    // Cena de demonstração Física 2D: dominós, rampa, pirâmide e círculos
+    // (Box2D de verdade) — aperte Play pra ver a física resolver.
+    void CreateDemoScene2DPhysics();
     // Cena de demonstração 2.5D: mundo 3D de fundo + camada de jogo 2D na
     // frente + UI (prova a composição 3D -> 2D -> UI com as duas câmeras).
     void CreateDemoScene2_5D();

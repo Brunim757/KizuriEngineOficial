@@ -717,6 +717,30 @@ KZ_SCRIPT_API void kz_rigidbody2d_apply_linear_impulse(uint32_t entity, float ix
     e.GetComponent<kizuri::Rigidbody2DComponent>().ApplyLinearImpulse({ ix, iy }, wake != 0);
 }
 
+KZ_SCRIPT_API void kz_rigidbody2d_apply_force(uint32_t entity, float fx, float fy, int wake) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::Rigidbody2DComponent>()) return;
+    e.GetComponent<kizuri::Rigidbody2DComponent>().ApplyForce({ fx, fy }, wake != 0);
+}
+
+KZ_SCRIPT_API void kz_rigidbody2d_set_angular_velocity(uint32_t entity, float w) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::Rigidbody2DComponent>()) return;
+    e.GetComponent<kizuri::Rigidbody2DComponent>().SetAngularVelocity(w);
+}
+
+KZ_SCRIPT_API float kz_rigidbody2d_get_angular_velocity(uint32_t entity) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::Rigidbody2DComponent>()) return 0.0f;
+    return e.GetComponent<kizuri::Rigidbody2DComponent>().GetAngularVelocity();
+}
+
+KZ_SCRIPT_API void kz_rigidbody2d_set_fixed_rotation(uint32_t entity, int fixed) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::Rigidbody2DComponent>()) return;
+    e.GetComponent<kizuri::Rigidbody2DComponent>().SetFixedRotation(fixed != 0);
+}
+
 KZ_SCRIPT_API void kz_rigidbody2d_set_transform(uint32_t entity, float x, float y, float angle) {
     auto e = Resolve(entity);
     if (!e || !e.HasComponent<kizuri::Rigidbody2DComponent>()) return;

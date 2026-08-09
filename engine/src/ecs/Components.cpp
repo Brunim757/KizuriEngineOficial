@@ -50,6 +50,27 @@ void Rigidbody2DComponent::SetTransform(const glm::vec2& position, float angleRa
     static_cast<b2Body*>(RuntimeBody)->SetTransform({ position.x, position.y }, angleRadians);
 }
 
+void Rigidbody2DComponent::ApplyForce(const glm::vec2& force, bool wake) {
+    if (!RuntimeBody) return;
+    static_cast<b2Body*>(RuntimeBody)->ApplyForceToCenter({ force.x, force.y }, wake);
+}
+
+float Rigidbody2DComponent::GetAngularVelocity() const {
+    if (!RuntimeBody) return 0.0f;
+    return static_cast<b2Body*>(RuntimeBody)->GetAngularVelocity();
+}
+
+void Rigidbody2DComponent::SetAngularVelocity(float w) {
+    if (!RuntimeBody) return;
+    static_cast<b2Body*>(RuntimeBody)->SetAngularVelocity(w);
+}
+
+void Rigidbody2DComponent::SetFixedRotation(bool fixed) {
+    FixedRotation = fixed;
+    if (!RuntimeBody) return;
+    static_cast<b2Body*>(RuntimeBody)->SetFixedRotation(fixed);
+}
+
 void NativeScriptComponent::BindByName(const std::string& className) {
     ClassName = className;
 

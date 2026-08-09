@@ -337,8 +337,12 @@ struct Rigidbody2DComponent {
     // RuntimeBody já foi criado. Fica aqui (não no script) porque o b2Body
     // é interno; scripts não precisam linkar Box2D.
     void ApplyLinearImpulse(const glm::vec2& impulse, bool wake = true);
+    void ApplyForce(const glm::vec2& force, bool wake = true);
     void SetLinearVelocity(const glm::vec2& velocity);
     glm::vec2 GetLinearVelocity() const;
+    float GetAngularVelocity() const;
+    void SetAngularVelocity(float w);
+    void SetFixedRotation(bool fixed);
     // Sincroniza o corpo com Translation/Rotation.z do Transform (útil
     // pra Kinematic, ou pra teleportar um Dynamic sem lutar com o Step).
     void SetTransform(const glm::vec2& position, float angleRadians);

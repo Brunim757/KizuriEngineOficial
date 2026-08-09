@@ -188,7 +188,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_rigidbody2d_apply_force(uint entity, float fx, float fy, int wake);
     [DllImport(Lib)] internal static extern void kz_rigidbody2d_set_angular_velocity(uint entity, float w);
     [DllImport(Lib)] internal static extern float kz_rigidbody2d_get_angular_velocity(uint entity);
-    [DllImport(Lib)] internal static extern void kz_rigidbody2d_set_fixed_rotation(uint entity, int fixed);
+    [DllImport(Lib)] internal static extern void kz_rigidbody2d_set_fixed_rotation(uint entity, int fixedRotation);
     [DllImport(Lib)] internal static extern void kz_rigidbody2d_set_transform(uint entity, float x, float y, float angle);
     [DllImport(Lib)] internal static extern int kz_physics2d_raycast(float x0, float y0, float x1, float y1, out float hitX, out float hitY, out uint hitEntity);
     [DllImport(Lib)] internal static extern int kz_physics2d_overlap_circle(float x, float y, float radius, out uint hitEntity);

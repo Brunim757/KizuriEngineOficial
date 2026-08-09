@@ -35,6 +35,7 @@ forem). Igual ao `SetActive` do GameObject.
 ```csharp
 Entity.Move(x, y, z);                  // translada (espaço local)
 Entity.SetPosition(x, y, z);
+Entity.SetWorldPosition(x, y, z);      // posição de mundo (mesmo com pai)
 Entity.Rotate(0f, 45f, 0f);
 Entity.SetEulerAngles(x, y, z);
 Entity.SetScale(x, y, z);

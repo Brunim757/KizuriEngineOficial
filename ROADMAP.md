@@ -736,5 +736,13 @@ minor chegar em `99` — quando seria `0.100`, vira **`1.0`**.
 - [x] **Animação de sprite**: `AddSpriteAnimation/PlaySpriteAnimation/
   SetSpriteAnimationFPS`
 - [x] **Getters de transform**: `Entity.Rotation` e `Entity.Scale`
+- [x] **Áudio por fonte**: `SetAudioVolume` / `SetAudioSpatial`
+- [x] **`Scene.All`** — todas as entidades da cena; **`FindInChildren`** —
+  busca recursiva por nome
+- [x] **Movimento de jogo**: `GetForward/GetRight/MoveForward/MoveRight` e
+  **`SetWorldPosition`** (converte pra local com pai)
+- [x] **Exemplo jogável `DemoCharacter3D`** (SampleGame): terreno + character
+  controller v2 + camera follow + gravidade alternada — validado pelo CI
+  managed
 
 ---

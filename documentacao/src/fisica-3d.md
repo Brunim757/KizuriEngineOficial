@@ -45,9 +45,16 @@ Entity.MoveCharacter(dirX, dirZ);        // input de movimento todo frame
 ## Rigidbody3D
 
 - **Type**: estático, dinâmico ou cinemático
+- **GravityScale** — gravidade por corpo (`0` = flutua, negativo = invertida)
+- **Damping** (linear/angular) — movimento mais macio
 - Forças via script: `ApplyForce`, `ApplyImpulse`
 - Velocidade: `TryGetVelocity`, `SetVelocity`
 - Torque: `ApplyTorque`, `SetAngularVelocity`
+
+```csharp
+Entity.SetGravityScale3D(0f);           // flutua (gravidade zerada)
+Entity.SetDamping3D(0.1f, 0.05f);       // amortecimento linear/angular
+```
 
 ## Consultas
 

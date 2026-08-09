@@ -51,6 +51,24 @@ Entity.AddCamera();
 Entity.AddLight(LightType.Directional, r, g, b, intensidade);
 Entity.AddMeshRenderer("builtin:cube");
 Entity.AddAnimator("Assets/Models/Fox.glb");
+// Animação de sprite (sprite sheet) em runtime
+Entity.AddSpriteAnimation("Assets/imgs/run.png", fps: 12f, totalFrames: 8, framesPerRow: 4);
+// Partículas configuráveis em runtime
+Entity.SetParticleRate(60f);
+Entity.SetParticleLifetime(0.5f, 1.5f);
+Entity.SetParticleVelocity(min, max);
+Entity.SetParticleGravity(new Math.Vector3(0, -2, 0));
+Entity.SetParticleColors(startColor, endColor);
+Entity.SetParticleSize(0.2f, 0.5f);
+```
+
+## Tilemap procedural
+
+```csharp
+var mapa = Scene.CreateEntity("Mapa");
+mapa.AddTilemap("Assets/imgs/atlas.png", atlasCols: 8, atlasRows: 8, mapW: 20, mapH: 12);
+mapa.AddSolidTile(3);   // tile 3 do atlas = sólido (collider Box2D)
+mapa.SetTile(2, 3, 3);  // põe o tile no mapa
 ```
 
 ## Física

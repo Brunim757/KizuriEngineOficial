@@ -34,11 +34,32 @@ jogos de plataforma, pinball, quebra-cabeças e qualquer coisa 2D.
 
 ```csharp
 // mover um corpo dinâmico
-Entity.SetLinearVelocity(x, y);
+var rb = Entity.GetRigidbody2D();
+rb.SetLinearVelocity(new Math.Vector2(5f, 0f));
+rb.ApplyForce(new Math.Vector2(0f, 100f));       // força contínua (todo frame)
+rb.ApplyLinearImpulse(new Math.Vector2(0f, 20f)); // impulso único (pulo)
+rb.SetAngularVelocity(3f);                         // gira (rad/s)
+rb.SetFixedRotation(true);                         // não tomba (tank)
 // detectar toque
 public override void OnCollisionBegin(Entity other) {
     if (other.Name == "Moeda") Scene.Destroy(other);
 }
+```
+
+`Entity.GetRigidbody2D()` devolve um `Rigidbody2D` (ou use `TryGetRigidbody2D`
+com `out`). Tudo aplicado em runtime, durante o Play.
+
+## Tilemap com colisão em runtime
+
+Além do tilemap do editor, dá pra construir um nível no script — tiles
+marcados como sólidos geram **collider Box2D estático** automaticamente:
+
+```csharp
+var mapa = Scene.CreateEntity("Mapa");
+mapa.AddTilemap("Assets/imgs/atlas.png", atlasCols: 8, atlasRows: 8, mapW: 20, mapH: 12);
+mapa.AddSolidTile(3);                 // tile 3 do atlas = sólido
+mapa.SetTile(2, 3, 3);                // coloca o tile sólido
+// y=0 é a linha de cima; colliders recriam sozinhos quando o mapa muda
 ```
 
 ## OverlapCircle2D

@@ -73,6 +73,13 @@ public readonly struct Entity
 		return true;
 	}
 
+	// Rigidbody2D da entidade (default se não tiver) — conveniência pro script.
+	public Rigidbody2D GetRigidbody2D()
+	{
+		TryGetRigidbody2D(out var rb);
+		return rb;
+	}
+
 	public void SetPosition(Math.Vector3 position)
 		=> Interop.KizuriNative.kz_transform_set_position(Handle, position.X, position.Y, position.Z);
 

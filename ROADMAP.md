@@ -712,3 +712,29 @@ minor chegar em `99` — quando seria `0.100`, vira **`1.0`**.
   v0.31.0 publicada** (ambas as plataformas)
 
 ---
+## 🚧 v0.32 — Editor, física 2D e API (em andamento)
+
+### Editor
+- [x] **Gizmos de collider 3D com profundidade e rotação** (`Renderer3D::
+  SubmitDebugLine`): wireframe abraça o objeto e é ocultado por geometria
+  mais próxima — não flutua mais acima (era overlay de tela sem depth)
+- [x] **Demonstração Física 2D**: dominós, rampa, pirâmide e bolas (Box2D)
+
+### Física
+- [x] **Rigidbody3D**: `GravityScale` (flutuação/invertida), `LinearDamping` e
+  `AngularDamping` — Inspetor completo (Tipo/Massa/Gravidade/Damping) +
+  serializado + C# (`SetGravityScale3D`/`SetDamping3D`)
+- [x] **Rigidbody2D C#**: `ApplyForce`, `Get/SetAngularVelocity`,
+  `SetFixedRotation`
+- [x] **Tilemap em runtime com colliders**: `AddTilemap`/`SetTile`/
+  `AddSolidTile` no C# + rebuild automático dos colliders Box2D
+  (`CollidersDirty`)
+
+### Scripting C#
+- [x] **Partículas**: `SetParticleRate/Lifetime/Velocity/Gravity/Colors/
+  Size/Additive`
+- [x] **Animação de sprite**: `AddSpriteAnimation/PlaySpriteAnimation/
+  SetSpriteAnimationFPS`
+- [x] **Getters de transform**: `Entity.Rotation` e `Entity.Scale`
+
+---

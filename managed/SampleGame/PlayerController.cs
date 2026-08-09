@@ -132,5 +132,6 @@ public static class SampleGameModule
 		Kizuri.GameModule.Register<PlayerController>("PlayerController");
 		Kizuri.GameModule.Register<UISample>("UISample");
 		Kizuri.GameModule.Register<Demo3D>("Demo3D");
+		Kizuri.GameModule.Register<DemoCharacter3D>("DemoCharacter3D");
 	}
 }

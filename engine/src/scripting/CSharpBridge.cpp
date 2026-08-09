@@ -387,6 +387,27 @@ KZ_SCRIPT_API int kz_entity_is_active(uint32_t entity) {
     return s_ActiveScene->IsEntityActive(e) ? 1 : 0;
 }
 
+// Quantas entidades existem na cena ativa (pra iterar com kz_scene_get_entity_at).
+KZ_SCRIPT_API int kz_scene_get_entity_count() {
+    if (s_ActiveScene == nullptr) return 0;
+    int count = 0;
+    for (auto e : s_ActiveScene->GetRegistry().storage<entt::entity>()) { (void)e; ++count; }
+    return count;
+}
+
+// Entidade no índice da enumeração (ordem interna — use pra varrer todas).
+KZ_SCRIPT_API uint32_t kz_scene_get_entity_at(int index) {
+    if (s_ActiveScene == nullptr || index < 0) return 0;
+    int i = 0;
+    uint32_t handle = 0;
+    for (auto e : s_ActiveScene->GetRegistry().storage<entt::entity>()) {
+        if (i++ == index) handle = kizuri::scripting::RegisterEntityHandle(kizuri::Entity{ e, s_ActiveScene });
+    }
+    return handle;
+}
+
+// Duplica a entidade (com toda a subárvore) e devolve a cópia, com um
+// leve deslocamento pra não nascer em cima do original.
 KZ_SCRIPT_API uint32_t kz_scene_duplicate_entity(uint32_t entity) {
     auto e = Resolve(entity);
     if (!e) return 0;

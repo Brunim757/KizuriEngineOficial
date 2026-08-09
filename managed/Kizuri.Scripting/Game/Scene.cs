@@ -75,6 +75,20 @@ public static class Scene
 	public static Entity Duplicate(Entity entity)
 		=> new(Interop.KizuriNative.kz_scene_duplicate_entity(entity.Handle));
 
+	// Todas as entidades da cena (ordem interna — útil pra varrer tudo:
+	// aplicar efeito, checar condição, etc.).
+	public static Entity[] All
+	{
+		get
+		{
+			int count = Interop.KizuriNative.kz_scene_get_entity_count();
+			if (count <= 0) return System.Array.Empty<Entity>();
+			var result = new Entity[count];
+			for (int i = 0; i < count; ++i) result[i] = new Entity(Interop.KizuriNative.kz_scene_get_entity_at(i));
+			return result;
+		}
+	}
+
 	// Raycast 2D contra o mundo Box2D (só funciona durante o Play). Devolve
 	// a primeira entidade atingida e o ponto do impacto. false = nada acertado.
 	public static bool Raycast2D(Math.Vector2 from, Math.Vector2 to, out Entity hit, out Math.Vector2 point)

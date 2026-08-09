@@ -83,6 +83,8 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_entity_get_world_position(uint entity, out float x, out float y, out float z);
     [DllImport(Lib)] internal static extern void kz_entity_look_at(uint entity, float tx, float ty, float tz);
     [DllImport(Lib)] internal static extern uint kz_scene_duplicate_entity(uint entity);
+    [DllImport(Lib)] internal static extern int kz_scene_get_entity_count();
+    [DllImport(Lib)] internal static extern uint kz_scene_get_entity_at(int index);
 
     // ---- Adicionar componentes em runtime -------------------------------------
     [DllImport(Lib)] internal static extern int kz_entity_add_sprite(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string? texturePath);

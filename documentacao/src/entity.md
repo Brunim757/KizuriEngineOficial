@@ -39,6 +39,10 @@ Entity.Rotate(0f, 45f, 0f);
 Entity.SetEulerAngles(x, y, z);
 Entity.SetScale(x, y, z);
 Entity.LookAt(outro);
+Entity.GetForward();                 // direção pra onde olha (Vector3)
+Entity.GetRight();                   // direção lateral
+Entity.MoveForward(distancia);       // move ao longo da própria frente
+Entity.MoveRight(distancia);         // move pro lado
 ```
 
 ## Criar conteúdo

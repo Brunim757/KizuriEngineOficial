@@ -100,7 +100,10 @@ var inimigo = Scene.Find("Inimigo");
 
 // Todas as entidades que têm o Tag "Inimigo" (Tags &amp; Layers)
 Entity[] horda = Scene.EntitiesWithTag("Inimigo");
-foreach (var e in horda) { ... }</code></pre><button class="copy" title="Copiar">📋</button></div>
+foreach (var e in horda) { ... }
+
+// Todas as entidades da cena (varrer tudo)
+foreach (var e in Scene.All) { ... }</code></pre><button class="copy" title="Copiar">📋</button></div>
 <h2 id="consultas-raycasts">Consultas (raycasts)</h2>
 <div class="codeblock"><pre><code class="language-csharp">// 2D (Box2D)
 var hit = Scene.Raycast2D(origemX, origemY, dirX, dirY);

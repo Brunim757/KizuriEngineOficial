@@ -44,6 +44,9 @@ var inimigo = Scene.Find("Inimigo");
 // Todas as entidades que têm o Tag "Inimigo" (Tags & Layers)
 Entity[] horda = Scene.EntitiesWithTag("Inimigo");
 foreach (var e in horda) { ... }
+
+// Todas as entidades da cena (varrer tudo)
+foreach (var e in Scene.All) { ... }
 ```
 
 ## Consultas (raycasts)

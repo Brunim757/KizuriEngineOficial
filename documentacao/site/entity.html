@@ -101,7 +101,11 @@ Entity.SetPosition(x, y, z);
 Entity.Rotate(0f, 45f, 0f);
 Entity.SetEulerAngles(x, y, z);
 Entity.SetScale(x, y, z);
-Entity.LookAt(outro);</code></pre><button class="copy" title="Copiar">📋</button></div>
+Entity.LookAt(outro);
+Entity.GetForward();                 // direção pra onde olha (Vector3)
+Entity.GetRight();                   // direção lateral
+Entity.MoveForward(distancia);       // move ao longo da própria frente
+Entity.MoveRight(distancia);         // move pro lado</code></pre><button class="copy" title="Copiar">📋</button></div>
 <h2 id="criar-contedo">Criar conteúdo</h2>
 <div class="codeblock"><pre><code class="language-csharp">Entity.AddSprite("Assets/imgs/heroi.png");
 Entity.AddText("Olá!", 24f, 1f, 1f, 1f);

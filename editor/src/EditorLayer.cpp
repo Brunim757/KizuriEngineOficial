@@ -4387,6 +4387,22 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<Rigidbody2DComponent>();
         }
 
+        if (m_SelectedEntity.HasComponent<Rigidbody3DComponent>()) {
+            auto& rb3 = m_SelectedEntity.GetComponent<Rigidbody3DComponent>();
+            if (DrawComponentHeader("Rigidbody 3D", &removeThis)) {
+                const char* types[] = { "Estático", "Dinâmico", "Cinemático" };
+                int current = (int)rb3.Type;
+                if (ImGui::Combo("Tipo", &current, types, IM_ARRAYSIZE(types)))
+                    rb3.Type = (Rigidbody3DComponent::BodyType)current;
+                ImGui::DragFloat("Massa", &rb3.Mass, 0.1f, 0.01f, 1000.0f);
+                ImGui::DragFloat("Escala de gravidade", &rb3.GravityScale, 0.05f, -5.0f, 5.0f);
+                ImGui::DragFloat("Amortecimento linear", &rb3.LinearDamping, 0.01f, 0.0f, 5.0f);
+                ImGui::DragFloat("Amortecimento angular", &rb3.AngularDamping, 0.01f, 0.0f, 5.0f);
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<Rigidbody3DComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<BoxCollider2DComponent>()) {
             auto& bc = m_SelectedEntity.GetComponent<BoxCollider2DComponent>();
             if (DrawComponentHeader("Box Collider 2D", &removeThis)) {

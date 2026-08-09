@@ -343,6 +343,13 @@ public readonly struct Entity
 	public void SetAngularVelocity(Math.Vector3 angular)
 		=> Interop.KizuriNative.kz_rigidbody3d_set_angular_velocity(Handle, angular.X, angular.Y, angular.Z);
 
+	// Gravidade escalada 3D (<0 invertida, 0 = flutua) e amortecimento.
+	public void SetGravityScale3D(float scale)
+		=> Interop.KizuriNative.kz_rigidbody3d_set_gravity_scale(Handle, scale);
+
+	public void SetDamping3D(float linear, float angular)
+		=> Interop.KizuriNative.kz_rigidbody3d_set_damping(Handle, linear, angular);
+
 	public bool AddCircleCollider2D(float radius = 0.5f, float density = 1f, float friction = 0.5f, float restitution = 0f)
 		=> Interop.KizuriNative.kz_entity_add_circle_collider2d(Handle, radius, density, friction, restitution) != 0;
 

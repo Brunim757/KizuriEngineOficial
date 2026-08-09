@@ -121,6 +121,8 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_rigidbody3d_apply_torque(uint entity, float tx, float ty, float tz);
     [DllImport(Lib)] internal static extern int kz_rigidbody3d_get_angular_velocity(uint entity, out float wx, out float wy, out float wz);
     [DllImport(Lib)] internal static extern void kz_rigidbody3d_set_angular_velocity(uint entity, float wx, float wy, float wz);
+    [DllImport(Lib)] internal static extern void kz_rigidbody3d_set_gravity_scale(uint entity, float scale);
+    [DllImport(Lib)] internal static extern void kz_rigidbody3d_set_damping(uint entity, float linear, float angular);
     [DllImport(Lib)] internal static extern int kz_physics3d_raycast(float x0, float y0, float z0, float x1, float y1, float z1, out float hitX, out float hitY, out float hitZ, out float fraction, out uint hitEntity);
     [DllImport(Lib)] internal static extern int kz_physics3d_overlap_sphere(float x, float y, float z, float radius, out uint hitEntity);
     [DllImport(Lib)] internal static extern int kz_physics3d_overlap_box(float x, float y, float z, float hx, float hy, float hz, out uint hitEntity);

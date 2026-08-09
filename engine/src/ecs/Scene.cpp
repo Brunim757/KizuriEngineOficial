@@ -1013,6 +1013,9 @@ void Scene::RegisterPhysics3DEntity(Entity entity) {
         body->setCollisionFlags(body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
         body->setActivationState(DISABLE_DEACTIVATION);
     }
+    // Gravidade escalada + amortecimento (flutuação / movimento mais macio).
+    body->setGravity(m_PhysicsWorld3D->getGravity() * rb3d.GravityScale);
+    body->setDamping(rb3d.LinearDamping, rb3d.AngularDamping);
     body->setUserPointer(reinterpret_cast<void*>(static_cast<uintptr_t>(static_cast<uint32_t>(entity.GetHandle()))));
 
     // Filtro de colisão por CAMADA (Tags & Layers): usa a sobrecarga clássica
@@ -1026,6 +1029,27 @@ void Scene::RegisterPhysics3DEntity(Entity entity) {
         m_PhysicsWorld3D->addRigidBody(body);
     }
     rb3d.RuntimeBody = body;
+}
+
+// Gravidade escalada em runtime (<0 invertida, 0 = flutua).
+void Scene::SetRigidbody3DGravityScale(Entity entity, float scale) {
+    if (!entity.HasComponent<Rigidbody3DComponent>()) return;
+    auto& rb3d = entity.GetComponent<Rigidbody3DComponent>();
+    rb3d.GravityScale = scale;
+    if (m_PhysicsWorld3D) {
+        if (auto* body = static_cast<btRigidBody*>(rb3d.RuntimeBody))
+            body->setGravity(m_PhysicsWorld3D->getGravity() * scale);
+    }
+}
+
+// Amortecimento linear/angular em runtime (movimento mais macio).
+void Scene::SetRigidbody3DDamping(Entity entity, float linear, float angular) {
+    if (!entity.HasComponent<Rigidbody3DComponent>()) return;
+    auto& rb3d = entity.GetComponent<Rigidbody3DComponent>();
+    rb3d.LinearDamping = linear;
+    rb3d.AngularDamping = angular;
+    if (auto* body = static_cast<btRigidBody*>(rb3d.RuntimeBody))
+        body->setDamping(linear, angular);
 }
 
 void Scene::UnregisterPhysics3DEntity(Entity entity) {

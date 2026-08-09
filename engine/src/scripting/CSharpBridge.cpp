@@ -1175,7 +1175,19 @@ KZ_SCRIPT_API void kz_rigidbody3d_set_angular_velocity(uint32_t entity, float wx
     auto* body = static_cast<btRigidBody*>(e.GetComponent<kizuri::Rigidbody3DComponent>().RuntimeBody);
     if (!body) return;
     body->setAngularVelocity(btVector3(wx, wy, wz));
-    body->activate();
+    return;
+}
+
+KZ_SCRIPT_API void kz_rigidbody3d_set_gravity_scale(uint32_t entity, float scale) {
+    auto e = Resolve(entity);
+    if (!e) return;
+    s_ActiveScene->SetRigidbody3DGravityScale(e, scale);
+}
+
+KZ_SCRIPT_API void kz_rigidbody3d_set_damping(uint32_t entity, float linear, float angular) {
+    auto e = Resolve(entity);
+    if (!e) return;
+    s_ActiveScene->SetRigidbody3DDamping(e, linear, angular);
 }
 
 // --- Queries 3D (Bullet) — só durante o Play, como as de 2D ---

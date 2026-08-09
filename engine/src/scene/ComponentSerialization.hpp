@@ -269,7 +269,10 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
 
     if (entity.HasComponent<Rigidbody3DComponent>()) {
         auto& rb = entity.GetComponent<Rigidbody3DComponent>();
-        je["Rigidbody3D"] = { { "Type", (int)rb.Type }, { "Mass", rb.Mass } };
+        je["Rigidbody3D"] = { { "Type", (int)rb.Type }, { "Mass", rb.Mass },
+                              { "GravityScale", rb.GravityScale },
+                              { "LinearDamping", rb.LinearDamping },
+                              { "AngularDamping", rb.AngularDamping } };
     }
 
     if (entity.HasComponent<BoxCollider3DComponent>()) {
@@ -593,6 +596,9 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         auto& rb = entity.AddComponent<Rigidbody3DComponent>();
         rb.Type = (Rigidbody3DComponent::BodyType)jr.value("Type", 1);
         rb.Mass = jr.value("Mass", 1.0f);
+        rb.GravityScale = jr.value("GravityScale", 1.0f);
+        rb.LinearDamping = jr.value("LinearDamping", 0.0f);
+        rb.AngularDamping = jr.value("AngularDamping", 0.0f);
     }
 
     if (je.contains("BoxCollider3D")) {
@@ -908,6 +914,9 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
             : entity.AddComponent<Rigidbody3DComponent>();
         rb.Type = (Rigidbody3DComponent::BodyType)jr.value("Type", 1);
         rb.Mass = jr.value("Mass", 1.0f);
+        rb.GravityScale = jr.value("GravityScale", 1.0f);
+        rb.LinearDamping = jr.value("LinearDamping", 0.0f);
+        rb.AngularDamping = jr.value("AngularDamping", 0.0f);
     } else if (entity.HasComponent<Rigidbody3DComponent>()) {
         entity.RemoveComponent<Rigidbody3DComponent>();
     }

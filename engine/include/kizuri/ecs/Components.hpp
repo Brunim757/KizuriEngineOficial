@@ -369,6 +369,10 @@ struct Rigidbody3DComponent {
     enum class BodyType { Static = 0, Dynamic, Kinematic };
     BodyType Type = BodyType::Dynamic;
     float Mass = 1.0f;
+    // <0 = gravidade invertida, 0 = sem gravidade (flutuação).
+    float GravityScale = 1.0f;
+    float LinearDamping = 0.0f;
+    float AngularDamping = 0.0f;
     void* RuntimeBody = nullptr; // btRigidBody*
 };
 

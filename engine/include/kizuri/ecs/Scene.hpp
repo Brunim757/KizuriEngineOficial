@@ -73,6 +73,10 @@ public:
     // TODAS as entidades tocadas pela esfera (área de dano, sensor).
     bool OverlapSphereAll3D(const glm::vec3& center, float radius, std::vector<Entity>& outEntities);
 
+    // Gravidade escalada / amortecimento do Rigidbody3D em runtime.
+    void SetRigidbody3DGravityScale(Entity entity, float scale);
+    void SetRigidbody3DDamping(Entity entity, float linear, float angular);
+
     // Duplica 'source' e toda a subárvore dela, com UUIDs novos (e um leve
     // deslocamento pra não nascer em cima do original). Devolve a raiz nova.
     Entity DuplicateEntity(Entity source);

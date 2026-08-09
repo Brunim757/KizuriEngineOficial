@@ -654,6 +654,25 @@ KZ_SCRIPT_API int kz_audio_stop(uint32_t entity) {
     return 1;
 }
 
+KZ_SCRIPT_API void kz_audio_set_volume(uint32_t entity, float volume) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::AudioSourceComponent>()) return;
+    auto& ac = e.GetComponent<kizuri::AudioSourceComponent>();
+    ac.Volume = volume;
+    if (ac.Handle != kizuri::kInvalidSound) kizuri::AudioEngine::SetVolume(ac.Handle, volume);
+}
+
+KZ_SCRIPT_API void kz_audio_set_spatial(uint32_t entity, int spatial, float minDist, float maxDist) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::AudioSourceComponent>()) return;
+    auto& ac = e.GetComponent<kizuri::AudioSourceComponent>();
+    ac.Spatial = (spatial != 0);
+    ac.MinDistance = minDist;
+    ac.MaxDistance = std::max(maxDist, minDist);
+    if (ac.Handle != kizuri::kInvalidSound)
+        kizuri::AudioEngine::SetSoundAttenuation(ac.Handle, ac.MinDistance, ac.MaxDistance);
+}
+
 KZ_SCRIPT_API void kz_audio_play_one_shot(const char* path, float volume) {
     if (path == nullptr) return;
     kizuri::AudioEngine::PlayOneShot(kizuri::Project::ResolvePath(path), volume);

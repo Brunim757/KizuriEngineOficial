@@ -127,6 +127,21 @@ public readonly struct Entity
 		return Entity.Invalid;
 	}
 
+	// Busca recursiva na subárvore inteira (filhos, netos, ...) pelo nome.
+	public Entity FindInChildren(string name)
+	{
+		int count = ChildCount;
+		for (int i = 0; i < count; ++i)
+		{
+			var c = GetChild(i);
+			if (!c.IsValid) continue;
+			if (c.Name == name) return c;
+			var found = c.FindInChildren(name);
+			if (found.IsValid) return found;
+		}
+		return Entity.Invalid;
+	}
+
 	// Rotação em radianos (euler) e escala — controle completo do Transform em runtime.
 	public void SetRotation(Math.Vector3 rotation)
 		=> Interop.KizuriNative.kz_transform_set_rotation(Handle, rotation.X, rotation.Y, rotation.Z);
@@ -424,6 +439,11 @@ public readonly struct Entity
 
 	public bool PlayAudio() => Interop.KizuriNative.kz_audio_play(Handle) != 0;
 	public bool StopAudio() => Interop.KizuriNative.kz_audio_stop(Handle) != 0;
+
+	// Volume da fonte de áudio (0..1) e configuração espacial (3D).
+	public void SetAudioVolume(float volume) => Interop.KizuriNative.kz_audio_set_volume(Handle, volume);
+	public void SetAudioSpatial(bool spatial, float minDistance = 1f, float maxDistance = 50f)
+		=> Interop.KizuriNative.kz_audio_set_spatial(Handle, spatial ? 1 : 0, minDistance, maxDistance);
 
 	// ---- UI (espaço de tela; precisa de um pai com UICanvas pra renderizar) ----
 

@@ -437,8 +437,12 @@ void main() {
     float shadow = u_HasShadow ? CalculateShadow(N, normalize(-u_LightDirections[0])) : 0.0;
 
     // --- Soma de todas as luzes dinâmicas do frame, Cook-Torrance por luz ---
+    // Loop com TETO FIXO (MAX_LIGHTS) e continue pros inativos — GLSL 330 core
+    // não aceita teto de uniform (u_LightCount); em alguns drivers (Fermi) o
+    // shader nem compila e a tela fica preta. Mesmo padrão do SSAO/SSR/PCSS.
     vec3 directLighting = vec3(0.0);
-    for (int i = 0; i < u_LightCount; ++i) {
+    for (int i = 0; i < MAX_LIGHTS; ++i) {
+        if (i >= u_LightCount) continue;
         vec3 L;
         float attenuation = 1.0;
         if (u_LightTypes[i] == 0) {

@@ -14,7 +14,6 @@ struct QuadVertex {
     glm::vec2 TexCoord;
     float TexIndex;
     float TilingFactor;
-    int EntityID;
 };
 
 // Vértice do pipeline de círculos — posição local (quad unitário) + atributos
@@ -371,7 +370,6 @@ static void PushQuadVertices(const glm::mat4& transform, const glm::vec4& color,
         v.TexCoord = texCoords[i];
         v.TexIndex = texIndex;
         v.TilingFactor = tiling;
-        v.EntityID = -1;
         ++s_Data.QuadVertexBufferPtr;
     }
     s_Data.QuadIndexCount += 6;

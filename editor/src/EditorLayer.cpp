@@ -56,6 +56,735 @@ static std::string PickDemoAsset(const char* kzresName, const char* contentRelat
     return FindContentFile(contentRelative);
 }
 
+// ---- Texturas procedurais da Vitrine de Funções ---------------------------
+// A demo não depende de assets externos: gera as texturas que precisa na CPU
+// (RGBA8) e sobe via Texture2D::SetData — prova que a engine aceita textura
+// gerada em runtime (sprites, sprite sheet, atlas de tilemap).
+
+static Ref<Texture2D> MakeProceduralTexture(uint32_t width, uint32_t height,
+                                            const std::function<uint32_t(uint32_t x, uint32_t y)>& pixel) {
+    auto tex = Texture2D::Create(width, height);
+    std::vector<uint32_t> px((size_t)width * height);
+    for (uint32_t y = 0; y < height; ++y)
+        for (uint32_t x = 0; x < width; ++x)
+            px[y * width + x] = pixel(x, y);
+    tex->SetData(px.data(), (uint32_t)(px.size() * sizeof(uint32_t)));
+    return tex;
+}
+
+// Pixel RGBA: uint32 = 0xAABBGGRR (bytes R,G,B,A na ordem do GL_RGBA).
+static constexpr uint32_t PxRGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) {
+    return ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)g << 8) | r;
+}
+
+// Xadrez simples — textura de sprite (o "Jogador 2D" da vitrine).
+static Ref<Texture2D> MakeCheckerTexture(uint32_t n = 4) {
+    return MakeProceduralTexture(n * 16, n * 16, [n](uint32_t x, uint32_t y) {
+        bool on = ((x / 16) + (y / 16)) % 2 == 0;
+        return on ? PxRGBA(220, 225, 235) : PxRGBA(60, 66, 78);
+    });
+}
+
+// Folha de sprites 4x1: uma bolinha que "pula" da esquerda pra direita.
+static Ref<Texture2D> MakeSpriteSheetTexture() {
+    const uint32_t frames = 4, px = 64;
+    return MakeProceduralTexture(frames * px, px, [](uint32_t x, uint32_t y) {
+        uint32_t f = x / px;
+        float lx = (float)(x % px), ly = (float)(y % px);
+        float cx = (float)px * (0.22f + 0.19f * (float)f);
+        float hop = (f == 2) ? 0.34f : (f == 1 || f == 3) ? 0.18f : 0.0f;
+        float cy = (float)px * (0.58f - hop);
+        float dx = lx - cx, dy = ly - cy;
+        float r = 0.24f * (float)px;
+        if (dx * dx + dy * dy < r * r) return PxRGBA(255, 255, 255);
+        if (ly > (float)px * 0.86f) return PxRGBA(120, 130, 145); // chãozinho
+        return PxRGBA(0, 0, 0, 0);
+    });
+}
+
+// Atlas 4x4 de tiles (16 tiles distintos) pro tilemap da vitrine.
+static Ref<Texture2D> MakeTileAtlasTexture() {
+    const uint32_t tiles = 4, px = 64;
+    const uint32_t w = tiles * px, h = tiles * px;
+    const glm::vec3 palette[16] = {
+        { 0.25f, 0.25f, 0.28f }, { 0.32f, 0.56f, 0.26f }, { 0.78f, 0.66f, 0.42f }, { 0.62f, 0.22f, 0.16f },
+        { 0.26f, 0.46f, 0.82f }, { 0.56f, 0.31f, 0.76f }, { 0.22f, 0.76f, 0.76f }, { 0.92f, 0.52f, 0.16f },
+        { 0.92f, 0.36f, 0.62f }, { 0.22f, 0.56f, 0.5f },  { 0.46f, 0.31f, 0.21f }, { 0.92f, 0.82f, 0.22f },
+        { 0.34f, 0.42f, 0.5f },  { 0.72f, 0.42f, 0.28f }, { 0.42f, 0.5f, 0.6f },  { 0.6f, 0.6f, 0.62f },
+    };
+    return MakeProceduralTexture(w, h, [&](uint32_t x, uint32_t y) {
+        uint32_t tx = x / px, ty = y / px;   // ty=0 é a linha de cima (tile 1)
+        uint32_t lx = x % px, ly = y % px;
+        uint32_t ti = ty * tiles + tx;
+        const glm::vec3& c = palette[ti % 16];
+        // Borda + xadrez interno leve pra cada tile ser reconhecível.
+        if (lx < 3 || ly < 3 || lx >= px - 3 || ly >= px - 3)
+            return PxRGBA((uint8_t)(c.r * 60), (uint8_t)(c.g * 60), (uint8_t)(c.b * 60));
+        bool on = ((lx / 8) + (ly / 8)) % 2 == 0;
+        float k = on ? 1.0f : 0.82f;
+        return PxRGBA((uint8_t)(c.r * 255 * k), (uint8_t)(c.g * 255 * k), (uint8_t)(c.b * 255 * k));
+    });
+}
+
+// ---------------------------------------------------------------------------
+// ShowcaseScript — controla a "Vitrine de Funções": lê os botões da UI e
+// dispara cada subsistema da engine em runtime (Play). Registrado no
+// ScriptRegistry e vinculado via BindByName pra sobreviver à cópia JSON que o
+// Play do editor faz da cena (Bind<T> com ClassName vazio não sobrevive).
+// ---------------------------------------------------------------------------
+class ShowcaseScript : public NativeScript {
+public:
+    void OnCreate() override;
+    void OnUpdate(Timestep ts) override;
+
+private:
+    Scene* m_Scene = nullptr;
+    struct Buttons {
+        Entity F3D, F2D, Particles, Timeline, Circles, Tilemap, Anim, CamFollow, Light, Text, Gfx;
+    } B;
+    struct Targets {
+        Entity Cam3D, Fox, TimelineObj, Emitter, Tilemap, Walker, Status, PointLight;
+    } T;
+
+    // Spawns escalonados (várias entidades criadas ao longo de alguns frames).
+    uint32_t m_Spawn3DLeft = 0;  float m_Spawn3DTimer = 0.0f;  uint32_t m_Spawn3DIndex = 0;
+    uint32_t m_Spawn2DLeft = 0;  float m_Spawn2DTimer = 0.0f;  uint32_t m_Spawn2DIndex = 0;
+    uint32_t m_RingSpawnLeft = 0; float m_RingTimer = 0.0f;
+    uint32_t m_RingIndex = 0;
+
+    bool m_TilePattern = false;
+    bool m_CamFollowOn = false;
+    bool m_ParticlesOn = true;
+    bool m_AnimOn = true;
+    bool m_LightAlt = false;
+    bool m_GfxHigh = true;
+    int m_TextIdx = 0;
+
+    Entity Find(const std::string& name) {
+        if (!m_Scene) return {};
+        auto& reg = m_Scene->GetRegistry();
+        auto view = reg.view<TagComponent>();
+        for (auto e : view)
+            if (view.get<TagComponent>(e).Tag == name) return Entity{ e, m_Scene };
+        return {};
+    }
+
+    bool Clicked(Entity btn) {
+        return btn && btn.HasComponent<UIButtonComponent>() && btn.GetComponent<UIButtonComponent>().WasClicked;
+    }
+
+    void SetStatus(const std::string& msg) {
+        if (T.Status && T.Status.HasComponent<TextComponent>())
+            T.Status.GetComponent<TextComponent>().Text = msg;
+    }
+
+    void SpawnPhysics3DOne();
+    void SpawnPhysics2DOne();
+    void SpawnRingOne();
+    void RebuildTilemap(bool alternate);
+    void CycleText();
+    void ToggleCameraFollow();
+    void ToggleGraphics();
+};
+
+void ShowcaseScript::OnCreate() {
+    m_Scene = GetScene();
+    T.Cam3D = Find("Câmera Principal");
+    T.Fox = Find("Fox (animado)");
+    T.TimelineObj = Find("Pilha Timeline");
+    T.Emitter = Find("Emissor");
+    T.Tilemap = Find("Tilemap");
+    T.Walker = Find("Andador");
+    T.Status = Find("Status");
+    T.PointLight = Find("Luz Pontual");
+
+    B.F3D = Find("Btn Física 3D");
+    B.F2D = Find("Btn Física 2D");
+    B.Particles = Find("Btn Partículas");
+    B.Timeline = Find("Btn Timeline");
+    B.Circles = Find("Btn Círculos");
+    B.Tilemap = Find("Btn Tilemap");
+    B.Anim = Find("Btn Animação");
+    B.CamFollow = Find("Btn Câmera");
+    B.Light = Find("Btn Luz");
+    B.Text = Find("Btn Texto");
+    B.Gfx = Find("Btn Gráficos");
+
+    // As texturas procedurais não são serializadas (só o caminho é) — a cópia
+    // JSON do Play as perde. Regenera aqui, no início do runtime.
+    if (Entity player = Find("Jogador 2D"); player && player.HasComponent<SpriteRendererComponent>())
+        player.GetComponent<SpriteRendererComponent>().Texture = MakeCheckerTexture(4);
+    if (T.Walker && T.Walker.HasComponent<SpriteAnimationComponent>())
+        T.Walker.GetComponent<SpriteAnimationComponent>().SheetTexture = MakeSpriteSheetTexture();
+    if (T.Tilemap && T.Tilemap.HasComponent<TilemapComponent>())
+        T.Tilemap.GetComponent<TilemapComponent>().AtlasTexture = MakeTileAtlasTexture();
+
+    SetStatus("Vitrine pronta! Clique num botão à esquerda para demonstrar a função.");
+}
+
+void ShowcaseScript::OnUpdate(Timestep ts) {
+    if (!m_Scene) return;
+    float dt = (float)ts;
+
+    // ---- Botões (estado WasClicked já resetado pelo UpdateUIPointer) ----
+    if (Clicked(B.F3D)) {
+        m_Spawn3DLeft = 8; m_Spawn3DTimer = 0.0f;
+        SetStatus("Física 3D: caixas dinâmicas (Rigidbody3D + BoxCollider3D) caindo no palco.");
+    }
+    if (Clicked(B.F2D)) {
+        m_Spawn2DLeft = 8; m_Spawn2DTimer = 0.0f;
+        SetStatus("Física 2D: blocos dinâmicos (Box2D) caindo no tilemap sólido.");
+    }
+    if (Clicked(B.Particles)) {
+        if (T.Emitter && T.Emitter.HasComponent<ParticleSystemComponent>()) {
+            auto& pc = T.Emitter.GetComponent<ParticleSystemComponent>();
+            pc.Playing = !pc.Playing;
+            m_ParticlesOn = pc.Playing;
+        }
+        SetStatus(m_ParticlesOn ? "Partículas: emissor LIGADO (GPU-instanced, aditivo)."
+                                : "Partículas: emissor DESLIGADO.");
+    }
+    if (Clicked(B.Timeline)) {
+        if (T.TimelineObj && T.TimelineObj.HasComponent<TimelineComponent>()) {
+            auto& tl = T.TimelineObj.GetComponent<TimelineComponent>();
+            tl.Playing = !tl.Playing;
+            tl.Time = 0.0f;
+        }
+        SetStatus("Timeline: cutscene por keyframes interpoladas (posição + rotação + escala).");
+    }
+    if (Clicked(B.Circles)) {
+        m_RingSpawnLeft = 3; m_RingTimer = 0.0f; m_RingIndex = 0;
+        SetStatus("Círculos: SDF no fragment shader — disco cheio ou anel com borda suave.");
+    }
+    if (Clicked(B.Tilemap)) {
+        m_TilePattern = !m_TilePattern;
+        RebuildTilemap(m_TilePattern);
+        SetStatus("Tilemap: padrão trocado e colliders Box2D reconstruídos em runtime.");
+    }
+    if (Clicked(B.Anim)) {
+        if (T.Walker && T.Walker.HasComponent<SpriteAnimationComponent>()) {
+            auto& a = T.Walker.GetComponent<SpriteAnimationComponent>();
+            a.Playing = !a.Playing;
+            m_AnimOn = a.Playing;
+        }
+        SetStatus(m_AnimOn ? "Animação de sprite: tocando (folha de sprites 4 frames)."
+                           : "Animação de sprite: pausada.");
+    }
+    if (Clicked(B.CamFollow)) ToggleCameraFollow();
+    if (Clicked(B.Light)) {
+        if (T.PointLight && T.PointLight.HasComponent<LightComponent>()) {
+            auto& lc = T.PointLight.GetComponent<LightComponent>();
+            m_LightAlt = !m_LightAlt;
+            if (m_LightAlt) { lc.Color = { 0.25f, 1.0f, 0.5f }; lc.Intensity = 5.0f; }
+            else            { lc.Color = { 1.0f, 0.3f, 0.6f }; lc.Intensity = 2.5f; }
+        }
+        SetStatus(m_LightAlt ? "Luz pontual: verde neon, intensidade 5."
+                             : "Luz pontual: magenta, intensidade 2.5.");
+    }
+    if (Clicked(B.Text)) CycleText();
+    if (Clicked(B.Gfx)) ToggleGraphics();
+
+    // ---- Spawns escalonados ----
+    if (m_Spawn3DLeft > 0) {
+        m_Spawn3DTimer -= dt;
+        if (m_Spawn3DTimer <= 0.0f) {
+            m_Spawn3DTimer = 0.08f;
+            SpawnPhysics3DOne();
+            --m_Spawn3DLeft;
+        }
+    }
+    if (m_Spawn2DLeft > 0) {
+        m_Spawn2DTimer -= dt;
+        if (m_Spawn2DTimer <= 0.0f) {
+            m_Spawn2DTimer = 0.08f;
+            SpawnPhysics2DOne();
+            --m_Spawn2DLeft;
+        }
+    }
+    if (m_RingSpawnLeft > 0) {
+        m_RingTimer -= dt;
+        if (m_RingTimer <= 0.0f) {
+            m_RingTimer = 0.15f;
+            SpawnRingOne();
+            --m_RingSpawnLeft;
+        }
+    }
+}
+
+void ShowcaseScript::SpawnPhysics3DOne() {
+    float t = (float)(m_Spawn3DIndex % 8) / 8.0f;
+    float spread = (float)((m_Spawn3DIndex * 2654435761u) % 100) / 100.0f * 8.0f - 4.0f;
+
+    Entity box = m_Scene->CreateEntity("Bloco 3D " + std::to_string(m_Spawn3DIndex + 1));
+    auto& mr = box.AddComponent<MeshRendererComponent>();
+    mr.MeshSource = "builtin:cube";
+    mr.MeshAsset = Mesh::FromSource("builtin:cube");
+    mr.MeshMaterial.Albedo = { 0.35f + t * 0.6f, 0.45f, 0.95f - t * 0.45f };
+    mr.MeshMaterial.Roughness = 0.35f;
+    auto& rb = box.AddComponent<Rigidbody3DComponent>();
+    rb.Type = Rigidbody3DComponent::BodyType::Dynamic;
+    rb.Mass = 1.0f;
+    box.AddComponent<BoxCollider3DComponent>().HalfExtents = { 0.5f, 0.5f, 0.5f };
+    auto& tr = box.GetComponent<TransformComponent>();
+    tr.Translation = { spread, 7.0f, 1.0f };
+    tr.Rotation = { 0.3f * spread, spread * 0.4f, 0.0f };
+    ++m_Spawn3DIndex;
+}
+
+void ShowcaseScript::SpawnPhysics2DOne() {
+    float t = (float)(m_Spawn2DIndex % 8) / 8.0f;
+
+    Entity box = m_Scene->CreateEntity("Bloco 2D " + std::to_string(m_Spawn2DIndex + 1));
+    auto& s = box.AddComponent<SpriteRendererComponent>();
+    s.Color = { 0.3f + t * 0.65f, 0.8f, 0.45f, 1.0f };
+    auto& rb = box.AddComponent<Rigidbody2DComponent>();
+    rb.Type = Rigidbody2DComponent::BodyType::Dynamic;
+    box.AddComponent<BoxCollider2DComponent>().Size = { 0.9f, 0.9f };
+    auto& tr = box.GetComponent<TransformComponent>();
+    tr.Translation = { -6.0f + (float)(m_Spawn2DIndex % 5) * 1.9f, 3.5f + (float)(m_Spawn2DIndex / 5) * 1.2f, 0.0f };
+    tr.Rotation.z = glm::radians((float)(m_Spawn2DIndex * 21));
+    ++m_Spawn2DIndex;
+}
+
+void ShowcaseScript::SpawnRingOne() {
+    static const glm::vec4 ringColors[3] = {
+        { 1.0f, 0.85f, 0.25f, 1.0f }, { 0.3f, 0.8f, 1.0f, 1.0f }, { 1.0f, 0.45f, 0.6f, 1.0f },
+    };
+    Entity ring = m_Scene->CreateEntity("Anel " + std::to_string(m_RingIndex + 1));
+    auto& cs = ring.AddComponent<CircleRendererComponent>();
+    cs.Color = ringColors[m_RingIndex % 3];
+    cs.Thickness = 0.2f;   // anel fino (borda suave pelo Fade)
+    cs.Fade = 0.04f;
+    auto& tr = ring.GetComponent<TransformComponent>();
+    tr.Translation = { 4.0f + (float)m_RingIndex * 1.6f, 0.5f + (float)(m_RingIndex % 2), 0.0f };
+    tr.Scale = { 1.2f + (float)m_RingIndex * 0.4f, 1.2f + (float)m_RingIndex * 0.4f, 1.0f };
+    ++m_RingIndex;
+}
+
+void ShowcaseScript::RebuildTilemap(bool alternate) {
+    if (!T.Tilemap || !T.Tilemap.HasComponent<TilemapComponent>()) return;
+    auto& tmc = T.Tilemap.GetComponent<TilemapComponent>();
+    uint32_t W = tmc.MapWidth, H = tmc.MapHeight;
+    if (W == 0 || H == 0) return;
+    tmc.Tiles.assign((size_t)W * H, 0);
+    if (!alternate) {
+        // Chão contínuo + duas plataformas soltas.
+        for (uint32_t x = 0; x < W; ++x)
+            tmc.Tiles[(H - 1) * W + x] = 1 + (x % 12);
+        for (uint32_t x = 2; x < 5 && x < W; ++x) tmc.Tiles[(H - 2) * W + x] = 3;
+        for (uint32_t x = 9; x < 12 && x < W; ++x) tmc.Tiles[(H - 2) * W + x] = 6;
+    } else {
+        // Pilares de alturas diferentes.
+        for (uint32_t x = 0; x < W; ++x) {
+            uint32_t height = 1 + (x % 3);
+            for (uint32_t y = 0; y < height; ++y)
+                tmc.Tiles[(H - 1 - y) * W + x] = 1 + ((x * 3 + y) % 12);
+        }
+    }
+    tmc.CollidersDirty = true;
+}
+
+void ShowcaseScript::CycleText() {
+    static const char* msgs[] = {
+        "Texto 2D com fonte embutida (JetBrains Mono).",
+        "Texto multilinha:\nlinha 1\nlinha 2\nlinha 3",
+        "UI (canvas + UIRect + UIButton + Texto) renderizada por cima de tudo.",
+    };
+    m_TextIdx = (m_TextIdx + 1) % 3;
+    SetStatus(msgs[m_TextIdx]);
+}
+
+void ShowcaseScript::ToggleCameraFollow() {
+    if (!T.Cam3D) { SetStatus("Sem câmera para seguir."); return; }
+    if (m_CamFollowOn) {
+        if (T.Cam3D.HasComponent<CameraFollowComponent>())
+            T.Cam3D.RemoveComponent<CameraFollowComponent>();
+        m_CamFollowOn = false;
+        SetStatus("Câmera Segue: desligada (câmera 3D parada).");
+    } else {
+        auto& cf = T.Cam3D.AddComponent<CameraFollowComponent>();
+        cf.TargetName = T.Fox ? "Fox (animado)" : "Pilha Timeline";
+        cf.Offset = { 0.0f, 3.5f, -7.5f };
+        cf.Smoothness = 6.0f;
+        m_CamFollowOn = true;
+        SetStatus("Câmera Segue: ligada — abra a aba \"Jogo\" (Game View) pra ver a câmera perseguir o alvo.");
+    }
+}
+
+void ShowcaseScript::ToggleGraphics() {
+    auto settings = Renderer3D::GetGraphicsSettings();
+    m_GfxHigh = !m_GfxHigh;
+    if (m_GfxHigh) {
+        settings.RenderScale = 1.0f;
+        settings.SSAOEnabled = true;
+        settings.SSREnabled = true;
+        settings.TAAEnabled = true;
+        settings.BloomEnabled = true;
+        settings.FogEnabled = true;
+        settings.FogDensity = 0.018f;
+        settings.FXAAEnabled = false;
+        SetStatus("Gráficos: ALTO — SSAO, SSR, TAA, Bloom e névoa ligados.");
+    } else {
+        settings.RenderScale = 0.75f;
+        settings.SSAOEnabled = false;
+        settings.SSREnabled = false;
+        settings.TAAEnabled = false;
+        settings.BloomEnabled = false;
+        settings.FogEnabled = false;
+        settings.FXAAEnabled = true;
+        SetStatus("Gráficos: BAIXO — efeitos desligados (só FXAA + escala 0.75).");
+    }
+    Renderer3D::SetGraphicsSettings(settings);
+}
+
+// Cena de demonstração VITRINE DE FUNÇÕES (v0.33): uma cena 2.5D interativa
+// que demonstra todos os subsistemas da engine. Aperte Play e clique nos
+// botões do painel à esquerda — cada botão dispara uma demonstração.
+void EditorLayer::CreateDemoShowcase() {
+    if (m_SceneState != SceneState::Edit) return;
+
+    m_ActiveScene = CreateRef<Scene>("Vitrine de Funções");
+    m_ScenePath.clear();
+    m_SelectedEntity = {};
+    m_ViewportMode = ViewportMode::Mode3D;
+    m_EditorCamPos = { 0.0f, 3.5f, 11.0f };
+    m_EditorCamYaw = -90.0f;
+    m_EditorCamPitch = -14.0f;
+
+    // Registra o script da vitrine no ScriptRegistry — é o que faz o
+    // BindByName sobreviver à cópia JSON do Play.
+    ScriptEngine::GetRegistry().Register<ShowcaseScript>("ShowcaseScript");
+
+    auto& scene = m_ActiveScene;
+
+    // ---- Câmeras (3D primária no fundo + 2D na frente) ----
+    Entity cam3d = scene->CreateEntity("Câmera Principal");
+    auto& cc3 = cam3d.AddComponent<CameraComponent>();
+    cc3.Type = CameraComponent::ProjectionType::Perspective3D;
+    cc3.Primary = true;
+    cc3.PerspectiveFOV = 55.0f;
+    auto& c3t = cam3d.GetComponent<TransformComponent>();
+    c3t.Translation = { 0.0f, 3.5f, 11.0f };
+    c3t.Rotation = { glm::radians(-14.0f), glm::radians(-90.0f), 0.0f };
+
+    Entity cam2d = scene->CreateEntity("Câmera 2D");
+    auto& cc2 = cam2d.AddComponent<CameraComponent>();
+    cc2.Type = CameraComponent::ProjectionType::Orthographic2D;
+    cc2.Primary = true;
+    cc2.OrthoSize = 6.0f;
+
+    // ---- Iluminação ----
+    Entity sun = scene->CreateEntity("Sol");
+    auto& sl = sun.AddComponent<LightComponent>();
+    sl.Type = LightType::Directional;
+    sl.Color = { 1.0f, 0.95f, 0.85f };
+    sl.Intensity = 2.0f;
+    sun.GetComponent<TransformComponent>().Rotation = { glm::radians(50.0f), glm::radians(30.0f), 0.0f };
+
+    Entity point = scene->CreateEntity("Luz Pontual");
+    auto& pl = point.AddComponent<LightComponent>();
+    pl.Type = LightType::Point;
+    pl.Color = { 1.0f, 0.3f, 0.6f };
+    pl.Intensity = 2.5f;
+    pl.Range = 9.0f;
+    point.GetComponent<TransformComponent>().Translation = { -2.5f, 2.2f, -1.5f };
+
+    Entity spot = scene->CreateEntity("Luz Spot");
+    auto& sp = spot.AddComponent<LightComponent>();
+    sp.Type = LightType::Spot;
+    sp.Color = { 0.35f, 0.7f, 1.0f };
+    sp.Intensity = 6.0f;
+    sp.Range = 14.0f;
+    sp.InnerConeDeg = 18.0f;
+    sp.OuterConeDeg = 30.0f;
+    sp.CastsShadow = true;
+    spot.GetComponent<TransformComponent>().Translation = { 3.2f, 6.0f, 0.0f }; // aponta pra baixo (dir local -Y)
+
+    // ---- Palco 3D ----
+    Entity ground = scene->CreateEntity("Chão");
+    auto& gm = ground.AddComponent<MeshRendererComponent>();
+    gm.MeshSource = "builtin:plane";
+    gm.MeshAsset = Mesh::FromSource(gm.MeshSource);
+    gm.MeshMaterial.Albedo = { 0.14f, 0.15f, 0.18f };
+    gm.MeshMaterial.Roughness = 0.92f;
+    ground.GetComponent<TransformComponent>().Scale = { 14.0f, 1.0f, 14.0f };
+
+    Entity mirror = scene->CreateEntity("Piso Espelhado");
+    auto& mm = mirror.AddComponent<MeshRendererComponent>();
+    mm.MeshSource = "builtin:plane";
+    mm.MeshAsset = Mesh::FromSource(mm.MeshSource);
+    mm.MeshMaterial.Albedo = { 0.02f, 0.02f, 0.025f };
+    mm.MeshMaterial.Metallic = 1.0f;
+    mm.MeshMaterial.Roughness = 0.04f;
+    auto& mt = mirror.GetComponent<TransformComponent>();
+    mt.Translation = { 0.0f, 0.012f, -4.0f };
+    mt.Scale = { 4.0f, 1.0f, 4.0f };
+
+    // Esferas PBR (gradiente metálico/rugosidade).
+    for (int i = 0; i < 5; ++i) {
+        Entity s = scene->CreateEntity("Esfera PBR " + std::to_string(i + 1));
+        auto& sm = s.AddComponent<MeshRendererComponent>();
+        sm.MeshSource = "builtin:sphere";
+        sm.MeshAsset = Mesh::FromSource(sm.MeshSource);
+        sm.MeshMaterial.Albedo = { 0.8f, 0.3f + (float)i * 0.12f, 0.2f };
+        sm.MeshMaterial.Metallic = (float)i / 4.0f;
+        sm.MeshMaterial.Roughness = 0.05f + (float)(4 - i) * 0.22f;
+        auto& st = s.GetComponent<TransformComponent>();
+        st.Translation = { -4.0f + (float)i * 1.7f, 0.55f, 4.0f };
+    }
+
+    Entity column = scene->CreateEntity("Cubo de Coluna");
+    auto& cm = column.AddComponent<MeshRendererComponent>();
+    cm.MeshSource = "builtin:cube";
+    cm.MeshAsset = Mesh::FromSource(cm.MeshSource);
+    cm.MeshMaterial.Albedo = { 0.3f, 0.55f, 0.85f };
+    cm.MeshMaterial.Metallic = 0.3f;
+    cm.MeshMaterial.Roughness = 0.4f;
+    auto& ctt = column.GetComponent<TransformComponent>();
+    ctt.Translation = { -6.2f, 1.5f, 0.5f };
+    ctt.Scale = { 1.0f, 3.0f, 1.0f };
+
+    Entity torus = scene->CreateEntity("Torus Metálico");
+    auto& tm = torus.AddComponent<MeshRendererComponent>();
+    tm.MeshSource = "builtin:torus";
+    tm.MeshAsset = Mesh::FromSource(tm.MeshSource);
+    tm.MeshMaterial.Albedo = { 0.75f, 0.55f, 0.2f };
+    tm.MeshMaterial.Metallic = 1.0f;
+    tm.MeshMaterial.Roughness = 0.25f;
+    auto& tt = torus.GetComponent<TransformComponent>();
+    tt.Translation = { 0.0f, 1.1f, -2.2f };
+    tt.Rotation = { glm::radians(70.0f), 0.0f, 0.0f };
+
+    Entity emissive = scene->CreateEntity("Esfera Emissiva");
+    auto& em = emissive.AddComponent<MeshRendererComponent>();
+    em.MeshSource = "builtin:sphere";
+    em.MeshAsset = Mesh::FromSource(em.MeshSource);
+    em.MeshMaterial.Albedo = { 0.02f, 0.02f, 0.05f };
+    em.MeshMaterial.Emissive = { 0.1f, 0.6f, 1.0f };
+    em.MeshMaterial.EmissiveStrength = 6.0f; // alimenta o bloom
+    emissive.GetComponent<TransformComponent>().Translation = { 2.4f, 0.9f, -2.0f };
+
+    // Cubo EMBUTIDO (kzres://models/Cube.glb) — sempre carrega.
+    Entity kzcube = scene->CreateEntity("Cubo Embutido (kzres)");
+    auto& kcm = kzcube.AddComponent<MeshRendererComponent>();
+    kcm.MeshSource = "kzres://models/Cube.glb";
+    kcm.MeshAsset = Mesh::FromSource(kcm.MeshSource);
+    kcm.MeshMaterial.Albedo = { 0.85f, 0.35f, 0.3f };
+    kcm.MeshMaterial.Roughness = 0.4f;
+    kzcube.GetComponent<TransformComponent>().Translation = { -1.0f, 0.5f, 4.0f };
+
+    // Fox esquelético animado (skinning) se o asset existir.
+    std::string foxPath = PickDemoAsset("models/Fox.glb", "models/Fox.glb");
+    if (!foxPath.empty()) {
+        Entity fox = scene->CreateEntity("Fox (animado)");
+        auto& fm = fox.AddComponent<MeshRendererComponent>();
+        fm.MeshSource = foxPath;
+        fm.MeshAsset = Mesh::FromSource(foxPath);
+        fm.MeshMaterial = Mesh::ExtractMaterialFromGLTF(foxPath);
+        auto& fa = fox.AddComponent<AnimatorComponent>();
+        fa.MeshPath = foxPath;
+        fa.Skin = SkinData::CreateFromGLTF(foxPath);
+        fa.ClipName = "Survey";
+        auto& ft = fox.GetComponent<TransformComponent>();
+        ft.Translation = { -3.2f, 0.0f, -2.0f };
+        ft.Scale = { 1.3f, 1.3f, 1.3f };
+        KZ_CORE_INFO("Vitrine: Fox carregado de '{0}'.", foxPath);
+    }
+
+    // Capacete PBR sob a luz spot (se o asset existir).
+    std::string helmetPath = PickDemoAsset("models/DamagedHelmet.glb", "models/DamagedHelmet.glb");
+    if (!helmetPath.empty()) {
+        Entity helmet = scene->CreateEntity("Capacete (PBR)");
+        auto& hm = helmet.AddComponent<MeshRendererComponent>();
+        hm.MeshSource = helmetPath;
+        hm.MeshAsset = Mesh::FromSource(helmetPath);
+        hm.MeshMaterial = Mesh::ExtractMaterialFromGLTF(helmetPath);
+        auto& ht = helmet.GetComponent<TransformComponent>();
+        ht.Translation = { 3.2f, 0.8f, 0.0f };
+        ht.Scale = { 1.5f, 1.5f, 1.5f };
+    }
+
+    // Terreno procedural com colisor estático (Bullet usa a malha de triângulos).
+    Entity terrain = scene->CreateEntity("Terreno");
+    auto& tm2 = terrain.AddComponent<MeshRendererComponent>();
+    tm2.MeshSource = "builtin:plane";
+    tm2.MeshMaterial.Albedo = { 0.32f, 0.38f, 0.26f };
+    tm2.MeshMaterial.Roughness = 0.95f;
+    auto& terr = terrain.AddComponent<TerrainComponent>();
+    terr.Segments = 32;
+    terr.Size = 18.0f;
+    terr.HeightScale = 2.2f;
+    terr.Seed = 7;
+    terr.Regenerate();
+    tm2.MeshAsset = terr.GeneratedMesh;
+    auto& trb = terrain.AddComponent<Rigidbody3DComponent>();
+    trb.Type = Rigidbody3DComponent::BodyType::Static;
+    terrain.GetComponent<TransformComponent>().Translation = { 5.5f, 0.0f, 3.0f };
+
+    // Objeto da demo de timeline (cutscene por keyframes) — começa parado.
+    Entity timelineObj = scene->CreateEntity("Pilha Timeline");
+    auto& tlm = timelineObj.AddComponent<MeshRendererComponent>();
+    tlm.MeshSource = "builtin:cylinder";
+    tlm.MeshAsset = Mesh::FromSource(tlm.MeshSource);
+    tlm.MeshMaterial.Albedo = { 0.9f, 0.55f, 0.2f };
+    tlm.MeshMaterial.Metallic = 0.6f;
+    tlm.MeshMaterial.Roughness = 0.3f;
+    auto& tl = timelineObj.AddComponent<TimelineComponent>();
+    tl.Playing = false; // o botão "Timeline" liga
+    tl.Loop = true;
+    tl.Keyframes = {
+        { 0.0f,  { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+        { 1.2f,  { 1.6f, 1.0f, -1.2f }, { 0.0f, 0.0f, glm::radians(180.0f) }, { 1.0f, 1.0f, 1.0f } },
+        { 2.4f,  { -1.6f, 1.0f, 0.0f }, { 0.0f, 0.0f, glm::radians(360.0f) }, { 1.0f, 1.0f, 1.0f } },
+        { 3.6f,  { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f } },
+    };
+    auto& tlt = timelineObj.GetComponent<TransformComponent>();
+    tlt.Translation = { 0.0f, 1.0f, 0.0f }; // posição do 1º keyframe (vista em edição)
+
+    // Emissor de partículas (aditivo, estilo fogo).
+    Entity emitter = scene->CreateEntity("Emissor");
+    auto& ps = emitter.AddComponent<ParticleSystemComponent>();
+    ps.Playing = true;
+    ps.Additive = true;
+    ps.EmissionRate = 40.0f;
+    ps.MaxParticles = 400;
+    ps.LifetimeMin = 0.5f;
+    ps.LifetimeMax = 1.2f;
+    ps.VelocityMin = { -0.4f, 1.2f, -0.4f };
+    ps.VelocityMax = { 0.4f, 2.6f, 0.4f };
+    ps.Gravity = { 0.0f, -1.5f, 0.0f };
+    ps.StartColor = { 1.0f, 0.7f, 0.2f, 1.0f };
+    ps.EndColor = { 1.0f, 0.15f, 0.02f, 0.0f };
+    ps.StartSize = 0.12f;
+    ps.EndSize = 0.35f;
+    emitter.GetComponent<TransformComponent>().Translation = { 1.4f, 1.2f, -0.8f };
+
+    // ---- Camada 2D (na frente do 3D, câmera ortográfica) ----
+    auto checker = MakeCheckerTexture(4);
+    Entity player = scene->CreateEntity("Jogador 2D");
+    auto& pss = player.AddComponent<SpriteRendererComponent>();
+    pss.Texture = checker;
+    pss.TilingFactor = 1.0f;
+    auto& pt = player.GetComponent<TransformComponent>();
+    pt.Translation = { -6.0f, 1.5f, 0.0f };
+    pt.Scale = { 1.6f, 1.6f, 1.0f };
+
+    Entity walker = scene->CreateEntity("Andador");
+    auto& wa = walker.AddComponent<SpriteAnimationComponent>();
+    wa.SheetTexture = MakeSpriteSheetTexture();
+    wa.FramesPerRow = 4;
+    wa.TotalFrames = 4;
+    wa.FPS = 9.0f;
+    wa.Loop = true;
+    wa.Playing = true;
+    auto& wt = walker.GetComponent<TransformComponent>();
+    wt.Translation = { 0.0f, 1.5f, 0.0f };
+    wt.Scale = { 1.8f, 1.8f, 1.0f };
+
+    for (int i = 0; i < 3; ++i) {
+        Entity coin = scene->CreateEntity("Moeda " + std::to_string(i + 1));
+        auto& cs = coin.AddComponent<CircleRendererComponent>();
+        cs.Color = { 1.0f, 0.82f, 0.25f, 1.0f };
+        cs.Thickness = 1.0f;
+        auto& ct = coin.GetComponent<TransformComponent>();
+        ct.Translation = { 4.2f + (float)i * 1.7f, 2.6f + (float)(i % 2) * 1.0f, 0.0f };
+        ct.Scale = { 0.8f, 0.8f, 1.0f };
+    }
+
+    Entity label2D = scene->CreateEntity("Rótulo 2D");
+    auto& lt = label2D.AddComponent<TextComponent>();
+    lt.Text = "Camada 2D — sprites, animação, círculos, tilemap e Box2D";
+    lt.FontSize = 22.0f;
+    lt.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    label2D.GetComponent<TransformComponent>().Translation = { -6.0f, 5.6f, 0.0f };
+
+    // Tilemap (atlas procedural 4x4) — o "chão" da física 2D.
+    auto atlas = MakeTileAtlasTexture();
+    Entity tilemap = scene->CreateEntity("Tilemap");
+    auto& tmc = tilemap.AddComponent<TilemapComponent>();
+    tmc.AtlasTexture = atlas;
+    tmc.AtlasColumns = 4;
+    tmc.AtlasRows = 4;
+    tmc.MapWidth = 14;
+    tmc.MapHeight = 3;
+    tmc.TileSize = { 1.0f, 1.0f };
+    for (uint32_t x = 0; x < tmc.MapWidth; ++x)
+        tmc.Tiles.push_back(1 + (x % 12)); // linha de baixo sólida
+    for (uint32_t x = 0; x < tmc.MapWidth * (tmc.MapHeight - 1); ++x)
+        tmc.Tiles.push_back(0);            // resto vazio
+    for (uint32_t v = 1; v <= 12; ++v) tmc.SolidTileValues.push_back(v);
+    tilemap.GetComponent<TransformComponent>().Translation = { -7.0f, -5.0f, 0.0f };
+
+    // ---- UI (canvas + painel de botões) ----
+    Entity canvas = scene->CreateEntity("Canvas");
+    canvas.AddComponent<UICanvasComponent>();
+
+    auto makeButton = [&](const std::string& tag, const std::string& text, float y,
+                          const glm::vec4& color) {
+        Entity btn = scene->CreateEntity(tag);
+        auto& ur = btn.AddComponent<UIRectComponent>();
+        ur.Position = { -14.5f, y };
+        ur.Size = { 4.8f, 0.85f };
+        ur.Color = color;
+        btn.AddComponent<UIButtonComponent>();
+        auto& btext = btn.AddComponent<TextComponent>();
+        btext.Text = text;
+        btext.FontSize = 0.34f;
+        btext.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+        btn.SetParent(canvas);
+        return btn;
+    };
+
+    float by = 7.0f;
+    makeButton("Btn Física 3D", "Física 3D", by, { 0.55f, 0.22f, 0.22f, 1.0f }); by -= 1.02f;
+    makeButton("Btn Física 2D", "Física 2D", by, { 0.22f, 0.5f, 0.55f, 1.0f }); by -= 1.02f;
+    makeButton("Btn Partículas", "Partículas", by, { 0.65f, 0.45f, 0.16f, 1.0f }); by -= 1.02f;
+    makeButton("Btn Timeline", "Timeline", by, { 0.5f, 0.25f, 0.6f, 1.0f }); by -= 1.02f;
+    makeButton("Btn Círculos", "Círculos", by, { 0.2f, 0.45f, 0.75f, 1.0f }); by -= 1.02f;
+    makeButton("Btn Tilemap", "Tilemap", by, { 0.35f, 0.55f, 0.3f, 1.0f }); by -= 1.02f;
+    makeButton("Btn Animação", "Animação", by, { 0.55f, 0.35f, 0.35f, 1.0f }); by -= 1.02f;
+    makeButton("Btn Câmera", "Câmera Segue", by, { 0.3f, 0.4f, 0.65f, 1.0f }); by -= 1.02f;
+    makeButton("Btn Luz", "Luz Pontual", by, { 0.6f, 0.5f, 0.15f, 1.0f }); by -= 1.02f;
+    makeButton("Btn Texto", "Texto", by, { 0.45f, 0.3f, 0.5f, 1.0f }); by -= 1.02f;
+    makeButton("Btn Gráficos", "Gráficos", by, { 0.3f, 0.55f, 0.5f, 1.0f }); by -= 1.02f;
+
+    Entity title = scene->CreateEntity("Título");
+    auto& urt = title.AddComponent<UIRectComponent>();
+    urt.Position = { 2.0f, 8.6f };
+    urt.Size = { 30.0f, 1.0f };
+    urt.Color = { 0.0f, 0.0f, 0.0f, 0.0f }; // a=0: só texto
+    auto& tct = title.AddComponent<TextComponent>();
+    tct.Text = "Vitrine de Funções — aperte Play e clique nos botões";
+    tct.FontSize = 0.5f;
+    tct.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    title.SetParent(canvas);
+
+    Entity status = scene->CreateEntity("Status");
+    auto& urs = status.AddComponent<UIRectComponent>();
+    urs.Position = { 2.0f, -8.4f };
+    urs.Size = { 32.0f, 1.4f };
+    urs.Color = { 0.0f, 0.0f, 0.0f, 0.0f };
+    auto& sts = status.AddComponent<TextComponent>();
+    sts.Text = "Clique num botão para demonstrar a função.";
+    sts.FontSize = 0.4f;
+    sts.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    status.SetParent(canvas);
+
+    // ---- Entidade "Tour" hospeda o script da vitrine ----
+    Entity tour = scene->CreateEntity("Tour");
+    auto& nsc = tour.AddComponent<NativeScriptComponent>();
+    nsc.BindByName("ShowcaseScript");
+
+    // Névoa sutil pra dar atmosfera (configurações gráficas da demo).
+    auto settings = Renderer3D::GetGraphicsSettings();
+    settings.FogEnabled = true;
+    settings.FogDensity = 0.018f;
+    Renderer3D::SetGraphicsSettings(settings);
+
+    m_SelectedEntity = tour;
+    KZ_CORE_INFO("Cena Vitrine de Funções criada.");
+}
+
 // Decompõe uma matriz de transformação em translação/rotação(euler,
 // radianos)/escala. Usado pra converter o resultado do ImGuizmo::Manipulate
 // (uma mat4 só) de volta pros três campos separados de TransformComponent.
@@ -1836,6 +2565,8 @@ void EditorLayer::DrawSettingsEditor() {
     if (ImGui::Button("Criar demo Física 3D")) CreateDemoScene3DPhysics();
     ImGui::SameLine();
     if (ImGui::Button("Criar demonstração 2.5D")) CreateDemoScene2_5D();
+    ImGui::SameLine();
+    if (ImGui::Button("Criar vitrine de funções")) CreateDemoShowcase();
 }
 
 void EditorLayer::DrawGizmo() {
@@ -2393,6 +3124,8 @@ void EditorLayer::DrawDockspace() {
             CreateDemoScene3D();
         if (ImGui::MenuItem("Cena de Demonstração Física 3D...", nullptr, false, m_SceneState == SceneState::Edit))
             CreateDemoScene3DPhysics();
+        if (ImGui::MenuItem("Cena Vitrine de Funções...", nullptr, false, m_SceneState == SceneState::Edit))
+            CreateDemoShowcase();
         ImGui::EndPopup();
     }
 

@@ -99,6 +99,11 @@ private:
     // viewport. Prova o sistema novo da v0.31.
     void CreateDemoScene3DPhysics();
 
+    // Cena de demonstração VITRINE DE FUNÇÕES (v0.33): 2.5D interativa com
+    // painel de botões que dispara cada subsistema (física 2D/3D, partículas,
+    // timeline, círculos, tilemap, animação, câmera segue, luz, texto, gráficos).
+    void CreateDemoShowcase();
+
     // Cria uma entidade a partir de um arquivo de asset (soltado do Content
     // Browser no viewport): .obj -> MeshRenderer, imagem -> SpriteRenderer.
     kizuri::Entity CreateEntityFromAsset(const std::string& path, const glm::vec3& worldPos);

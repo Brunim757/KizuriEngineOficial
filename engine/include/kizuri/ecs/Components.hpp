@@ -409,6 +409,15 @@ struct SphereCollider3DComponent {
     float Radius = 0.5f;
 };
 
+// Colisor 3D de MALHA (pilar AAA v0.34): envoltório convexo da malha do
+// MeshRenderer da entidade (ou de MeshPath, se definido) — geometria de
+// verdade, não caixa/esfera. Convexo só (o Bullet não faz concave; pra
+// terreno/ambiente use o colisor de terreno ou várias caixas).
+struct MeshColliderComponent {
+    std::string MeshPath; // vazio = usa o MeshRenderer da própria entidade
+    uint32_t MaxPoints = 96; // amostragem do hull (perf vs fidelidade)
+};
+
 // Componente de script nativo em C++ — esta é a "primeira geração" do que
 // será a KZScript. O jogo herda de NativeScript e sobrescreve os callbacks.
 class NativeScript;

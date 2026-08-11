@@ -298,6 +298,11 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
         je["SphereCollider3D"] = { { "Radius", sc.Radius } };
     }
 
+    if (entity.HasComponent<MeshColliderComponent>()) {
+        auto& mc = entity.GetComponent<MeshColliderComponent>();
+        je["MeshCollider"] = { { "MeshPath", mc.MeshPath }, { "MaxPoints", mc.MaxPoints } };
+    }
+
     if (entity.HasComponent<LightComponent>()) {
         auto& lc = entity.GetComponent<LightComponent>();
         je["Light"] = {
@@ -692,6 +697,13 @@ if (je.contains("CharacterController")) {
         auto& js = je["SphereCollider3D"];
         auto& sc = entity.AddComponent<SphereCollider3DComponent>();
         sc.Radius = js.value("Radius", 0.5f);
+    }
+
+    if (je.contains("MeshCollider")) {
+        auto& jm = je["MeshCollider"];
+        auto& mc = entity.AddComponent<MeshColliderComponent>();
+        mc.MeshPath = jm.value("MeshPath", "");
+        mc.MaxPoints = jm.value("MaxPoints", 96u);
     }
 
     if (je.contains("Light")) {

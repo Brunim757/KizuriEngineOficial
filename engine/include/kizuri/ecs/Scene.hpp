@@ -207,6 +207,7 @@ private:
 
     // Estado do mouse pra UI (preenchido pelo host via SetUIMouseNDC).
     glm::vec2 m_UIMouseNDC{ 0.0f };
+    glm::vec3 m_LastListenerPos{ 0.0f }; // posição do ouvinte (oclusão de áudio)
     bool m_UIMouseValid = false;
     bool m_UIMouseDown = false;
     bool m_UIMouseDownPrev = false;

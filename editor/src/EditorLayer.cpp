@@ -4468,6 +4468,39 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<Rigidbody3DComponent>();
         }
 
+        if (m_SelectedEntity.HasComponent<BoxCollider3DComponent>()) {
+            auto& bc3 = m_SelectedEntity.GetComponent<BoxCollider3DComponent>();
+            if (DrawComponentHeader("Box Collider 3D", &removeThis)) {
+                ImGui::DragFloat3("Meia-extensão", &bc3.HalfExtents.x, 0.05f);
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<BoxCollider3DComponent>();
+        }
+
+        if (m_SelectedEntity.HasComponent<SphereCollider3DComponent>()) {
+            auto& sc3 = m_SelectedEntity.GetComponent<SphereCollider3DComponent>();
+            if (DrawComponentHeader("Sphere Collider 3D", &removeThis)) {
+                ImGui::DragFloat("Raio", &sc3.Radius, 0.05f, 0.01f, 100.0f);
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<SphereCollider3DComponent>();
+        }
+
+        if (m_SelectedEntity.HasComponent<MeshColliderComponent>()) {
+            auto& mc3 = m_SelectedEntity.GetComponent<MeshColliderComponent>();
+            if (DrawComponentHeader("Mesh Collider 3D (convexo)", &removeThis)) {
+                char mcBuf[512];
+                strncpy(mcBuf, mc3.MeshPath.c_str(), sizeof(mcBuf) - 1);
+                mcBuf[sizeof(mcBuf) - 1] = '\0';
+                if (ImGui::InputText("Malha (vazio = do MeshRenderer)", mcBuf, sizeof(mcBuf)))
+                    mc3.MeshPath = mcBuf;
+                ImGui::DragInt("Pontos máximos (amostragem)", (int*)&mc3.MaxPoints, 1, 8, 512);
+                ImGui::TextDisabled("Envoltório convexo da geometria (Bullet).");
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<MeshColliderComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<BoxCollider2DComponent>()) {
             auto& bc = m_SelectedEntity.GetComponent<BoxCollider2DComponent>();
             if (DrawComponentHeader("Box Collider 2D", &removeThis)) {
@@ -4604,6 +4637,16 @@ void EditorLayer::DrawAddComponentButton() {
             m_SelectedEntity.AddComponent<CircleCollider2DComponent>();
         if (!m_SelectedEntity.HasComponent<NativeScriptComponent>() && ImGui::MenuItem("Script Nativo"))
             m_SelectedEntity.AddComponent<NativeScriptComponent>();
+        ImGui::Separator();
+        // Física 3D (pilar AAA v0.34 — grupo completo no menu).
+        if (!m_SelectedEntity.HasComponent<Rigidbody3DComponent>() && ImGui::MenuItem("Rigidbody 3D"))
+            m_SelectedEntity.AddComponent<Rigidbody3DComponent>();
+        if (!m_SelectedEntity.HasComponent<BoxCollider3DComponent>() && ImGui::MenuItem("Box Collider 3D"))
+            m_SelectedEntity.AddComponent<BoxCollider3DComponent>();
+        if (!m_SelectedEntity.HasComponent<SphereCollider3DComponent>() && ImGui::MenuItem("Sphere Collider 3D"))
+            m_SelectedEntity.AddComponent<SphereCollider3DComponent>();
+        if (!m_SelectedEntity.HasComponent<MeshColliderComponent>() && ImGui::MenuItem("Mesh Collider 3D (convexo)"))
+            m_SelectedEntity.AddComponent<MeshColliderComponent>();
         ImGui::Separator();
         // IA e Navegação (pilar AAA v0.34).
         if (!m_SelectedEntity.HasComponent<NavGridComponent>() && ImGui::MenuItem("NavGrid (grade de navegação)"))

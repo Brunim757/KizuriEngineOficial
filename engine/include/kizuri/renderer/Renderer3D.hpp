@@ -138,6 +138,9 @@ public:
     static void BeginScene(const PerspectiveCamera& camera);
     static void EndScene();
 
+    // VP da câmera da passada atual — usada pelo Scene pro culling de luzes.
+    static glm::mat4 GetLastViewProjection() { return s_ViewProjection; }
+
     // Configurações gráficas globais (qualidade preset / MSAA / SSAO /
     // bloom / exposição / resolução interna). Aplicar em runtime não exige
     // reiniciar nada: os recursos que dependem de tamanho (HDR, shadow map,
@@ -205,7 +208,6 @@ private:
     static Ref<VertexArray> s_DebugVAO;
     static Ref<VertexBuffer> s_DebugVBO;
     static glm::mat4 s_ViewProjection;
-
     static std::vector<DrawCommand> s_DrawList;
     static std::vector<InstanceBatch> s_InstanceBatches;
     static std::vector<DebugLine> s_DebugLines;

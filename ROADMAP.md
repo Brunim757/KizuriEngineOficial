@@ -775,8 +775,8 @@ seguintes. Ordem de implementação = ordem de dependência.
 - [ ] **Retargeting** — mapeamento de ossos por nome pra skeletons diferentes (v1)
 
 ### 3. Renderização (culling + streaming + qualidade)
-- [ ] **Frustum culling** por entidade (AABB × frustum) no passe 3D
-- [ ] **Culling de luzes** (só luzes no frustum + range)
+- [x] **Frustum culling** por entidade (AABB × frustum + culling por tamanho de tela) no passe 3D
+- [x] **Culling de luzes** (pontual/spot fora do frustum+range não são submetidas)
 - [ ] **Streaming de assets**: carregamento de texturas/malhas em thread
   (callback quando pronto), cache por prioridade
 - [ ] **LOD automático** — geração de versões reduzidas de malhas procedurais
@@ -801,10 +801,10 @@ seguintes. Ordem de implementação = ordem de dependência.
 - [ ] **Editor de shaders** (visual, nós) (v1 — mais longe)
 
 ### 6. Pipeline de conteúdo (assets + física + áudio)
-- [ ] **Collider de malha convexa** (btConvexHullShape do Mesh::GetVertices) —
-  MeshColliderComponent 3D
-- [ ] **Áudio com oclusão** — filtro lowpass por raycast quando obstáculo entre
-  fonte e ouvinte; **reverb** básico (miniaudio nodes)
+- [x] **Collider de malha convexa** (btConvexHullShape do Mesh::GetVertices) —
+  MeshColliderComponent 3D (amostragem de pontos)
+- [x] **Áudio com oclusão** — raycast fonte→ouvinte abafa o som (volume);
+  reverb básico pendente
 - [ ] **Streaming de cenas** — carregar cena grande em partes (stepwise) com
   progresso (o serializador já tem BeginDeserializeStepwise)
 - [ ] **Async loader de texturas** (parte do pilar 3)

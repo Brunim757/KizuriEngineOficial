@@ -987,6 +987,27 @@ void Scene::RegisterPhysics3DEntity(Entity entity) {
     } else if (entity.HasComponent<SphereCollider3DComponent>()) {
         auto& sc3d = entity.GetComponent<SphereCollider3DComponent>();
         shape = new btSphereShape(sc3d.Radius * transform.Scale.x);
+    } else if (entity.HasComponent<MeshColliderComponent>()) {
+        // Colisor de MALHA (convexo): envoltório da geometria do MeshRenderer
+        // (ou de MeshPath). Amostra até MaxPoints pra custo controlado.
+        auto& mc = entity.GetComponent<MeshColliderComponent>();
+        Ref<Mesh> mesh = nullptr;
+        if (!mc.MeshPath.empty()) mesh = Mesh::FromSource(mc.MeshPath);
+        else if (entity.HasComponent<MeshRendererComponent>())
+            mesh = entity.GetComponent<MeshRendererComponent>().MeshAsset;
+        const auto& verts = mesh ? mesh->GetVertices() : std::vector<Vertex3D>{};
+        if (verts.size() >= 4) {
+            auto* hull = new btConvexHullShape();
+            uint32_t step = std::max(1u, (uint32_t)(verts.size() / std::max(mc.MaxPoints, 4u)));
+            for (size_t k = 0; k < verts.size(); k += step) {
+                const auto& p = verts[k].Position;
+                hull->addPoint(btVector3(p.x * transform.Scale.x, p.y * transform.Scale.y, p.z * transform.Scale.z));
+            }
+            hull->initializePolyhedralFeatures();
+            shape = hull;
+        } else {
+            shape = new btBoxShape(btVector3(0.5f, 0.5f, 0.5f));
+        }
     } else {
         shape = new btBoxShape(btVector3(0.5f, 0.5f, 0.5f));
     }
@@ -1716,6 +1737,9 @@ void Scene::SubmitLights() {
         Renderer3D::SubmitLight(Light{}); // sem nenhuma LightComponent na cena, mantém o sol default de antes
         return;
     }
+    // Culling de luzes (pilar render v0.34): só submete luz pontual/spot cuja
+    // esfera de alcance toca o frustum da câmera — direcional ilumina sempre.
+    glm::mat4 cullVP = Renderer3D::GetLastViewProjection();
     for (auto e : lights) {
         if (!IsEntityActive(Entity{ e, this })) continue; // luz inativa não ilumina
         auto& lc = lights.get<LightComponent>(e);
@@ -1730,6 +1754,12 @@ void Scene::SubmitLights() {
         l.InnerConeDeg = lc.InnerConeDeg;
         l.OuterConeDeg = lc.OuterConeDeg;
         l.CastsShadow = lc.CastsShadow;
+
+        if (l.Type != LightType::Directional) {
+            // Esfera do alcance da luz vs frustum (AABB aproximada).
+            glm::vec3 r = glm::vec3(l.Range);
+            if (!AABBInFrustum(cullVP, l.Position - r, l.Position + r)) continue;
+        }
         Renderer3D::SubmitLight(l);
     }
 }
@@ -1796,6 +1826,7 @@ void Scene::UpdateAudio(Timestep) {
         glm::vec3 forward = glm::normalize(glm::mat3(world) * glm::vec3(0.0f, 0.0f, -1.0f));
         glm::vec3 up = glm::normalize(glm::mat3(world) * glm::vec3(0.0f, 1.0f, 0.0f));
         AudioEngine::SetListenerPosition(pos, forward, up);
+        m_LastListenerPos = pos;
         break;
     }
 
@@ -1820,6 +1851,19 @@ void Scene::UpdateAudio(Timestep) {
         if (ac.PlayOnStart && !ac.HasStarted) {
             AudioEngine::Play(ac.Handle, ac.Loop, ac.Volume, ac.Group);
             ac.HasStarted = true;
+        }
+
+        // Oclusão (pilar AAA v0.34): fonte espacial com um corpo 3D entre ela
+        // e o ouvinte é abafada (raycast do Bullet). Volume efetivo por frame.
+        if (ac.Spatial && ac.HasStarted && ac.Handle != kInvalidSound) {
+            float occlusion = 1.0f;
+            glm::vec3 src = glm::vec3(GetWorldTransform(Entity{ e, this })[3]);
+            Entity hit; glm::vec3 hp; float frac = 0.0f;
+            if (Raycast3D(src, m_LastListenerPos, hit, hp, frac)) {
+                // Ignora colisão com a própria entidade.
+                if ((uint32_t)e != (uint32_t)hit.GetHandle()) occlusion = 0.3f;
+            }
+            AudioEngine::SetVolume(ac.Handle, ac.Volume * occlusion);
         }
     }
 }

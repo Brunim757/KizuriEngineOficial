@@ -58,6 +58,10 @@ struct SkinData {
     // tempo 'time' do clip 'clipName'. clipName vazio ou inválido = pose de
     // repouso (bind pose). Devolve false se a skin não tem juntas.
     bool Evaluate(const std::string& clipName, float time, glm::mat4* outMatrices, int maxJoints) const;
+
+    // Igual ao Evaluate, porém devolve as matrizes GLOBAIS (sem inverseBind)
+    // — o que o blend de animação e o IK usam pra misturar/corrigir a pose.
+    bool EvaluateGlobal(const std::string& clipName, float time, glm::mat4* outMatrices, int maxJoints) const;
 };
 
 } // namespace kizuri

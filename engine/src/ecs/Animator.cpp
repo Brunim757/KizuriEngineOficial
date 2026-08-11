@@ -232,4 +232,46 @@ bool SkinData::Evaluate(const std::string& clipName, float time, glm::mat4* outM
     return true;
 }
 
+// Igual ao Evaluate, mas devolve as matrizes GLOBAIS das juntas (SEM o
+// inverse bind) — o que o blend de animação e o IK precisam pra misturar/
+// corrigir a pose antes do skinning final.
+bool SkinData::EvaluateGlobal(const std::string& clipName, float time, glm::mat4* outMatrices, int maxJoints) const {
+    if (outMatrices == nullptr || Joints.empty()) return false;
+
+    int n = (int)Joints.size();
+    int count = std::min(n, maxJoints);
+
+    std::vector<glm::vec3> t(n), s(n, glm::vec3(1.0f));
+    std::vector<glm::quat> r(n);
+    for (int i = 0; i < n; ++i) {
+        t[i] = Joints[i].T;
+        r[i] = Joints[i].R;
+        s[i] = Joints[i].S;
+    }
+
+    int clipIdx = GetClipIndex(clipName);
+    if (clipIdx >= 0) {
+        const AnimationClip& clip = Clips[(size_t)clipIdx];
+        for (const auto& ch : clip.Channels) {
+            if (ch.Joint < 0 || ch.Joint >= n || ch.Times.empty()) continue;
+            glm::vec4 v = SampleChannel(ch, time);
+            switch (ch.Type) {
+                case AnimChannel::Path::Translation: t[ch.Joint] = glm::vec3(v); break;
+                case AnimChannel::Path::Rotation:    r[ch.Joint] = glm::quat(v.w, v.x, v.y, v.z); break;
+                default:                             s[ch.Joint] = glm::vec3(v); break;
+            }
+        }
+    }
+
+    std::vector<glm::mat4> global(n);
+    for (int idx = 0; idx < (int)Order.size(); ++idx) {
+        int i = Order[(size_t)idx];
+        glm::mat4 local = glm::translate(glm::mat4(1.0f), t[i]) * glm::mat4_cast(r[i]) * glm::scale(glm::mat4(1.0f), s[i]);
+        global[i] = (Joints[i].Parent >= 0) ? global[Joints[i].Parent] * local : local;
+    }
+
+    for (int i = 0; i < count; ++i) outMatrices[i] = global[i];
+    return true;
+}
+
 } // namespace kizuri

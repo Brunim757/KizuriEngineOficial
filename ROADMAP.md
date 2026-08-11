@@ -767,9 +767,10 @@ seguintes. Ordem de implementação = ordem de dependência.
 - [x] **Demo IA**: jogador + 3 inimigos perseguindo com obstáculos (WASD)
 
 ### 2. Animação (blend trees + IK + camadas)
-- [ ] **BlendTreeComponent** — mistura de 2+ clips por peso (ex: idle↔walk pelo
-  speed) + crossfade entre clips; C++ + C#
-- [ ] **TwoBoneIKComponent** — IK analítico de 2 ossos (braços/pernas)
+- [x] **BlendTreeComponent** (AnimationBlendComponent) — mistura de 2 clips por
+  peso (idle↔walk pelo speed), TRS mix com slerp de rotação; C++ + C#
+- [x] **TwoBoneIKComponent** — IK analítico de 2 ossos (braços/pernas) com
+  peso e alvo em mundo; C++ + C#
 - [ ] **Camadas** — blend por camada (corpo + braço apontando) (v1)
 - [ ] **Retargeting** — mapeamento de ossos por nome pra skeletons diferentes (v1)
 

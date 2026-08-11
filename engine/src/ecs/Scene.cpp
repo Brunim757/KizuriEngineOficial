@@ -1584,6 +1584,132 @@ void Scene::UpdateAnimators(Timestep ts) {
     });
 }
 
+// ---------------------------------------------------------------------------
+// Animação AAA (pilar v0.34): blend de clips + IK de dois ossos.
+// ---------------------------------------------------------------------------
+
+// Quat que leva o vetor 'a' até 'b' (normalizados).
+static glm::quat RotationBetweenVectors(const glm::vec3& a, const glm::vec3& b) {
+    glm::vec3 na = glm::normalize(a);
+    glm::vec3 nb = glm::normalize(b);
+    float d = glm::clamp(glm::dot(na, nb), -1.0f, 1.0f);
+    if (d > 0.9999f) return glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    if (d < -0.9999f) {
+        glm::vec3 ax = glm::cross(na, glm::vec3(0.0f, 1.0f, 0.0f));
+        if (glm::dot(ax, ax) < 1e-6f) ax = glm::cross(na, glm::vec3(1.0f, 0.0f, 0.0f));
+        return glm::angleAxis(glm::pi<float>(), glm::normalize(ax));
+    }
+    glm::vec3 axis = glm::cross(na, nb);
+    return glm::angleAxis(std::acos(d), glm::normalize(axis));
+}
+
+// IK analítico de dois ossos (triângulo): corrige root+mid pra levar tip ao
+// alvo, no espaço GLOBAL. 'weight' 0..1 suaviza a correção (0 = pose original).
+static void ApplyTwoBoneIK(const SkinData* skin, glm::mat4* global, const TwoBoneIKComponent& ik, int jointCount) {
+    int ri = -1, mi = -1, ti = -1;
+    for (int i = 0; i < jointCount; ++i) {
+        const std::string& name = skin->Joints[(size_t)i].Name;
+        if (name == ik.RootBone && ri < 0) ri = i;
+        else if (name == ik.MidBone && mi < 0) mi = i;
+        else if (name == ik.TipBone && ti < 0) ti = i;
+        if (ri >= 0 && mi >= 0 && ti >= 0) break;
+    }
+    if (ri < 0 || mi < 0 || ti < 0) return;
+    if (ri == mi || mi == ti || ri == ti) return;
+
+    glm::vec3 root = glm::vec3(global[ri][3]);
+    glm::vec3 mid = glm::vec3(global[mi][3]);
+    glm::vec3 tip = glm::vec3(global[ti][3]);
+    glm::vec3 target = ik.Target;
+
+    const float a = glm::length(mid - root);
+    const float b = glm::length(tip - mid);
+    const float c = glm::clamp(glm::length(target - root), 1e-4f, glm::max(a + b - 1e-4f, 1e-4f));
+
+    const float cosMid = glm::clamp((a * a + b * b - c * c) / (2.0f * a * b), -1.0f, 1.0f);
+    const float midAngle = std::acos(cosMid);
+
+    const glm::vec3 dirRootMid = glm::normalize(mid - root);
+    const glm::vec3 dirRootTarget = glm::normalize(target - root);
+    glm::vec3 bendAxis = glm::cross(dirRootMid, dirRootTarget);
+    if (glm::dot(bendAxis, bendAxis) < 1e-6f) bendAxis = glm::vec3(0.0f, 1.0f, 0.0f);
+    bendAxis = glm::normalize(bendAxis);
+
+    // Ângulo na raiz (lei dos senos) e nova posição do meio.
+    const float alpha = std::asin(glm::clamp(b * std::sin(midAngle) / c, -1.0f, 1.0f));
+    glm::quat rootRotFull = glm::angleAxis(alpha, bendAxis);
+    glm::vec3 dirRootMidNew = glm::normalize(rootRotFull * dirRootTarget);
+
+    glm::quat qRoot = RotationBetweenVectors(dirRootMid, dirRootMidNew);
+    glm::quat qMid = RotationBetweenVectors(tip - mid, target - mid);
+
+    const float w = glm::clamp(ik.Weight, 0.0f, 1.0f);
+    if (w <= 0.001f) return;
+
+    // Suaviza a correção pelo peso (rotação parcial).
+    auto weighted = [w](const glm::quat& q) {
+        float ang = 2.0f * std::acos(glm::clamp(q.w, -1.0f, 1.0f));
+        if (ang < 1e-5f) return glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+        glm::vec3 ax = glm::normalize(glm::vec3(q.x, q.y, q.z));
+        return glm::angleAxis(ang * w, ax);
+    };
+    glm::quat qRootW = weighted(qRoot);
+    glm::quat qMidW = weighted(qMid);
+
+    glm::mat4 corrRoot = glm::translate(glm::mat4(1.0f), root) * glm::mat4_cast(qRootW) * glm::translate(glm::mat4(1.0f), -root);
+    glm::mat4 corrMid = glm::translate(glm::mat4(1.0f), mid) * glm::mat4_cast(qMidW) * glm::translate(glm::mat4(1.0f), -mid);
+
+    // Aplica na ordem pai → filho (matrizes globais absolutas).
+    global[ri] = corrRoot * global[ri];
+    global[mi] = corrMid * (corrRoot * global[mi]);
+    global[ti] = corrMid * (corrRoot * global[ti]);
+}
+
+// Pose final de um personagem: blend (se houver) + IK (se houver), no espaço
+// global, e aplica o inverseBind no fim. 'count' = nº de juntas da skin.
+static bool ComputeSkinnedPose(const SkinData* skin, const AnimatorComponent& ac,
+                               const AnimationBlendComponent* blend, const TwoBoneIKComponent* ik,
+                               glm::mat4* outJoints, int count) {
+    if (!skin || skin->Joints.empty()) return false;
+
+    glm::mat4 gA[kMaxSkinJoints];
+    if (!skin->EvaluateGlobal(ac.ClipName, ac.Time, gA, count)) return false;
+
+    glm::mat4 gB[kMaxSkinJoints];
+    bool haveB = blend && blend->UseBlend && !blend->ClipB.empty() &&
+                 skin->EvaluateGlobal(blend->ClipB, ac.Time, gB, count);
+    float w = blend ? glm::clamp(blend->BlendWeight, 0.0f, 1.0f) : 0.0f;
+
+    glm::mat4 global[kMaxSkinJoints];
+    for (int i = 0; i < count; ++i) {
+        if (haveB && w > 0.0001f) {
+            // Mistura TRS correta (lerp posição/escala, slerp rotação).
+            glm::vec3 tA = glm::vec3(gA[i][3]);
+            glm::vec3 tB = glm::vec3(gB[i][3]);
+            glm::vec3 sA(glm::length(glm::vec3(gA[i][0])), glm::length(glm::vec3(gA[i][1])), glm::length(glm::vec3(gA[i][2])));
+            glm::vec3 sB(glm::length(glm::vec3(gB[i][0])), glm::length(glm::vec3(gB[i][1])), glm::length(glm::vec3(gB[i][2])));
+            glm::mat3 rA3(gA[i]); glm::mat3 rB3(gB[i]);
+            for (int c = 0; c < 3; ++c) {
+                rA3[c] = glm::normalize(rA3[c]);
+                rB3[c] = glm::normalize(rB3[c]);
+            }
+            glm::quat qA(rA3), qB(rB3);
+            glm::vec3 t = glm::mix(tA, tB, w);
+            glm::quat q = glm::normalize(glm::slerp(qA, qB, w));
+            glm::vec3 s = glm::mix(sA, sB, w);
+            global[i] = glm::translate(glm::mat4(1.0f), t) * glm::mat4_cast(q) * glm::scale(glm::mat4(1.0f), s);
+        } else {
+            global[i] = gA[i];
+        }
+    }
+
+    if (ik) ApplyTwoBoneIK(skin, global, *ik, count);
+
+    for (int i = 0; i < count; ++i)
+        outJoints[i] = global[i] * skin->Joints[(size_t)i].InverseBind;
+    return true;
+}
+
 void Scene::SubmitLights() {
     auto lights = m_Registry.view<TransformComponent, LightComponent>();
     if (lights.begin() == lights.end()) {
@@ -2149,9 +2275,12 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
             auto* animator = m_Registry.try_get<AnimatorComponent>(me);
             if (animator && animator->Skin && !animator->Skin->Joints.empty()) {
                 glm::mat4 joints[kMaxSkinJoints];
-                if (animator->Skin->Evaluate(animator->ClipName, animator->Time, joints, kMaxSkinJoints))
+                auto* blend = m_Registry.try_get<AnimationBlendComponent>(me);
+                auto* ik = m_Registry.try_get<TwoBoneIKComponent>(me);
+                int jointCount = (int)std::min((size_t)animator->Skin->Joints.size(), (size_t)kMaxSkinJoints);
+                if (ComputeSkinnedPose(animator->Skin.get(), *animator, blend, ik, joints, jointCount))
                     Renderer3D::SubmitSkinned(mr.MeshAsset, mr.MeshMaterial, world, joints,
-                                              (uint32_t)animator->Skin->Joints.size());
+                                              (uint32_t)jointCount);
                 else
                     Renderer3D::Submit(mr.MeshAsset, mr.MeshMaterial, world);
                 continue;

@@ -186,6 +186,19 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
                           { "HeightScale", t.HeightScale }, { "Seed", t.Seed } };
     }
 
+    if (entity.HasComponent<AnimationBlendComponent>()) {
+        auto& ab = entity.GetComponent<AnimationBlendComponent>();
+        je["AnimationBlend"] = { { "ClipA", ab.ClipA }, { "ClipB", ab.ClipB },
+                                 { "BlendWeight", ab.BlendWeight }, { "UseBlend", ab.UseBlend } };
+    }
+
+    if (entity.HasComponent<TwoBoneIKComponent>()) {
+        auto& ik = entity.GetComponent<TwoBoneIKComponent>();
+        je["TwoBoneIK"] = { { "RootBone", ik.RootBone }, { "MidBone", ik.MidBone },
+                            { "TipBone", ik.TipBone }, { "Target", Vec3ToJson(ik.Target) },
+                            { "Weight", ik.Weight } };
+    }
+
     if (entity.HasComponent<CharacterControllerComponent>()) {
         auto& cc = entity.GetComponent<CharacterControllerComponent>();
         je["CharacterController"] = { { "Speed", cc.Speed }, { "Gravity", cc.Gravity },
@@ -434,7 +447,45 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         entity.RemoveComponent<TimelineComponent>();
     }
 
-    if (je.contains("CharacterController")) {
+        if (je.contains("AnimationBlend")) {
+        auto& jab = je["AnimationBlend"];
+        auto& ab = entity.AddComponent<AnimationBlendComponent>();
+        ab.ClipA = jab.value("ClipA", "");
+        ab.ClipB = jab.value("ClipB", "");
+        ab.BlendWeight = jab.value("BlendWeight", 0.0f);
+        ab.UseBlend = jab.value("UseBlend", true);
+    }
+
+    if (je.contains("TwoBoneIK")) {
+        auto& jik = je["TwoBoneIK"];
+        auto& ik = entity.AddComponent<TwoBoneIKComponent>();
+        ik.RootBone = jik.value("RootBone", "");
+        ik.MidBone = jik.value("MidBone", "");
+        ik.TipBone = jik.value("TipBone", "");
+        ik.Target = JsonToVec3(jik["Target"]);
+        ik.Weight = jik.value("Weight", 1.0f);
+    }
+
+    if (je.contains("AnimationBlend")) {
+        auto& jab = je["AnimationBlend"];
+        auto& ab = entity.AddComponent<AnimationBlendComponent>();
+        ab.ClipA = jab.value("ClipA", "");
+        ab.ClipB = jab.value("ClipB", "");
+        ab.BlendWeight = jab.value("BlendWeight", 0.0f);
+        ab.UseBlend = jab.value("UseBlend", true);
+    }
+
+    if (je.contains("TwoBoneIK")) {
+        auto& jik = je["TwoBoneIK"];
+        auto& ik = entity.AddComponent<TwoBoneIKComponent>();
+        ik.RootBone = jik.value("RootBone", "");
+        ik.MidBone = jik.value("MidBone", "");
+        ik.TipBone = jik.value("TipBone", "");
+        ik.Target = JsonToVec3(jik["Target"]);
+        ik.Weight = jik.value("Weight", 1.0f);
+    }
+
+if (je.contains("CharacterController")) {
         auto& jc = je["CharacterController"];
         auto& cc = entity.HasComponent<CharacterControllerComponent>()
             ? entity.GetComponent<CharacterControllerComponent>()
@@ -910,6 +961,33 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         cc.StepOffset = jc.value("StepOffset", 0.3f);
     } else if (entity.HasComponent<CharacterControllerComponent>()) {
         entity.RemoveComponent<CharacterControllerComponent>();
+    }
+
+    if (je.contains("AnimationBlend")) {
+        auto& jab = je["AnimationBlend"];
+        auto& ab = entity.HasComponent<AnimationBlendComponent>()
+            ? entity.GetComponent<AnimationBlendComponent>()
+            : entity.AddComponent<AnimationBlendComponent>();
+        ab.ClipA = jab.value("ClipA", "");
+        ab.ClipB = jab.value("ClipB", "");
+        ab.BlendWeight = jab.value("BlendWeight", 0.0f);
+        ab.UseBlend = jab.value("UseBlend", true);
+    } else if (entity.HasComponent<AnimationBlendComponent>()) {
+        entity.RemoveComponent<AnimationBlendComponent>();
+    }
+
+    if (je.contains("TwoBoneIK")) {
+        auto& jik = je["TwoBoneIK"];
+        auto& ik = entity.HasComponent<TwoBoneIKComponent>()
+            ? entity.GetComponent<TwoBoneIKComponent>()
+            : entity.AddComponent<TwoBoneIKComponent>();
+        ik.RootBone = jik.value("RootBone", "");
+        ik.MidBone = jik.value("MidBone", "");
+        ik.TipBone = jik.value("TipBone", "");
+        ik.Target = JsonToVec3(jik["Target"]);
+        ik.Weight = jik.value("Weight", 1.0f);
+    } else if (entity.HasComponent<TwoBoneIKComponent>()) {
+        entity.RemoveComponent<TwoBoneIKComponent>();
     }
 
     if (je.contains("CircleRenderer")) {

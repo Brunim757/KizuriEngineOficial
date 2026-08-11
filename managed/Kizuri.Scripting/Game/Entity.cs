@@ -317,6 +317,16 @@ public readonly struct Entity
 		=> Interop.KizuriNative.kz_entity_move_character(Handle, fwdX, fwdZ);
 
 	// ---- IA e Navegação (pilar AAA v0.34) ----
+	// ---- Animação AAA (pilar v0.34) ----
+	public bool AddAnimationBlend(string clipA, string clipB, float weight = 0f)
+		=> Interop.KizuriNative.kz_entity_add_animation_blend(Handle, clipA, clipB, weight) != 0;
+	public void SetAnimationBlend(float weight)
+		=> Interop.KizuriNative.kz_animation_set_blend(Handle, weight);
+	public bool AddTwoBoneIK(string root, string mid, string tip)
+		=> Interop.KizuriNative.kz_entity_add_two_bone_ik(Handle, root, mid, tip) != 0;
+	public void SetIKTarget(float x, float y, float z, float weight = 1f)
+		=> Interop.KizuriNative.kz_ik_set_target(Handle, x, y, z, weight);
+
 	public bool AddNavGrid(float originX, float originZ, uint width, uint depth, float cellSize)
 		=> Interop.KizuriNative.kz_entity_add_nav_grid(Handle, originX, originZ, width, depth, cellSize) != 0;
 	public bool AddNavObstacle(float halfX, float halfY, float halfZ)

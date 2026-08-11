@@ -4090,6 +4090,45 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<AnimatorComponent>();
         }
 
+        if (m_SelectedEntity.HasComponent<AnimationBlendComponent>()) {
+            auto& ab = m_SelectedEntity.GetComponent<AnimationBlendComponent>();
+            if (DrawComponentHeader("Blend de Animação", &removeThis)) {
+                char aBuf[128], bBuf[128];
+                strncpy(aBuf, ab.ClipA.c_str(), sizeof(aBuf) - 1); aBuf[sizeof(aBuf) - 1] = '\0';
+                strncpy(bBuf, ab.ClipB.c_str(), sizeof(bBuf) - 1); bBuf[sizeof(bBuf) - 1] = '\0';
+                ImGui::InputText("Clip A (peso 0)", aBuf, sizeof(aBuf));
+                ImGui::InputText("Clip B (peso 1)", bBuf, sizeof(bBuf));
+                ab.ClipA = aBuf;
+                ab.ClipB = bBuf;
+                ImGui::DragFloat("Peso (0=A, 1=B)", &ab.BlendWeight, 0.01f, 0.0f, 1.0f);
+                ImGui::Checkbox("Usar blend", &ab.UseBlend);
+                ImGui::TextDisabled("Mistura TRS (slerp de rotação) nos mesmos ossos da skin.");
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<AnimationBlendComponent>();
+        }
+
+        if (m_SelectedEntity.HasComponent<TwoBoneIKComponent>()) {
+            auto& ik = m_SelectedEntity.GetComponent<TwoBoneIKComponent>();
+            if (DrawComponentHeader("IK de Dois Ossos", &removeThis)) {
+                char rBuf[128], mBuf[128], tBuf[128];
+                strncpy(rBuf, ik.RootBone.c_str(), sizeof(rBuf) - 1); rBuf[sizeof(rBuf) - 1] = '\0';
+                strncpy(mBuf, ik.MidBone.c_str(), sizeof(mBuf) - 1); mBuf[sizeof(mBuf) - 1] = '\0';
+                strncpy(tBuf, ik.TipBone.c_str(), sizeof(tBuf) - 1); tBuf[sizeof(tBuf) - 1] = '\0';
+                ImGui::InputText("Osso raiz", rBuf, sizeof(rBuf));
+                ImGui::InputText("Osso do meio", mBuf, sizeof(mBuf));
+                ImGui::InputText("Osso da ponta", tBuf, sizeof(tBuf));
+                ik.RootBone = rBuf;
+                ik.MidBone = mBuf;
+                ik.TipBone = tBuf;
+                ImGui::DragFloat3("Alvo (mundo)", &ik.Target.x, 0.1f);
+                ImGui::DragFloat("Peso", &ik.Weight, 0.01f, 0.0f, 1.0f);
+                ImGui::TextDisabled("Alvo animável por script (SetIKTarget).");
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<TwoBoneIKComponent>();
+        }
+
         // ---- IA e Navegação (pilar AAA v0.34) ----
         if (m_SelectedEntity.HasComponent<NavGridComponent>()) {
             auto& ng = m_SelectedEntity.GetComponent<NavGridComponent>();
@@ -4539,6 +4578,14 @@ void EditorLayer::DrawAddComponentButton() {
             m_SelectedEntity.AddComponent<LightComponent>();
         if (!m_SelectedEntity.HasComponent<AnimatorComponent>() && ImGui::MenuItem("Animador (skinning)"))
             m_SelectedEntity.AddComponent<AnimatorComponent>();
+        if (!m_SelectedEntity.HasComponent<AnimationBlendComponent>() && ImGui::MenuItem("Blend de Animação (2 clips)"))
+            m_SelectedEntity.AddComponent<AnimationBlendComponent>();
+        if (!m_SelectedEntity.HasComponent<TwoBoneIKComponent>() && ImGui::MenuItem("IK de Dois Ossos")) {
+            auto& ik = m_SelectedEntity.AddComponent<TwoBoneIKComponent>();
+            ik.RootBone = "root";
+            ik.MidBone = "bone1";
+            ik.TipBone = "bone2";
+        }
         if (!m_SelectedEntity.HasComponent<TextComponent>() && ImGui::MenuItem("Texto (HUD)"))
             m_SelectedEntity.AddComponent<TextComponent>();
         if (!m_SelectedEntity.HasComponent<SpriteAnimationComponent>() && ImGui::MenuItem("Animação de Sprite"))

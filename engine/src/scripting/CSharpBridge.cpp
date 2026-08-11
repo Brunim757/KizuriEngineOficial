@@ -996,6 +996,40 @@ KZ_SCRIPT_API void kz_material_set_height_scale(uint32_t entity, float scale) {
     e.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial.HeightScale = scale;
 }
 
+// ---- Animação AAA (pilar v0.34): blend + IK ----------------------------------
+KZ_SCRIPT_API int kz_entity_add_animation_blend(uint32_t entity, const char* clipA, const char* clipB, float weight) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& ab = e.AddComponent<kizuri::AnimationBlendComponent>();
+    ab.ClipA = clipA ? clipA : "";
+    ab.ClipB = clipB ? clipB : "";
+    ab.BlendWeight = weight;
+    return 1;
+}
+KZ_SCRIPT_API void kz_animation_set_blend(uint32_t entity, float weight) {
+    auto e = Resolve(entity);
+    if (!e) return;
+    if (auto* ab = e.GetScene()->GetRegistry().try_get<kizuri::AnimationBlendComponent>(e.GetHandle()))
+        ab->BlendWeight = weight;
+}
+KZ_SCRIPT_API int kz_entity_add_two_bone_ik(uint32_t entity, const char* root, const char* mid, const char* tip) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& ik = e.AddComponent<kizuri::TwoBoneIKComponent>();
+    ik.RootBone = root ? root : "";
+    ik.MidBone = mid ? mid : "";
+    ik.TipBone = tip ? tip : "";
+    return 1;
+}
+KZ_SCRIPT_API void kz_ik_set_target(uint32_t entity, float x, float y, float z, float weight) {
+    auto e = Resolve(entity);
+    if (!e) return;
+    if (auto* ik = e.GetScene()->GetRegistry().try_get<kizuri::TwoBoneIKComponent>(e.GetHandle())) {
+        ik->Target = { x, y, z };
+        ik->Weight = weight;
+    }
+}
+
 // ---- IA e Navegação (pilar AAA v0.34) --------------------------------------
 KZ_SCRIPT_API int kz_entity_add_nav_grid(uint32_t entity, float ox, float oz, uint32_t width, uint32_t depth, float cellSize) {
     auto e = Resolve(entity);

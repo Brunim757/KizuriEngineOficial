@@ -154,6 +154,10 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_material_set_height_scale(uint entity, float scale);
     [DllImport(Lib)] internal static extern void kz_entity_add_character_controller(uint entity, float speed, float gravity);
     [DllImport(Lib)] internal static extern void kz_entity_move_character(uint entity, float x, float z);
+    [DllImport(Lib)] internal static extern int kz_entity_add_animation_blend(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string clipA, [MarshalAs(UnmanagedType.LPUTF8Str)] string clipB, float weight);
+    [DllImport(Lib)] internal static extern void kz_animation_set_blend(uint entity, float weight);
+    [DllImport(Lib)] internal static extern int kz_entity_add_two_bone_ik(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string root, [MarshalAs(UnmanagedType.LPUTF8Str)] string mid, [MarshalAs(UnmanagedType.LPUTF8Str)] string tip);
+    [DllImport(Lib)] internal static extern void kz_ik_set_target(uint entity, float x, float y, float z, float weight);
     [DllImport(Lib)] internal static extern int kz_entity_add_nav_grid(uint entity, float ox, float oz, uint width, uint depth, float cellSize);
     [DllImport(Lib)] internal static extern int kz_entity_add_nav_obstacle(uint entity, float hx, float hy, float hz);
     [DllImport(Lib)] internal static extern int kz_entity_add_nav_agent(uint entity, float speed, float turnSpeed);

@@ -301,6 +301,29 @@ struct AnimatorComponent {
     }
 };
 
+// Blend de animação (pilar AAA v0.34): mistura dois clips da MESMA skin por
+// um peso 0..1 (ex: idle↔andando pelo speed). A mistura é feita nas matrizes
+// globais (TRS: lerp posição, slerp rotação, lerp escala) ANTES do inverse
+// bind — o mesmo resultado do crossfade dos motores AAA.
+struct AnimationBlendComponent {
+    std::string ClipA;         // clip base (peso 0)
+    std::string ClipB;         // clip alvo (peso 1)
+    float BlendWeight = 0.0f;  // 0..1
+    bool UseBlend = true;
+};
+
+// IK de dois ossos (pilar AAA v0.34): posiciona uma ponta (mão/pé) num alvo
+// ajustando dois ossos intermediários (ombro↔cotovelo↔mão, quadril↔joelho↔pé)
+// — solução analítica clássica de triângulo. Aplica-se DEPOIS do blend, nas
+// matrizes globais; Weight 0..1 mistura com a pose original.
+struct TwoBoneIKComponent {
+    std::string RootBone;   // raiz do encadeamento (ombro/quadril)
+    std::string MidBone;    // meio (cotovelo/joelho)
+    std::string TipBone;    // ponta (mão/pé)
+    glm::vec3 Target{ 0.0f }; // alvo em espaço MUNDO
+    float Weight = 1.0f;
+};
+
 // ---------------------------------------------------------------------------
 // UI (sistema de interface em espaço de tela, estilo Canvas)
 // ---------------------------------------------------------------------------

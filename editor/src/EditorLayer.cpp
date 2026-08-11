@@ -472,6 +472,15 @@ void EditorLayer::CreateDemoScene2D() {
     KZ_CORE_INFO("Cena de demonstração 2D criada.");
 }
 
+void EditorLayer::OnDetach() {
+    // Não pode fechar o editor com a thread de build do C# viva (o
+    // destruidor de std::thread chamaria std::terminate). Espera terminar.
+    if (m_PlayBuildActive || m_PlayBuildThread.joinable()) {
+        m_PlayBuildCancelled = true;
+        if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join();
+    }
+}
+
 void EditorLayer::OnUpdate(Timestep ts) {
     KZ_CORE_TRACE("EditorLayer::OnUpdate — início (viewport {0}x{1})", m_ViewportSize.x, m_ViewportSize.y);
 

@@ -232,7 +232,8 @@ target_link_libraries(KizuriEngine
 if(WIN32)
     # ole32: CoCreateInstance/CoInitializeEx/CoTaskMemFree (kizuri/core/FileDialog.cpp, IFileDialog).
     # MinGW linka user32/gdi32 por padrão pra alvo Windows, mas não ole32 — precisa ser explícito.
-    target_link_libraries(KizuriEngine PUBLIC ole32)
+    # ws2_32: sockets Winsock (kizuri/net/Network.cpp).
+    target_link_libraries(KizuriEngine PUBLIC ole32 ws2_32)
 endif()
 
 target_compile_definitions(KizuriEngine PUBLIC

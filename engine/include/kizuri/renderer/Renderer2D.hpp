@@ -54,6 +54,10 @@ public:
     static void ResetStats();
     static Renderer2DStats GetStats();
 
+    // Matriz de view-projeção da passada 2D atual — usada pelo TextRenderer
+    // pra converter FontSize (pixels) em unidades do mundo ortográfico ativo.
+    static glm::mat4 GetViewProjection();
+
 private:
     static void StartBatch();
     static void NextBatch();

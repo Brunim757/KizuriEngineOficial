@@ -1198,6 +1198,10 @@ void main() {
         float tdist = length(ReconstructViewPos(tuv, td));
         float tcoc = clamp((tdist - u_FocusDistance) / max(u_FocusRange, 0.001), -1.0, 1.0);
         float w = (1.0 - abs(tcoc)) * (1.0 - abs(tcoc)); // amostras em foco pesam mais
+        // O tap CENTRAL (o próprio pixel) SEMPRE contribui um mínimo — sem
+        // isso, regiões inteiras fora de foco (horizonte/céu distante) tinham
+        // todos os pesos zerados e o gather devolvia preto.
+        if (i == 0) w = max(w, 0.08);
         vec3 c = texture(u_SceneColor, tuv).rgb;
         if (any(isnan(c)) || any(isinf(c))) c = vec3(0.0);
         sum += c * w;

@@ -446,5 +446,6 @@ void Renderer2D::DrawRotatedQuad(const glm::vec3& pos, const glm::vec2& size, fl
 
 void Renderer2D::ResetStats() { s_Data.Stats = {}; }
 Renderer2DStats Renderer2D::GetStats() { return s_Data.Stats; }
+glm::mat4 Renderer2D::GetViewProjection() { return s_Data.ViewProjection; }
 
 } // namespace kizuri

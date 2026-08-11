@@ -42,6 +42,8 @@ struct EditorContext {
     // Ações que um painel pode pedir de volta ao EditorLayer.
     std::function<void(kizuri::Entity)> SelectEntity;
     std::function<void()> TogglePlay;
+    // Abre o Content Browser na pasta do arquivo (botão "Gerenciador").
+    std::function<void(const std::string& filePath)> RevealInContentBrowser;
 };
 
 class EditorPanel {

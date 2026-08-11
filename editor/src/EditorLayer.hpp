@@ -36,6 +36,9 @@ private:
     void DrawDockspace();
     void DrawSceneHierarchy();
     void DrawInspector();
+    // Abre o Content Browser na pasta do arquivo informado (botão
+    // "Gerenciador" dos campos de arquivo do Inspetor).
+    void RevealFileInContentBrowser(const std::string& filePath);
     void DrawEntityNode(kizuri::Entity entity, kizuri::Entity& outEntityToDelete, bool editable);
     void DrawAddComponentButton();
     void DrawSceneFileModals();
@@ -228,6 +231,10 @@ private:
     std::filesystem::path m_ContentBrowserRoot;
     std::filesystem::path m_ContentBrowserCurrentDir;
     std::unordered_map<std::string, kizuri::Ref<kizuri::Texture2D>> m_ThumbCache;
+    // Botão "Gerenciador" do Inspetor: revela o arquivo do campo no Content
+    // Browser (navega pra pasta dele + abre o painel se estiver colapsado).
+    std::string m_ContentBrowserRevealPath;
+    bool m_ContentBrowserRevealRequested = false;
 
     // Busca de entidade na Hierarquia (filtra por nome; lista plana).
     char m_HierarchySearchBuffer[64] = "";

@@ -93,20 +93,38 @@ void MaterialEditorPanel::OnImGuiRender() {
     ImGui::Checkbox("Reflexão planar (espelho)", &mat->PlanarReflect);
     ImGui::Separator();
 
-    auto showMap = [](const char* label, const kizuri::Ref<kizuri::Texture2D>& tex) {
+    // Slots de mapa: campo de texto + botão nativo "..." + botão
+    // "Gerenciador" (abre o Content Browser na pasta) + drop de arquivo.
+    // O material é editado SOMENTE aqui — o Inspetor não duplica.
+    auto mapSlot = [&](const char* label, std::string& path, kizuri::Ref<kizuri::Texture2D>& tex) {
+        char buf[512];
+        strncpy(buf, path.c_str(), sizeof(buf) - 1);
+        buf[sizeof(buf) - 1] = '\0';
+        if (ImGui::InputText(label, buf, sizeof(buf))) {
+            path = buf;
+            tex = path.empty() ? nullptr : kizuri::Texture2D::Create(path);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("...")) {
+            std::string picked = kizuri::FileDialog::OpenFile(label, "*.png;*.jpg;*.jpeg;*.bmp;*.tga");
+            if (!picked.empty()) {
+                path = kizuri::Project::MakeRelativePath(picked);
+                tex = path.empty() ? nullptr : kizuri::Texture2D::Create(path);
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Gerenciador")) {
+            if (m_Ctx.RevealInContentBrowser) m_Ctx.RevealInContentBrowser(path);
+        }
         if (tex) {
-            ImGui::Text("%s", label);
             uint32_t id = tex->GetRendererID();
-            ImGui::Image((ImTextureID)(uint64_t)id, ImVec2(48.0f, 48.0f), ImVec2(0, 1), ImVec2(1, 0));
-        } else {
-            ImGui::TextDisabled("%s: (nenhum)", label);
+            ImGui::Image((ImTextureID)(uint64_t)id, ImVec2(64.0f, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
         }
     };
-    showMap("Albedo", mat->AlbedoMap);
-    showMap("Normais", mat->NormalMap);
-    showMap("Metallic/Roughness", mat->MetallicRoughnessMap);
-    showMap("Emissivo", mat->EmissiveMap);
-    showMap("Altura (POM)", mat->HeightMap);
-    ImGui::TextDisabled("Atribua mapas pelo Inspetor (slots com drop/arquivo).");
+    mapSlot("Mapa de Albedo", mat->AlbedoMapPath, mat->AlbedoMap);
+    mapSlot("Mapa de Normais", mat->NormalMapPath, mat->NormalMap);
+    mapSlot("Mapa Metallic/Roughness", mat->MetallicRoughnessMapPath, mat->MetallicRoughnessMap);
+    mapSlot("Mapa Emissivo", mat->EmissiveMapPath, mat->EmissiveMap);
+    mapSlot("Mapa de Altura (POM)", mat->HeightMapPath, mat->HeightMap);
     ImGui::End();
 }

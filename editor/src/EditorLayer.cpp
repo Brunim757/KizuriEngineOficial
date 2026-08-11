@@ -124,6 +124,7 @@ void EditorLayer::OnAttach() {
     m_PanelContext->ShowColliders = &m_ShowColliders;
     m_PanelContext->SelectEntity = [this](Entity e) { m_SelectedEntity = e; AutoSwitchViewportMode(); };
     m_PanelContext->TogglePlay = [this]() { (m_SceneState == SceneState::Edit) ? OnScenePlay() : OnSceneStop(); };
+    m_PanelContext->RevealInContentBrowser = [this](const std::string& p) { RevealFileInContentBrowser(p); };
 
     auto makePanel = [&](std::unique_ptr<EditorPanel> p) { m_Panels.push_back(std::move(p)); };
     makePanel(std::make_unique<ProfilerPanel>(*m_PanelContext));
@@ -465,7 +466,7 @@ void EditorLayer::CreateDemoScene2D() {
     button.AddComponent<UIButtonComponent>();
     auto& btext = button.AddComponent<TextComponent>();
     btext.Text = "Kizuri 2D!";
-    btext.FontSize = 0.5f;
+    btext.FontSize = 14.0f; // pixels de tela
     btext.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
     button.SetParent(canvas);
 
@@ -551,6 +552,11 @@ void EditorLayer::OnUpdate(Timestep ts) {
             } else {
                 KZ_CORE_ERROR("Play cancelado — falha ao compilar o jogo:\n{0}", m_PlayBuildError);
             }
+            // SEMPRE espera a thread do build terminar antes de seguir (ou de
+            // soltar m_PlayBuildActive) — sem o join aqui, a thread ficava
+            // joinable e o Play seguinte (novo std::thread) chamava
+            // std::terminate() e FECHAVA a engine.
+            if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join();
             m_PlayBuildActive = false;
             if (m_PlayBuildOk) StartPlayInternal();
         } else if (m_PlayBuildDone && m_PlayBuildCancelled) {
@@ -608,7 +614,9 @@ void EditorLayer::OnUpdate(Timestep ts) {
         // Play: roda a LÓGICA do jogo uma vez e renderiza o VIEWPORT com a
         // CÂMERA DO EDITOR — você voa pela cena enquanto o jogo roda (o
         // GameView mostra a câmera do jogador). Navegação livre ativa.
-        UpdateEditorCamera(ts);
+        // (2D usa a câmera ortográfica — senão a rodinha não dava zoom.)
+        if (m_ViewportMode == ViewportMode::Mode2D) UpdateEditor2DCamera(ts);
+        else UpdateEditorCamera(ts);
         m_ActiveScene->OnUpdateRuntimeLogic(ts);
         m_ActiveScene->RenderRuntimeWithEditorCamera(m_EditorCamera);
 
@@ -679,6 +687,16 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
     auto [mx, my] = Input::GetMousePosition();
     glm::vec2 mousePos{ mx, my };
 
+    // Mesma convenção de PerspectiveCamera::RecalculateViewMatrix
+    // (Camera.cpp) — precisa bater pra WASD mover na direção que a
+    // câmera está de fato olhando.
+    glm::vec3 forward{
+        cos(glm::radians(m_EditorCamYaw)) * cos(glm::radians(m_EditorCamPitch)),
+        sin(glm::radians(m_EditorCamPitch)),
+        sin(glm::radians(m_EditorCamYaw)) * cos(glm::radians(m_EditorCamPitch))
+    };
+    forward = glm::normalize(forward);
+
     if (flying) {
         if (m_FirstMouseLook) {
             m_LastMousePos = mousePos;
@@ -690,15 +708,6 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
         m_EditorCamYaw += delta.x * m_EditorCamSensitivity;
         m_EditorCamPitch -= delta.y * m_EditorCamSensitivity;        m_EditorCamPitch = std::clamp(m_EditorCamPitch, -89.0f, 89.0f);
 
-        // Mesma convenção de PerspectiveCamera::RecalculateViewMatrix
-        // (Camera.cpp) — precisa bater pra WASD mover na direção que a
-        // câmera está de fato olhando.
-        glm::vec3 forward{
-            cos(glm::radians(m_EditorCamYaw)) * cos(glm::radians(m_EditorCamPitch)),
-            sin(glm::radians(m_EditorCamPitch)),
-            sin(glm::radians(m_EditorCamYaw)) * cos(glm::radians(m_EditorCamPitch))
-        };
-        forward = glm::normalize(forward);
         glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
         glm::vec3 up = glm::cross(right, forward);
 
@@ -716,6 +725,17 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
     }
 
     m_LastMousePos = mousePos;
+
+    // Zoom com a rodinha (só com o viewport sob o mouse): move a câmera na
+    // direção do olhar — igual Unity/Godot. Multiplicativo pra ser suave
+    // tanto de perto quanto de longe.
+    if (m_ViewportHovered && !flying) {
+        float scroll = ImGui::GetIO().MouseWheel;
+        if (scroll != 0.0f) {
+            float distance = glm::length(m_EditorCamPos);
+            m_EditorCamPos += forward * (scroll * distance * 0.12f);
+        }
+    }
 
     m_EditorCamera.SetPosition(m_EditorCamPos);
     m_EditorCamera.SetRotation(m_EditorCamYaw, m_EditorCamPitch);
@@ -1551,9 +1571,11 @@ void EditorLayer::DrawGizmo() {
 
     // Atalhos de operação só valem com o viewport focado e a câmera livre
     // desativada (botão direito solto) — senão W entraria em conflito com
-    // o "andar pra frente" da fly camera.
+    // o "andar pra frente" da fly camera. E nada disso vale enquanto o
+    // usuário está DIGITANDO num campo de texto (ex.: renomeando objeto) —
+    // ImGui marcou WantTextInput; W/E/R devem ir pro campo, não pro gizmo.
     bool flying = Input::IsMouseButtonPressed(Mouse::Right);
-    if (m_ViewportHovered && !flying) {
+    if (m_ViewportHovered && !flying && !ImGui::GetIO().WantTextInput) {
         if (Input::IsKeyPressed(Key::W)) m_GizmoOperation = ImGuizmo::TRANSLATE;
         if (Input::IsKeyPressed(Key::E)) m_GizmoOperation = ImGuizmo::ROTATE;
         if (Input::IsKeyPressed(Key::R)) m_GizmoOperation = ImGuizmo::SCALE;
@@ -1641,6 +1663,10 @@ void EditorLayer::OnScenePlay() {
         std::string csproj, engineRoot;
         GetGameBuildInfo(csproj, engineRoot);
         if (!csproj.empty()) {
+            // Nunca deixa uma thread antiga do build viva ao iniciar outro:
+            // reassignar std::thread joinable chamava std::terminate (a engine
+            // fechava no 2º Play quando o 1º build tinha falhado).
+            if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join();
             m_PlayBuildError.clear();
             m_PlayBuildDll.clear();
             m_PlayBuildOk = false;
@@ -2206,8 +2232,8 @@ void EditorLayer::DrawDockspace() {
         ImGui::DockBuilderDockWindow("Console", dockCenterBottomID);
         ImGui::DockBuilderDockWindow("Inspetor", dockRightID);
         ImGui::DockBuilderDockWindow("Profiler", dockRightBottomID);
-        ImGui::DockBuilderDockWindow("Material Editor", dockRightBottomID); // aba com o Profiler
-        ImGui::DockBuilderDockWindow("Project Settings", dockRightBottomID); // aba (abre pelo menu)
+        // Material Editor e Project Settings NÃO são dockados de propósito —
+        // abrem como janelas flutuantes (solto na tela), cada um no seu lugar.
 
         ImGui::DockBuilderFinish(dockspaceID);
     }
@@ -3020,9 +3046,32 @@ void EditorLayer::DrawConsole() {
     ImGui::End();
 }
 
+void EditorLayer::RevealFileInContentBrowser(const std::string& filePath) {
+    m_ContentBrowserRevealPath = filePath;
+    m_ContentBrowserRevealRequested = true;
+}
+
 void EditorLayer::DrawContentBrowser() {
     KZ_TRACE_SCOPE("EditorLayer::DrawContentBrowser");
     BeginPanelNoMenuButton();
+
+    // Pedido do Inspetor (botão "Gerenciador"): abre o painel se estiver
+    // colapsado e navega pra pasta do arquivo revelado.
+    if (m_ContentBrowserRevealRequested) {
+        m_ContentBrowserRevealRequested = false;
+        ImGui::SetNextWindowCollapsed(false, ImGuiCond_Always);
+        if (!m_ContentBrowserRoot.empty() && !m_ContentBrowserRevealPath.empty()) {
+            std::error_code ec;
+            std::filesystem::path p = kizuri::Project::ResolvePath(m_ContentBrowserRevealPath);
+            if (p.has_parent_path())
+                p = p.parent_path();
+            // Só navega se o arquivo estiver dentro da raiz de assets.
+            auto rel = std::filesystem::relative(p, m_ContentBrowserRoot, ec);
+            if (!ec && rel.string().find("..") == std::string::npos)
+                m_ContentBrowserCurrentDir = p;
+        }
+    }
+
     ImGui::Begin("Content Browser");
     kizuri::editor::icons::PanelHeader("CONTENT BROWSER", kizuri::editor::icons::Folder);
 
@@ -3487,6 +3536,8 @@ void EditorLayer::DrawInspector() {
                     sc.TexturePath = browsedTexture;
                     sc.Texture = sc.TexturePath.empty() ? nullptr : kizuri::Texture2D::Create(sc.TexturePath);
                 }
+                ImGui::SameLine();
+                if (ImGui::Button("Gerenciador")) RevealFileInContentBrowser(sc.TexturePath);
                 if (sc.Texture) {
                     uint32_t texID = sc.Texture->GetRendererID();
                     ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(96.0f, 96.0f), ImVec2(0, 1), ImVec2(1, 0));
@@ -3620,103 +3671,18 @@ void EditorLayer::DrawInspector() {
                     if (mr.MeshSource.find(".glb") != std::string::npos || mr.MeshSource.find(".gltf") != std::string::npos)
                         mr.MeshMaterial = kizuri::Mesh::ExtractMaterialFromGLTF(Project::ResolvePath(mr.MeshSource));
                 }
-                ImGui::ColorEdit3("Albedo", &mat.Albedo.x);
-                ImGui::DragFloat("Metallic", &mat.Metallic, 0.01f, 0.0f, 1.0f);
-                ImGui::DragFloat("Roughness", &mat.Roughness, 0.01f, 0.02f, 1.0f);
-                ImGui::DragFloat("AO", &mat.AO, 0.01f, 0.0f, 1.0f);
-                ImGui::ColorEdit3("Emissive", &mat.Emissive.x);
-                ImGui::DragFloat("Intensidade emissiva", &mat.EmissiveStrength, 0.01f, 0.0f, 20.0f);
-                char albBuf[512], nrmBuf[512], mrBuf[512], emBuf[512];
-                strncpy(albBuf, mat.AlbedoMapPath.c_str(), sizeof(albBuf) - 1); albBuf[sizeof(albBuf) - 1] = '\0';
-                strncpy(nrmBuf, mat.NormalMapPath.c_str(), sizeof(nrmBuf) - 1); nrmBuf[sizeof(nrmBuf) - 1] = '\0';
-                strncpy(mrBuf, mat.MetallicRoughnessMapPath.c_str(), sizeof(mrBuf) - 1); mrBuf[sizeof(mrBuf) - 1] = '\0';
-                strncpy(emBuf, mat.EmissiveMapPath.c_str(), sizeof(emBuf) - 1); emBuf[sizeof(emBuf) - 1] = '\0';
-                if (ImGui::InputText("Mapa de Albedo", albBuf, sizeof(albBuf))) {
-                    mat.AlbedoMapPath = albBuf;
-                    mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.AlbedoMapPath);
+                ImGui::SameLine();
+                if (ImGui::Button("Gerenciador")) RevealFileInContentBrowser(mr.MeshSource);
+                // Material NÃO é editado aqui — o painel "Material Editor"
+                // (menu Exibir, janela flutuante) tem preview + todos os
+                // campos PBR. O Inspetor cuida da malha; o material fica
+                // num lugar só.
+                if (ImGui::Button("Abrir Material Editor")) {
+                    for (auto& p : m_Panels)
+                        if (std::string(p->GetTitle()) == "Material Editor") { p->SetVisible(true); break; }
                 }
-                std::string droppedAlbedo;
-                if (AcceptAssetDrop(droppedAlbedo)) {
-                    mat.AlbedoMapPath = kizuri::Project::MakeRelativePath(droppedAlbedo);
-                    mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.AlbedoMapPath);
-                }
-                std::string browsedAlbedo;
-                if (FileBrowseButton("Mapa de Albedo", "*.png;*.jpg;*.jpeg;*.bmp;*.tga", browsedAlbedo)) {
-                    mat.AlbedoMapPath = browsedAlbedo;
-                    mat.AlbedoMap = mat.AlbedoMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.AlbedoMapPath);
-                }
-                if (mat.AlbedoMap) {
-                    uint32_t texID = mat.AlbedoMap->GetRendererID();
-                    ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(64.0f, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
-                }
-                if (ImGui::InputText("Mapa de Normais", nrmBuf, sizeof(nrmBuf))) {
-                    mat.NormalMapPath = nrmBuf;
-                    mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.NormalMapPath);
-                }
-                std::string droppedNormal;
-                if (AcceptAssetDrop(droppedNormal)) {
-                    mat.NormalMapPath = kizuri::Project::MakeRelativePath(droppedNormal);
-                    mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.NormalMapPath);
-                }
-                std::string browsedNormal;
-                if (FileBrowseButton("Mapa de Normais", "*.png;*.jpg;*.jpeg;*.bmp;*.tga", browsedNormal)) {
-                    mat.NormalMapPath = browsedNormal;
-                    mat.NormalMap = mat.NormalMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.NormalMapPath);
-                }
-                if (ImGui::InputText("Mapa Metallic/Roughness", mrBuf, sizeof(mrBuf))) {
-                    mat.MetallicRoughnessMapPath = mrBuf;
-                    mat.MetallicRoughnessMap = mat.MetallicRoughnessMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.MetallicRoughnessMapPath);
-                }
-                std::string droppedMR;
-                if (AcceptAssetDrop(droppedMR)) {
-                    mat.MetallicRoughnessMapPath = kizuri::Project::MakeRelativePath(droppedMR);
-                    mat.MetallicRoughnessMap = mat.MetallicRoughnessMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.MetallicRoughnessMapPath);
-                }
-                std::string browsedMR;
-                if (FileBrowseButton("Mapa Metallic/Roughness", "*.png;*.jpg;*.jpeg;*.bmp;*.tga", browsedMR)) {
-                    mat.MetallicRoughnessMapPath = browsedMR;
-                    mat.MetallicRoughnessMap = mat.MetallicRoughnessMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.MetallicRoughnessMapPath);
-                }
-                if (ImGui::InputText("Mapa Emissivo", emBuf, sizeof(emBuf))) {
-                    mat.EmissiveMapPath = emBuf;
-                    mat.EmissiveMap = mat.EmissiveMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.EmissiveMapPath);
-                }
-                std::string droppedEmissive;
-                if (AcceptAssetDrop(droppedEmissive)) {
-                    mat.EmissiveMapPath = kizuri::Project::MakeRelativePath(droppedEmissive);
-                    mat.EmissiveMap = mat.EmissiveMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.EmissiveMapPath);
-                }
-                std::string browsedEmissive;
-                if (FileBrowseButton("Mapa Emissivo", "*.png;*.jpg;*.jpeg;*.bmp;*.tga", browsedEmissive)) {
-                    mat.EmissiveMapPath = browsedEmissive;
-                    mat.EmissiveMap = mat.EmissiveMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.EmissiveMapPath);
-                }
-                char hgtBuf[512];
-                strncpy(hgtBuf, mat.HeightMapPath.c_str(), sizeof(hgtBuf) - 1); hgtBuf[sizeof(hgtBuf) - 1] = '\0';
-                if (ImGui::InputText("Mapa de Altura (POM)", hgtBuf, sizeof(hgtBuf))) {
-                    mat.HeightMapPath = hgtBuf;
-                    mat.HeightMap = mat.HeightMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.HeightMapPath);
-                }
-                std::string droppedHeight;
-                if (AcceptAssetDrop(droppedHeight)) {
-                    mat.HeightMapPath = kizuri::Project::MakeRelativePath(droppedHeight);
-                    mat.HeightMap = mat.HeightMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.HeightMapPath);
-                }
-                std::string browsedHeight;
-                if (FileBrowseButton("Mapa de Altura (POM)", "*.png;*.jpg;*.jpeg;*.bmp;*.tga", browsedHeight)) {
-                    mat.HeightMapPath = browsedHeight;
-                    mat.HeightMap = mat.HeightMapPath.empty() ? nullptr : kizuri::Texture2D::Create(mat.HeightMapPath);
-                }
-                if (mat.HeightMap) {
-                    ImGui::DragFloat("Escala de paralaxe (POM)", &mat.HeightScale, 0.001f, 0.0f, 0.5f);
-                    uint32_t texID = mat.HeightMap->GetRendererID();
-                    ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(64.0f, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
-                }
-                ImGui::Checkbox("Reflexão planar (espelho real)", &mat.PlanarReflect);
-                if (mat.NormalMap) {
-                    uint32_t texID = mat.NormalMap->GetRendererID();
-                    ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(64.0f, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
-                }
+                ImGui::SameLine();
+                ImGui::TextDisabled("Preview + campos PBR na janela dedicada.");
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<MeshRendererComponent>();
@@ -3908,6 +3874,8 @@ void EditorLayer::DrawInspector() {
                     sac.SheetPath = browsedSheet;
                     sac.SheetTexture = sac.SheetPath.empty() ? nullptr : kizuri::Texture2D::Create(sac.SheetPath);
                 }
+                ImGui::SameLine();
+                if (ImGui::Button("Gerenciador")) RevealFileInContentBrowser(sac.SheetPath);
                 if (sac.SheetTexture) {
                     uint32_t texID = sac.SheetTexture->GetRendererID();
                     ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(96.0f, 96.0f), ImVec2(0, 1), ImVec2(1, 0));
@@ -3942,6 +3910,8 @@ void EditorLayer::DrawInspector() {
                     tmc.AtlasPath = browsedAtlas;
                     tmc.AtlasTexture = tmc.AtlasPath.empty() ? nullptr : kizuri::Texture2D::Create(tmc.AtlasPath);
                 }
+                ImGui::SameLine();
+                if (ImGui::Button("Gerenciador")) RevealFileInContentBrowser(tmc.AtlasPath);
                 if (tmc.AtlasTexture) {
                     uint32_t texID = tmc.AtlasTexture->GetRendererID();
                     ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(96.0f, 96.0f), ImVec2(0, 1), ImVec2(1, 0));
@@ -4054,6 +4024,8 @@ void EditorLayer::DrawInspector() {
                     pc.TexturePath = browsedParticleTex;
                     pc.Texture = pc.TexturePath.empty() ? nullptr : kizuri::Texture2D::Create(pc.TexturePath);
                 }
+                ImGui::SameLine();
+                if (ImGui::Button("Gerenciador")) RevealFileInContentBrowser(pc.TexturePath);
                 ImGui::TextDisabled("%d partículas ativas.", (int)pc.ActiveParticles.size());
                 ImGui::TextDisabled("A simulação ocorre apenas durante o Play, assim como a física.");
                 ImGui::TreePop();
@@ -4072,6 +4044,8 @@ void EditorLayer::DrawInspector() {
                 std::string browsedClip;
                 if (FileBrowseButton("Áudio", "*.wav;*.mp3;*.ogg;*.flac", browsedClip))
                     ac.ClipPath = browsedClip;
+                ImGui::SameLine();
+                if (ImGui::Button("Gerenciador")) RevealFileInContentBrowser(ac.ClipPath);
                 ImGui::Checkbox("Em loop", &ac.Loop);
                 ImGui::SameLine();
                 ImGui::Checkbox("Reproduzir ao iniciar", &ac.PlayOnStart);
@@ -4690,6 +4664,36 @@ void EditorLayer::OnImGuiRender() {
             ImGui::Spacing();
             ImGui::ProgressBar(-1.0f, ImVec2(-1.0f, 0.0f), "dotnet build (1ª vez pode demorar)");
             ImGui::TextDisabled("A janela continua respondendo.");
+        }
+        ImGui::End();
+        ImGui::PopStyleColor();
+        ImGui::PopStyleVar();
+    }
+
+    // Erro persistente do build C# (Play) — antes só ia pro console e
+    // "sumia rápido"; agora fica na tela até o usuário fechar ou um novo
+    // Play tentar compilar de novo.
+    if (!m_PlayBuildActive && !m_PlayBuildError.empty()) {
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(520.0f, 0.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.16f, 0.06f, 0.08f, 0.97f));
+        if (ImGui::Begin("##build_error_overlay", nullptr,
+                         ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+                         ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoResize |
+                         ImGuiWindowFlags_NoSavedSettings)) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.45f, 0.4f, 1.0f));
+            ImGui::TextUnformatted("Falha ao compilar o jogo (C#)");
+            ImGui::PopStyleColor();
+            ImGui::Spacing();
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.85f, 0.8f, 1.0f));
+            ImGui::TextWrapped("%s", m_PlayBuildError.c_str());
+            ImGui::PopStyleColor();
+            ImGui::Spacing();
+            if (ImGui::Button("Fechar")) m_PlayBuildError.clear();
+            ImGui::SameLine();
+            ImGui::TextDisabled("O Play funciona sem scripts C#; o erro é só do assembly do jogo.");
         }
         ImGui::End();
         ImGui::PopStyleColor();

@@ -493,7 +493,7 @@ public readonly struct Entity
 	public bool AddUIButton(float x, float y, float w, float h, float r, float g, float b, float a = 1f)
 		=> Interop.KizuriNative.kz_entity_add_ui_button(Handle, x, y, w, h, r, g, b, a) != 0;
 
-	public bool AddUIText(string text, float fontSize = 0.6f, float r = 1f, float g = 1f, float b = 1f, float a = 1f)
+	public bool AddUIText(string text, float fontSize = 14f, float r = 1f, float g = 1f, float b = 1f, float a = 1f)
 		=> Interop.KizuriNative.kz_entity_add_ui_text(Handle, text, fontSize, r, g, b, a) != 0;
 
 	public bool UIButtonWasClicked() => Interop.KizuriNative.kz_ui_button_was_clicked(Handle) != 0;

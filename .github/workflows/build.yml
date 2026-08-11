@@ -131,6 +131,10 @@ jobs:
           mkdir -p release
           cp -r build/bin/* release/
           if [ -d content ]; then cp -r content release/content; fi
+          # Árvore managed/Kizuri.Scripting: sem ela o Play do editor não
+          # acha o EngineDir e o dotnet build do jogo falha no zip (o csproj
+          # referencia $(EngineDir)/managed/Kizuri.Scripting/...).
+          if [ -d managed/Kizuri.Scripting ]; then cp -r managed release/managed; fi
           (cd release && tar -a -c -f "../KizuriEngine-${{ matrix.os }}.zip" .)
 
       - name: Publicar na Release

@@ -6,7 +6,23 @@ void GameViewPanel::OnUpdate(kizuri::Timestep ts) {
     (void)ts;
     // Game View = a CÂMERA DO JOGADOR, só durante o Play. O viewport mostra
     // a câmera do editor (voar pela cena); aqui é o que o jogador vê.
-    if (!m_Visible || !m_Ctx.IsPlay || !m_Ctx.ActiveScene) return;
+    if (!m_Visible) return;
+
+    if (m_Framebuffer && (!m_Ctx.IsPlay || !m_Ctx.ActiveScene)) {
+        // Fora do Play: limpa o frame — sem isso o painel ficava congelado
+        // no último frame do Play anterior (impressão de "jogo antigo").
+        ScopedTemporalOff temporal;
+        m_Framebuffer->Bind();
+        kizuri::RenderCommand::SetClearColor({ 0.05f, 0.05f, 0.06f, 1.0f });
+        kizuri::RenderCommand::Clear();
+        m_Framebuffer->Unbind();
+        kizuri::Application& app = kizuri::Application::Get();
+        auto& window = app.GetWindow();
+        kizuri::RenderCommand::SetViewport(0, 0, window.GetWidth(), window.GetHeight());
+        return;
+    }
+
+    if (!m_Ctx.IsPlay || !m_Ctx.ActiveScene) return;
     if (m_Ctx.ViewportSize.x < 1.0f || m_Ctx.ViewportSize.y < 1.0f) return;
 
     if (!m_Framebuffer)
@@ -34,7 +50,7 @@ void GameViewPanel::OnImGuiRender() {
         ImGui::End();
         return;
     }
-    if (!m_Framebuffer) {
+    if (!m_Framebuffer || !m_Ctx.IsPlay) {
         ImGui::TextDisabled("Inicie o Play para ver a câmera do jogador aqui.");
         ImGui::End();
         return;

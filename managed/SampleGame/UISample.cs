@@ -20,19 +20,19 @@ public sealed class UISample : Script
 
 		var title = Scene.CreateEntity("Titulo");
 		title.SetParent(_canvas);
-		title.AddUIText("KIZURI ENGINE", 0.9f, 1f, 1f, 1f);
+		title.AddUIText("KIZURI ENGINE", 24f, 1f, 1f, 1f);
 		title.SetUIRect(0f, 7.5f, 0f, 0f);
 
 		// Botão = rect com fundo + texto no centro (mesma entidade).
 		_button = Scene.CreateEntity("Botao");
 		_button.SetParent(_canvas);
 		_button.AddUIButton(0f, 1f, 6f, 2f, 0.22f, 0.42f, 0.9f);
-		_button.AddUIText("Clique em mim", 0.6f, 1f, 1f, 1f);
+		_button.AddUIText("Clique em mim", 16f, 1f, 1f, 1f);
 
 		// HUD de pontuação (texto sem fundo).
 		_counterText = Scene.CreateEntity("Contador");
 		_counterText.SetParent(_canvas);
-		_counterText.AddUIText("Cliques: 0", 0.55f, 1f, 0.95f, 0.5f);
+		_counterText.AddUIText("Cliques: 0", 14f, 1f, 0.95f, 0.5f);
 		_counterText.SetUIRect(0f, -2.5f, 0f, 0f);
 	}
 

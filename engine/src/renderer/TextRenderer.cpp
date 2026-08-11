@@ -1,6 +1,7 @@
 #include "kizuri/renderer/TextRenderer.hpp"
 #include "kizuri/renderer/Renderer2D.hpp"
 #include "kizuri/core/Log.hpp"
+#include <glad/gl.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -23,6 +24,20 @@ namespace {
     Ref<Texture2D> s_AtlasTexture;
     stbtt_bakedchar s_BakedChars[kCharCount];
     bool s_Ready = false;
+
+    // FontSize é em PIXELS DE TELA (ver TextComponent). Converte pra escala
+    // de mundo multiplicando pela densidade de pixels do viewport ortográfico
+    // atual (altura do glViewport / altura do mundo projetado). Sem isso o
+    // texto de mundo saía gigante (escala usada direto em unidades de mundo).
+    float ComputeWorldScale(float fontSize) {
+        GLint vp[4];
+        glGetIntegerv(GL_VIEWPORT, vp);
+        glm::mat4 vpMatrix = Renderer2D::GetViewProjection();
+        float worldHeight = 2.0f / glm::max(glm::abs(vpMatrix[1][1]), 1e-6f);
+        float pxPerUnit = (float)vp[3] / worldHeight;
+        if (pxPerUnit <= 0.0f) return fontSize / (float)kPixelHeight; // fallback
+        return (fontSize / (float)kPixelHeight) / pxPerUnit;
+    }
 }
 
 void TextRenderer::EnsureAtlas() {
@@ -64,7 +79,7 @@ void TextRenderer::Shutdown() {
 
 float TextRenderer::MeasureWidth(const std::string& text, float fontSize) {
     if (!s_Ready) EnsureAtlas();
-    float scale = fontSize / (float)kPixelHeight;
+    float scale = ComputeWorldScale(fontSize);
     float maxWidth = 0.0f, lineWidth = 0.0f;
     for (char c : text) {
         if (c == '\n') { maxWidth = glm::max(maxWidth, lineWidth); lineWidth = 0.0f; continue; }
@@ -89,8 +104,14 @@ void TextRenderer::DrawString(const std::string& text, const glm::vec3& position
     }
     lines.push_back(current);
 
-    float scale = fontSize / (float)kPixelHeight;
-    float lineHeight = fontSize * 1.2f;
+    float scale = ComputeWorldScale(fontSize);
+    // Altura da linha em unidades do mundo: 1.2x o FontSize (pixels) / densidade.
+    GLint vp[4];
+    glGetIntegerv(GL_VIEWPORT, vp);
+    glm::mat4 vpMatrix = Renderer2D::GetViewProjection();
+    float worldHeight = 2.0f / glm::max(glm::abs(vpMatrix[1][1]), 1e-6f);
+    float pxPerUnit = (float)vp[3] / worldHeight;
+    float lineHeight = (pxPerUnit > 0.0f) ? (fontSize * 1.2f) / pxPerUnit : scale * (float)kPixelHeight * 1.2f;
     float penY = position.y;
 
     for (const std::string& line : lines) {

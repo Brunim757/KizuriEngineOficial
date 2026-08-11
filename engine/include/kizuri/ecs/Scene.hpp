@@ -27,6 +27,7 @@ namespace kizuri {
 
 class Entity;
 class PerspectiveCamera;
+class NavGrid;
 
 // Scene é o "mundo" da Kizuri Engine: guarda todas as entidades ECS (EnTT),
 // controla física 2D (Box2D) e 3D (Bullet), e expõe callbacks de runtime.
@@ -76,6 +77,20 @@ public:
     // Gravidade escalada / amortecimento do Rigidbody3D em runtime.
     void SetRigidbody3DGravityScale(Entity entity, float scale);
     void SetRigidbody3DDamping(Entity entity, float linear, float angular);
+
+    // ---- IA e Navegação (pilar AAA v0.34) ----
+    // Reconstrói a grade de uma entidade com NavGridComponent: desenha os
+    // NavObstacleComponent da cena como células bloqueadas. Chamado em
+    // runtime start; também serve pra reconstruir quando o cenário muda.
+    void RebuildNavGrid(Entity gridEntity);
+
+    // Define o destino de um NavAgentComponent (recalcula o caminho). Os
+    // agentes são movidos automaticamente pelo Scene no update.
+    void SetNavDestination(Entity agent, const glm::vec3& destination);
+    void StopNavAgent(Entity agent);
+    bool NavAgentHasPath(Entity agent) const;
+    float NavAgentRemainingDistance(Entity agent) const;
+    bool NavAgentReached(Entity agent) const;
 
     // Duplica 'source' e toda a subárvore dela, com UUIDs novos (e um leve
     // deslocamento pra não nascer em cima do original). Devolve a raiz nova.
@@ -171,6 +186,12 @@ private:
     void DispatchCollisionBegin(entt::entity self, entt::entity other);
     void DispatchCollisionEnd(entt::entity self, entt::entity other);
     void StartScriptIfNeeded(Entity entity);
+
+    // IA e Navegação.
+    void BuildNavGrids();                    // constrói todas as grades no runtime start
+    void UpdateEnemyAI(Timestep ts);         // máquina de estados dirigindo os agents
+    void UpdateNavAgents(Timestep ts);       // move os agents ao longo do caminho
+    NavGrid* FindGridNear(const glm::vec3& pos) const; // grade cujo footprint contém pos
 
     std::string m_Name;
     entt::registry m_Registry;

@@ -294,6 +294,36 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
         };
     }
 
+    // ---- IA e Navegação (pilar AAA v0.34) ----
+    if (entity.HasComponent<NavGridComponent>()) {
+        auto& ng = entity.GetComponent<NavGridComponent>();
+        je["NavGrid"] = { { "Origin", Vec3ToJson(ng.Origin) }, { "Width", ng.Width },
+                          { "Depth", ng.Depth }, { "CellSize", ng.CellSize },
+                          { "AutoBuild", ng.AutoBuild } };
+    }
+    if (entity.HasComponent<NavObstacleComponent>()) {
+        auto& no = entity.GetComponent<NavObstacleComponent>();
+        je["NavObstacle"] = { { "HalfExtents", Vec3ToJson(no.HalfExtents) } };
+    }
+    if (entity.HasComponent<NavAgentComponent>()) {
+        auto& na = entity.GetComponent<NavAgentComponent>();
+        je["NavAgent"] = { { "Speed", na.Speed }, { "TurnSpeed", na.TurnSpeed },
+                           { "StopDistance", na.StopDistance }, { "Radius", na.Radius },
+                           { "FaceMovement", na.FaceMovement }, { "Enabled", na.Enabled } };
+    }
+    if (entity.HasComponent<EnemyAIComponent>()) {
+        auto& ai = entity.GetComponent<EnemyAIComponent>();
+        nlohmann::json patrol = nlohmann::json::array();
+        for (auto& p : ai.PatrolPoints) patrol.push_back(Vec3ToJson(p));
+        je["EnemyAI"] = {
+            { "InitialState", (int)ai.InitialState },
+            { "SightRange", ai.SightRange }, { "LoseRange", ai.LoseRange },
+            { "ChaseRange", ai.ChaseRange }, { "AttackCooldown", ai.AttackCooldown },
+            { "AttackDamage", ai.AttackDamage }, { "PatrolWait", ai.PatrolWait },
+            { "TargetTag", ai.TargetTag }, { "PatrolPoints", patrol }
+        };
+    }
+
     if (entity.HasComponent<ParticleSystemComponent>()) {
         auto& pc = entity.GetComponent<ParticleSystemComponent>();
         je["ParticleSystem"] = {
@@ -642,6 +672,49 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         pc.EndSize = jp.value("EndSize", 0.4f);
         pc.TexturePath = jp.value("TexturePath", "");
         if (!pc.TexturePath.empty()) pc.Texture = Texture2D::Create(ResolveSerializedPath(pc.TexturePath));
+    }
+
+    // ---- IA e Navegação (pilar AAA v0.34) ----
+    if (je.contains("NavGrid")) {
+        auto& jn = je["NavGrid"];
+        auto& ng = entity.AddComponent<NavGridComponent>();
+        ng.Origin = JsonToVec3(jn["Origin"]);
+        ng.Width = jn.value("Width", 40u);
+        ng.Depth = jn.value("Depth", 40u);
+        ng.CellSize = jn.value("CellSize", 1.0f);
+        ng.AutoBuild = jn.value("AutoBuild", true);
+    }
+    if (je.contains("NavObstacle")) {
+        auto& jo = je["NavObstacle"];
+        auto& no = entity.AddComponent<NavObstacleComponent>();
+        no.HalfExtents = JsonToVec3(jo["HalfExtents"]);
+    }
+    if (je.contains("NavAgent")) {
+        auto& ja = je["NavAgent"];
+        auto& na = entity.AddComponent<NavAgentComponent>();
+        na.Speed = ja.value("Speed", 4.0f);
+        na.TurnSpeed = ja.value("TurnSpeed", 8.0f);
+        na.StopDistance = ja.value("StopDistance", 0.3f);
+        na.Radius = ja.value("Radius", 0.3f);
+        na.FaceMovement = ja.value("FaceMovement", true);
+        na.Enabled = ja.value("Enabled", true);
+    }
+    if (je.contains("EnemyAI")) {
+        auto& ji = je["EnemyAI"];
+        auto& ai = entity.AddComponent<EnemyAIComponent>();
+        ai.InitialState = (EnemyAIComponent::State)ji.value("InitialState", 0);
+        ai.m_State = ai.InitialState;
+        ai.SightRange = ji.value("SightRange", 12.0f);
+        ai.LoseRange = ji.value("LoseRange", 18.0f);
+        ai.ChaseRange = ji.value("ChaseRange", 8.0f);
+        ai.AttackCooldown = ji.value("AttackCooldown", 1.2f);
+        ai.AttackDamage = ji.value("AttackDamage", 1.0f);
+        ai.PatrolWait = ji.value("PatrolWait", 1.5f);
+        ai.TargetTag = ji.value("TargetTag", "Jogador");
+        ai.PatrolPoints.clear();
+        if (ji.contains("PatrolPoints") && ji["PatrolPoints"].is_array()) {
+            for (auto& jp : ji["PatrolPoints"]) ai.PatrolPoints.push_back(JsonToVec3(jp));
+        }
     }
 
     if (je.contains("AudioSource")) {

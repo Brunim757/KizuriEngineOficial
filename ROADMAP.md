@@ -746,3 +746,66 @@ minor chegar em `99` — quando seria `0.100`, vira **`1.0`**.
   managed
 
 ---
+---
+## 🚀 v0.34 — Pilares AAA (em andamento)
+
+Objetivo: transformar a engine de "jogos pequenos" pra "qualquer jogo" — os
+seis pilares que separam um motor de jogo AAA de um motor de jogo indie.
+Cada pilar é entregue funcional e utilizável (v1) e evolui nas versões
+seguintes. Ordem de implementação = ordem de dependência.
+
+### 1. IA e Navegação (NavMesh + agentes + máquina de estados)
+- [x] **NavGrid** — grade de navegação 2D/3D (XZ) com A* + diagonal + suavização
+  de caminho (simplificação por linha de visão na grade)
+- [x] **NavObstacleComponent** — entidades que bloqueiam a grade (rasterização
+  por AABB em runtime)
+- [x] **NavAgentComponent** — segue caminho com suavização, rotação gradual e
+  evitar obstáculos simples; API C++ (NativeScript) + C#
+- [x] **EnemyAIComponent** — máquina de estados (Patrulha / Persegue / Ataca)
+  com visão por raycast (linha de visão)
+- [x] Debug visual: caminho + grade desenhados no viewport (DrawNavDebug)
+- [x] **Demo IA**: jogador + 3 inimigos perseguindo com obstáculos (WASD)
+
+### 2. Animação (blend trees + IK + camadas)
+- [ ] **BlendTreeComponent** — mistura de 2+ clips por peso (ex: idle↔walk pelo
+  speed) + crossfade entre clips; C++ + C#
+- [ ] **TwoBoneIKComponent** — IK analítico de 2 ossos (braços/pernas)
+- [ ] **Camadas** — blend por camada (corpo + braço apontando) (v1)
+- [ ] **Retargeting** — mapeamento de ossos por nome pra skeletons diferentes (v1)
+
+### 3. Renderização (culling + streaming + qualidade)
+- [ ] **Frustum culling** por entidade (AABB × frustum) no passe 3D
+- [ ] **Culling de luzes** (só luzes no frustum + range)
+- [ ] **Streaming de assets**: carregamento de texturas/malhas em thread
+  (callback quando pronto), cache por prioridade
+- [ ] **LOD automático** — geração de versões reduzidas de malhas procedurais
+  (builtins) + integração com LODComponent
+- [ ] **Oclusão** simples (portais/occluders por caixa) (v1)
+
+### 4. Rede (multiplayer)
+- [ ] **Camada UDP confiável** — envio/recepção com ACK + retransmissão +
+  numeração de pacotes (host/cliente, sem servidor dedicado na v1)
+- [ ] **Serialização de estado** — transforms/entidades em pacotes (delta
+  compressado por estado inteiro)
+- [ ] **KZNetwork API** — Host/Connect/Send/Receive + eventos de conexão;
+  C++ + C# mínimo
+- [ ] **Demo multiplayer local** — duas instâncias do Sandbox na mesma máquina
+
+### 5. Editor (ferramentas AAA)
+- [ ] **Editor de partículas** (painel dedicado com preview)
+- [ ] **Escultura de terreno** — pintar altura no TerrainComponent (regenera
+  mesh + collider em tempo real)
+- [ ] **Editor de animação** — preview de clips + curva de blend
+- [ ] **Timeline de cutscene** — editor visual de keyframes
+- [ ] **Editor de shaders** (visual, nós) (v1 — mais longe)
+
+### 6. Pipeline de conteúdo (assets + física + áudio)
+- [ ] **Collider de malha convexa** (btConvexHullShape do Mesh::GetVertices) —
+  MeshColliderComponent 3D
+- [ ] **Áudio com oclusão** — filtro lowpass por raycast quando obstáculo entre
+  fonte e ouvinte; **reverb** básico (miniaudio nodes)
+- [ ] **Streaming de cenas** — carregar cena grande em partes (stepwise) com
+  progresso (o serializador já tem BeginDeserializeStepwise)
+- [ ] **Async loader de texturas** (parte do pilar 3)
+
+---

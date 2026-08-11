@@ -44,6 +44,10 @@ protected:
     virtual void OnCollisionBegin(Entity other) { (void)other; }
     virtual void OnCollisionEnd(Entity other) { (void)other; }
 
+    // Disparado pelo EnemyAIComponent quando o inimigo ataca (cooldown):
+    // o jogo decide o dano/som/efeito. 'amount' é o AttackDamage.
+    virtual void OnEnemyAttack(float amount) { (void)amount; }
+
 private:
     Entity m_Entity;
     friend class Scene;

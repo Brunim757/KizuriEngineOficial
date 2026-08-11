@@ -316,6 +316,22 @@ public readonly struct Entity
 	public void MoveCharacter(float fwdX, float fwdZ)
 		=> Interop.KizuriNative.kz_entity_move_character(Handle, fwdX, fwdZ);
 
+	// ---- IA e Navegação (pilar AAA v0.34) ----
+	public bool AddNavGrid(float originX, float originZ, uint width, uint depth, float cellSize)
+		=> Interop.KizuriNative.kz_entity_add_nav_grid(Handle, originX, originZ, width, depth, cellSize) != 0;
+	public bool AddNavObstacle(float halfX, float halfY, float halfZ)
+		=> Interop.KizuriNative.kz_entity_add_nav_obstacle(Handle, halfX, halfY, halfZ) != 0;
+	public bool AddNavAgent(float speed = 4f, float turnSpeed = 8f)
+		=> Interop.KizuriNative.kz_entity_add_nav_agent(Handle, speed, turnSpeed) != 0;
+	public void SetNavDestination(float x, float y, float z)
+		=> Interop.KizuriNative.kz_navagent_set_destination(Handle, x, y, z);
+	public void StopNavAgent()
+		=> Interop.KizuriNative.kz_navagent_stop(Handle);
+	public bool NavAgentHasPath()
+		=> Interop.KizuriNative.kz_navagent_has_path(Handle) != 0;
+	public float NavAgentRemainingDistance()
+		=> Interop.KizuriNative.kz_navagent_remaining_distance(Handle);
+
 	// ---- Timeline (keyframes de transform / cutscene) ----
 	public void AddTimeline() => Interop.KizuriNative.kz_entity_add_timeline(Handle);
 	public void PlayTimeline(bool play = true) => Interop.KizuriNative.kz_timeline_play(Handle, play ? 1 : 0);

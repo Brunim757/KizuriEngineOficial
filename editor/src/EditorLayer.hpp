@@ -36,6 +36,9 @@ private:
     void DrawDockspace();
     void DrawSceneHierarchy();
     void DrawInspector();
+    // Desenha a grade de navegação + caminhos dos NavAgent no viewport
+    // (debug do pilar IA). Visível no Play e em edição com o overlay ligado.
+    void DrawNavDebug();
     // Abre o Content Browser na pasta do arquivo informado (botão
     // "Gerenciador" dos campos de arquivo do Inspetor).
     void RevealFileInContentBrowser(const std::string& filePath);
@@ -91,6 +94,9 @@ private:
     void CreateDemoScene3D();
     // Cena de demonstração 2D: sprites, física Box2D, círculos, texto e UI.
     void CreateDemoScene2D();
+    // Cena de demonstração IA (v0.34): NavGrid + obstáculos + inimigos com
+    // EnemyAIComponent (patrulha/persegue/ataca) — fuja com WASD.
+    void CreateDemoSceneAI();
 
     // Cria uma entidade a partir de um arquivo de asset (soltado do Content
     // Browser no viewport): .obj -> MeshRenderer, imagem -> SpriteRenderer.

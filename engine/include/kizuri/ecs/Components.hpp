@@ -7,12 +7,14 @@
 #include "kizuri/renderer/TextRenderer.hpp" // TextAlignment (TextComponent)
 #include "kizuri/audio/AudioEngine.hpp"
 #include "kizuri/ecs/Animator.hpp"
+#include "kizuri/ai/NavGrid.hpp"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <string>
 #include <functional>
 #include <vector>
+#include <memory>
 
 namespace kizuri {
 
@@ -415,6 +417,76 @@ struct NativeScriptComponent {
     // Implementado em Components.cpp (não aqui) pra não criar um ciclo de
     // include com NativeScript.hpp/ScriptEngine.hpp.
     void BindByName(const std::string& className);
+};
+
+// ---------------------------------------------------------------------------
+// IA e Navegação (pilar AAA v0.34)
+// ---------------------------------------------------------------------------
+
+// Grade de navegação: região do mundo (XZ) que os agentes usam pra andar.
+// Em runtime, o Scene desenha os NavObstacleComponent na grade e os
+// NavAgentComponent consultam ela pra calcular caminhos (A*).
+struct NavGridComponent {
+    // Origem e tamanho da grade (quantidade de células).
+    glm::vec3 Origin{ 0.0f };      // canto da grade (x, ?, z)
+    uint32_t Width = 40;           // células em X
+    uint32_t Depth = 40;           // células em Z
+    float CellSize = 1.0f;         // tamanho de cada célula (mundo)
+    bool AutoBuild = true;         // rasteriza os obstáculos no Play
+
+    // Estado runtime — preenchido pelo Scene::BuildNavGrid.
+    std::shared_ptr<kizuri::NavGrid> Grid;
+};
+
+// Obstáculo de navegação: o NavGridComponent rasteriza a AABB desta entidade
+// (com HalfExtents opcional; vazio = usa a escala do transform) como células
+// bloqueadas. Não muda a física — só a navegação.
+struct NavObstacleComponent {
+    glm::vec3 HalfExtents{ 0.0f }; // 0 = deriva da escala do transform
+};
+
+// Agente de navegação: segue o caminho mais curto até um destino no
+// NavGridComponent mais próximo. Movimento suave no plano XZ (altura fica
+// com o script/character controller). Rotação (yaw) vira pra direção.
+struct NavAgentComponent {
+    float Speed = 4.0f;            // unidades/segundo
+    float TurnSpeed = 8.0f;        // quão rápido gira o yaw (rad/s aprox)
+    float StopDistance = 0.3f;     // para quando estiver a essa distância
+    float Radius = 0.3f;           // raio de afastamento do obstáculo (margin)
+    bool FaceMovement = true;      // gira o yaw pra direção do movimento
+    bool Enabled = true;           // congela o agente sem destruir o caminho
+
+    // API de script — ver Scene::SetNavDestination/StopNavAgent.
+    glm::vec3 Destination{ 0.0f };
+    bool HasDestination = false;
+    std::vector<glm::vec3> Path;      // runtime
+    size_t PathIndex = 0;             // runtime
+    float PathTimer = 0.0f;           // runtime (recalcula periodicamente)
+};
+
+// Inteligência do inimigo: máquina de estados simples (Patrulha → Persegue →
+// Ataca) dirigindo um NavAgent (mesma entidade ou ChildAgentName — se a
+// entidade tiver um NavAgent, usa ele; senão procura um filho com esse nome).
+struct EnemyAIComponent {
+    enum class State { Patrol = 0, Chase = 1, Attack = 2 };
+
+    State InitialState = State::Patrol;
+    float SightRange = 12.0f;      // enxerga o alvo até essa distância
+    float LoseRange = 18.0f;       // perde o alvo além dela (histerese)
+    float ChaseRange = 8.0f;       // distância pra parar e atacar
+    float AttackCooldown = 1.2f;   // segundos entre ataques
+    float AttackDamage = 1.0f;
+    float PatrolWait = 1.5f;       // segundos parado em cada ponto de patrulha
+    std::vector<glm::vec3> PatrolPoints; // usados em ordem (loop)
+    std::string TargetTag = "Jogador";   // quem o inimigo persegue (TagComponent)
+
+    // Runtime.
+    State m_State = InitialState;
+    float m_StateTimer = 0.0f;      // tempo no estado (pro cooldown de ataque)
+    float m_PatrolTimer = 0.0f;     // espera no ponto de patrulha
+    int m_PatrolIndex = 0;          // ponto de patrulha atual
+    bool m_HasTarget = false;
+    uint32_t m_TargetHandle = 0;    // handle da entidade alvo (resolvida a cada frame)
 };
 
 } // namespace kizuri

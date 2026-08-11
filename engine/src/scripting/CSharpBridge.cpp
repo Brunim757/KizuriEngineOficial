@@ -996,6 +996,53 @@ KZ_SCRIPT_API void kz_material_set_height_scale(uint32_t entity, float scale) {
     e.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial.HeightScale = scale;
 }
 
+// ---- IA e Navegação (pilar AAA v0.34) --------------------------------------
+KZ_SCRIPT_API int kz_entity_add_nav_grid(uint32_t entity, float ox, float oz, uint32_t width, uint32_t depth, float cellSize) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& ng = e.AddComponent<kizuri::NavGridComponent>();
+    ng.Origin = { ox, 0.0f, oz };
+    ng.Width = width;
+    ng.Depth = depth;
+    ng.CellSize = cellSize;
+    return 1;
+}
+KZ_SCRIPT_API int kz_entity_add_nav_obstacle(uint32_t entity, float hx, float hy, float hz) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& no = e.AddComponent<kizuri::NavObstacleComponent>();
+    no.HalfExtents = { hx, hy, hz };
+    return 1;
+}
+KZ_SCRIPT_API int kz_entity_add_nav_agent(uint32_t entity, float speed, float turnSpeed) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    auto& na = e.AddComponent<kizuri::NavAgentComponent>();
+    na.Speed = speed;
+    na.TurnSpeed = turnSpeed;
+    return 1;
+}
+KZ_SCRIPT_API void kz_navagent_set_destination(uint32_t entity, float x, float y, float z) {
+    auto e = Resolve(entity);
+    if (!e) return;
+    e.GetScene()->SetNavDestination(e, { x, y, z });
+}
+KZ_SCRIPT_API void kz_navagent_stop(uint32_t entity) {
+    auto e = Resolve(entity);
+    if (!e) return;
+    e.GetScene()->StopNavAgent(e);
+}
+KZ_SCRIPT_API int kz_navagent_has_path(uint32_t entity) {
+    auto e = Resolve(entity);
+    if (!e) return 0;
+    return e.GetScene()->NavAgentHasPath(e) ? 1 : 0;
+}
+KZ_SCRIPT_API float kz_navagent_remaining_distance(uint32_t entity) {
+    auto e = Resolve(entity);
+    if (!e) return 0.0f;
+    return e.GetScene()->NavAgentRemainingDistance(e);
+}
+
 // ---- Character controller (cinemático) ------------------------------------
 KZ_SCRIPT_API void kz_entity_add_character_controller(uint32_t entity, float speed, float gravity) {
     auto e = Resolve(entity);

@@ -383,6 +383,175 @@ void EditorLayer::CreateDemoScene3D() {
     KZ_CORE_INFO("Cena de demonstração 3D criada.");
 }
 
+// ---------------------------------------------------------------------------
+// Demo de IA (pilar AAA v0.34): arena com NavGrid + obstáculos, um jogador
+// (WASD) e 3 inimigos com EnemyAIComponent (patrulha → persegue → ataca)
+// usando NavAgent. Aperte Play e fuja dos inimigos.
+// ---------------------------------------------------------------------------
+
+// Script do jogador da demo — move no plano XZ e gira pro lado do movimento.
+class DemoPlayerMove : public NativeScript {
+public:
+    void OnUpdate(Timestep ts) override {
+        auto& tc = GetComponent<TransformComponent>();
+        const float speed = 5.5f;
+        glm::vec2 input{ 0.0f };
+        if (Input::IsKeyPressed(Key::A)) input.x -= 1.0f;
+        if (Input::IsKeyPressed(Key::D)) input.x += 1.0f;
+        if (Input::IsKeyPressed(Key::W)) input.y += 1.0f;
+        if (Input::IsKeyPressed(Key::S)) input.y -= 1.0f;
+        if (glm::length(input) > 0.01f) {
+            input = glm::normalize(input);
+            tc.Translation.x += input.x * speed * (float)ts;
+            tc.Translation.z += input.y * speed * (float)ts;
+            tc.Rotation.y = std::atan2(input.x, input.y);
+        }
+    }
+};
+
+// Script do inimigo da demo — trata o ataque disparado pelo EnemyAIComponent.
+class DemoEnemyScript : public NativeScript {
+public:
+    void OnEnemyAttack(float amount) override {
+        KZ_CORE_INFO("Inimigo {0} atacou! (dano {1})", GetEntity().GetName(), amount);
+    }
+};
+
+void EditorLayer::CreateDemoSceneAI() {
+    if (m_SceneState != SceneState::Edit) return;
+
+    m_ActiveScene = CreateRef<Scene>("Demonstração IA");
+    m_ScenePath.clear();
+    m_SelectedEntity = {};
+    m_ViewportMode = ViewportMode::Mode3D;
+
+    // Registra os scripts da demo — BindByName sobrevive à cópia JSON do Play.
+    ScriptEngine::GetRegistry().Register<DemoPlayerMove>("DemoPlayerMove");
+    ScriptEngine::GetRegistry().Register<DemoEnemyScript>("DemoEnemyScript");
+
+    auto& scene = m_ActiveScene;
+
+    // Câmera em ângulo sobre a arena, seguindo o jogador.
+    Entity camera = scene->CreateEntity("Câmera Principal");
+    auto& cc = camera.AddComponent<CameraComponent>();
+    cc.Type = CameraComponent::ProjectionType::Perspective3D;
+    cc.Primary = true;
+    cc.PerspectiveFOV = 50.0f;
+    auto& camT = camera.GetComponent<TransformComponent>();
+    camT.Translation = { 0.0f, 12.0f, 12.0f };
+    camT.Rotation = { glm::radians(-40.0f), glm::radians(-90.0f), 0.0f };
+    auto& cf = camera.AddComponent<CameraFollowComponent>();
+    cf.TargetName = "Jogador";
+    cf.Offset = { 0.0f, 14.0f, -14.0f };
+    cf.UseWorldOffset = true;
+    cf.FollowRotation = false;
+
+    Entity sun = scene->CreateEntity("Sol");
+    auto& sl = sun.AddComponent<LightComponent>();
+    sl.Type = LightType::Directional;
+    sl.Color = { 1.0f, 0.95f, 0.85f };
+    sl.Intensity = 1.8f;
+    sun.GetComponent<TransformComponent>().Rotation = { glm::radians(55.0f), glm::radians(30.0f), 0.0f };
+
+    // Chão.
+    Entity ground = scene->CreateEntity("Chão");
+    auto& gm = ground.AddComponent<MeshRendererComponent>();
+    gm.MeshSource = "builtin:plane";
+    gm.MeshAsset = Mesh::FromSource(gm.MeshSource);
+    gm.MeshMaterial.Albedo = { 0.20f, 0.22f, 0.26f };
+    gm.MeshMaterial.Roughness = 0.9f;
+    ground.GetComponent<TransformComponent>().Scale = { 30.0f, 1.0f, 30.0f };
+
+    // Grade de navegação (cobre ±25 do centro).
+    Entity navGrid = scene->CreateEntity("NavGrade");
+    auto& ng = navGrid.AddComponent<NavGridComponent>();
+    ng.Origin = { -25.0f, 0.0f, -25.0f };
+    ng.Width = 50;
+    ng.Depth = 50;
+    ng.CellSize = 1.0f;
+
+    // Obstáculos (visual + bloco da navegação).
+    const glm::vec3 obstaclePos[6] = {
+        { -6.0f, 0.0f, -4.0f }, { 5.0f, 0.0f, -6.0f }, { 0.0f, 0.0f, 3.0f },
+        { -8.0f, 0.0f, 6.0f },  { 7.0f, 0.0f, 5.0f },  { -2.0f, 0.0f, -9.0f },
+    };
+    for (int i = 0; i < 6; ++i) {
+        Entity ob = scene->CreateEntity("Obstáculo " + std::to_string(i + 1));
+        auto& om = ob.AddComponent<MeshRendererComponent>();
+        om.MeshSource = "builtin:cube";
+        om.MeshAsset = Mesh::FromSource(om.MeshSource);
+        om.MeshMaterial.Albedo = { 0.55f, 0.32f, 0.24f };
+        om.MeshMaterial.Roughness = 0.6f;
+        auto& ot = ob.GetComponent<TransformComponent>();
+        ot.Translation = obstaclePos[i];
+        ot.Scale = { 2.0f, 2.5f, 2.0f };
+        ob.AddComponent<NavObstacleComponent>(); // meio-vão vazio = usa a escala
+    }
+
+    // Jogador.
+    Entity player = scene->CreateEntity("Jogador");
+    auto& pm = player.AddComponent<MeshRendererComponent>();
+    pm.MeshSource = "builtin:cube";
+    pm.MeshAsset = Mesh::FromSource(pm.MeshSource);
+    pm.MeshMaterial.Albedo = { 0.25f, 0.6f, 0.9f };
+    pm.MeshMaterial.Roughness = 0.4f;
+    auto& pt = player.GetComponent<TransformComponent>();
+    pt.Translation = { -8.0f, 0.5f, -2.0f };
+    pt.Scale = { 1.0f, 1.0f, 1.0f };
+    auto& pns = player.AddComponent<NativeScriptComponent>();
+    pns.BindByName("DemoPlayerMove");
+
+    // Inimigos: patrulham; perseguem quando veem o jogador; atacam no alcance.
+    const glm::vec3 enemyPos[3] = { { 8.0f, 0.5f, 8.0f }, { -9.0f, 0.5f, -8.0f }, { 9.0f, 0.5f, -8.0f } };
+    const glm::vec3 patrolPoints[3][3] = {
+        { { 10.0f, 0.5f, 8.0f }, { -6.0f, 0.5f, 8.0f }, { 10.0f, 0.5f, -6.0f } },
+        { { -10.0f, 0.5f, -6.0f }, { 10.0f, 0.5f, -6.0f }, { -10.0f, 0.5f, 10.0f } },
+        { { 10.0f, 0.5f, 10.0f }, { -10.0f, 0.5f, -10.0f }, { 10.0f, 0.5f, -10.0f } },
+    };
+    for (int i = 0; i < 3; ++i) {
+        Entity enemy = scene->CreateEntity("Inimigo " + std::to_string(i + 1));
+        auto& em = enemy.AddComponent<MeshRendererComponent>();
+        em.MeshSource = "builtin:sphere";
+        em.MeshAsset = Mesh::FromSource(em.MeshSource);
+        em.MeshMaterial.Albedo = { 0.85f, 0.25f, 0.2f };
+        em.MeshMaterial.Roughness = 0.35f;
+        auto& et = enemy.GetComponent<TransformComponent>();
+        et.Translation = enemyPos[i];
+        et.Scale = { 1.1f, 1.1f, 1.1f };
+
+        auto& na = enemy.AddComponent<NavAgentComponent>();
+        na.Speed = 3.2f + (float)i * 0.5f;
+        na.TurnSpeed = 6.0f;
+
+        auto& ai = enemy.AddComponent<EnemyAIComponent>();
+        ai.SightRange = 14.0f;
+        ai.LoseRange = 20.0f;
+        ai.ChaseRange = 1.6f;
+        ai.AttackCooldown = 1.0f;
+        ai.AttackDamage = 10.0f;
+        ai.PatrolWait = 1.0f;
+        ai.TargetTag = "Jogador";
+        for (int p = 0; p < 3; ++p) ai.PatrolPoints.push_back(patrolPoints[i][p]);
+
+        auto& ens = enemy.AddComponent<NativeScriptComponent>();
+        ens.BindByName("DemoEnemyScript");
+    }
+
+    // Rótulo 2D de instrução.
+    Entity label = scene->CreateEntity("Instruções");
+    auto& lt = label.AddComponent<TextComponent>();
+    lt.Text = "Demo IA — WASD pra fugir dos inimigos (Eles patrulham, perseguem e atacam)";
+    lt.FontSize = 16.0f;
+    lt.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    label.GetComponent<TransformComponent>().Translation = { -9.0f, 5.5f, 0.0f };
+
+    m_EditorCamPos = { 0.0f, 18.0f, 18.0f };
+    m_EditorCamYaw = -90.0f;
+    m_EditorCamPitch = -40.0f;
+    m_SelectedEntity = player;
+    KZ_CORE_INFO("Cena de demonstração IA criada (NavGrid + NavAgent + EnemyAI).");
+}
+
 // Cena de demonstração 2D — showcase do pipeline 2D: sprites, física Box2D
 // (chão + caixas caindo), círculos, texto e UI (canvas + botão). Roda 100%
 // no Play com a câmera ortográfica.
@@ -1147,6 +1316,84 @@ void EditorLayer::DrawColliderGizmo() {
 // (2D: caixa/círculo; 3D: caixa/esfera), não só o da entidade selecionada.
 // Cor mais apagada pra não competir com o gizmo de seleção. Aproximação
 // axis-aligned (não rotaciona pelo corpo) — suficiente pra visualizar.
+// Debug da IA (v0.34): desenha a grade de navegação (células bloqueadas em
+// vermelho) e os caminhos atuais de cada NavAgent (amarelo, com o destino
+// em verde). Visível durante o Play e em edição com o overlay de colliders.
+void EditorLayer::DrawNavDebug() {
+    if (!m_ActiveScene) return;
+    if (m_SceneState == SceneState::Edit && !m_ShowColliders) return;
+
+    glm::mat4 viewProj = (m_ViewportMode == ViewportMode::Mode2D)
+        ? m_Editor2DCamera.GetViewProjectionMatrix()
+        : m_EditorCamera.GetViewProjectionMatrix();
+    glm::vec2 vpPos = m_ViewportBounds[0], vpSize = m_ViewportBounds[1] - m_ViewportBounds[0];
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+
+    auto Project = [&](const glm::vec3& wp, ImVec2& out) {
+        return ProjectToViewport(viewProj, wp, vpPos, vpSize, out);
+    };
+    auto Line = [&](const glm::vec3& a, const glm::vec3& b, ImU32 color) {
+        ImVec2 sa, sb;
+        if (Project(a, sa) && Project(b, sb)) dl->AddLine(sa, sb, color, 1.5f);
+    };
+
+    auto& registry = m_ActiveScene->GetRegistry();
+
+    // Grade de navegação.
+    registry.view<kizuri::TransformComponent, kizuri::NavGridComponent>().each([&](auto e, auto&, auto& ngc) {
+        if (!ngc.Grid || ngc.Grid->GetWidth() <= 0) return;
+        const kizuri::NavGrid& g = *ngc.Grid;
+        const ImU32 gridCol = IM_COL32(120, 180, 255, 60);
+        const ImU32 blockCol = IM_COL32(255, 90, 80, 110);
+        int w = g.GetWidth(), d = g.GetDepth();
+        float cs = g.GetCellSize();
+        // Linhas da grade (a cada 4 células, pra não poluir).
+        int step = std::max(1, (int)(w / 20));
+        for (int x = 0; x <= w; x += step) {
+            Line({ g.GetOriginX() + x * cs, 0.02f, g.GetOriginZ() },
+                 { g.GetOriginX() + x * cs, 0.02f, g.GetOriginZ() + d * cs }, gridCol);
+        }
+        for (int z = 0; z <= d; z += step) {
+            Line({ g.GetOriginX(), 0.02f, g.GetOriginZ() + z * cs },
+                 { g.GetOriginX() + w * cs, 0.02f, g.GetOriginZ() + z * cs }, gridCol);
+        }
+        // Células bloqueadas (quadradinhos).
+        ImVec2 a, b;
+        if (Project({ g.GetOriginX(), 0.0f, g.GetOriginZ() }, a) &&
+            Project({ g.GetOriginX() + cs, 0.0f, g.GetOriginZ() + cs }, b)) {
+            float px = std::max(2.0f, (b.x - a.x) * 0.8f);
+            for (int z = 0; z < d; ++z)
+                for (int x = 0; x < w; ++x) {
+                    if (!g.IsBlocked(x, z)) continue;
+                    ImVec2 c;
+                    if (Project(g.CellToWorld(x, z), c))
+                        dl->AddRectFilled({ c.x - px * 0.5f, c.y - px * 0.5f },
+                                          { c.x + px * 0.5f, c.y + px * 0.5f }, blockCol);
+                }
+        }
+    });
+
+    // Caminhos dos agentes.
+    registry.view<kizuri::TransformComponent, kizuri::NavAgentComponent>().each([&](auto e, auto&, auto& na) {
+        if (!na.HasDestination) return;
+        const ImU32 pathCol = IM_COL32(255, 220, 90, 200);
+        const ImU32 destCol = IM_COL32(120, 255, 120, 220);
+        glm::vec3 prev;
+        bool hasPrev = false;
+        for (size_t i = na.PathIndex; i < na.Path.size(); ++i) {
+            glm::vec3 p = na.Path[i];
+            p.y = 0.05f;
+            if (hasPrev) Line(prev, p, pathCol);
+            prev = p;
+            hasPrev = true;
+        }
+        glm::vec3 dest = na.Destination;
+        dest.y = 0.05f;
+        ImVec2 sc;
+        if (Project(dest, sc)) dl->AddCircleFilled(sc, 4.0f, destCol);
+    });
+}
+
 void EditorLayer::DrawAllColliders() {
     if (m_SceneState != SceneState::Edit || !m_ActiveScene) return;
 
@@ -1563,6 +1810,8 @@ void EditorLayer::DrawSettingsEditor() {
     if (ImGui::Button("Criar demonstração 2D")) CreateDemoScene2D();
     ImGui::SameLine();
     if (ImGui::Button("Criar demonstração 3D")) CreateDemoScene3D();
+    ImGui::SameLine();
+    if (ImGui::Button("Criar demo IA")) CreateDemoSceneAI();
 }
 
 void EditorLayer::DrawGizmo() {
@@ -2118,6 +2367,8 @@ void EditorLayer::DrawDockspace() {
         ImGui::Separator();
         if (ImGui::MenuItem("Cena de Demonstração 2D...", nullptr, false, m_SceneState == SceneState::Edit))
             CreateDemoScene2D();
+        if (ImGui::MenuItem("Cena de Demonstração IA...", nullptr, false, m_SceneState == SceneState::Edit))
+            CreateDemoSceneAI();
         if (ImGui::MenuItem("Cena de Demonstração 3D...", nullptr, false, m_SceneState == SceneState::Edit))
             CreateDemoScene3D();
         ImGui::EndPopup();
@@ -3839,6 +4090,90 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<AnimatorComponent>();
         }
 
+        // ---- IA e Navegação (pilar AAA v0.34) ----
+        if (m_SelectedEntity.HasComponent<NavGridComponent>()) {
+            auto& ng = m_SelectedEntity.GetComponent<NavGridComponent>();
+            if (DrawComponentHeader("NavGrid (navegação)", &removeThis)) {
+                bool changed = false;
+                changed |= ImGui::DragFloat3("Origem", &ng.Origin.x, 0.5f);
+                changed |= ImGui::DragInt("Células em X", (int*)&ng.Width, 1, 4, 256);
+                changed |= ImGui::DragInt("Células em Z", (int*)&ng.Depth, 1, 4, 256);
+                changed |= ImGui::DragFloat("Tamanho da célula", &ng.CellSize, 0.1f, 0.1f, 10.0f);
+                ImGui::Checkbox("Rasterizar obstáculos no Play", &ng.AutoBuild);
+                if (ImGui::Button("Reconstruir grade agora")) {
+                    m_ActiveScene->RebuildNavGrid(m_SelectedEntity);
+                }
+                if (ng.Grid)
+                    ImGui::TextDisabled("Grade: %dx%d células", ng.Grid->GetWidth(), ng.Grid->GetDepth());
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<NavGridComponent>();
+        }
+
+        if (m_SelectedEntity.HasComponent<NavObstacleComponent>()) {
+            auto& no = m_SelectedEntity.GetComponent<NavObstacleComponent>();
+            if (DrawComponentHeader("Nav Obstáculo", &removeThis)) {
+                ImGui::DragFloat3("Meia-extensão", &no.HalfExtents.x, 0.1f);
+                ImGui::TextDisabled("(0,0,0) = usa a escala do transform.");
+                ImGui::TextDisabled("Só bloqueia a navegação — não a física.");
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<NavObstacleComponent>();
+        }
+
+        if (m_SelectedEntity.HasComponent<NavAgentComponent>()) {
+            auto& na = m_SelectedEntity.GetComponent<NavAgentComponent>();
+            if (DrawComponentHeader("Nav Agent", &removeThis)) {
+                ImGui::DragFloat("Velocidade", &na.Speed, 0.1f, 0.0f, 30.0f);
+                ImGui::DragFloat("Giro", &na.TurnSpeed, 0.1f, 0.1f, 30.0f);
+                ImGui::DragFloat("Distância de parada", &na.StopDistance, 0.05f, 0.05f, 5.0f);
+                ImGui::Checkbox("Girar pro movimento", &na.FaceMovement);
+                ImGui::Checkbox("Ativo", &na.Enabled);
+                if (na.HasDestination) {
+                    ImGui::TextDisabled("Destino: (%.1f, %.1f, %.1f)",
+                                        na.Destination.x, na.Destination.y, na.Destination.z);
+                    if (ImGui::Button("Parar")) m_ActiveScene->StopNavAgent(m_SelectedEntity);
+                }
+                ImGui::TextDisabled("Use o script: Scene.SetNavDestination(entidade, pos).");
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<NavAgentComponent>();
+        }
+
+        if (m_SelectedEntity.HasComponent<EnemyAIComponent>()) {
+            auto& ai = m_SelectedEntity.GetComponent<EnemyAIComponent>();
+            if (DrawComponentHeader("Inimigo IA", &removeThis)) {
+                const char* states[] = { "Patrulha", "Persegue", "Ataca" };
+                int s = (int)ai.InitialState;
+                if (ImGui::Combo("Estado inicial", &s, states, 3)) ai.InitialState = (EnemyAIComponent::State)s;
+                ImGui::DragFloat("Alcance de visão", &ai.SightRange, 0.5f, 1.0f, 100.0f);
+                ImGui::DragFloat("Alcance de perder", &ai.LoseRange, 0.5f, 1.0f, 120.0f);
+                ImGui::DragFloat("Alcance de ataque", &ai.ChaseRange, 0.1f, 0.5f, 30.0f);
+                ImGui::DragFloat("Cooldown de ataque (s)", &ai.AttackCooldown, 0.1f, 0.1f, 10.0f);
+                ImGui::DragFloat("Dano por ataque", &ai.AttackDamage, 0.5f, 0.0f, 100.0f);
+                ImGui::DragFloat("Espera na patrulha (s)", &ai.PatrolWait, 0.1f, 0.0f, 10.0f);
+                char tagBuf[64];
+                strncpy(tagBuf, ai.TargetTag.c_str(), sizeof(tagBuf) - 1);
+                tagBuf[sizeof(tagBuf) - 1] = '\0';
+                if (ImGui::InputText("Tag do alvo", tagBuf, sizeof(tagBuf))) ai.TargetTag = tagBuf;
+
+                ImGui::Separator();
+                ImGui::TextDisabled("Pontos de patrulha (%.0f,%.0f,%.0f ...)", 
+                                    ai.PatrolPoints.empty() ? 0.0f : ai.PatrolPoints[0].x,
+                                    ai.PatrolPoints.empty() ? 0.0f : ai.PatrolPoints[0].y,
+                                    ai.PatrolPoints.empty() ? 0.0f : ai.PatrolPoints[0].z);
+                if (ImGui::Button("+ Ponto aqui (posição da entidade)")) {
+                    ai.PatrolPoints.push_back(m_SelectedEntity.GetComponent<TransformComponent>().Translation);
+                }
+                ImGui::SameLine();
+                if (!ai.PatrolPoints.empty() && ImGui::Button("Remover último"))
+                    ai.PatrolPoints.pop_back();
+                ImGui::TextDisabled("O inimigo precisa de um NavAgent (mesma entidade ou filho) e de um NavGrid na cena.");
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<EnemyAIComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<TextComponent>()) {
             auto& tc = m_SelectedEntity.GetComponent<TextComponent>();
             if (DrawComponentHeader("Texto", &removeThis)) {
@@ -4223,6 +4558,16 @@ void EditorLayer::DrawAddComponentButton() {
         if (!m_SelectedEntity.HasComponent<NativeScriptComponent>() && ImGui::MenuItem("Script Nativo"))
             m_SelectedEntity.AddComponent<NativeScriptComponent>();
         ImGui::Separator();
+        // IA e Navegação (pilar AAA v0.34).
+        if (!m_SelectedEntity.HasComponent<NavGridComponent>() && ImGui::MenuItem("NavGrid (grade de navegação)"))
+            m_SelectedEntity.AddComponent<NavGridComponent>();
+        if (!m_SelectedEntity.HasComponent<NavObstacleComponent>() && ImGui::MenuItem("Nav Obstáculo"))
+            m_SelectedEntity.AddComponent<NavObstacleComponent>();
+        if (!m_SelectedEntity.HasComponent<NavAgentComponent>() && ImGui::MenuItem("Nav Agent (segue caminho)"))
+            m_SelectedEntity.AddComponent<NavAgentComponent>();
+        if (!m_SelectedEntity.HasComponent<EnemyAIComponent>() && ImGui::MenuItem("Inimigo IA (patrulha/persegue)"))
+            m_SelectedEntity.AddComponent<EnemyAIComponent>();
+        ImGui::Separator();
         if (!m_SelectedEntity.HasComponent<UICanvasComponent>() && ImGui::MenuItem("UI Canvas"))
             m_SelectedEntity.AddComponent<UICanvasComponent>();
         if (!m_SelectedEntity.HasComponent<UIRectComponent>() && ImGui::MenuItem("UI Rect"))
@@ -4498,8 +4843,10 @@ void EditorLayer::OnImGuiRender() {
         DrawLightGizmo();
         DrawColliderGizmo();
         if (m_ShowColliders) DrawAllColliders(); // overlay de física debug
+        DrawNavDebug();
     } else {
         KZ_CORE_TRACE("EditorLayer::OnImGuiRender — gizmo pulado (Play)");
+        DrawNavDebug(); // grade + caminhos da IA sempre visíveis no Play
     }
 
     // Arrastar um arquivo do Content Browser pro viewport cria a entidade

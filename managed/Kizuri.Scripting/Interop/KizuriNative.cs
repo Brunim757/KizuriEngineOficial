@@ -154,6 +154,13 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_material_set_height_scale(uint entity, float scale);
     [DllImport(Lib)] internal static extern void kz_entity_add_character_controller(uint entity, float speed, float gravity);
     [DllImport(Lib)] internal static extern void kz_entity_move_character(uint entity, float x, float z);
+    [DllImport(Lib)] internal static extern int kz_entity_add_nav_grid(uint entity, float ox, float oz, uint width, uint depth, float cellSize);
+    [DllImport(Lib)] internal static extern int kz_entity_add_nav_obstacle(uint entity, float hx, float hy, float hz);
+    [DllImport(Lib)] internal static extern int kz_entity_add_nav_agent(uint entity, float speed, float turnSpeed);
+    [DllImport(Lib)] internal static extern void kz_navagent_set_destination(uint entity, float x, float y, float z);
+    [DllImport(Lib)] internal static extern void kz_navagent_stop(uint entity);
+    [DllImport(Lib)] internal static extern int kz_navagent_has_path(uint entity);
+    [DllImport(Lib)] internal static extern float kz_navagent_remaining_distance(uint entity);
     [DllImport(Lib)] internal static extern void kz_entity_add_timeline(uint entity);
     [DllImport(Lib)] internal static extern void kz_timeline_play(uint entity, int play);
     [DllImport(Lib)] internal static extern void kz_timeline_set_time(uint entity, float time);

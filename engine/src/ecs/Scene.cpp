@@ -1276,6 +1276,7 @@ void Scene::OnRuntimeStart() {
     m_Running = true;
     OnPhysics2DStart();
     OnPhysics3DStart();
+    BuildNavGrids(); // IA/navegação: monta as grades + obstacles
 
     // Diz ao ABI C# qual cena é a ativa (Play do editor / KizuriGame). Sem
     // isso, os handles de entidade resolvidos no CSharpBridge apontam pra
@@ -1337,6 +1338,8 @@ void Scene::OnUpdateRuntimeLogic(Timestep ts) {
     UpdateTimelines(ts);
     UpdateCameraFollowers(ts);
     UpdateCharacterControllers(ts);
+    UpdateEnemyAI(ts);
+    UpdateNavAgents(ts);
     UpdateParticleSystems(ts);
     UpdateSpriteAnimations(ts);
     UpdateAnimators(ts);
@@ -1785,6 +1788,266 @@ void Scene::UpdateCharacterControllers(Timestep ts) {
         }
 
         tc.Translation = newPos;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// IA e Navegação (pilar AAA v0.34)
+// ---------------------------------------------------------------------------
+
+NavGrid* Scene::FindGridNear(const glm::vec3& pos) const {
+    NavGrid* best = nullptr;
+    float bestArea = FLT_MAX;
+    auto view = m_Registry.view<TransformComponent, NavGridComponent>();
+    for (auto e : view) {
+        auto& ngc = view.get<NavGridComponent>(e);
+        if (!ngc.Grid || ngc.Grid->GetWidth() <= 0 || ngc.Grid->GetDepth() <= 0) continue;
+        const NavGrid& g = *ngc.Grid;
+        int x, z;
+        if (!g.WorldToCell(pos, x, z)) continue; // fora dessa grade
+        float area = (float)g.GetWidth() * (float)g.GetDepth();
+        if (area < bestArea) { bestArea = area; best = ngc.Grid.get(); }
+    }
+    return best;
+}
+
+void Scene::RebuildNavGrid(Entity gridEntity) {
+    if (!gridEntity || !gridEntity.HasComponent<NavGridComponent>()) return;
+    auto& ngc = gridEntity.GetComponent<NavGridComponent>();
+    if (!ngc.Grid) ngc.Grid = std::make_shared<NavGrid>();
+    NavGrid& g = *ngc.Grid;
+    g.Build(ngc.Origin.x, ngc.Origin.z, ngc.CellSize, (int)ngc.Width, (int)ngc.Depth);
+
+    // Rasteriza os NavObstacleComponent ativos da cena na grade.
+    if (ngc.AutoBuild) {
+        auto obsv = m_Registry.view<TransformComponent, NavObstacleComponent>();
+        for (auto oe : obsv) {
+            Entity obEnt{ oe, this };
+            if (!IsEntityActive(obEnt)) continue;
+            auto& tc = obsv.get<TransformComponent>(oe);
+            auto& ob = obsv.get<NavObstacleComponent>(oe);
+            glm::vec3 half = ob.HalfExtents;
+            if (half.x <= 0.0f && half.y <= 0.0f && half.z <= 0.0f)
+                half = tc.Scale * 0.5f; // vazio = usa a escala do transform
+            g.RasterizeBox(tc.Translation, half);
+        }
+    }
+}
+
+void Scene::BuildNavGrids() {
+    auto view = m_Registry.view<TransformComponent, NavGridComponent>();
+    for (auto e : view) {
+        if (!IsEntityActive(Entity{ e, this })) continue;
+        RebuildNavGrid(Entity{ e, this });
+    }
+}
+
+void Scene::SetNavDestination(Entity agent, const glm::vec3& destination) {
+    if (!agent || !agent.HasComponent<NavAgentComponent>()) return;
+    auto& na = agent.GetComponent<NavAgentComponent>();
+    na.Destination = destination;
+    na.HasDestination = true;
+    na.Path.clear();
+    na.PathIndex = 0;
+    na.PathTimer = 0.0f;
+}
+
+void Scene::StopNavAgent(Entity agent) {
+    if (!agent || !agent.HasComponent<NavAgentComponent>()) return;
+    auto& na = agent.GetComponent<NavAgentComponent>();
+    na.HasDestination = false;
+    na.Path.clear();
+    na.PathIndex = 0;
+}
+
+bool Scene::NavAgentHasPath(Entity agent) const {
+    if (!agent) return false;
+    auto* na = m_Registry.try_get<NavAgentComponent>(agent.GetHandle());
+    return na && na->HasDestination && na->PathIndex < na->Path.size();
+}
+
+float Scene::NavAgentRemainingDistance(Entity agent) const {
+    if (!agent) return 0.0f;
+    auto* na = m_Registry.try_get<NavAgentComponent>(agent.GetHandle());
+    if (!na || !na->HasDestination) return 0.0f;
+    const TransformComponent* tc = m_Registry.try_get<TransformComponent>(agent.GetHandle());
+    float dist = 0.0f;
+    glm::vec3 prev = tc ? tc->Translation : glm::vec3(0.0f);
+    for (size_t i = na->PathIndex; i < na->Path.size(); ++i) {
+        dist += glm::length(na->Path[i] - prev);
+        prev = na->Path[i];
+    }
+    return dist;
+}
+
+bool Scene::NavAgentReached(Entity agent) const {
+    if (!agent) return true;
+    auto* na = m_Registry.try_get<NavAgentComponent>(agent.GetHandle());
+    return !na || !na->HasDestination;
+}
+
+// Máquina de estados do inimigo: Patrulha → Persegue → Ataca, dirigindo o
+// NavAgent da própria entidade (ou de um filho direto).
+void Scene::UpdateEnemyAI(Timestep ts) {
+    float dt = (float)ts;
+    auto view = m_Registry.view<TransformComponent, EnemyAIComponent>();
+    for (auto e : view) {
+        Entity entity{ e, this };
+        if (!IsEntityActive(entity)) continue;
+        auto& ai = view.get<EnemyAIComponent>(e);
+        ai.m_StateTimer += dt;
+
+        // Resolve o alvo pela tag (barato, uma vez por frame).
+        ai.m_HasTarget = false;
+        if (!ai.TargetTag.empty()) {
+            auto tags = m_Registry.view<TransformComponent, TagComponent>();
+            for (auto te : tags) {
+                if (tags.get<TagComponent>(te).Tag == ai.TargetTag) {
+                    auto* id = m_Registry.try_get<IDComponent>(te);
+                    if (id && id->Active) { ai.m_TargetHandle = (uint32_t)te; ai.m_HasTarget = true; }
+                    break;
+                }
+            }
+        }
+
+        // NavAgent: na própria entidade ou num filho direto.
+        Entity navEntity = entity.HasComponent<NavAgentComponent>() ? entity : Entity{};
+        if (!navEntity) {
+            for (Entity child : entity.GetChildren())
+                if (child.HasComponent<NavAgentComponent>()) { navEntity = child; break; }
+        }
+        if (!navEntity) continue;
+
+        glm::vec3 selfPos = entity.GetComponent<TransformComponent>().Translation;
+        float distToTarget = FLT_MAX;
+        if (ai.m_HasTarget) {
+            entt::entity te = entt::entity(ai.m_TargetHandle);
+            if (m_Registry.valid(te)) {
+                Entity t{ te, this };
+                if (t.HasComponent<TransformComponent>())
+                    distToTarget = glm::length(t.GetComponent<TransformComponent>().Translation - selfPos);
+            }
+        }
+
+        switch (ai.m_State) {
+        case EnemyAIComponent::State::Patrol: {
+            if (!ai.PatrolPoints.empty()) {
+                // Anda de ponto em ponto; espera PatrolWait em cada um.
+                if (!NavAgentHasPath(navEntity)) {
+                    ai.m_PatrolTimer += dt;
+                    if (ai.m_PatrolTimer >= ai.PatrolWait) {
+                        ai.m_PatrolTimer = 0.0f;
+                        SetNavDestination(navEntity, ai.PatrolPoints[ai.m_PatrolIndex]);
+                    }
+                } else if (NavAgentReached(navEntity)) {
+                    ai.m_PatrolTimer += dt;
+                    if (ai.m_PatrolTimer >= ai.PatrolWait) {
+                        ai.m_PatrolTimer = 0.0f;
+                        ai.m_PatrolIndex = (ai.m_PatrolIndex + 1) % (int)ai.PatrolPoints.size();
+                        SetNavDestination(navEntity, ai.PatrolPoints[ai.m_PatrolIndex]);
+                    }
+                }
+            }
+            if (ai.m_HasTarget && distToTarget <= ai.SightRange) {
+                ai.m_State = EnemyAIComponent::State::Chase;
+                ai.m_StateTimer = 0.0f;
+            }
+            break;
+        }
+        case EnemyAIComponent::State::Chase: {
+            if (!ai.m_HasTarget || distToTarget > ai.LoseRange) { ai.m_State = EnemyAIComponent::State::Patrol; break; }
+            if (distToTarget <= ai.ChaseRange) {
+                StopNavAgent(navEntity);
+                ai.m_State = EnemyAIComponent::State::Attack;
+                ai.m_StateTimer = 0.0f;
+                break;
+            }
+            if (ai.m_StateTimer >= 0.25f) { // recalcula o destino (o alvo se move)
+                ai.m_StateTimer = 0.0f;
+                entt::entity te = entt::entity(ai.m_TargetHandle);
+                if (m_Registry.valid(te)) {
+                    Entity t{ te, this };
+                    if (t.HasComponent<TransformComponent>())
+                        SetNavDestination(navEntity, t.GetComponent<TransformComponent>().Translation);
+                }
+            }
+            break;
+        }
+        case EnemyAIComponent::State::Attack: {
+            if (!ai.m_HasTarget || distToTarget > ai.ChaseRange) { ai.m_State = EnemyAIComponent::State::Chase; break; }
+            if (ai.m_StateTimer >= ai.AttackCooldown) {
+                ai.m_StateTimer = 0.0f;
+                if (entity.HasComponent<NativeScriptComponent>() &&
+                    entity.GetComponent<NativeScriptComponent>().Instance)
+                    entity.GetComponent<NativeScriptComponent>().Instance->OnEnemyAttack(ai.AttackDamage);
+            }
+            break;
+        }
+        }
+    }
+}
+
+// Move os NavAgent ao longo do caminho no plano XZ; altura fica com o
+// script/controller. Recalcula o caminho periodicamente (destino mutável).
+void Scene::UpdateNavAgents(Timestep ts) {
+    float dt = (float)ts;
+    auto view = m_Registry.view<TransformComponent, NavAgentComponent>();
+    for (auto e : view) {
+        Entity entity{ e, this };
+        if (!IsEntityActive(entity)) continue;
+        auto& tc = view.get<TransformComponent>(e);
+        auto& na = view.get<NavAgentComponent>(e);
+        if (!na.Enabled || !na.HasDestination) continue;
+
+        NavGrid* grid = FindGridNear(tc.Translation);
+        if (!grid) { StopNavAgent(entity); continue; }
+
+        na.PathTimer -= dt;
+        if (na.PathTimer <= 0.0f) {
+            na.PathTimer = 0.35f;
+            na.Path = grid->SmoothPath(grid->FindPath(tc.Translation, na.Destination));
+            na.PathIndex = 0;
+        }
+
+        if (na.PathIndex >= na.Path.size()) continue;
+        glm::vec3 wp = na.Path[na.PathIndex];
+        glm::vec3 to = wp - tc.Translation;
+        to.y = 0.0f;
+        float d = glm::length(to);
+        if (d < na.StopDistance) {
+            ++na.PathIndex;
+            if (na.PathIndex >= na.Path.size()) {
+                glm::vec3 dd = na.Destination - tc.Translation;
+                dd.y = 0.0f;
+                if (glm::length(dd) <= na.StopDistance) StopNavAgent(entity);
+                else { na.Path.clear(); na.PathIndex = 0; na.PathTimer = 0.0f; }
+            }
+            continue;
+        }
+
+        glm::vec2 dir{ to.x / d, to.z / d };
+        glm::vec2 step = dir * na.Speed * dt;
+        glm::vec3 ahead = tc.Translation + glm::vec3(step.x, 0.0f, step.y);
+        // Não invade célula bloqueada na frente (margem simples).
+        int ax, az;
+        if (!grid->WorldToCell(ahead, ax, az) || grid->IsBlocked(ax, az)) {
+            // Só gira e tenta recalcular o caminho (obstáculo à frente).
+            na.Path.clear(); na.PathIndex = 0; na.PathTimer = 0.0f;
+            continue;
+        }
+        tc.Translation.x += step.x;
+        tc.Translation.z += step.y;
+
+        if (na.FaceMovement) {
+            float targetYaw = std::atan2(step.y, step.x);
+            float cur = tc.Rotation.y;
+            float diff = targetYaw - cur;
+            const float kPi = 3.14159265358979323846f;
+            while (diff > kPi) diff -= 2.0f * kPi;
+            while (diff < -kPi) diff += 2.0f * kPi;
+            float k = glm::clamp(na.TurnSpeed * dt, 0.0f, 1.0f);
+            tc.Rotation.y = cur + diff * k;
+        }
     }
 }
 

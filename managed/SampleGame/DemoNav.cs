@@ -17,12 +17,12 @@ public sealed class DemoNav : Script
 		// Obstáculo no meio (bloqueia a grade).
 		var obstacle = Scene.CreateEntity("Muro");
 		obstacle.AddNavObstacle(2f, 2f, 0.5f);
-		obstacle.SetPosition(0f, 0.5f, 0f);
+		obstacle.SetPosition(new Math.Vector3(0f, 0.5f, 0f));
 
 		// Agente que anda entre os dois lados do muro.
 		_agent = Scene.CreateEntity("Agente");
 		_agent.AddNavAgent(3f, 6f);
-		_agent.SetPosition(-10f, 0.5f, 0f);
+		_agent.SetPosition(new Math.Vector3(-10f, 0.5f, 0f));
 		_goA = true;
 		_agent.SetNavDestination(10f, 0.5f, 0f);
 	}

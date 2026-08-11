@@ -52,6 +52,12 @@ public:
     // Size unidades de lado, elevação até HeightScale, com Seed fixo.
     static Ref<Mesh> CreateTerrain(uint32_t segments = 64, float size = 100.0f,
                                    float heightScale = 5.0f, uint32_t seed = 1);
+
+    // LOD automático (pilar AAA v0.34): versão reduzida de um builtin pro
+    // nível de detalhe 'level' (0 = máximo). Fora isso devolve a malha
+    // original (decimação genérica de malha ainda não existe — prefabs/
+    // meshes importadas usam os níveis manuais do LODComponent).
+    static Ref<Mesh> CreateLODMesh(const std::string& source, int level);
     // Terreno a partir de um heightmap EXPLÍCITO ((segments+1)² alturas, em
     // ordem i-major: [i][j] = heights[i*(segments+1)+j], i ao longo de X).
     // Usado pela escultura do editor — mesma malha/normais do CreateTerrain.

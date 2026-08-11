@@ -442,6 +442,22 @@ Ref<Mesh> Mesh::CreateTerrainFromHeightmap(uint32_t segments, float size,
     return CreateRef<Mesh>(vertices, indices);
 }
 
+// LOD automático: versão com menos polígonos de um builtin.
+Ref<Mesh> Mesh::CreateLODMesh(const std::string& source, int level) {
+    level = glm::clamp(level, 0, 3);
+    if (source == "builtin:sphere")
+        return CreateSphere((uint32_t)glm::max(6, 32 >> level), (uint32_t)glm::max(3, 16 >> level));
+    if (source == "builtin:cylinder")
+        return CreateCylinder((uint32_t)glm::max(6, 32 >> level));
+    if (source == "builtin:cone")
+        return CreateCone((uint32_t)glm::max(6, 32 >> level));
+    if (source == "builtin:capsule")
+        return CreateCapsule((uint32_t)glm::max(6, 24 >> level), (uint32_t)glm::max(3, 12 >> level));
+    if (source == "builtin:torus")
+        return CreateTorus((uint32_t)glm::max(8, 48 >> level), (uint32_t)glm::max(4, 24 >> level));
+    return FromSource(source); // cube/plane (sem redução) ou mesh externa
+}
+
 Ref<Mesh> Mesh::FromSource(const std::string& source) {
     if (source == "builtin:cube")     return CreateCube();
     if (source == "builtin:plane")    return CreatePlane();

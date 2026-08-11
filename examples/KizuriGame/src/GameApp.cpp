@@ -1,6 +1,7 @@
 #include <Kizuri.hpp>
 #include <kizuri/core/EntryPoint.hpp>
 #include <kizuri/project/Project.hpp>
+#include <kizuri/net/NetworkFacade.hpp>
 #include <nlohmann/json.hpp>
 #include <imgui.h>
 #include <filesystem>
@@ -152,6 +153,19 @@ public:
 
         if (args.size() > 1) scenePath = args[1];
         if (args.size() > 2) modulePath = args[2];
+
+        // Rede multiplayer (pilar AAA v0.34):
+        //   KizuriGame cena.kzscene --net-host            -> abre a partida
+        //   KizuriGame cena.kzscene --net-connect 1.2.3.4 -> entra na partida
+        for (size_t i = 1; i < args.size(); ++i) {
+            if (args[i] == "--net-host") {
+                if (kizuri::Network::Host(26000))
+                    KZ_CORE_INFO("Rede: partida aberta na porta 26000 (host).");
+            } else if (args[i] == "--net-connect" && i + 1 < args.size()) {
+                if (kizuri::Network::Connect(args[i + 1], 26000))
+                    KZ_CORE_INFO("Rede: conectando em {0}:26000 (cliente).");
+            }
+        }
 
         PushLayer(new GameLayer(scenePath, modulePath));
     }

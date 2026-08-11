@@ -16,8 +16,11 @@
 #include "UI/Panels/GameViewPanel.hpp"
 #include "UI/Panels/MaterialEditorPanel.hpp"
 #include "UI/Panels/ProjectSettingsPanel.hpp"
+#include "UI/Panels/ParticleEditorPanel.hpp"
+#include "UI/Panels/AnimatorPanel.hpp"
 #include <kizuri/project/GameExporter.hpp>
 #include <kizuri/scripting/ScriptEngine.hpp>
+#include <kizuri/net/NetworkFacade.hpp>
 #include <kizuri/core/CommandLineArgs.hpp>
 #include <fstream>
 #include <cfloat>
@@ -130,6 +133,8 @@ void EditorLayer::OnAttach() {
     makePanel(std::make_unique<ProfilerPanel>(*m_PanelContext));
     makePanel(std::make_unique<GameViewPanel>(*m_PanelContext));
     makePanel(std::make_unique<MaterialEditorPanel>(*m_PanelContext));
+    makePanel(std::make_unique<ParticleEditorPanel>(*m_PanelContext));
+    makePanel(std::make_unique<AnimatorPanel>(*m_PanelContext));
     makePanel(std::make_unique<ProjectSettingsPanel>(*m_PanelContext));
 
     // Painéis que fazem sentido já abertos no layout padrão.
@@ -550,6 +555,142 @@ void EditorLayer::CreateDemoSceneAI() {
     m_EditorCamPitch = -40.0f;
     m_SelectedEntity = player;
     KZ_CORE_INFO("Cena de demonstração IA criada (NavGrid + NavAgent + EnemyAI).");
+}
+
+// ---------------------------------------------------------------------------
+// Demo de REDE (pilar AAA v0.34): duas instâncias jogando na mesma máquina.
+// 1ª instância = host (move o cubo com WASD); 2ª instância = cliente (vê o
+// cubo do host se mover). Aperte Play na 1ª e abra OUTRA janela do editor
+// (ou o KizuriGame com --net-connect) pra ser o cliente.
+// ---------------------------------------------------------------------------
+
+// Script do cubo de rede: no host controla e ENVIA o transform; no cliente
+// RECEBE e aplica. Mesmo prefab/cena roda nos dois lados.
+class DemoNetCube : public NativeScript {
+public:
+    void OnCreate() override {
+        m_Host = kizuri::Network::Host(26000);
+        if (!m_Host) {
+            KZ_CORE_INFO("Porta 26000 ocupada — conectando em 127.0.0.1 (cliente).");
+            kizuri::Network::Connect("127.0.0.1", 26000);
+        } else {
+            KZ_CORE_INFO("Demo de rede: HOST na porta 26000. Abra outra instância (cliente).");
+        }
+    }
+
+    void OnUpdate(Timestep ts) override {
+        auto& tc = GetComponent<TransformComponent>();
+
+        // Processa eventos (os dois lados).
+        kizuri::net::Event ev;
+        while (kizuri::Network::PollEvent(ev)) {
+            if (ev.Type == kizuri::net::EventType::Connect)
+                KZ_CORE_INFO("Rede: jogador {0} conectou!", ev.Peer);
+            else if (ev.Type == kizuri::net::EventType::Data && ev.Data.size() >= kizuri::net::kNetTransformSize) {
+                kizuri::net::NetTransform t = kizuri::net::ReadNetTransform(ev.Data.data());
+                if (!m_Host) { // cliente: aplica o estado do host
+                    tc.Translation = { t.X, t.Y, t.Z };
+                    tc.Rotation.y = t.Yaw;
+                }
+            }
+        }
+
+        // Host: controla com WASD e envia o transform (cadência ~10Hz).
+        if (m_Host) {
+            const float speed = 4.0f;
+            glm::vec2 input{ 0.0f };
+            if (Input::IsKeyPressed(Key::A)) input.x -= 1.0f;
+            if (Input::IsKeyPressed(Key::D)) input.x += 1.0f;
+            if (Input::IsKeyPressed(Key::W)) input.y += 1.0f;
+            if (Input::IsKeyPressed(Key::S)) input.y -= 1.0f;
+            if (glm::length(input) > 0.01f) {
+                input = glm::normalize(input);
+                tc.Translation.x += input.x * speed * (float)ts;
+                tc.Translation.z += input.y * speed * (float)ts;
+                tc.Rotation.y = std::atan2(input.x, input.y);
+            }
+            m_SendTimer -= (float)ts;
+            if (m_SendTimer <= 0.0f) {
+                m_SendTimer = 0.1f;
+                kizuri::net::NetTransform t;
+                t.EntityId = 1;
+                t.X = tc.Translation.x; t.Y = tc.Translation.y; t.Z = tc.Translation.z;
+                t.Yaw = tc.Rotation.y;
+                uint8_t buf[kizuri::net::kNetTransformSize];
+                kizuri::net::WriteNetTransform(t, buf);
+                kizuri::Network::Send(1, buf, kizuri::net::kNetTransformSize);
+            }
+        }
+    }
+
+private:
+    bool m_Host = false;
+    float m_SendTimer = 0.0f;
+};
+
+void EditorLayer::CreateDemoSceneNet() {
+    if (m_SceneState != SceneState::Edit) return;
+
+    m_ActiveScene = CreateRef<Scene>("Demonstração Rede");
+    m_ScenePath.clear();
+    m_SelectedEntity = {};
+    m_ViewportMode = ViewportMode::Mode3D;
+
+    ScriptEngine::GetRegistry().Register<DemoNetCube>("DemoNetCube");
+
+    auto& scene = m_ActiveScene;
+
+    Entity camera = scene->CreateEntity("Câmera Principal");
+    auto& cc = camera.AddComponent<CameraComponent>();
+    cc.Type = CameraComponent::ProjectionType::Perspective3D;
+    cc.Primary = true;
+    cc.PerspectiveFOV = 55.0f;
+    auto& camT = camera.GetComponent<TransformComponent>();
+    camT.Translation = { 0.0f, 6.0f, 8.0f };
+    camT.Rotation = { glm::radians(-35.0f), glm::radians(-90.0f), 0.0f };
+    auto& cf = camera.AddComponent<CameraFollowComponent>();
+    cf.TargetName = "Cubo de Rede";
+    cf.Offset = { 0.0f, 5.0f, -7.0f };
+    cf.UseWorldOffset = true;
+    cf.FollowRotation = false;
+
+    Entity sun = scene->CreateEntity("Sol");
+    auto& sl = sun.AddComponent<LightComponent>();
+    sl.Type = LightType::Directional;
+    sl.Color = { 1.0f, 0.95f, 0.85f };
+    sl.Intensity = 1.8f;
+    sun.GetComponent<TransformComponent>().Rotation = { glm::radians(55.0f), glm::radians(30.0f), 0.0f };
+
+    Entity ground = scene->CreateEntity("Chão");
+    auto& gm = ground.AddComponent<MeshRendererComponent>();
+    gm.MeshSource = "builtin:plane";
+    gm.MeshAsset = Mesh::FromSource(gm.MeshSource);
+    gm.MeshMaterial.Albedo = { 0.18f, 0.2f, 0.24f };
+    gm.MeshMaterial.Roughness = 0.9f;
+    ground.GetComponent<TransformComponent>().Scale = { 20.0f, 1.0f, 20.0f };
+
+    Entity cube = scene->CreateEntity("Cubo de Rede");
+    auto& cm = cube.AddComponent<MeshRendererComponent>();
+    cm.MeshSource = "builtin:cube";
+    cm.MeshAsset = Mesh::FromSource(cm.MeshSource);
+    cm.MeshMaterial.Albedo = { 0.2f, 0.7f, 0.9f };
+    cm.MeshMaterial.Roughness = 0.35f;
+    cube.GetComponent<TransformComponent>().Translation = { 0.0f, 0.5f, 0.0f };
+    auto& cns = cube.AddComponent<NativeScriptComponent>();
+    cns.BindByName("DemoNetCube");
+
+    Entity label = scene->CreateEntity("Instruções");
+    auto& lt = label.AddComponent<TextComponent>();
+    lt.Text = "Demo Rede — 1ª janela = HOST (WASD) · 2ª janela = cliente (vê o cubo)";
+    lt.FontSize = 15.0f;
+    lt.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    label.GetComponent<TransformComponent>().Translation = { -8.0f, 4.0f, 0.0f };
+
+    m_EditorCamPos = { 0.0f, 6.0f, 8.0f };
+    m_EditorCamYaw = -90.0f;
+    m_EditorCamPitch = -35.0f;
+    m_SelectedEntity = cube;
+    KZ_CORE_INFO("Cena de demonstração Rede criada (host/cliente na porta 26000).");
 }
 
 // Cena de demonstração 2D — showcase do pipeline 2D: sprites, física Box2D
@@ -1924,6 +2065,8 @@ void EditorLayer::DrawSettingsEditor() {
     if (ImGui::Button("Criar demonstração 3D")) CreateDemoScene3D();
     ImGui::SameLine();
     if (ImGui::Button("Criar demo IA")) CreateDemoSceneAI();
+    ImGui::SameLine();
+    if (ImGui::Button("Criar demo Rede")) CreateDemoSceneNet();
 }
 
 void EditorLayer::DrawGizmo() {
@@ -2481,6 +2624,8 @@ void EditorLayer::DrawDockspace() {
             CreateDemoScene2D();
         if (ImGui::MenuItem("Cena de Demonstração IA...", nullptr, false, m_SceneState == SceneState::Edit))
             CreateDemoSceneAI();
+        if (ImGui::MenuItem("Cena de Demonstração Rede...", nullptr, false, m_SceneState == SceneState::Edit))
+            CreateDemoSceneNet();
         if (ImGui::MenuItem("Cena de Demonstração 3D...", nullptr, false, m_SceneState == SceneState::Edit))
             CreateDemoScene3D();
         ImGui::EndPopup();
@@ -4082,6 +4227,17 @@ void EditorLayer::DrawInspector() {
                     lod.Levels.erase(lod.Levels.begin() + toRemove);
                 if (ImGui::Button("+ Adicionar nível"))
                     lod.Levels.push_back({ "builtin:cube", 100.0f, nullptr });
+                ImGui::Separator();
+                if (ImGui::Button("Gerar LOD automático (builtins)")) {
+                    auto& mr = m_SelectedEntity.GetComponent<MeshRendererComponent>();
+                    lod.Levels.clear();
+                    // Nível 0 = a malha do MeshRenderer (maior detalhe).
+                    lod.Levels.push_back({ mr.MeshSource, 30.0f, mr.MeshAsset });
+                    for (int lvl = 1; lvl <= 2; ++lvl) {
+                        auto m = kizuri::Mesh::CreateLODMesh(mr.MeshSource, lvl);
+                        lod.Levels.push_back({ mr.MeshSource, 60.0f + (lvl - 1) * 80.0f, m });
+                    }
+                }
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<LODComponent>();
@@ -4099,14 +4255,43 @@ void EditorLayer::DrawInspector() {
                 float dur = tl.Duration();
                 if (dur > 0.0f)
                     ImGui::SliderFloat("Tempo", &tl.Time, 0.0f, dur);
+                // Timeline VISUAL (pilar AAA v0.34): linha do tempo com os
+                // keyframes arrastáveis (Tempo editável) + posição/rotação.
                 int toRemove = -1;
-                for (int i = 0; i < (int)tl.Keyframes.size(); ++i) {
-                    auto& k = tl.Keyframes[i];
-                    ImGui::PushID(i);
-                    ImGui::Text("K%d  t=%.2f  (%.1f, %.1f, %.1f)", i, k.Time, k.Position.x, k.Position.y, k.Position.z);
-                    ImGui::SameLine();
-                    if (ImGui::SmallButton("X")) toRemove = i;
-                    ImGui::PopID();
+                if (!tl.Keyframes.empty()) {
+                    float maxT = tl.Duration();
+                    ImGui::TextUnformatted("Linha do tempo (arraste os tempos):");
+                    for (int i = 0; i < (int)tl.Keyframes.size(); ++i) {
+                        auto& k = tl.Keyframes[i];
+                        ImGui::PushID(i);
+                        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
+                        if (ImGui::BeginChild(ImGui::GetID((void*)(uintptr_t)i), ImVec2(0, 0),
+                                              ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
+                        }
+                        ImGui::PopStyleVar();
+                        // faixa + marcador do keyframe
+                        ImGui::BeginChild(ImGui::GetID((void*)(uintptr_t)(i + 1000)), ImVec2(0, 26));
+                        ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.16f, 0.2f, 1.0f));
+                        ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.82f, 0.24f, 0.27f, 1.0f));
+                        float t = k.Time;
+                        if (ImGui::SliderFloat("##t", &t, 0.0f, glm::max(maxT, 0.1f), "")) k.Time = t;
+                        ImGui::PopStyleColor(2);
+                        ImGui::EndChild();
+                        ImGui::SameLine();
+                        ImGui::SetNextItemWidth(70.0f);
+                        ImGui::DragFloat("t", &k.Time, 0.05f, 0.0f, 999.0f, "%.2f");
+                        ImGui::SameLine();
+                        ImGui::DragFloat3("P", &k.Position.x, 0.05f);
+                        ImGui::SameLine();
+                        ImGui::DragFloat3("R", &k.Rotation.x, 1.0f);
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton("X")) toRemove = i;
+                        ImGui::PopID();
+                    }
+                    if (toRemove >= 0 && toRemove < (int)tl.Keyframes.size())
+                        tl.Keyframes.erase(tl.Keyframes.begin() + toRemove);
+                } else {
+                    ImGui::TextDisabled("Sem keyframes — adicione abaixo (posição atual da entidade).");
                 }
                 if (toRemove >= 0 && toRemove < (int)tl.Keyframes.size())
                     tl.Keyframes.erase(tl.Keyframes.begin() + toRemove);

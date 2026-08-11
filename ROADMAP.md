@@ -779,8 +779,8 @@ seguintes. Ordem de implementação = ordem de dependência.
 - [x] **Culling de luzes** (pontual/spot fora do frustum+range não são submetidas)
 - [x] **Streaming de texturas**: LoadTextureAsync (thread de trabalho + callback
   na main thread via TickAsyncLoads, cache unificado)
-- [ ] **LOD automático** — geração de versões reduzidas de malhas procedurais
-  (builtins) + integração com LODComponent
+- [x] **LOD automático** — Mesh::CreateLODMesh (builtins reduzidos) + botão
+  'Gerar LOD automático' no LODComponent
 - [ ] **Oclusão** simples (portais/occluders por caixa) (v1)
 
 ### 4. Rede (multiplayer)
@@ -790,15 +790,18 @@ seguintes. Ordem de implementação = ordem de dependência.
   em 17 bytes (delta por estado inteiro)
 - [x] **KZNetwork API** — Host/Connect/Send/PollEvent + eventos de conexão;
   C++ (kizuri::Network) + C# (Kizuri.Network)
-- [ ] **Demo multiplayer local** — duas instâncias do Sandbox na mesma máquina (pendente)
+- [x] **Demo multiplayer local** — 2 instâncias (host + cliente, porta 26000),
+  cubo sincronizado; KizuriGame aceita --net-host/--net-connect
 
 ### 5. Editor (ferramentas AAA)
-- [ ] **Editor de partículas** (painel dedicado com preview)
+- [x] **Editor de partículas** (painel dedicado com preview ao vivo)
 - [x] **Escultura de terreno** — pincel no viewport (levanta/afunda),
   heightmap explícito, regenera malha em tempo real; o collider nasce da
   malha esculpida no Play
-- [ ] **Editor de animação** — preview de clips + curva de blend
-- [ ] **Timeline de cutscene** — editor visual de keyframes
+- [x] **Editor de animação** — AnimatorPanel registrado (clips, transporte,
+  scrubber) + blend no painel
+- [x] **Timeline de cutscene** — linha do tempo visual com tempos
+  arrastáveis + posição/rotação no Inspetor
 - [ ] **Editor de shaders** (visual, nós) (v1 — mais longe)
 
 ### 6. Pipeline de conteúdo (assets + física + áudio)

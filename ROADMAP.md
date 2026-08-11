@@ -777,8 +777,8 @@ seguintes. Ordem de implementação = ordem de dependência.
 ### 3. Renderização (culling + streaming + qualidade)
 - [x] **Frustum culling** por entidade (AABB × frustum + culling por tamanho de tela) no passe 3D
 - [x] **Culling de luzes** (pontual/spot fora do frustum+range não são submetidas)
-- [ ] **Streaming de assets**: carregamento de texturas/malhas em thread
-  (callback quando pronto), cache por prioridade
+- [x] **Streaming de texturas**: LoadTextureAsync (thread de trabalho + callback
+  na main thread via TickAsyncLoads, cache unificado)
 - [ ] **LOD automático** — geração de versões reduzidas de malhas procedurais
   (builtins) + integração com LODComponent
 - [ ] **Oclusão** simples (portais/occluders por caixa) (v1)

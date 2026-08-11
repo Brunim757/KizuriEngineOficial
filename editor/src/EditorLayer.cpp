@@ -813,6 +813,71 @@ void EditorLayer::OnUpdate(Timestep ts) {
         UpdateEditorCamera(ts);
         KZ_CORE_TRACE("EditorLayer::OnUpdate — chamando OnUpdateEditor3D");
         m_ActiveScene->OnUpdateEditor3D(ts, m_EditorCamera);
+
+        // Escultura de terreno (pilar AAA v0.34): pincel no viewport 3D.
+        // Esquerdo = levanta, Shift+esquerdo = afunda.
+        if (m_TerrainSculpting && m_ViewportHovered && m_SelectedEntity &&
+            m_SelectedEntity.HasComponent<TerrainComponent>() &&
+            Input::IsMouseButtonPressed(Mouse::Left)) {
+            auto& terr = m_SelectedEntity.GetComponent<TerrainComponent>();
+            if (terr.Heightmap.size() < (size_t)(terr.Segments + 1) * (terr.Segments + 1)) {
+                // Converte o fbm atual em heightmap (a 1ª pincelada congela).
+                terr.Regenerate();
+                const auto& verts = terr.GeneratedMesh ? terr.GeneratedMesh->GetVertices() : std::vector<Vertex3D>{};
+                terr.Heightmap.resize((size_t)(terr.Segments + 1) * (terr.Segments + 1), 0.0f);
+                for (size_t k = 0; k < verts.size() && k < terr.Heightmap.size(); ++k)
+                    terr.Heightmap[k] = verts[k].Position.y;
+            }
+
+            // Raio do mouse (mesma matemática do picking).
+            glm::vec2 mouse{ Input::GetMouseX(), Input::GetMouseY() };
+            glm::vec2 local = mouse - m_ViewportBounds[0];
+            glm::vec2 size = m_ViewportBounds[1] - m_ViewportBounds[0];
+            if (local.x >= 0.0f && local.y >= 0.0f && local.x <= size.x && local.y <= size.y && size.x > 0.0f && size.y > 0.0f) {
+                glm::vec2 ndc{ (local.x / size.x) * 2.0f - 1.0f, 1.0f - (local.y / size.y) * 2.0f };
+                glm::mat4 invViewProj = glm::inverse(m_EditorCamera.GetProjectionMatrix() * m_EditorCamera.GetViewMatrix());
+                glm::vec4 nearP = invViewProj * glm::vec4(ndc.x, ndc.y, -1.0f, 1.0f);
+                glm::vec4 farP  = invViewProj * glm::vec4(ndc.x, ndc.y, 1.0f, 1.0f);
+                nearP /= nearP.w; farP /= farP.w;
+                glm::vec3 rayOrigin = glm::vec3(nearP);
+                glm::vec3 rayDir = glm::normalize(glm::vec3(farP - nearP));
+
+                // Intersecta o raio com o plano y = altura média do terreno.
+                glm::vec3 terrPos = glm::vec3(m_ActiveScene->GetWorldTransform(m_SelectedEntity)[3]);
+                float planeY = terrPos.y + terr.HeightScale * 0.5f;
+                if (std::abs(rayDir.y) > 1e-5f) {
+                    float t = (planeY - rayOrigin.y) / rayDir.y;
+                    if (t > 0.0f) {
+                        glm::vec3 hit = rayOrigin + rayDir * t;
+                        float dir = Input::IsKeyPressed(Key::LeftShift) ? -1.0f : 1.0f;
+                        float strength = m_TerrainBrushStrength * (float)ts * dir;
+
+                        uint32_t seg = terr.Segments;
+                        float half = terr.Size * 0.5f;
+                        float cell = terr.Size / (float)seg;
+                        int cx = (int)glm::round((hit.x - terrPos.x + half) / cell);
+                        int cz = (int)glm::round((hit.z - terrPos.z + half) / cell);
+                        int radiusCells = (int)glm::ceil(m_TerrainBrushRadius / cell);
+                        for (int i = glm::max(0, cx - radiusCells); i <= glm::min((int)seg, cx + radiusCells); ++i) {
+                            for (int j = glm::max(0, cz - radiusCells); j <= glm::min((int)seg, cz + radiusCells); ++j) {
+                                float dx = (i - cx) * cell;
+                                float dz = (j - cz) * cell;
+                                float d = std::sqrt(dx * dx + dz * dz);
+                                if (d > m_TerrainBrushRadius) continue;
+                                float falloff = 1.0f - d / m_TerrainBrushRadius;
+                                falloff *= falloff;
+                                float& h = terr.Heightmap[(size_t)i * (seg + 1) + j];
+                                h = glm::clamp(h + strength * falloff, -20.0f, 20.0f);
+                            }
+                        }
+                        terr.Regenerate();
+                        if (m_SelectedEntity.HasComponent<MeshRendererComponent>())
+                            m_SelectedEntity.GetComponent<MeshRendererComponent>().MeshAsset = terr.GeneratedMesh;
+                    }
+                }
+            }
+        }
+
         KZ_CORE_TRACE("EditorLayer::OnUpdate — OnUpdateEditor3D retornou");
     } else {
         UpdateEditor2DCamera(ts);
@@ -4034,6 +4099,19 @@ void EditorLayer::DrawInspector() {
                 changed |= ImGui::DragFloat("Elevação", &t.HeightScale, 0.1f, 0.0f, 50.0f);
                 changed |= ImGui::DragInt("Semente", (int*)&t.Seed, 1);
                 if (changed || ImGui::Button("Regenerar terreno")) {
+                    if (changed) t.Heightmap.clear(); // mudou a geometria base — descarta a escultura
+                    t.Regenerate();
+                    if (m_SelectedEntity.HasComponent<MeshRendererComponent>())
+                        m_SelectedEntity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;
+                }
+
+                ImGui::Separator();
+                ImGui::Checkbox("Modo escultura (pincel no viewport)", &m_TerrainSculpting);
+                ImGui::DragFloat("Raio do pincel", &m_TerrainBrushRadius, 0.1f, 0.5f, 30.0f);
+                ImGui::DragFloat("Intensidade", &m_TerrainBrushStrength, 0.05f, 0.01f, 5.0f);
+                ImGui::TextDisabled("Esquerdo = levanta · Shift+esquerdo = afunda.");
+                if (!t.Heightmap.empty() && ImGui::Button("Limpar escultura (volta ao fbm)")) {
+                    t.Heightmap.clear();
                     t.Regenerate();
                     if (m_SelectedEntity.HasComponent<MeshRendererComponent>())
                         m_SelectedEntity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;

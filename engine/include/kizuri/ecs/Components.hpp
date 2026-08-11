@@ -143,6 +143,7 @@ struct LODComponent {
 
 // Terreno procedural: gera um mesh de heightmap (fbm) com Mesh::CreateTerrain.
 // Requer um MeshRenderer na mesma entidade (o mesh gerado é usado no lugar).
+// Com Heightmap preenchido (escultura do editor), a malha vem dele.
 struct TerrainComponent {
     uint32_t Segments = 64;
     float Size = 100.0f;
@@ -150,7 +151,16 @@ struct TerrainComponent {
     uint32_t Seed = 1;
     Ref<Mesh> GeneratedMesh; // runtime — gerado sob demanda (não serializado)
 
-    void Regenerate() { GeneratedMesh = Mesh::CreateTerrain(Segments, Size, HeightScale, Seed); }
+    // Alturas explícitas ((Segments+1)², [i][j] = v[i*(Segments+1)+j], i=X).
+    // Não serializado — a escultura do editor regenera a malha a cada pincel.
+    std::vector<float> Heightmap;
+
+    void Regenerate() {
+        if (Heightmap.size() >= (size_t)(Segments + 1) * (Segments + 1))
+            GeneratedMesh = Mesh::CreateTerrainFromHeightmap(Segments, Size, Heightmap);
+        else
+            GeneratedMesh = Mesh::CreateTerrain(Segments, Size, HeightScale, Seed);
+    }
 };
 
 // Character controller (v1, cinemático): movimento horizontal pelo input

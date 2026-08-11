@@ -201,6 +201,10 @@ private:
     bool m_ShowStats = true;           // overlay de estatísticas no viewport (FPS/draw calls/tris)
     float m_FpsSmoothed = 0.0f;        // FPS médio suavizado (Profiler do viewport)
     bool m_ShowColliders = false;      // overlay de física: desenha TODOS os colliders da cena (debug)
+    // Escultura de terreno (pilar AAA v0.34): pincel no viewport 3D.
+    bool m_TerrainSculpting = false;
+    float m_TerrainBrushRadius = 2.0f;
+    float m_TerrainBrushStrength = 0.4f;
     int m_ThumbBudget = 0;             // thumbnails novos permitidos neste frame (anti-trava)
 
     // Preferências do editor (configuráveis em Configurações > Editor).

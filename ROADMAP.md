@@ -794,8 +794,9 @@ seguintes. Ordem de implementação = ordem de dependência.
 
 ### 5. Editor (ferramentas AAA)
 - [ ] **Editor de partículas** (painel dedicado com preview)
-- [ ] **Escultura de terreno** — pintar altura no TerrainComponent (regenera
-  mesh + collider em tempo real)
+- [x] **Escultura de terreno** — pincel no viewport (levanta/afunda),
+  heightmap explícito, regenera malha em tempo real; o collider nasce da
+  malha esculpida no Play
 - [ ] **Editor de animação** — preview de clips + curva de blend
 - [ ] **Timeline de cutscene** — editor visual de keyframes
 - [ ] **Editor de shaders** (visual, nós) (v1 — mais longe)

@@ -52,7 +52,11 @@ public:
     // Size unidades de lado, elevação até HeightScale, com Seed fixo.
     static Ref<Mesh> CreateTerrain(uint32_t segments = 64, float size = 100.0f,
                                    float heightScale = 5.0f, uint32_t seed = 1);
-    static Ref<Mesh> LoadFromOBJ(const std::string& path);
+    // Terreno a partir de um heightmap EXPLÍCITO ((segments+1)² alturas, em
+    // ordem i-major: [i][j] = heights[i*(segments+1)+j], i ao longo de X).
+    // Usado pela escultura do editor — mesma malha/normais do CreateTerrain.
+    static Ref<Mesh> CreateTerrainFromHeightmap(uint32_t segments, float size,
+                                                const std::vector<float>& heights);    static Ref<Mesh> LoadFromOBJ(const std::string& path);
     static Ref<Mesh> LoadFromGLTF(const std::string& path); // .glb/.gltf via cgltf
     static Ref<Mesh> LoadFromGLTFMemory(const void* data, std::size_t size); // .glb em memória (embutido)
 

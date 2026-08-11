@@ -400,6 +400,48 @@ Ref<Mesh> Mesh::CreateTerrain(uint32_t segments, float size, float heightScale, 
     return CreateRef<Mesh>(vertices, indices);
 }
 
+Ref<Mesh> Mesh::CreateTerrainFromHeightmap(uint32_t segments, float size,
+                                           const std::vector<float>& heights) {
+    segments = glm::clamp(segments, 2u, 256u);
+    const size_t count = (size_t)(segments + 1) * (segments + 1);
+    if (heights.size() < count) return CreateTerrain(segments, size, 1.0f, 1);
+
+    std::vector<Vertex3D> vertices;
+    std::vector<uint32_t> indices;
+    vertices.reserve(count);
+
+    const float half = size * 0.5f;
+    for (uint32_t i = 0; i <= segments; ++i) {
+        for (uint32_t j = 0; j <= segments; ++j) {
+            float x = -half + size * (float)i / (float)segments;
+            float z = -half + size * (float)j / (float)segments;
+            float y = heights[i * (segments + 1) + j];
+            vertices.push_back({ glm::vec3(x, y, z), glm::vec3(0.0f, 1.0f, 0.0f),
+                                 { (float)i / (float)segments, (float)j / (float)segments } });
+        }
+    }
+    // Normais por diferenças finitas (mesma convenção do CreateTerrain).
+    for (uint32_t i = 0; i <= segments; ++i) {
+        for (uint32_t j = 0; j <= segments; ++j) {
+            float hL = heights[(i > 0 ? i - 1 : i) * (segments + 1) + j];
+            float hR = heights[(i < segments ? i + 1 : i) * (segments + 1) + j];
+            float hD = heights[i * (segments + 1) + (j > 0 ? j - 1 : j)];
+            float hU = heights[i * (segments + 1) + (j < segments ? j + 1 : j)];
+            float dx = (float)segments / size, dz = (float)segments / size;
+            glm::vec3 n = glm::normalize(glm::vec3((hL - hR) * dx, 2.0f, (hD - hU) * dz));
+            vertices[i * (segments + 1) + j].Normal = n;
+        }
+    }
+    for (uint32_t i = 0; i < segments; ++i) {
+        for (uint32_t j = 0; j < segments; ++j) {
+            uint32_t a0 = i * (segments + 1) + j, a1 = a0 + 1;
+            uint32_t b0 = a0 + (segments + 1), b1 = b0 + 1;
+            indices.insert(indices.end(), { a0, b0, a1, a1, b0, b1 });
+        }
+    }
+    return CreateRef<Mesh>(vertices, indices);
+}
+
 Ref<Mesh> Mesh::FromSource(const std::string& source) {
     if (source == "builtin:cube")     return CreateCube();
     if (source == "builtin:plane")    return CreatePlane();

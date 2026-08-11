@@ -908,6 +908,47 @@ void EditorLayer::OnUpdate(Timestep ts) {
         for (auto& panel : m_Panels)
             if (panel->IsVisible()) panel->OnUpdate(ts);
     }
+
+    // Arquivos soltos do SISTEMA (Explorer/gerenciador de arquivos) na janela:
+    // cria a entidade correspondente na posição do mouse, como o arrasto
+    // interno do Content Browser. Só em modo edição.
+    if (m_SceneState == SceneState::Edit) {
+        auto& dropped = Application::Get().GetWindow().GetDroppedFiles();
+        if (!dropped.empty()) {
+            for (const std::string& dropPath : dropped) {
+                Entity created = CreateEntityFromAsset(dropPath, MouseDropWorldPos());
+                if (created) {
+                    m_SelectedEntity = created;
+                    AutoSwitchViewportMode();
+                }
+            }
+            dropped.clear();
+        }
+    }
+}
+
+// Posição de mundo (3D: no chão y=0; 2D: no plano) para onde o mouse do
+// viewport aponta — usada no drop de arquivos do sistema e no Content Browser.
+glm::vec3 EditorLayer::MouseDropWorldPos() const {
+    glm::vec2 mouse{ ImGui::GetMousePos().x, ImGui::GetMousePos().y };
+    glm::vec2 local = mouse - m_ViewportBounds[0];
+    glm::vec2 size = m_ViewportBounds[1] - m_ViewportBounds[0];
+    if (size.x <= 0.0f || size.y <= 0.0f ||
+        local.x < 0.0f || local.y < 0.0f || local.x > size.x || local.y > size.y)
+        return { 0.0f, 0.0f, 0.0f };
+    glm::vec2 ndc{ (local.x / size.x) * 2.0f - 1.0f, 1.0f - (local.y / size.y) * 2.0f };
+    if (m_ViewportMode == ViewportMode::Mode3D) {
+        glm::mat4 inv = glm::inverse(m_EditorCamera.GetProjectionMatrix() * m_EditorCamera.GetViewMatrix());
+        glm::vec4 nearP = inv * glm::vec4(ndc.x, ndc.y, -1.0f, 1.0f);
+        glm::vec4 farP  = inv * glm::vec4(ndc.x, ndc.y, 1.0f, 1.0f);
+        glm::vec3 o = glm::vec3(nearP) / nearP.w;
+        glm::vec3 d = glm::normalize(glm::vec3(farP) / farP.w - o);
+        float t = (0.0f - o.y) / glm::max(d.y, 0.0001f);
+        return (t > 0.0f) ? o + d * t : o;
+    }
+    glm::mat4 inv = glm::inverse(m_Editor2DCamera.GetProjectionMatrix() * m_Editor2DCamera.GetViewMatrix());
+    glm::vec4 wp = inv * glm::vec4(ndc.x, ndc.y, 0.0f, 1.0f);
+    return { wp.x / wp.w, wp.y / wp.w, 0.0f };
 }
 
 void EditorLayer::OnEvent(Event& e) {
@@ -1718,6 +1759,8 @@ void EditorLayer::DrawSettingsGraphics() {
         applyHDRI = true;
     }
     ImGui::SameLine();
+    if (ImGui::Button("Gerenciador")) RevealFileInContentBrowser(m_EnvironmentHDRIPathBuffer);
+    ImGui::SameLine();
     applyHDRI |= ImGui::Button("Aplicar");
     if (ImGui::Button("Voltar ao céu procedural")) {
         m_EnvironmentHDRIPathBuffer[0] = '\0';
@@ -1766,12 +1809,16 @@ void EditorLayer::DrawSettingsGeneral() {
             strncpy(s_startBuf, startPick.c_str(), sizeof(s_startBuf) - 1);
             s_startBuf[sizeof(s_startBuf) - 1] = '\0';
         }
+        ImGui::SameLine();
+        if (ImGui::Button("Gerenciador")) RevealFileInContentBrowser(s_startBuf);
         ImGui::InputText("GameModule (DLL)", s_moduleBuf, sizeof(s_moduleBuf));
         std::string modulePick;
         if (FileBrowseButton("GameModule", "*.dll", modulePick)) {
             strncpy(s_moduleBuf, modulePick.c_str(), sizeof(s_moduleBuf) - 1);
             s_moduleBuf[sizeof(s_moduleBuf) - 1] = '\0';
         }
+        ImGui::SameLine();
+        if (ImGui::Button("Gerenciador")) RevealFileInContentBrowser(s_moduleBuf);
         if (ImGui::Button("Salvar configurações do projeto")) {
             project->GetConfig().Name = s_nameBuf;
             project->GetConfig().StartScenePath = s_startBuf;
@@ -4021,6 +4068,8 @@ void EditorLayer::DrawInspector() {
                         l.MeshSource = buf;
                         l.MeshAsset = l.MeshSource.empty() ? nullptr : Mesh::FromSource(l.MeshSource);
                     }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Gerenciador")) RevealFileInContentBrowser(l.MeshSource);
                     if (ImGui::DragFloat("A partir de (distância)", &l.Distance, 1.0f, 0.0f, 10000.0f))
                         std::sort(lod.Levels.begin(), lod.Levels.end(),
                                   [](auto& a, auto& b) { return a.Distance < b.Distance; });
@@ -4136,6 +4185,8 @@ void EditorLayer::DrawInspector() {
                     ac.Skin = ac.MeshPath.empty() ? nullptr : kizuri::SkinData::CreateFromGLTF(Project::ResolvePath(ac.MeshPath));
                     if (!ac.Skin || ac.Skin->Clips.empty()) ac.ClipName.clear();
                 }
+                ImGui::SameLine();
+                if (ImGui::Button("Gerenciador")) RevealFileInContentBrowser(ac.MeshPath);
 
                 if (ac.Skin && !ac.Skin->Clips.empty()) {
                     // Seletor de clip.

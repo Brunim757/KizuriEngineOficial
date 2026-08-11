@@ -207,6 +207,19 @@ void Window::Init(const WindowProps& props) {
         MouseMovedEvent e((float)x, (float)y);
         if (data.EventCallback) data.EventCallback(e);
     });
+
+    // Drop de arquivos do SISTEMA (Explorer/gerenciador) na janela: guarda
+    // os caminhos — o editor consome depois no OnUpdate (cria entidades na
+    // posição do mouse). É o que permite arrastar um .glb/.png do Windows
+    // direto pra cena, além do arrasto interno do Content Browser.
+    glfwSetDropCallback(m_Window, [](GLFWwindow* w, int count, const char** paths) {
+        auto& data = *(WindowData*)glfwGetWindowUserPointer(w);
+        if (!paths || count <= 0) return;
+        for (int i = 0; i < count; ++i) {
+            if (paths[i]) data.DroppedFiles.emplace_back(paths[i]);
+        }
+        KZ_CORE_INFO("Arquivo(s) solto(s) na janela: {0}", count);
+    });
 }
 
 void Window::Shutdown() {

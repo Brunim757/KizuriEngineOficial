@@ -42,6 +42,8 @@ private:
     // Abre o Content Browser na pasta do arquivo informado (botão
     // "Gerenciador" dos campos de arquivo do Inspetor).
     void RevealFileInContentBrowser(const std::string& filePath);
+    // Posição de mundo sob o mouse do viewport (drop de arquivos do sistema).
+    glm::vec3 MouseDropWorldPos() const;
     void DrawEntityNode(kizuri::Entity entity, kizuri::Entity& outEntityToDelete, bool editable);
     void DrawAddComponentButton();
     void DrawSceneFileModals();

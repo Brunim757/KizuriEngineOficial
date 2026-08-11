@@ -2,6 +2,7 @@
 #include "kizuri/Core.hpp"
 #include "kizuri/core/Event.hpp"
 #include <string>
+#include <vector>
 
 struct GLFWwindow;
 
@@ -36,6 +37,9 @@ public:
 
     void SetVSync(bool enabled);
     bool IsVSync() const { return m_Data.VSync; }
+
+    // Arquivos soltos pelo sistema na janela (Explorer) — editor consome e limpa.
+    std::vector<std::string>& GetDroppedFiles() { return m_Data.DroppedFiles; }
 
     GLFWwindow* GetNativeWindow() const { return m_Window; }
 
@@ -74,6 +78,9 @@ private:
         uint32_t Width = 0, Height = 0;
         bool VSync = true;
         EventCallbackFn EventCallback;
+        // Arquivos soltos pelo SISTEMA na janela (glfwSetDropCallback) —
+        // consumidos/limpos pelo consumidor (editor) a cada frame.
+        std::vector<std::string> DroppedFiles;
     };
     WindowData m_Data;
 };

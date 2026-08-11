@@ -154,6 +154,12 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_material_set_height_scale(uint entity, float scale);
     [DllImport(Lib)] internal static extern void kz_entity_add_character_controller(uint entity, float speed, float gravity);
     [DllImport(Lib)] internal static extern void kz_entity_move_character(uint entity, float x, float z);
+    [DllImport(Lib)] internal static extern int kz_net_host(ushort port);
+    [DllImport(Lib)] internal static extern int kz_net_connect([MarshalAs(UnmanagedType.LPUTF8Str)] string addr, ushort port);
+    [DllImport(Lib)] internal static extern void kz_net_shutdown();
+    [DllImport(Lib)] internal static extern int kz_net_is_host();
+    [DllImport(Lib)] internal static extern int kz_net_send(uint peer, byte[] data, uint size);
+    [DllImport(Lib)] internal static extern int kz_net_poll_event(ref int outType, ref uint outPeer, byte[] outData, uint maxData, ref uint outSize);
     [DllImport(Lib)] internal static extern int kz_entity_add_animation_blend(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string clipA, [MarshalAs(UnmanagedType.LPUTF8Str)] string clipB, float weight);
     [DllImport(Lib)] internal static extern void kz_animation_set_blend(uint entity, float weight);
     [DllImport(Lib)] internal static extern int kz_entity_add_two_bone_ik(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string root, [MarshalAs(UnmanagedType.LPUTF8Str)] string mid, [MarshalAs(UnmanagedType.LPUTF8Str)] string tip);

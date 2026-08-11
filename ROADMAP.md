@@ -784,13 +784,13 @@ seguintes. Ordem de implementação = ordem de dependência.
 - [ ] **Oclusão** simples (portais/occluders por caixa) (v1)
 
 ### 4. Rede (multiplayer)
-- [ ] **Camada UDP confiável** — envio/recepção com ACK + retransmissão +
+- [x] **Camada UDP confiável** — envio/recepção com ACK + retransmissão +
   numeração de pacotes (host/cliente, sem servidor dedicado na v1)
-- [ ] **Serialização de estado** — transforms/entidades em pacotes (delta
-  compressado por estado inteiro)
-- [ ] **KZNetwork API** — Host/Connect/Send/Receive + eventos de conexão;
-  C++ + C# mínimo
-- [ ] **Demo multiplayer local** — duas instâncias do Sandbox na mesma máquina
+- [x] **Serialização de estado** — NetTransform (id+pos+yaw+flags) empacotado
+  em 17 bytes (delta por estado inteiro)
+- [x] **KZNetwork API** — Host/Connect/Send/PollEvent + eventos de conexão;
+  C++ (kizuri::Network) + C# (Kizuri.Network)
+- [ ] **Demo multiplayer local** — duas instâncias do Sandbox na mesma máquina (pendente)
 
 ### 5. Editor (ferramentas AAA)
 - [ ] **Editor de partículas** (painel dedicado com preview)

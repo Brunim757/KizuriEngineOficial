@@ -1,6 +1,7 @@
 #include "kizuri/ecs/Scene.hpp"
 #include "kizuri/ecs/Entity.hpp"
 #include "kizuri/ecs/Components.hpp"
+#include "kizuri/net/NetworkFacade.hpp"
 #include "kizuri/scripting/NativeScript.hpp"
 #include "kizuri/scripting/CSharpBridge.h"
 #include "kizuri/scene/SceneSerializer.hpp"
@@ -1356,6 +1357,7 @@ void Scene::OnUpdateRuntimeLogic(Timestep ts) {
     UpdatePhysics3D(ts);
     FlushCollisionEvents();
 
+    kizuri::Network::Update((float)ts); // rede multiplayer (pilar AAA v0.34)
     UpdateTimelines(ts);
     UpdateCameraFollowers(ts);
     UpdateCharacterControllers(ts);

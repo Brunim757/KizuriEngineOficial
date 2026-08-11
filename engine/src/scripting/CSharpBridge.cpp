@@ -9,6 +9,7 @@
 #include "kizuri/ecs/Scene.hpp"
 #include "kizuri/ecs/Entity.hpp"
 #include "kizuri/ecs/Components.hpp"
+#include "kizuri/net/NetworkFacade.hpp"
 #include "kizuri/renderer/Renderer3D.hpp"
 #include "kizuri/audio/AudioEngine.hpp"
 #include "kizuri/project/Project.hpp"
@@ -994,6 +995,27 @@ KZ_SCRIPT_API void kz_material_set_height_scale(uint32_t entity, float scale) {
     auto e = Resolve(entity);
     if (!e || !e.HasComponent<kizuri::MeshRendererComponent>()) return;
     e.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial.HeightScale = scale;
+}
+
+// ---- Rede multiplayer (pilar AAA v0.34) -------------------------------------
+KZ_SCRIPT_API int kz_net_host(uint16_t port) { return kizuri::Network::Host(port) ? 1 : 0; }
+KZ_SCRIPT_API int kz_net_connect(const char* addr, uint16_t port) {
+    return (addr && kizuri::Network::Connect(addr, port)) ? 1 : 0;
+}
+KZ_SCRIPT_API void kz_net_shutdown() { kizuri::Network::Shutdown(); }
+KZ_SCRIPT_API int kz_net_is_host() { return kizuri::Network::IsHost() ? 1 : 0; }
+KZ_SCRIPT_API int kz_net_send(uint32_t peer, const uint8_t* data, uint32_t size) {
+    return kizuri::Network::Send(peer, data, size) ? 1 : 0;
+}
+KZ_SCRIPT_API int kz_net_poll_event(int* outType, uint32_t* outPeer,
+                                    uint8_t* outData, uint32_t maxData, uint32_t* outSize) {
+    kizuri::net::Event ev;
+    if (!kizuri::Network::PollEvent(ev)) return 0;
+    if (outType) *outType = (int)ev.Type;
+    if (outPeer) *outPeer = ev.Peer;
+    if (outSize) *outSize = (uint32_t)std::min<size_t>(ev.Data.size(), maxData);
+    if (outData && maxData > 0) std::memcpy(outData, ev.Data.data(), (uint32_t)std::min<size_t>(ev.Data.size(), maxData));
+    return 1;
 }
 
 // ---- Animação AAA (pilar v0.34): blend + IK ----------------------------------

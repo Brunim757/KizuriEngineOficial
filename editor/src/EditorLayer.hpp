@@ -86,23 +86,8 @@ private:
     // presente) — Fox esquelético animado, DamagedHelmet PBR, primitivas,
     // HDRI de céu, fog — pra mostrar a engine trabalhando junta.
     void CreateDemoScene3D();
-    // Cena de demonstração 2D: sprites, física Box2D, partículas, texto e UI.
+    // Cena de demonstração 2D: sprites, física Box2D, círculos, texto e UI.
     void CreateDemoScene2D();
-    // Cena de demonstração Física 2D: dominós, rampa, pirâmide e círculos
-    // (Box2D de verdade) — aperte Play pra ver a física resolver.
-    void CreateDemoScene2DPhysics();
-    // Cena de demonstração 2.5D: mundo 3D de fundo + camada de jogo 2D na
-    // frente + UI (prova a composição 3D -> 2D -> UI com as duas câmeras).
-    void CreateDemoScene2_5D();
-    // Cena de demonstração Física 3D: terreno com colisor heightfield +
-    // caixas/esferas dinâmicas caindo no relevo (Bullet). Play + voar no
-    // viewport. Prova o sistema novo da v0.31.
-    void CreateDemoScene3DPhysics();
-
-    // Cena de demonstração VITRINE DE FUNÇÕES (v0.33): 2.5D interativa com
-    // painel de botões que dispara cada subsistema (física 2D/3D, partículas,
-    // timeline, círculos, tilemap, animação, câmera segue, luz, texto, gráficos).
-    void CreateDemoShowcase();
 
     // Cria uma entidade a partir de um arquivo de asset (soltado do Content
     // Browser no viewport): .obj -> MeshRenderer, imagem -> SpriteRenderer.

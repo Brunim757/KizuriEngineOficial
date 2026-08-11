@@ -5,6 +5,7 @@
 #include "kizuri/renderer/Renderer.hpp"
 #include "kizuri/renderer/RenderCommand.hpp"
 #include "kizuri/audio/AudioEngine.hpp"
+#include "kizuri/assets/AssetManager.hpp"
 #include <GLFW/glfw3.h>
 
 namespace kizuri {

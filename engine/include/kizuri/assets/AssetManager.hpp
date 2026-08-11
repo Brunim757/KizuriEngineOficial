@@ -4,6 +4,8 @@
 #include "kizuri/renderer/Renderer3D.hpp"
 #include <string>
 #include <unordered_map>
+#include <functional>
+#include <vector>
 
 namespace kizuri {
 
@@ -11,9 +13,25 @@ namespace kizuri {
 // mantém um cache indexado por caminho para texturas e meshes.
 class AssetManager {
 public:
+    // Callback executada na MAIN THREAD quando a textura estiver pronta
+    // (a GL texture só pode ser criada na thread com contexto).
+    using TextureCallback = std::function<void(Ref<Texture2D>)>;
+
     static Ref<Texture2D> GetTexture(const std::string& path);
     static Ref<Mesh> GetMesh(const std::string& path);
     static void Clear();
+
+    // Streaming (pilar AAA v0.34): decodifica a imagem numa thread de
+    // trabalho e devolve a textura pronta via callback (main thread).
+    // Já carregada em cache → o callback roda IMEDIATAMENTE (síncrono).
+    static bool LoadTextureAsync(const std::string& path, TextureCallback callback);
+
+    // Processa os loads terminados: cria a GL texture e chama o callback.
+    // Chamado pela Application todo frame.
+    static void TickAsyncLoads();
+
+    // Espera as threads terminarem (fim do programa/Teste de shutdown).
+    static void Shutdown();
 
 private:
     // Sem 'inline' de propósito — mesmo bug do Application::s_Instance

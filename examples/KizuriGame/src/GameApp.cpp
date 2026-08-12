@@ -113,7 +113,7 @@ public:
 
     void OnEvent(Event& e) override {
         EventDispatcher dispatcher(e);
-        dispatcher.Dispatch<KeyPressedEvent>([this](KeyPressedEvent& ev) {
+        dispatcher.Dispatch<KeyPressedEvent>([](KeyPressedEvent& ev) {
             if (ev.GetKeyCode() == Key::Escape) Application::Get().Close();
             return false;
         });

@@ -18,7 +18,7 @@ static float VertexAO(const glm::vec3& posWorld, const glm::vec3& normalWorld,
     glm::vec3 t = glm::normalize(glm::cross(n, std::abs(n.y) < 0.99f ? glm::vec3(0.f, 1.f, 0.f) : glm::vec3(1.f, 0.f, 0.f)));
     glm::vec3 b = glm::cross(n, t);
 
-    uint32_t seedX = (uint32_t)(seed * 2654435761u);
+    (void)seed; // seed por vértice: (v+1)*phi — variação determinística por vértice
     for (uint32_t i = 0; i < samples; ++i) {
         // Direção cosseno-ponderada no hemisfério.
         glm::vec2 rnd = glm::diskRand(1.0f);
@@ -53,12 +53,6 @@ Ref<Texture2D> LightmapBaker::Bake(const Input& in, const TraceFn& trace) {
     std::vector<float> accum(W * H, 0.0f);
     std::vector<float> weight(W * H, 0.0f);
 
-    auto uvToTexel = [&](glm::vec2 uv, int& x, int& y) {
-        uv = glm::fract(uv); // REPEAT
-        x = (int)(uv.x * (float)W);
-        y = (int)(uv.y * (float)H);
-    };
-
     float sunDotMax = 0.0f;
     for (size_t k = 0; k + 2 < idxs.size(); k += 3) {
         uint32_t i0 = idxs[k], i1 = idxs[k + 1], i2 = idxs[k + 2];
@@ -72,8 +66,8 @@ Ref<Texture2D> LightmapBaker::Bake(const Input& in, const TraceFn& trace) {
         float maxV = std::max({ uv0.y, uv1.y, uv2.y });
         int x0 = (int)(minU * W) - 1, x1 = (int)(maxU * W) + 1;
         int y0 = (int)(minV * H) - 1, y1 = (int)(maxV * H) + 1;
-        if (x1 - x0 > W) x0 = 0, x1 = W - 1; // UVs stiched pelo frontier
-        if (y1 - y0 > H) y0 = 0, y1 = H - 1;
+        if (x1 - x0 > (int)W) x0 = 0, x1 = (int)W - 1; // UVs stiched pelo frontier
+        if (y1 - y0 > (int)H) y0 = 0, y1 = (int)H - 1;
         x0 = glm::clamp(x0, 0, (int)W - 1);
         x1 = glm::clamp(x1, 0, (int)W - 1);
         y0 = glm::clamp(y0, 0, (int)H - 1);

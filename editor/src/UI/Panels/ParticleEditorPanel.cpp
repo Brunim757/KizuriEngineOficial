@@ -93,13 +93,12 @@ void ParticleEditorPanel::OnImGuiRender() {
         ImGui::Separator();
     }
 
-    bool changed = false;
-    changed |= ImGui::Checkbox("Tocando", &pc.Playing);
+    (void)ImGui::Checkbox("Tocando", &pc.Playing);
     ImGui::SameLine();
-    changed |= ImGui::Checkbox("Aditivo (fogo)", &pc.Additive);
+    (void)ImGui::Checkbox("Aditivo (fogo)", &pc.Additive);
     ImGui::SliderFloat("Taxa (partículas/s)", &pc.EmissionRate, 0.0f, 500.0f, "%.0f");
     int maxP = (int)pc.MaxParticles;
-    if (ImGui::DragInt("Máximo de partículas", &maxP, 1, 1, 20000)) { pc.MaxParticles = (uint32_t)maxP; changed = true; }
+    if (ImGui::DragInt("Máximo de partículas", &maxP, 1, 1, 20000)) { pc.MaxParticles = (uint32_t)maxP; }
     ImGui::Text("Vida: %.2f ~ %.2f s", pc.LifetimeMin, pc.LifetimeMax);
     ImGui::DragFloat("Vida mínima", &pc.LifetimeMin, 0.05f, 0.05f, 60.0f);
     ImGui::DragFloat("Vida máxima", &pc.LifetimeMax, 0.05f, 0.05f, 60.0f);

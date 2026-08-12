@@ -1122,7 +1122,7 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
 
         constexpr float kLookSensitivity = 0.12f;
         m_EditorCamYaw += delta.x * m_EditorCamSensitivity;
-        m_EditorCamPitch -= delta.y * m_EditorCamSensitivity;        m_EditorCamPitch = std::clamp(m_EditorCamPitch, -89.0f, 89.0f);
+        m_EditorCamPitch -= delta.y * kLookSensitivity;        m_EditorCamPitch = std::clamp(m_EditorCamPitch, -89.0f, 89.0f);
 
         glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
         glm::vec3 up = glm::cross(right, forward);
@@ -1587,7 +1587,7 @@ void EditorLayer::DrawNavDebug() {
     auto& registry = m_ActiveScene->GetRegistry();
 
     // Grade de navegação.
-    registry.view<kizuri::TransformComponent, kizuri::NavGridComponent>().each([&](auto e, auto&, auto& ngc) {
+    registry.view<kizuri::TransformComponent, kizuri::NavGridComponent>().each([&](auto, auto&, auto& ngc) {
         if (!ngc.Grid || ngc.Grid->GetWidth() <= 0) return;
         const kizuri::NavGrid& g = *ngc.Grid;
         const ImU32 gridCol = IM_COL32(120, 180, 255, 60);
@@ -1621,7 +1621,7 @@ void EditorLayer::DrawNavDebug() {
     });
 
     // Caminhos dos agentes.
-    registry.view<kizuri::TransformComponent, kizuri::NavAgentComponent>().each([&](auto e, auto&, auto& na) {
+    registry.view<kizuri::TransformComponent, kizuri::NavAgentComponent>().each([&](auto, auto&, auto& na) {
         if (!na.HasDestination) return;
         const ImU32 pathCol = IM_COL32(255, 220, 90, 200);
         const ImU32 destCol = IM_COL32(120, 255, 120, 220);
@@ -4141,7 +4141,6 @@ void EditorLayer::DrawInspector() {
         if (m_SelectedEntity.HasComponent<MeshRendererComponent>()) {
             auto& mr = m_SelectedEntity.GetComponent<MeshRendererComponent>();
             if (DrawComponentHeader("Mesh Renderer", &removeThis)) {
-                auto& mat = mr.MeshMaterial;
                 // Fonte da mesh: combobox com os builtins + campo livre pra arquivo.
                 const char* builtins[] = { "builtin:cube", "builtin:plane", "builtin:sphere",
                                            "builtin:cylinder", "builtin:cone", "builtin:capsule", "builtin:torus" };
@@ -4542,11 +4541,10 @@ void EditorLayer::DrawInspector() {
         if (m_SelectedEntity.HasComponent<NavGridComponent>()) {
             auto& ng = m_SelectedEntity.GetComponent<NavGridComponent>();
             if (DrawComponentHeader("NavGrid (navegação)", &removeThis)) {
-                bool changed = false;
-                changed |= ImGui::DragFloat3("Origem", &ng.Origin.x, 0.5f);
-                changed |= ImGui::DragInt("Células em X", (int*)&ng.Width, 1, 4, 256);
-                changed |= ImGui::DragInt("Células em Z", (int*)&ng.Depth, 1, 4, 256);
-                changed |= ImGui::DragFloat("Tamanho da célula", &ng.CellSize, 0.1f, 0.1f, 10.0f);
+                (void)ImGui::DragFloat3("Origem", &ng.Origin.x, 0.5f);
+                (void)ImGui::DragInt("Células em X", (int*)&ng.Width, 1, 4, 256);
+                (void)ImGui::DragInt("Células em Z", (int*)&ng.Depth, 1, 4, 256);
+                (void)ImGui::DragFloat("Tamanho da célula", &ng.CellSize, 0.1f, 0.1f, 10.0f);
                 ImGui::Checkbox("Rasterizar obstáculos no Play", &ng.AutoBuild);
                 if (ImGui::Button("Reconstruir grade agora")) {
                     m_ActiveScene->RebuildNavGrid(m_SelectedEntity);

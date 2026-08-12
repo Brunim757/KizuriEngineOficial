@@ -28,7 +28,7 @@ inline void RestoreGLTFTextureMaps(MeshRendererComponent& mr) {
     if (!mat.HeightMap && restored.HeightMap) mat.HeightMap = restored.HeightMap;
 }
 
-inline inline nlohmann::json Vec2ToJson(const glm::vec2& v) { return { v.x, v.y }; }
+inline nlohmann::json Vec2ToJson(const glm::vec2& v) { return { v.x, v.y }; }
 nlohmann::json Vec3ToJson(const glm::vec3& v) { return { v.x, v.y, v.z }; }
 inline nlohmann::json Vec4ToJson(const glm::vec4& v) { return { v.x, v.y, v.z, v.w }; }
 inline static glm::vec2 JsonToVec2(const nlohmann::json& j) {

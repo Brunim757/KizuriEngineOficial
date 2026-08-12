@@ -63,6 +63,11 @@ void SetTimeScale(float scale) { s_TimeScale = scale > 0.0f ? scale : 0.0f; }
 } // namespace scripting
 } // namespace kizuri
 
+// Auxiliares internos (fora do bloco extern "C": retornam tipos C++,
+// então não podem ter C-linkage — são de ligação interna do TU).
+namespace {
+} // namespace
+
 extern "C" {
 
 // ---------------------------------------------------------------------------
@@ -129,10 +134,8 @@ KZ_SCRIPT_API int kz_input_is_mouse_button_pressed(int button) {
 }
 
 // Edge-detect de mouse (GetMouseButtonDown): true só no frame do clique.
-std::unordered_map<int, bool>& PrevMouseButtonState() {
-    static std::unordered_map<int, bool> s_Prev;
-    return s_Prev;
-}
+// Auxiliar interno (fora do bloco extern "C" — retorna tipo C++, não pode
+// ter C-linkage; moved pra função estática com visibilidade interna).
 KZ_SCRIPT_API int kz_input_is_mouse_button_down(int button) {
     bool pressed = kizuri::Input::IsMouseButtonPressed(button);
     bool& prev = PrevMouseButtonState()[button];
@@ -144,10 +147,6 @@ KZ_SCRIPT_API int kz_input_is_mouse_button_down(int button) {
 // Edge-detect de tecla (GetKeyDown): true só no frame em que a tecla foi
 // pressionada. Mantém o estado anterior por tecla consultada — scripts que
 // consultam todo frame funcionam normalmente.
-std::unordered_map<int, bool>& PrevKeyState() {
-    static std::unordered_map<int, bool> s_Prev;
-    return s_Prev;
-}
 KZ_SCRIPT_API int kz_input_is_key_down(int key) {
     bool pressed = kizuri::Input::IsKeyPressed(key);
     bool& prev = PrevKeyState()[key];

@@ -38,7 +38,7 @@ public:
 protected:
     virtual void OnCreate() {}
     virtual void OnDestroy() {}
-    virtual void OnUpdate(Timestep ts) {}
+    virtual void OnUpdate([[maybe_unused]] Timestep ts) {}
 
     // other pode ser inválido (ex.: colisão com tilemap estático sem entidade).
     virtual void OnCollisionBegin(Entity other) { (void)other; }

@@ -15,6 +15,7 @@ public:
     UUID() : m_UUID(Generate()) {}
     explicit UUID(uint64_t uuid) : m_UUID(uuid) {}
     UUID(const UUID&) = default;
+    UUID& operator=(const UUID&) = default;
 
     operator uint64_t() const { return m_UUID; }
 

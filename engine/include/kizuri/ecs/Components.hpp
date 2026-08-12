@@ -525,11 +525,16 @@ struct NativeScriptComponent {
     std::function<NativeScript*()> InstantiateScript;
     std::function<void(NativeScriptComponent*)> DestroyScript;
 
+    // Destrói a instância com o tipo COMPLETO (definido em Components.cpp,
+    // onde NativeScript.hpp é incluído) — evita delete de tipo incompleto,
+    // que é UB. Nunca destrua Instance manualmente fora daqui.
+    void DestroyInstance();
+
     template<typename T>
     void Bind() {
         ClassName.clear();
         InstantiateScript = [] { return static_cast<NativeScript*>(new T()); };
-        DestroyScript = [](NativeScriptComponent* nsc) { delete nsc->Instance; nsc->Instance = nullptr; };
+        DestroyScript = [](NativeScriptComponent* nsc) { nsc->DestroyInstance(); };
     }
 
     // Vincula por nome via o ScriptRegistry do GameModule carregado — é o

@@ -140,7 +140,15 @@ void NativeScriptComponent::BindByName(const std::string& className) {
             KZ_CORE_ERROR("O script '{0}' não foi encontrado no módulo de jogo carregado.", className);
         return instance;
     };
-    DestroyScript = [](NativeScriptComponent* nsc) { delete nsc->Instance; nsc->Instance = nullptr; };
+    DestroyScript = [](NativeScriptComponent* nsc) { nsc->DestroyInstance(); };
+}
+
+void NativeScriptComponent::DestroyInstance() {
+    // Tipo completo aqui (NativeScript.hpp incluído no topo deste TU):
+    // `delete` seguro + nulo antes de liberar, pra qualquer reentrada.
+    NativeScript* ptr = Instance;
+    Instance = nullptr;
+    delete ptr;
 }
 
 } // namespace kizuri

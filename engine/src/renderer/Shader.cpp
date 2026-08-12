@@ -57,6 +57,7 @@ namespace {
 // Remove a diretiva de versão de QUALQUER lugar (e pré-adiciona a 330),
 // garantindo que o resultado sempre começa com "#version".
 std::string RewriteVersionFor(const std::string& src, int glsl) {
+    (void)glsl; // reservado: GLES 300 se KIZURI_GLES
     std::string body = src;
     size_t pos = body.find("#version");
     if (pos != std::string::npos) {

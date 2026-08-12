@@ -1349,7 +1349,7 @@ void Scene::OnUpdateRuntimeLogic(Timestep ts) {
     KZ_TRACE_SCOPE("Scene::OnUpdateRuntimeLogic");
     UpdateUIPointer(); // hit-test dos UIButton antes dos scripts (que leem WasClicked)
 
-    m_Registry.view<NativeScriptComponent>().each([=](auto entityHandle, auto& nsc) {
+    m_Registry.view<NativeScriptComponent>().each([this, ts](auto entityHandle, auto& nsc) {
         if (!IsEntityActive(Entity{ entityHandle, this })) return; // inativa não roda script
         if (nsc.Instance) nsc.Instance->OnUpdate(ts);
     });

@@ -36,6 +36,10 @@ endif()
 # em tempo de build (ver engine/CMakeLists.txt + cmake/EmbedResource.cmake),
 # então não há mais uma pasta assets/ pra copiar pra junto do binário.
 
+if(NOT MSVC)
+    target_compile_options(KizuriEditor PRIVATE -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unknown-warning-option)
+endif()
+
 if(WIN32)
     target_link_options(KizuriEditor PRIVATE $<$<AND:$<CXX_COMPILER_ID:GNU>,$<CONFIG:Release>>:-mwindows>)
     set_target_properties(KizuriEditor PROPERTIES WIN32_EXECUTABLE $<CONFIG:Release>)

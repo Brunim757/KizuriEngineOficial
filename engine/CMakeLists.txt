@@ -241,10 +241,20 @@ target_compile_definitions(KizuriEngine PUBLIC
     GLFW_INCLUDE_NONE
 )
 
+# Marcas como SYSTEM os includes propagados pelos alvos de terceiros que
+# ainda não são system (glm/entt/spdlog/json/glfw/glad): com -Werror isso é
+# essencial — warnings de LIB não podem derrubar o build da engine.
+foreach(dep glfw glad glm::glm EnTT::EnTT spdlog::spdlog nlohmann_json::nlohmann_json)
+    target_include_directories(KizuriEngine SYSTEM PRIVATE $<TARGET_PROPERTY:${dep},INTERFACE_INCLUDE_DIRECTORIES>)
+endforeach()
+
 if(MSVC)
-    target_compile_options(KizuriEngine PUBLIC /W4 /permissive-)
+    target_compile_options(KizuriEngine PUBLIC /W4 /permissive- /WX)
 else()
-    target_compile_options(KizuriEngine PUBLIC -Wall -Wextra -Wno-unused-parameter)
+    # -Werror: o código da engine fica SEMPRE com zero warnings. As libs de
+    # terceiros são SYSTEM (-isystem) e não poluem; se um warning real
+    # aparecer aqui, quebra o build de propósito (padrão da casa desde v0.35).
+    target_compile_options(KizuriEngine PUBLIC -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unknown-warning-option)
 endif()
 
 target_compile_definitions(KizuriEngine PUBLIC

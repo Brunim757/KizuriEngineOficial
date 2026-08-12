@@ -93,9 +93,9 @@ void ParticleEditorPanel::OnImGuiRender() {
         ImGui::Separator();
     }
 
-    (void)ImGui::Checkbox("Tocando", &pc.Playing);
+    ImGui::Checkbox("Tocando", &pc.Playing);
     ImGui::SameLine();
-    (void)ImGui::Checkbox("Aditivo (fogo)", &pc.Additive);
+    ImGui::Checkbox("Aditivo (fogo)", &pc.Additive);
     ImGui::SliderFloat("Taxa (partículas/s)", &pc.EmissionRate, 0.0f, 500.0f, "%.0f");
     int maxP = (int)pc.MaxParticles;
     if (ImGui::DragInt("Máximo de partículas", &maxP, 1, 1, 20000)) { pc.MaxParticles = (uint32_t)maxP; }
@@ -110,8 +110,8 @@ void ParticleEditorPanel::OnImGuiRender() {
     ImGui::DragFloat3("Gravidade", &pc.Gravity.x, 0.05f);
 
     ImGui::Separator();
-    changed |= ImGui::ColorEdit4("Cor inicial", &pc.StartColor.x);
-    changed |= ImGui::ColorEdit4("Cor final", &pc.EndColor.x);
+    ImGui::ColorEdit4("Cor inicial", &pc.StartColor.x);
+    ImGui::ColorEdit4("Cor final", &pc.EndColor.x);
     ImGui::DragFloat("Tamanho inicial", &pc.StartSize, 0.01f, 0.0f, 10.0f);
     ImGui::DragFloat("Tamanho final", &pc.EndSize, 0.01f, 0.0f, 10.0f);
 
@@ -122,7 +122,6 @@ void ParticleEditorPanel::OnImGuiRender() {
     if (ImGui::InputText("Textura (vazio = degradê radial)", texBuf, sizeof(texBuf))) {
         pc.TexturePath = texBuf;
         pc.Texture = pc.TexturePath.empty() ? nullptr : kizuri::Texture2D::Create(pc.TexturePath);
-        changed = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Gerenciador")) {

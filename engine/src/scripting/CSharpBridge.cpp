@@ -66,6 +66,14 @@ void SetTimeScale(float scale) { s_TimeScale = scale > 0.0f ? scale : 0.0f; }
 // Auxiliares internos (fora do bloco extern "C": retornam tipos C++,
 // então não podem ter C-linkage — são de ligação interna do TU).
 namespace {
+std::unordered_map<int, bool>& PrevMouseButtonState() {
+    static std::unordered_map<int, bool> s_Prev;
+    return s_Prev;
+}
+std::unordered_map<int, bool>& PrevKeyState() {
+    static std::unordered_map<int, bool> s_Prev;
+    return s_Prev;
+}
 } // namespace
 
 extern "C" {

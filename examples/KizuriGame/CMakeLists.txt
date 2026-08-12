@@ -22,6 +22,10 @@ endif()
 
 # No Windows, esconde o console em builds Release (comportamento de produto
 # final "limpo" — igual ao Sandbox e ao Editor; mensagens vão pro log).
+if(NOT MSVC)
+    target_compile_options(KizuriGame PRIVATE -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unknown-warning-option)
+endif()
+
 if(WIN32)
     target_link_options(KizuriGame PRIVATE $<$<AND:$<CXX_COMPILER_ID:GNU>,$<CONFIG:Release>>:-mwindows>)
     set_target_properties(KizuriGame PROPERTIES WIN32_EXECUTABLE $<CONFIG:Release>)

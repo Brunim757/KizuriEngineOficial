@@ -3,6 +3,7 @@
 #include <glad/gl.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <algorithm>
+#include <unordered_set>
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -170,7 +171,18 @@ Ref<Shader> ShaderLibrary::Load(const std::string& name, const std::string& vert
     return shader;
 }
 
-Ref<Shader> ShaderLibrary::Get(const std::string& name) { return m_Shaders.at(name); }
+// Robusto: nunca lança std::out_of_range pra fora — shader ausente loga
+// uma vez e devolve vazio (callers que usam sem checar Exists não caem).
+Ref<Shader> ShaderLibrary::Get(const std::string& name) {
+    auto it = m_Shaders.find(name);
+    if (it == m_Shaders.end()) {
+        static std::unordered_set<std::string> s_Logged;
+        if (s_Logged.insert(name).second)
+            KZ_CORE_ERROR("Shader '{0}' não encontrado na biblioteca — retornando vazio.", name);
+        return nullptr;
+    }
+    return it->second;
+}
 bool ShaderLibrary::Exists(const std::string& name) const { return m_Shaders.find(name) != m_Shaders.end(); }
 
 } // namespace kizuri

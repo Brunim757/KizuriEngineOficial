@@ -1,5 +1,6 @@
 #include "kizuri/core/Log.hpp"
 #include "kizuri/core/LogHistory.hpp"
+#include <string>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/base_sink.h>
@@ -31,7 +32,11 @@ protected:
     void sink_it_(const spdlog::details::log_msg& msg) override {
         spdlog::memory_buf_t formatted;
         formatter_->format(msg, formatted);
-        LogHistory::Push(ToLogLevel(msg.level), fmt::to_string(formatted));
+        // memory_buf_t é fmt::memory_buffer (build com fmt bundled) ou
+        // std::string (SPDLOG_USE_STD_FORMAT) — nunca assumir fmt:: aqui:
+        // a construção abaixo funciona com os dois (data/size).
+        LogHistory::Push(ToLogLevel(msg.level),
+                         std::string(formatted.data(), formatted.size()));
     }
     void flush_() override {}
 };

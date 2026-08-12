@@ -4,6 +4,7 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <cstdlib>
+#include <new>
 
 #if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
@@ -215,8 +216,20 @@ void Window::Init(const WindowProps& props) {
     glfwSetDropCallback(m_Window, [](GLFWwindow* w, int count, const char** paths) {
         auto& data = *(WindowData*)glfwGetWindowUserPointer(w);
         if (!paths || count <= 0) return;
+        // Fila limitada a 64 caminhos — o editor drena no OnUpdate; se o
+        // usuário soltar 10.000 arquivos, não cresce sem limite (memória).
+        constexpr size_t kMaxPendingDrops = 64;
         for (int i = 0; i < count; ++i) {
-            if (paths[i]) data.DroppedFiles.emplace_back(paths[i]);
+            if (!paths[i]) continue;
+            if (data.DroppedFiles.size() >= kMaxPendingDrops) {
+                KZ_CORE_WARN("Fila de drops cheia ({0}); ignorando o restante.", kMaxPendingDrops);
+                break;
+            }
+            try { data.DroppedFiles.emplace_back(paths[i]); }
+            catch (const std::bad_alloc&) {
+                KZ_CORE_ERROR("Sem memória pra armazenar o drop; ignorado.");
+                break;
+            }
         }
         KZ_CORE_INFO("Arquivo(s) solto(s) na janela: {0}", count);
     });

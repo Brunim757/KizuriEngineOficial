@@ -34,7 +34,7 @@ inline nlohmann::json Vec4ToJson(const glm::vec4& v) { return { v.x, v.y, v.z, v
 inline static glm::vec2 JsonToVec2(const nlohmann::json& j) {
     return j.is_array() ? glm::vec2(j[0].get<float>(), j[1].get<float>()) : glm::vec2(0.0f);
 }
-glm::vec3 JsonToVec3(const nlohmann::json& j) { return { j[0].get<float>(), j[1].get<float>(), j[2].get<float>() }; }
+inline glm::vec3 JsonToVec3(const nlohmann::json& j) { return { j[0].get<float>(), j[1].get<float>(), j[2].get<float>() }; }
 inline glm::vec4 JsonToVec4(const nlohmann::json& j) { return { j[0].get<float>(), j[1].get<float>(), j[2].get<float>(), j[3].get<float>() }; }
 
 inline void ApplyTimelineJson(nlohmann::json::const_reference jtl, TimelineComponent& tl) {

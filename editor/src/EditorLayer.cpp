@@ -4191,6 +4191,23 @@ void EditorLayer::DrawInspector() {
                 }
                 ImGui::SameLine();
                 ImGui::TextDisabled("Preview + campos PBR na janela dedicada.");
+                if (ImGui::Button("Assar Lightmap (AO + ambience)")) {
+                    m_ActiveScene->BakeLightmap(m_SelectedEntity);
+                    // Salva a lightmap junto do projeto (assets/).
+                    if (mr.LightmapTexture) {
+                        std::string path = kizuri::Project::GetActive()->GetAssetDirectory() + "/Lightmaps/" + m_SelectedEntity.GetName() + "_lightmap.png";
+                        std::error_code ec;
+                        std::filesystem::create_directories(std::filesystem::path(path).parent_path(), ec);
+                        if (kizuri::Texture2D::SaveToFile(mr.LightmapTexture, path))
+                            mr.LightmapPath = kizuri::Project::MakeRelativePath(path);
+                    }
+                }
+                if (mr.LightmapTexture) {
+                    ImGui::SameLine();
+                    if (ImGui::Button("Remover lightmap")) { mr.LightmapTexture = nullptr; mr.LightmapPath.clear(); }
+                    uint32_t texID = mr.LightmapTexture->GetRendererID();
+                    ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(96.0f, 96.0f), ImVec2(0, 1), ImVec2(1, 0));
+                }
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<MeshRendererComponent>();

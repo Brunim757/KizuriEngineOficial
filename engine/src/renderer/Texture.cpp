@@ -3,6 +3,8 @@
 #include "kizuri/core/EmbeddedContent.hpp"
 #include <glad/gl.h>
 #include <cstring>
+#include <vector>
+#include <stb_image_write.h>
 
 #define STB_IMAGE_IMPLEMENTATION_GUARD
 #ifdef STB_IMAGE_IMPLEMENTATION_GUARD
@@ -92,6 +94,20 @@ void Texture2D::Bind(uint32_t slot) const {
 }
 
 Ref<Texture2D> Texture2D::Create(uint32_t width, uint32_t height) { return CreateRef<Texture2D>(width, height); }
+bool Texture2D::SaveToFile(const Ref<Texture2D>& texture, const std::string& path) {
+    if (!texture || path.empty()) return false;
+    const uint32_t w = texture->GetWidth(), h = texture->GetHeight();
+    if (w == 0 || h == 0) return false;
+    std::vector<uint8_t> pixels((size_t)w * h * 4);
+    glBindTexture(GL_TEXTURE_2D, texture->GetRendererID());
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+    // stbi_write_png espera y=0 no topo; a textura GL tem y=0 embaixo — inverte.
+    std::vector<uint8_t> flipped((size_t)w * h * 4);
+    for (uint32_t y = 0; y < h; ++y)
+        std::memcpy(flipped.data() + (size_t)(h - 1 - y) * w * 4, pixels.data() + (size_t)y * w * 4, (size_t)w * 4);
+    return stbi_write_png(path.c_str(), (int)w, (int)h, 4, flipped.data(), (int)w * 4) != 0;
+}
+
 Ref<Texture2D> Texture2D::Create(const std::string& path) {
     if (IsEmbeddedPath(path)) {
         EmbeddedBuffer buf;

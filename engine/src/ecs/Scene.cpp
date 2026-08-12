@@ -1971,6 +1971,134 @@ void Scene::UpdateCharacterControllers(Timestep ts) {
 }
 
 // ---------------------------------------------------------------------------
+// Lightmap (pilar AAA v0.35)
+// ---------------------------------------------------------------------------
+
+// Interseção raio-triângulo (Möller-Trumbore) em espaço local da malha.
+static bool RayTriangleMT(const glm::vec3& origin, const glm::vec3& dir,
+                          const glm::vec3& a, const glm::vec3& b, const glm::vec3& c,
+                          float& outT) {
+    const float eps = 1e-8f;
+    glm::vec3 e1 = b - a, e2 = c - a;
+    glm::vec3 pvec = glm::cross(dir, e2);
+    float det = glm::dot(e1, pvec);
+    if (std::abs(det) < eps) return false;
+    float inv = 1.0f / det;
+    glm::vec3 tvec = origin - a;
+    float u = glm::dot(tvec, pvec) * inv;
+    if (u < 0.0f || u > 1.0f) return false;
+    glm::vec3 qvec = glm::cross(tvec, e1);
+    float v = glm::dot(dir, qvec) * inv;
+    if (v < 0.0f || u + v > 1.0f) return false;
+    outT = glm::dot(e2, qvec) * inv;
+    return outT >= 0.0f;
+}
+
+void Scene::BakeLightmap(Entity entity) {
+    if (!entity || !entity.HasComponent<MeshRendererComponent>()) return;
+    auto& mr = entity.GetComponent<MeshRendererComponent>();
+    if (!mr.MeshAsset) return;
+    const auto& verts = mr.MeshAsset->GetVertices();
+    const auto& idxs = mr.MeshAsset->GetIndices();
+    if (verts.empty() || idxs.size() < 3) return;
+
+    // Pré-coleta das malhas da cena em espaço de MUNDO (os raycasts do bake).
+    struct TraceMesh { glm::mat4 InvWorld; glm::vec3 Min, Max; const std::vector<Vertex3D>* Pos; const std::vector<uint32_t>* Idx; };
+    std::vector<TraceMesh> statics;
+
+    auto meshes = m_Registry.view<TransformComponent, MeshRendererComponent>();
+    for (auto me : meshes) {
+        auto& mr2 = meshes.get<MeshRendererComponent>(me);
+        if (!mr2.MeshAsset || mr2.MeshAsset->GetVertices().empty()) continue;
+        Entity ent{ me, this };
+        glm::mat4 world = GetWorldTransform(ent);
+        TraceMesh tm;
+        tm.InvWorld = glm::inverse(world);
+        tm.Pos = &mr2.MeshAsset->GetVertices();
+        tm.Idx = &mr2.MeshAsset->GetIndices();
+        tm.Min = mr2.MeshAsset->GetBoundsMin();
+        tm.Max = mr2.MeshAsset->GetBoundsMax();
+        statics.push_back(tm);
+    }
+
+    // Função de trace: da origem na direção, devolve distância OU -1.
+    auto trace = [&](const glm::vec3& origin, const glm::vec3& dir) -> float {
+        float best = -1.0f;
+        for (const auto& sm : statics) {
+            if (!sm.Pos || !sm.Idx) continue;
+            glm::vec3 localO = glm::vec3(sm.InvWorld * glm::vec4(origin, 1.0f));
+            glm::vec3 localD = glm::vec3(sm.InvWorld * glm::vec4(dir, 0.0f));
+            float len = glm::length(localD);
+            if (len < 1e-9f) continue;
+            glm::vec3 dirN = localD / len;
+
+            // AABB local rápido.
+            glm::vec3 o = localO, d = dirN, mn = sm.Min, mx = sm.Max;
+            float t0 = -FLT_MAX, t1 = FLT_MAX;
+            bool inside = true;
+            for (int a = 0; a < 3; ++a) {
+                if (std::abs(d[a]) < 1e-9f) { if (o[a] < mn[a] || o[a] > mx[a]) { inside = false; break; } }
+                else {
+                    float ta = (mn[a] - o[a]) / d[a], tb = (mx[a] - o[a]) / d[a];
+                    if (ta > tb) std::swap(ta, tb);
+                    t0 = glm::max(t0, ta); t1 = glm::min(t1, tb);
+                    if (t0 > t1) { inside = false; break; }
+                }
+            }
+            if (!inside) continue;
+            if (t1 < 0.0f) continue;
+
+            const auto& P = *sm.Pos;
+            const auto& I = *sm.Idx;
+            for (size_t k = 0; k + 2 < I.size(); k += 3) {
+                uint32_t i0 = I[k], i1 = I[k + 1], i2 = I[k + 2];
+                if (i0 >= P.size() || i1 >= P.size() || i2 >= P.size()) continue;
+                float t;
+                if (RayTriangleMT(localO, dirN, P[i0].Position, P[i1].Position, P[i2].Position, t)) {
+                    if (t > 0.001f && (best < 0.0f || t < best)) best = t;
+                }
+            }
+        }
+        return best;
+    };
+
+    // Direção do sol da cena (1ª luz direcional, se existir).
+    glm::vec3 sunDir{ 0.3f, -0.9f, -0.25f };
+    glm::vec3 sunColor{ 1.0f, 0.95f, 0.85f };
+    auto lights = m_Registry.view<TransformComponent, LightComponent>();
+    for (auto le : lights) {
+        auto& lc = lights.get<LightComponent>(le);
+        if (lc.Type != LightType::Directional) continue;
+        glm::mat4 lw = GetWorldTransform(Entity{ le, this });
+        sunDir = glm::normalize(glm::mat3(lw) * glm::vec3(0.0f, -1.0f, 0.0f));
+        sunColor = lc.Color;
+        break;
+    }
+
+    // Converte pra vetores simples pro baker (posições/normais/UVs).
+    struct BakeGeom { std::vector<glm::vec3> Pos, Nrm; std::vector<glm::vec2> UV; };
+    BakeGeom geom;
+    geom.Pos.reserve(verts.size());
+    geom.Nrm.reserve(verts.size());
+    geom.UV.reserve(verts.size());
+    for (const auto& v : verts) { geom.Pos.push_back(v.Position); geom.Nrm.push_back(v.Normal); geom.UV.push_back(v.TexCoord); }
+
+    LightmapBaker::Input in;
+    in.Positions = &geom.Pos;
+    in.Normals = &geom.Nrm;
+    in.TexCoords = &geom.UV;
+    in.Indices = &idxs;
+    in.SunDir = sunDir;
+    in.SunColor = sunColor;
+
+    auto lightmap = LightmapBaker::Bake(in, trace);
+    if (lightmap) {
+        mr.LightmapTexture = lightmap;
+        KZ_CORE_INFO("Lightmap assada em '{0}' ({1} vértices).", entity.GetName(), verts.size());
+    }
+}
+
+// ---------------------------------------------------------------------------
 // IA e Navegação (pilar AAA v0.34)
 // ---------------------------------------------------------------------------
 
@@ -2335,7 +2463,7 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
                     Renderer3D::SubmitSkinned(mr.MeshAsset, mr.MeshMaterial, world, joints,
                                               (uint32_t)jointCount);
                 else
-                    Renderer3D::Submit(mr.MeshAsset, mr.MeshMaterial, world);
+                    Renderer3D::Submit(mr.MeshAsset, mr.MeshMaterial, world, mr.LightmapTexture);
                 continue;
             }
 
@@ -2386,7 +2514,7 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
                 if (!terr->GeneratedMesh) terr->Regenerate();
                 if (terr->GeneratedMesh) mesh = terr->GeneratedMesh;
             }
-            Renderer3D::Submit(mesh, mr.MeshMaterial, world);
+            Renderer3D::Submit(mesh, mr.MeshMaterial, world, mr.LightmapTexture);
         }
     };
 

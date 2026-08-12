@@ -169,6 +169,9 @@ public:
 
     // Empilha um comando de desenho; EndScene() resolve sombra + cor de verdade em dois passes.
     static void Submit(const Ref<Mesh>& mesh, const Material& material, const glm::mat4& transform);
+    // Com lightmap assada (pilar AAA v0.35).
+    static void Submit(const Ref<Mesh>& mesh, const Material& material, const glm::mat4& transform,
+                       const Ref<Texture2D>& lightmap);
 
     // Mesmo que Submit, mas com skinning: jointMatrices (global * inverseBind)
     // das kMaxSkinJoints primeiras juntas, avaliadas pela SkinData do animator.
@@ -202,6 +205,7 @@ private:
         Material Mat;
         glm::mat4 Transform;
         std::vector<glm::mat4> Joints; // vazio = malha estática
+        Ref<Texture2D> Lightmap;       // lightmap assada (pilar AAA v0.35)
     };
 
     // Lote instanciado: mesma malha/material, N transformadas num draw call.

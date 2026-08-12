@@ -176,6 +176,9 @@ uniform sampler2D u_NormalMap;
 uniform bool u_HasNormalMap;
 uniform sampler2D u_MetallicRoughnessMap;
 uniform bool u_HasMetallicRoughnessMap;
+uniform int u_HasLightmap;
+uniform sampler2D u_Lightmap;
+
 uniform sampler2D u_EmissiveMap;
 uniform bool u_HasEmissiveMap;
 uniform sampler2D u_HeightMap; // parallax occlusion mapping (POM)
@@ -510,6 +513,11 @@ void main() {
     if (u_HasEmissiveMap) emissive *= texture(u_EmissiveMap, texCoord).rgb;
 
     vec3 color = ambient + directLighting + emissive;
+
+    // Lightmap assada (pilar AAA v0.35): AO + ambience + sol direto por texel
+    // de UV — sombras "paradas" que não custam nada por frame.
+    if (u_HasLightmap == 1)
+        color *= texture(u_Lightmap, v_TexCoord).rgb;
 
     // Névoa exponencial (distância da câmera) — nunca no skybox, que não passa por aqui.
     if (u_FogEnabled) {
@@ -2335,6 +2343,9 @@ void Renderer3D::RenderPlanarReflection(const glm::vec3& planePoint, const glm::
             s_MeshShader->SetInt("u_HasHeightMap", hasHeight ? 1 : 0);
             s_MeshShader->SetFloat("u_HeightScale", cmd.Mat.HeightScale);
             if (hasHeight) { cmd.Mat.HeightMap->Bind(9); s_MeshShader->SetInt("u_HeightMap", 9); }
+            bool hasLM = (bool)cmd.Lightmap;
+            s_MeshShader->SetInt("u_HasLightmap", hasLM ? 1 : 0);
+            if (hasLM) { cmd.Lightmap->Bind(10); s_MeshShader->SetInt("u_Lightmap", 10); }
             s_MeshShader->SetFloat3("u_Emissive", cmd.Mat.Emissive);
             s_MeshShader->SetFloat("u_EmissiveStrength", cmd.Mat.EmissiveStrength);
 
@@ -2989,6 +3000,12 @@ void Renderer3D::EndScene() {
                 cmd.Mat.EmissiveMap->Bind(8);
                 s_MeshShader->SetInt("u_EmissiveMap", 8);
             }
+            bool hasLM = (bool)cmd.Lightmap;
+            s_MeshShader->SetInt("u_HasLightmap", hasLM ? 1 : 0);
+            if (hasLM) {
+                cmd.Lightmap->Bind(10);
+                s_MeshShader->SetInt("u_Lightmap", 10);
+            }
             bool hasHeight = (bool)cmd.Mat.HeightMap;
             s_MeshShader->SetInt("u_HasHeightMap", hasHeight ? 1 : 0);
             s_MeshShader->SetFloat("u_HeightScale", cmd.Mat.HeightScale);
@@ -3043,6 +3060,7 @@ void Renderer3D::EndScene() {
             s_MeshShader->SetInt("u_HasHeightMap", hasHeight ? 1 : 0);
             s_MeshShader->SetFloat("u_HeightScale", mat.HeightScale);
             if (hasHeight) { mat.HeightMap->Bind(9); s_MeshShader->SetInt("u_HeightMap", 9); }
+            s_MeshShader->SetInt("u_HasLightmap", 0); // instâncias: sem lightmap (v1)
             s_MeshShader->SetFloat3("u_Emissive", mat.Emissive);
             s_MeshShader->SetFloat("u_EmissiveStrength", mat.EmissiveStrength);
             s_MeshShader->SetInt("u_IsPlanarMirror", 0);
@@ -3587,7 +3605,12 @@ void Renderer3D::SubmitDebugLine(const glm::vec3& from, const glm::vec3& to, con
 }
 
 void Renderer3D::Submit(const Ref<Mesh>& mesh, const Material& material, const glm::mat4& transform) {
-    s_DrawList.push_back({ mesh, material, transform, {} });
+    s_DrawList.push_back({ mesh, material, transform, {}, nullptr });
+}
+
+void Renderer3D::Submit(const Ref<Mesh>& mesh, const Material& material, const glm::mat4& transform,
+                        const Ref<Texture2D>& lightmap) {
+    s_DrawList.push_back({ mesh, material, transform, {}, lightmap });
 }
 
 void Renderer3D::SubmitMeshInstances(const Ref<Mesh>& mesh, const Material& material,

@@ -78,6 +78,11 @@ public:
     void SetRigidbody3DGravityScale(Entity entity, float scale);
     void SetRigidbody3DDamping(Entity entity, float linear, float angular);
 
+    // Lightmap (pilar AAA v0.35): assa AO + ambience da malha da entidade
+    // (raios contra TODAS as malhas da cena em espaço de mundo) numa textura
+    // de lightmap e guarda no MeshRendererComponent. Use na edição.
+    void BakeLightmap(Entity entity);
+
     // ---- IA e Navegação (pilar AAA v0.34) ----
     // Reconstrói a grade de uma entidade com NavGridComponent: desenha os
     // NavObstacleComponent da cena como células bloqueadas. Chamado em

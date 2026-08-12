@@ -156,6 +156,7 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
         auto& mat = mr.MeshMaterial;
         je["MeshRenderer"] = {
             { "MeshSource", mr.MeshSource },
+            { "LightmapPath", mr.LightmapPath },
             { "Albedo", Vec3ToJson(mat.Albedo) },
             { "Metallic", mat.Metallic },
             { "Roughness", mat.Roughness },
@@ -555,6 +556,8 @@ if (je.contains("CharacterController")) {
         auto& jm = je["MeshRenderer"];
         auto& mr = entity.AddComponent<MeshRendererComponent>();
         mr.MeshSource = jm.value("MeshSource", "builtin:cube");
+        mr.LightmapPath = jm.value("LightmapPath", "");
+        if (!mr.LightmapPath.empty()) mr.LightmapTexture = Texture2D::Create(kizuri::Project::ResolvePath(mr.LightmapPath));
         mr.MeshAsset = Mesh::FromSource(ResolveSerializedPath(mr.MeshSource));
         auto& mat = mr.MeshMaterial;
         mat.Albedo = JsonToVec3(jm["Albedo"]);
@@ -903,6 +906,8 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
             ? entity.GetComponent<MeshRendererComponent>()
             : entity.AddComponent<MeshRendererComponent>();
         mr.MeshSource = jm.value("MeshSource", "builtin:cube");
+        mr.LightmapPath = jm.value("LightmapPath", "");
+        if (!mr.LightmapPath.empty()) mr.LightmapTexture = Texture2D::Create(kizuri::Project::ResolvePath(mr.LightmapPath));
         mr.MeshAsset = Mesh::FromSource(ResolveSerializedPath(mr.MeshSource));
         auto& mat = mr.MeshMaterial;
         mat.Albedo = JsonToVec3(jm["Albedo"]);

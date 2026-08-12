@@ -126,6 +126,11 @@ struct MeshRendererComponent {
     Ref<Mesh> MeshAsset;
     Material MeshMaterial;
     std::string MeshSource; // serializável: "builtin:cube|plane|sphere" ou caminho .obj/.glb/.gltf
+
+    // Lightmap assada (pilar AAA v0.35): textura por-énite multiplicada no
+    // fragment shader (AO + ambience + sol direto). Runtime + serializada.
+    Ref<Texture2D> LightmapTexture;
+    std::string LightmapPath; // serializável
 };
 
 // LOD (Level of Detail): várias versões da mesma malha, trocadas pela

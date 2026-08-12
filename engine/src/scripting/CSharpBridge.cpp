@@ -282,8 +282,13 @@ KZ_SCRIPT_API void kz_scene_draw_instanced(const char* meshSource, float r, floa
     auto mesh = kizuri::Mesh::FromSource(kizuri::Project::ResolvePath(meshSource));
     if (!mesh) return;
     std::vector<glm::mat4> transforms((size_t)count);
-    for (int i = 0; i < count; ++i)
-        std::memcpy(&transforms[i], transformData + i * 16, sizeof(glm::mat4));
+    for (int i = 0; i < count; ++i) {
+        const float* src = transformData + i * 16; // coluna-major (GL)
+        transforms[i] = glm::mat4(src[0], src[1], src[2], src[3],
+                                  src[4], src[5], src[6], src[7],
+                                  src[8], src[9], src[10], src[11],
+                                  src[12], src[13], src[14], src[15]);
+    }
     kizuri::Material mat;
     mat.Albedo = { r, g, b };
     kizuri::Renderer3D::SubmitMeshInstances(mesh, mat, transforms.data(), (uint32_t)count);

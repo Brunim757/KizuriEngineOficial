@@ -88,6 +88,17 @@ struct TextComponent {
 // Animação de sprite 2D por frames numa folha de sprites (sprite sheet).
 // FrameAtual/Contador são estado runtime — a folha é amostrada com UVs
 // recortadas pela posição do frame atual.
+// Decal (pilar AAA v0.35): textura projetada na cena por uma caixa
+// orientada — a escala do transform é o tamanho do decal; a projeção sai
+// pelo eixo Z local (gire o decal pra encostar na superfície desejada).
+// Usado pra sujeira, sangue, marcas de pneu, luzes de neon, poças...
+struct DecalComponent {
+    std::string TexturePath;     // serializável
+    Ref<Texture2D> Texture;      // runtime (carregada sob demanda)
+    glm::vec4 Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    int SortingLayer = 0;
+};
+
 struct SpriteAnimationComponent {
     std::string SheetPath;         // serializável
     Ref<Texture2D> SheetTexture;   // runtime (carregada sob demanda)

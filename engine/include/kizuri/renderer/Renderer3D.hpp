@@ -199,6 +199,12 @@ public:
     struct DebugLine { glm::vec3 From; glm::vec3 To; glm::vec3 Color; };
     static void SubmitDebugLine(const glm::vec3& from, const glm::vec3& to, const glm::vec3& color);
 
+    // Decal (pilar AAA v0.35): textura projetada na cena por uma caixa
+    // orientada (transform da entidade; escala = tamanho; projeção ao longo
+    // do eixo Z local). Renderizado após a geometria, com blend e depth test.
+    static void SubmitDecal(const glm::mat4& transform, const Ref<Texture2D>& texture,
+                            const glm::vec4& tint = glm::vec4(1.0f));
+
 private:
     struct DrawCommand {
         Ref<Mesh> MeshAsset;

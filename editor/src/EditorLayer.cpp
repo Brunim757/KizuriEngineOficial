@@ -4544,6 +4544,30 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<EnemyAIComponent>();
         }
 
+        if (m_SelectedEntity.HasComponent<DecalComponent>()) {
+            auto& dc = m_SelectedEntity.GetComponent<DecalComponent>();
+            if (DrawComponentHeader("Decal (textura projetada)", &removeThis)) {
+                char decBuf[512];
+                strncpy(decBuf, dc.TexturePath.c_str(), sizeof(decBuf) - 1);
+                decBuf[sizeof(decBuf) - 1] = '\0';
+                if (ImGui::InputText("Textura", decBuf, sizeof(decBuf))) {
+                    dc.TexturePath = decBuf;
+                    dc.Texture = dc.TexturePath.empty() ? nullptr : kizuri::Texture2D::Create(dc.TexturePath);
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Gerenciador")) RevealFileInContentBrowser(dc.TexturePath);
+                ImGui::ColorEdit4("Cor", &dc.Color.x);
+                ImGui::DragInt("Camada de ordenação", &dc.SortingLayer, 1);
+                if (dc.Texture) {
+                    uint32_t texID = dc.Texture->GetRendererID();
+                    ImGui::Image((ImTextureID)(uint64_t)texID, ImVec2(64.0f, 64.0f), ImVec2(0, 1), ImVec2(1, 0));
+                }
+                ImGui::TextDisabled("Escala do transform = tamanho; projetado ao longo do Z local.");
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<DecalComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<TextComponent>()) {
             auto& tc = m_SelectedEntity.GetComponent<TextComponent>();
             if (DrawComponentHeader("Texto", &removeThis)) {
@@ -4955,6 +4979,8 @@ void EditorLayer::DrawAddComponentButton() {
             m_SelectedEntity.AddComponent<TextComponent>();
         if (!m_SelectedEntity.HasComponent<SpriteAnimationComponent>() && ImGui::MenuItem("Animação de Sprite"))
             m_SelectedEntity.AddComponent<SpriteAnimationComponent>();
+        if (!m_SelectedEntity.HasComponent<DecalComponent>() && ImGui::MenuItem("Decal (textura projetada)"))
+            m_SelectedEntity.AddComponent<DecalComponent>();
         if (!m_SelectedEntity.HasComponent<TilemapComponent>() && ImGui::MenuItem("Tilemap"))
             m_SelectedEntity.AddComponent<TilemapComponent>();
         if (!m_SelectedEntity.HasComponent<ParticleSystemComponent>() && ImGui::MenuItem("Particle System"))

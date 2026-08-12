@@ -2,6 +2,7 @@
 #include "kizuri/ecs/Entity.hpp"
 #include "kizuri/ecs/Components.hpp"
 #include "kizuri/net/NetworkFacade.hpp"
+#include "kizuri/renderer/LightmapBaker.hpp"
 #include "kizuri/scripting/NativeScript.hpp"
 #include "kizuri/scripting/CSharpBridge.h"
 #include "kizuri/scene/SceneSerializer.hpp"
@@ -2448,6 +2449,18 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
 
     auto SubmitMeshes = [&]() {
         auto meshes = m_Registry.view<TransformComponent, MeshRendererComponent>();
+
+        // Decals (pilar AAA v0.35): caixas projetoras com textura.
+        auto decals = m_Registry.view<TransformComponent, DecalComponent>();
+        for (auto de : decals) {
+            Entity ent{ de, this };
+            if (!IsEntityActive(ent)) continue;
+            auto& dc = decals.get<DecalComponent>(de);
+            if (!dc.Texture && !dc.TexturePath.empty())
+                dc.Texture = Texture2D::Create(Project::ResolvePath(dc.TexturePath));
+            if (!dc.Texture) continue;
+            Renderer3D::SubmitDecal(GetWorldTransform(ent), dc.Texture, dc.Color);
+        }
         for (auto me : meshes) {
             if (!IsEntityActive(Entity{ me, this })) continue; // inativa não desenha
             auto& mr = meshes.get<MeshRendererComponent>(me);

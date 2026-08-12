@@ -124,6 +124,12 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
         };
     }
 
+    if (entity.HasComponent<DecalComponent>()) {
+        auto& dc = entity.GetComponent<DecalComponent>();
+        je["Decal"] = { { "TexturePath", dc.TexturePath }, { "Color", Vec4ToJson(dc.Color) },
+                        { "SortingLayer", dc.SortingLayer } };
+    }
+
     if (entity.HasComponent<SpriteAnimationComponent>()) {
         auto& ac = entity.GetComponent<SpriteAnimationComponent>();
         je["SpriteAnimation"] = {
@@ -524,7 +530,20 @@ if (je.contains("CharacterController")) {
         tc.SortingLayer = jt.value("SortingLayer", 0);
     }
 
-    if (je.contains("SpriteAnimation")) {
+        if (je.contains("Decal")) {
+        auto& jd = je["Decal"];
+        auto& dc = entity.HasComponent<DecalComponent>()
+            ? entity.GetComponent<DecalComponent>()
+            : entity.AddComponent<DecalComponent>();
+        dc.TexturePath = jd.value("TexturePath", "");
+        dc.Color = JsonToVec4(jd["Color"]);
+        dc.SortingLayer = jd.value("SortingLayer", 0);
+        if (!dc.TexturePath.empty()) dc.Texture = Texture2D::Create(ResolveSerializedPath(dc.TexturePath));
+    } else if (entity.HasComponent<DecalComponent>()) {
+        entity.RemoveComponent<DecalComponent>();
+    }
+
+if (je.contains("SpriteAnimation")) {
         auto& ja = je["SpriteAnimation"];
         auto& ac = entity.AddComponent<SpriteAnimationComponent>();
         ac.SheetPath = ja.value("SheetPath", "");
@@ -866,7 +885,20 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         entity.RemoveComponent<TextComponent>();
     }
 
-    if (je.contains("SpriteAnimation")) {
+        if (je.contains("Decal")) {
+        auto& jd = je["Decal"];
+        auto& dc = entity.HasComponent<DecalComponent>()
+            ? entity.GetComponent<DecalComponent>()
+            : entity.AddComponent<DecalComponent>();
+        dc.TexturePath = jd.value("TexturePath", "");
+        dc.Color = JsonToVec4(jd["Color"]);
+        dc.SortingLayer = jd.value("SortingLayer", 0);
+        if (!dc.TexturePath.empty()) dc.Texture = Texture2D::Create(ResolveSerializedPath(dc.TexturePath));
+    } else if (entity.HasComponent<DecalComponent>()) {
+        entity.RemoveComponent<DecalComponent>();
+    }
+
+if (je.contains("SpriteAnimation")) {
         auto& ja = je["SpriteAnimation"];
         auto& ac = entity.HasComponent<SpriteAnimationComponent>()
             ? entity.GetComponent<SpriteAnimationComponent>()

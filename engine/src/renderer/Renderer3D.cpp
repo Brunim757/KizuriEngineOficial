@@ -26,6 +26,10 @@ glm::mat4 Renderer3D::s_ViewProjection = glm::mat4(1.0f);
 std::vector<Renderer3D::DrawCommand> Renderer3D::s_DrawList;
 std::vector<Renderer3D::InstanceBatch> Renderer3D::s_InstanceBatches;
 std::vector<Renderer3D::DebugLine> Renderer3D::s_DebugLines;
+struct DecalCmd { glm::mat4 Transform; Ref<Texture2D> Texture; glm::vec4 Tint; };
+static std::vector<DecalCmd> s_DecalList;
+static Ref<Shader> s_DecalShader;
+static Ref<Mesh> s_DecalCube;
 std::vector<Light> Renderer3D::s_LightList;
 Light Renderer3D::s_ShadowCaster;
 bool Renderer3D::s_HasShadowCaster = false;
@@ -534,6 +538,45 @@ void main() {
     // Sem tonemap aqui — sai HDR linear cru de propósito. O passe de composição
     // (bright-pass + bloom + ACES) é quem faz o tonemap, uma vez só, no final.
     o_Color = vec4(color, 1.0);
+}
+)";
+
+// ---- Decal (pilar AAA v0.35) -----------------------------------------------
+static const char* s_DecalVertexSrc = R"(
+#version 330 core
+layout(location = 0) in vec3 a_Position;
+layout(location = 1) in vec3 a_Normal;
+layout(location = 2) in vec2 a_TexCoord;
+
+uniform mat4 u_ViewProjection;
+uniform mat4 u_Transform;
+
+out vec3 v_WorldPos;
+
+void main() {
+    v_WorldPos = vec3(u_Transform * vec4(a_Position, 1.0));
+    gl_Position = u_ViewProjection * vec4(v_WorldPos, 1.0);
+}
+)";
+
+static const char* s_DecalFragmentSrc = R"(
+#version 330 core
+layout(location = 0) out vec4 o_Color;
+
+in vec3 v_WorldPos;
+
+uniform mat4 u_InverseTransform;
+uniform sampler2D u_DecalTexture;
+uniform vec4 u_Tint;
+
+void main() {
+    vec3 local = vec3(u_InverseTransform * vec4(v_WorldPos, 1.0));
+    if (any(greaterThan(abs(local), vec3(0.5)))) discard;
+
+    vec2 uv = local.xy + 0.5;
+    vec4 tex = texture(u_DecalTexture, uv);
+    o_Color = tex * u_Tint;
+    if (o_Color.a < 0.01) discard;
 }
 )";
 
@@ -1844,6 +1887,8 @@ void Renderer3D::Init() {
 
     // Shadow map de luz pontual (depth cubemap com profundidade LINEAR).
     s_EquirectShader = CreateRef<Shader>("Renderer3D_Equirect", s_CaptureVertexSrc, s_EquirectFragmentSrc);
+    s_DecalShader = CreateRef<Shader>("Renderer3D_Decal", s_DecalVertexSrc, s_DecalFragmentSrc);
+    s_DecalCube = Mesh::CreateCube();
 
     GenerateEnvironment();
 
@@ -3109,6 +3154,26 @@ void Renderer3D::EndScene() {
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);
 
+    // Decals: projetados na geometria (depth test, sem escrever profundidade).
+    if (!s_DecalList.empty()) {
+        s_DecalShader->Bind();
+        s_DecalShader->SetMat4("u_ViewProjection", s_ViewProjection);
+        glDepthMask(GL_FALSE);
+        RenderCommand::SetBlending(true);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        for (const auto& decal : s_DecalList) {
+            s_DecalShader->SetMat4("u_Transform", decal.Transform);
+            s_DecalShader->SetMat4("u_InverseTransform", glm::inverse(decal.Transform));
+            s_DecalShader->SetFloat4("u_Tint", decal.Tint);
+            decal.Texture->Bind(0);
+            s_DecalShader->SetInt("u_DecalTexture", 0);
+            RenderCommand::DrawIndexed(s_DecalCube->GetVertexArray(), s_DecalCube->GetIndexCount());
+        }
+        RenderCommand::SetBlending(false);
+        glDepthMask(GL_TRUE);
+        s_DecalList.clear();
+    }
+
     // Partículas: testam profundidade contra a geometria real (ficam atrás de paredes),
     // mas não escrevem (partículas sobrepostas se misturam entre si, não se ocluem).
     if (!s_ParticleBatches.empty()) {
@@ -3602,6 +3667,12 @@ void Renderer3D::DrawGrid() {
 void Renderer3D::SubmitDebugLine(const glm::vec3& from, const glm::vec3& to, const glm::vec3& color) {
     if (s_DebugLines.size() >= 8192) return; // teto — nunca trava o frame
     s_DebugLines.push_back({ from, to, color });
+}
+
+void Renderer3D::SubmitDecal(const glm::mat4& transform, const Ref<Texture2D>& texture,
+                            const glm::vec4& tint) {
+    if (!texture) return;
+    s_DecalList.push_back({ transform, texture, tint });
 }
 
 void Renderer3D::Submit(const Ref<Mesh>& mesh, const Material& material, const glm::mat4& transform) {

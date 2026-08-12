@@ -2,6 +2,7 @@
 #include "kizuri/core/Log.hpp"
 #include <glm/gtc/random.hpp>
 #include <cmath>
+#include <algorithm>
 #include <limits>
 
 namespace kizuri {

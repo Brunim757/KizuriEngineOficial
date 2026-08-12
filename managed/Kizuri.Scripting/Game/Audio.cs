@@ -38,3 +38,7 @@ public static class Audio
 		set => Interop.KizuriNative.kz_audio_set_group_volume(2, value);
 	}
 }
+
+	// Reverb global (pilar AAA v0.34): wet 0..1, roomSize 0..1, damp 0..1.
+	public static void SetGlobalReverb(float wet, float roomSize = 0.5f, float damp = 0.3f)
+		=> Interop.KizuriNative.kz_audio_set_global_reverb(wet, roomSize, damp);

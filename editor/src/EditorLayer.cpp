@@ -4738,6 +4738,7 @@ void EditorLayer::DrawInspector() {
                 ImGui::SameLine();
                 ImGui::Checkbox("Reproduzir ao iniciar", &ac.PlayOnStart);
                 ImGui::Checkbox("Áudio espacial (3D)", &ac.Spatial);
+                ImGui::Checkbox("Reverb", &ac.Reverb);
                 ImGui::DragFloat("Volume", &ac.Volume, 0.01f, 0.0f, 2.0f);
                 const char* groupNames[] = { "SFX", "Música", "UI" };
                 ImGui::Combo("Grupo (mixer)", &ac.Group, groupNames, 3);

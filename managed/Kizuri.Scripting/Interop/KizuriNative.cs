@@ -154,6 +154,8 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_material_set_height_scale(uint entity, float scale);
     [DllImport(Lib)] internal static extern void kz_entity_add_character_controller(uint entity, float speed, float gravity);
     [DllImport(Lib)] internal static extern void kz_entity_move_character(uint entity, float x, float z);
+    [DllImport(Lib)] internal static extern void kz_audio_set_global_reverb(float wet, float roomSize, float damp);
+    [DllImport(Lib)] internal static extern void kz_audio_set_reverb(uint entity, int enabled);
     [DllImport(Lib)] internal static extern int kz_net_host(ushort port);
     [DllImport(Lib)] internal static extern int kz_net_connect([MarshalAs(UnmanagedType.LPUTF8Str)] string addr, ushort port);
     [DllImport(Lib)] internal static extern void kz_net_shutdown();

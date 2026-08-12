@@ -254,6 +254,7 @@ struct AudioSourceComponent {
     float Volume = 1.0f;
     float MinDistance = 1.0f, MaxDistance = 50.0f;
     int Group = 0; // Audio mixer: 0=SFX, 1=Música, 2=UI
+    bool Reverb = false; // envia pelo nó de reverb global (pilar AAA v0.34)
 
     SoundHandle Handle = kInvalidSound; // estado runtime — não serializado
     bool HasStarted = false;

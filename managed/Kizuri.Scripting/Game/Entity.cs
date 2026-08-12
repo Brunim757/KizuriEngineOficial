@@ -503,6 +503,9 @@ public readonly struct Entity
 
 	// Volume da fonte de áudio (0..1) e configuração espacial (3D).
 	public void SetAudioVolume(float volume) => Interop.KizuriNative.kz_audio_set_volume(Handle, volume);
+	public void SetSoundReverb(bool enabled)
+		=> Interop.KizuriNative.kz_audio_set_reverb(Handle, enabled ? 1 : 0);
+
 	public void SetAudioSpatial(bool spatial, float minDistance = 1f, float maxDistance = 50f)
 		=> Interop.KizuriNative.kz_audio_set_spatial(Handle, spatial ? 1 : 0, minDistance, maxDistance);
 

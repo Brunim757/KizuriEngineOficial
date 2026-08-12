@@ -39,6 +39,17 @@ public:
     // multiplicadores em Play/PlayOneShot.
     static void SetGroupVolume(int group, float volume);
     static float GetGroupVolume(int group);
+
+    // ---- Reverb (pilar AAA v0.34) ----
+    // Reverb GLOBAL (Schroeder — 4 combs + 2 allpass por canal) na saída da
+    // mixagem. wet=0 desliga o efeito; roomSize 0..1 (maior = mais eco);
+    // damp 0..1 (maior = mais abafado).
+    static void SetGlobalReverb(float wet, float roomSize, float damp);
+
+    // Envia UMA fonte pelo reverb (passa a ser processada pelo nó global).
+    // enabled=false volta pro caminho direto (sem reverb).
+    static void SetSoundReverb(SoundHandle handle, bool enabled, float wet = 1.0f);
+    static bool IsSoundReverbing(SoundHandle handle);
 };
 
 } // namespace kizuri

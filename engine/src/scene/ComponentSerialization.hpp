@@ -360,7 +360,7 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
         auto& ac = entity.GetComponent<AudioSourceComponent>();
         je["AudioSource"] = {
             { "ClipPath", ac.ClipPath }, { "Loop", ac.Loop }, { "PlayOnStart", ac.PlayOnStart },
-            { "Spatial", ac.Spatial }, { "Volume", ac.Volume }, { "Group", ac.Group },
+            { "Spatial", ac.Spatial }, { "Reverb", ac.Reverb }, { "Volume", ac.Volume }, { "Group", ac.Group },
             { "MinDistance", ac.MinDistance }, { "MaxDistance", ac.MaxDistance }
         };
     }
@@ -786,6 +786,7 @@ if (je.contains("CharacterController")) {
         ac.ClipPath = ja.value("ClipPath", "");
         ac.Loop = ja.value("Loop", false);
         ac.PlayOnStart = ja.value("PlayOnStart", true);
+        ac.Reverb = ja.value("Reverb", false);
         ac.Spatial = ja.value("Spatial", true);
         ac.Volume = ja.value("Volume", 1.0f);
         ac.Group = ja.value("Group", 0);

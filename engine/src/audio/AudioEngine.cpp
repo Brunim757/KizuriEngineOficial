@@ -27,6 +27,142 @@ static SoundHandle s_NextHandle = 1;
 // Volumes por grupo (Audio mixer): 0=SFX, 1=Música, 2=UI.
 static float s_GroupVolumes[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
+// ---------------------------------------------------------------------------
+// Reverb (pilar AAA v0.34): nó customizado do miniaudio (Schroeder — 4
+// combs + 2 allpass por canal) inserido no grafo do ma_engine entre os sons
+// e o endpoint. Sons com reverb ligado são roteados pelo nó; os demais
+// seguem direto no endpoint (caminho seco, sem custo).
+// ---------------------------------------------------------------------------
+struct ReverbChannelState {
+    std::vector<float> CombBuf[4];
+    std::vector<float> AllpassBuf[2];
+    size_t CombPos[4] = {};
+    size_t AllpassPos[2] = {};
+    float LowpassState = 0.0f;
+
+    void Init(uint32_t sampleRate) {
+        // Tamanhos clássicos do Freeverb (em ms), escalados pela taxa.
+        const float combMs[4] = { 29.7f, 37.1f, 41.1f, 43.7f };
+        const float apMs[2] = { 5.0f, 1.7f };
+        for (int i = 0; i < 4; ++i) CombBuf[i].assign((size_t)(combMs[i] * sampleRate / 1000.0f), 0.0f);
+        for (int i = 0; i < 2; ++i) AllpassBuf[i].assign((size_t)(apMs[i] * sampleRate / 1000.0f), 0.0f);
+    }
+
+    float Process(float input, float feedback, float damp) {
+        float acc = 0.0f;
+        for (int i = 0; i < 4; ++i) {
+            size_t len = CombBuf[i].size();
+            if (len == 0) continue;
+            float delayed = CombBuf[i][CombPos[i]];
+            // Damping: passa-baixa de 1 polo no caminho de feedback.
+            LowpassState = delayed * (1.0f - damp) + LowpassState * damp;
+            CombBuf[i][CombPos[i]] = input + LowpassState * feedback;
+            CombPos[i] = (CombPos[i] + 1) % len;
+            acc += delayed;
+        }
+        acc *= 0.25f;
+        for (int i = 0; i < 2; ++i) {
+            size_t len = AllpassBuf[i].size();
+            if (len == 0) continue;
+            float bufOut = AllpassBuf[i][AllpassPos[i]];
+            float out = -input + bufOut;
+            AllpassBuf[i][AllpassPos[i]] = input + bufOut * 0.5f;
+            AllpassPos[i] = (AllpassPos[i] + 1) % len;
+            input = out;
+        }
+        return acc;
+    }
+};
+
+struct ReverbNode {
+    ma_node_base base; // primeiro membro SEMPRE (padrão miniaudio)
+    ma_node* pNode = nullptr; // handle (aponta pra este struct)
+    std::vector<ReverbChannelState> Channels; // um por canal (processa até 2)
+    float Wet = 0.0f;
+    float Room = 0.5f;
+    float Damp = 0.3f;
+    uint32_t ChannelsCount = 2;
+};
+
+static void ReverbProcess(ma_node* pNode, const float** ppFramesIn, ma_uint32* pFrameCountIn,
+                          float** ppFramesOut, ma_uint32* pFrameCountOut) {
+    ReverbNode* reverb = pNode ? (ReverbNode*)pNode : nullptr;
+    if (!reverb || !ppFramesIn || !ppFramesOut || !pFrameCountIn || !pFrameCountOut) return;
+    ma_uint32 frames = (*pFrameCountIn < *pFrameCountOut) ? *pFrameCountIn : *pFrameCountOut;
+    const float* in = ppFramesIn[0];
+    float* out = ppFramesOut[0];
+    uint32_t chs = reverb->ChannelsCount;
+    for (ma_uint32 f = 0; f < frames; ++f) {
+        for (uint32_t c = 0; c < chs; ++c) {
+            float x = in[f * chs + c];
+            float rev = 0.0f;
+            if (c < reverb->Channels.size())
+                rev = reverb->Channels[c].Process(x, 0.7f + reverb->Room * 0.28f, reverb->Damp);
+            out[f * chs + c] = x + rev * reverb->Wet;
+        }
+    }
+    *pFrameCountOut = frames;
+}
+
+static ma_node_vtable s_ReverbVTable = {
+    ReverbProcess, // onProcess
+    NULL,          // onGetRequiredInputFrameCount
+    1,             // inputBusCount
+    1,             // outputBusCount
+    MA_NODE_FLAG_CONTINUOUS_PROCESSING | MA_NODE_FLAG_ALLOW_NULL_INPUT, // o tail soa mesmo sem áudio nova
+};
+
+static ReverbNode* s_Reverb = nullptr;
+static bool s_ReverbNodeReady = false;
+static std::unordered_map<SoundHandle, float> s_ReverbWet; // fonte -> wet (reverb ligado)
+
+static void EnsureReverbNode() {
+    if (s_ReverbNodeReady || !s_Initialized) return;
+    ma_uint32 chs = ma_engine_get_channels(&s_Engine);
+    if (chs == 0) chs = 2;
+
+    auto* data = new (std::nothrow) ReverbNode();
+    if (!data) return;
+    data->ChannelsCount = chs;
+    data->Channels.resize(chs < 2 ? chs : 2);
+    for (auto& ch : data->Channels) ch.Init(ma_engine_get_sample_rate(&s_Engine));
+
+    ma_uint32 inChs[1] = { chs };
+    ma_uint32 outChs[1] = { chs };
+    ma_node_config cfg = ma_node_config_init();
+    cfg.vtable = &s_ReverbVTable;      // o vtable declara 1 input + 1 output bus
+    cfg.pInputChannels = inChs;
+    cfg.pOutputChannels = outChs;
+
+    ma_node_graph* graph = ma_engine_get_node_graph(&s_Engine);
+    // O handle ma_node É o próprio struct (ma_node_base no início).
+    ma_node* node = (ma_node*)data;
+    if (ma_node_init(graph, &cfg, nullptr, node) != MA_SUCCESS) {
+        delete data;
+        return;
+    }
+    data->pNode = node;
+    // Reverb (saída) -> endpoint do grafo (entrada): todo o caminho úmido
+    // passa por aqui; os sons secos continuam indo direto ao endpoint.
+    ma_node_attach_output_bus(node, 0, ma_node_graph_get_endpoint(graph), 0);
+    s_Reverb = data;
+    s_ReverbNodeReady = true;
+    KZ_CORE_INFO("Áudio: nó de reverb inserido no grafo ({0} canais).", chs);
+}
+
+static void RouteSoundThroughReverb(ma_sound* sound, bool enabled, float wet) {
+    if (!sound) return;
+    if (s_ReverbNodeReady && enabled && s_Reverb && s_Reverb->pNode) {
+        ma_node_detach_output_bus((ma_node*)sound, 0);
+        ma_node_attach_output_bus((ma_node*)sound, 0, s_Reverb->pNode, 0);
+    } else {
+        // Volta pro caminho padrão: o endpoint do grafo.
+        ma_node_detach_output_bus((ma_node*)sound, 0);
+        ma_node_attach_output_bus((ma_node*)sound, 0, ma_node_graph_get_endpoint(ma_engine_get_node_graph(&s_Engine)), 0);
+    }
+    (void)wet;
+}
+
 // Pool de one-shots POSICIONAIS. O end-callback roda na thread de áudio e
 // só MARCA o slot livre; a desinicialização do ma_sound fica pro main thread
 // (na próxima reutilização do slot) — uninit na thread de áudio é proibido.
@@ -48,6 +184,13 @@ void AudioEngine::Init() {
 
 void AudioEngine::Shutdown() {
     if (!s_Initialized) return;
+    if (s_ReverbNodeReady && s_Reverb && s_Reverb->pNode) {
+        ma_node_uninit(s_Reverb->pNode, NULL);
+        delete s_Reverb;
+        s_Reverb = nullptr;
+        s_ReverbNodeReady = false;
+        s_ReverbWet.clear();
+    }
     s_Sounds.clear();
     for (auto& os : s_OneShots)
         if (os.InUse) { ma_sound_uninit(&os.Sound); os.InUse = false; }
@@ -180,6 +323,45 @@ void AudioEngine::SetGroupVolume(int group, float volume) {
 float AudioEngine::GetGroupVolume(int group) {
     if (group < 0 || group > 3) return 1.0f;
     return s_GroupVolumes[group];
+}
+
+void AudioEngine::SetGlobalReverb(float wet, float roomSize, float damp) {
+    if (!s_Initialized) return;
+    wet = glm::clamp(wet, 0.0f, 1.0f);
+    if (wet <= 0.001f) {
+        // Desliga: sons com reverb voltam ao caminho seco.
+        for (auto& [handle, w] : s_ReverbWet) {
+            auto it = s_Sounds.find(handle);
+            if (it != s_Sounds.end()) RouteSoundThroughReverb(&it->second->Sound, false, 0.0f);
+        }
+        s_ReverbWet.clear();
+        if (s_Reverb) s_Reverb->Wet = 0.0f;
+        return;
+    }
+    EnsureReverbNode();
+    if (!s_Reverb) return;
+    s_Reverb->Wet = wet;
+    s_Reverb->Room = glm::clamp(roomSize, 0.0f, 1.0f);
+    s_Reverb->Damp = glm::clamp(damp, 0.0f, 1.0f);
+}
+
+void AudioEngine::SetSoundReverb(SoundHandle handle, bool enabled, float wet) {
+    if (!s_Initialized) return;
+    auto it = s_Sounds.find(handle);
+    if (it == s_Sounds.end()) return;
+    if (!enabled || wet <= 0.001f) {
+        s_ReverbWet.erase(handle);
+        RouteSoundThroughReverb(&it->second->Sound, false, 0.0f);
+        return;
+    }
+    EnsureReverbNode();
+    if (!s_Reverb) return;
+    s_ReverbWet[handle] = wet;
+    RouteSoundThroughReverb(&it->second->Sound, true, wet);
+}
+
+bool AudioEngine::IsSoundReverbing(SoundHandle handle) {
+    return s_ReverbWet.find(handle) != s_ReverbWet.end();
 }
 
 } // namespace kizuri

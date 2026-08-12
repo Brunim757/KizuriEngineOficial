@@ -1855,6 +1855,13 @@ void Scene::UpdateAudio(Timestep) {
             ac.HasStarted = true;
         }
 
+        // Reverb (pilar AAA v0.34): roteia a fonte pelo nó quando marcada.
+        if (ac.HasStarted && ac.Handle != kInvalidSound) {
+            bool revOn = AudioEngine::IsSoundReverbing(ac.Handle);
+            if (ac.Reverb != revOn)
+                AudioEngine::SetSoundReverb(ac.Handle, ac.Reverb, 1.0f);
+        }
+
         // Oclusão (pilar AAA v0.34): fonte espacial com um corpo 3D entre ela
         // e o ouvinte é abafada (raycast do Bullet). Volume efetivo por frame.
         if (ac.Spatial && ac.HasStarted && ac.Handle != kInvalidSound) {

@@ -997,6 +997,17 @@ KZ_SCRIPT_API void kz_material_set_height_scale(uint32_t entity, float scale) {
     e.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial.HeightScale = scale;
 }
 
+// ---- Reverb (pilar AAA v0.34) --------------------------------------------------
+KZ_SCRIPT_API void kz_audio_set_global_reverb(float wet, float roomSize, float damp) {
+    kizuri::AudioEngine::SetGlobalReverb(wet, roomSize, damp);
+}
+KZ_SCRIPT_API void kz_audio_set_reverb(uint32_t entity, int enabled) {
+    auto e = Resolve(entity);
+    if (!e) return;
+    if (auto* ac = e.GetScene()->GetRegistry().try_get<kizuri::AudioSourceComponent>(e.GetHandle()))
+        ac->Reverb = enabled != 0;
+}
+
 // ---- Rede multiplayer (pilar AAA v0.34) -------------------------------------
 KZ_SCRIPT_API int kz_net_host(uint16_t port) { return kizuri::Network::Host(port) ? 1 : 0; }
 KZ_SCRIPT_API int kz_net_connect(const char* addr, uint16_t port) {

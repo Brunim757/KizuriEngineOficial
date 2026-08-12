@@ -28,6 +28,10 @@ minor chegar em `99` — quando seria `0.100`, vira **`1.0`**.
   (a "100" é a versão 1.0).
 
 > Changelog no Discord: só publicar quando o dono pedir — nunca automático.
+> **Desde v0.35.0** o **Content Pack é um download SEPARADO e opcional** do
+> Release (`KizuriEngine-Content-Pack.zip`) — o zip da engine não inclui mais
+> `content/`, e todo binário carrega o ícone torii (recurso Windows + janela).
+
 
 ---
 

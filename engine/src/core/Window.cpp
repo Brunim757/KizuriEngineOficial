@@ -1,6 +1,7 @@
 #include "kizuri/core/Window.hpp"
 #include "kizuri/core/Log.hpp"
 #include "kizuri/renderer/Shader.hpp"
+#include "kizuri/core/WindowIcon.hpp"
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
 #include <cstdlib>
@@ -120,6 +121,16 @@ void Window::Init(const WindowProps& props) {
             break;
         }
         KZ_CORE_WARN("Falha ao criar o contexto OpenGL {0}.{1} core; tentando uma versão anterior...", version[0], version[1]);
+    }
+
+    if (m_Window) {
+        // Ícone da janela (torii da marca): embutido no binário — o ícone do
+        // sisteminha (taskbar/alt-tab) funciona até sem arquivo externo.
+        GLFWimage icon;
+        icon.width = kizuri::windowicon::kWidth;
+        icon.height = kizuri::windowicon::kHeight;
+        icon.pixels = (unsigned char*)kizuri::windowicon::kPixels;
+        glfwSetWindowIcon(m_Window, 1, &icon);
     }
 
     if (!m_Window) {

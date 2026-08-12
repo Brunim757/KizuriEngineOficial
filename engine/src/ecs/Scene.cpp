@@ -2514,6 +2514,27 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
     auto SubmitMeshes = [&]() {
         auto meshes = m_Registry.view<TransformComponent, MeshRendererComponent>();
 
+        // Foliage (pilar AAA v0.35): vegetação instanciada (1 draw call).
+        auto foliage = m_Registry.view<TransformComponent, FoliageComponent>();
+        for (auto fe : foliage) {
+            Entity ent{ fe, this };
+            if (!IsEntityActive(ent)) continue;
+            auto& fc = foliage.get<FoliageComponent>(fe);
+            if (fc.Instances.empty()) fc.Regenerate();
+            if (fc.Instances.empty()) continue;
+            if (!fc.MeshAsset) fc.MeshAsset = Mesh::FromSource(fc.MeshSource);
+            if (!fc.MeshAsset) continue;
+            Material mat;
+            mat.Albedo = { fc.Color.r, fc.Color.g, fc.Color.b };
+            mat.Roughness = 0.85f;
+            // A origem da entidade desloca todo o bloco de vegetação.
+            glm::mat4 base = GetWorldTransform(ent);
+            std::vector<glm::mat4> worldInsts;
+            worldInsts.reserve(fc.Instances.size());
+            for (auto& inst : fc.Instances) worldInsts.push_back(base * inst);
+            Renderer3D::SubmitMeshInstances(fc.MeshAsset, mat, worldInsts.data(), (uint32_t)worldInsts.size());
+        }
+
         // Decals (pilar AAA v0.35): caixas projetoras com textura.
         auto decals = m_Registry.view<TransformComponent, DecalComponent>();
         for (auto de : decals) {

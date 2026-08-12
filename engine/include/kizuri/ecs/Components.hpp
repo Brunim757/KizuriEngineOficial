@@ -95,6 +95,27 @@ struct TextComponent {
 // Occluder (pilar AAA v0.35): caixa sólida que BLOQUEIA a visão de tudo
 // que estiver atrás dela — o renderer descarta objetos totalmente ocultos
 // por ela (culling de oclusão por projeção em tela).
+// Vegetação/foliage (pilar AAA v0.35): espalha N instâncias de uma malha
+// numa área ao redor da origem (determinístico pela seed — mesmo resultado
+// toda vez que regenera). Renderizado com instancing (1 draw call pra
+// centenas de árvores/grama).
+struct FoliageComponent {
+    std::string MeshSource = "builtin:cone"; // árvore/arbusto/grama
+    glm::vec2 AreaSize = { 12.0f, 12.0f };   // extensão XZ
+    float HeightScale = 1.0f;                // altura do tronco (cone)
+    uint32_t Count = 200;
+    float ScaleMin = 0.6f, ScaleMax = 1.3f;
+    uint32_t Seed = 42;
+    bool AvoidCenter = true;                 // deixa um raio vazio na origem
+
+    // Runtime — regenerado sob demanda.
+    std::vector<glm::mat4> Instances;
+    Ref<Mesh> MeshAsset;
+    glm::vec4 Color = { 0.24f, 0.5f, 0.22f, 1.0f };
+
+    void Regenerate();
+};
+
 struct OccluderComponent {
     glm::vec3 HalfExtents{ 0.0f }; // 0 = usa a escala do transform
     float MaxOcclusionDistance = 60.0f; // só oclui alvos até essa distância

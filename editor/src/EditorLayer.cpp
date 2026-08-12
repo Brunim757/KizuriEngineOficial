@@ -4544,6 +4544,32 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<EnemyAIComponent>();
         }
 
+        if (m_SelectedEntity.HasComponent<FoliageComponent>()) {
+            auto& fc = m_SelectedEntity.GetComponent<FoliageComponent>();
+            if (DrawComponentHeader("Foliage (vegetação)", &removeThis)) {
+                bool regen = false;
+                char fMesh[256];
+                strncpy(fMesh, fc.MeshSource.c_str(), sizeof(fMesh) - 1); fMesh[sizeof(fMesh) - 1] = '\0';
+                if (ImGui::InputText("Malha (instâncias)", fMesh, sizeof(fMesh))) {
+                    fc.MeshSource = fMesh;
+                    fc.MeshAsset = fc.MeshSource.empty() ? nullptr : kizuri::Mesh::FromSource(fc.MeshSource);
+                    regen = true;
+                }
+                regen |= ImGui::DragFloat2("Área (XZ)", &fc.AreaSize.x, 0.5f, 1.0f, 200.0f);
+                regen |= ImGui::DragFloat("Altura (tronco)", &fc.HeightScale, 0.05f, 0.1f, 10.0f);
+                regen |= ImGui::DragInt("Quantidade", (int*)&fc.Count, 1, 1, 5000);
+                regen |= ImGui::DragFloat("Escala mínima", &fc.ScaleMin, 0.05f, 0.1f, 10.0f);
+                regen |= ImGui::DragFloat("Escala máxima", &fc.ScaleMax, 0.05f, 0.1f, 10.0f);
+                regen |= ImGui::DragInt("Semente", (int*)&fc.Seed, 1);
+                regen |= ImGui::Checkbox("Vazio no centro", &fc.AvoidCenter);
+                ImGui::ColorEdit4("Cor", &fc.Color.x);
+                if (ImGui::Button("Regenerar vegetação") || regen) fc.Regenerate();
+                ImGui::TextDisabled("Instâncias: %zu · 1 draw call · a malha vem do campo acima.", fc.Instances.size());
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<FoliageComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<OccluderComponent>()) {
             auto& oc = m_SelectedEntity.GetComponent<OccluderComponent>();
             if (DrawComponentHeader("Occluder", &removeThis)) {
@@ -4994,6 +5020,8 @@ void EditorLayer::DrawAddComponentButton() {
             m_SelectedEntity.AddComponent<DecalComponent>();
         if (!m_SelectedEntity.HasComponent<OccluderComponent>() && ImGui::MenuItem("Occluder (bloqueia visão)"))
             m_SelectedEntity.AddComponent<OccluderComponent>();
+        if (!m_SelectedEntity.HasComponent<FoliageComponent>() && ImGui::MenuItem("Foliage (vegetação)"))
+            m_SelectedEntity.AddComponent<FoliageComponent>();
         if (!m_SelectedEntity.HasComponent<TilemapComponent>() && ImGui::MenuItem("Tilemap"))
             m_SelectedEntity.AddComponent<TilemapComponent>();
         if (!m_SelectedEntity.HasComponent<ParticleSystemComponent>() && ImGui::MenuItem("Particle System"))

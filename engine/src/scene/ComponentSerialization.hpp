@@ -28,9 +28,13 @@ inline void RestoreGLTFTextureMaps(MeshRendererComponent& mr) {
     if (!mat.HeightMap && restored.HeightMap) mat.HeightMap = restored.HeightMap;
 }
 
-inline nlohmann::json Vec3ToJson(const glm::vec3& v) { return { v.x, v.y, v.z }; }
+inline inline nlohmann::json Vec2ToJson(const glm::vec2& v) { return { v.x, v.y }; }
+nlohmann::json Vec3ToJson(const glm::vec3& v) { return { v.x, v.y, v.z }; }
 inline nlohmann::json Vec4ToJson(const glm::vec4& v) { return { v.x, v.y, v.z, v.w }; }
-inline glm::vec3 JsonToVec3(const nlohmann::json& j) { return { j[0].get<float>(), j[1].get<float>(), j[2].get<float>() }; }
+inline static glm::vec2 JsonToVec2(const nlohmann::json& j) {
+    return j.is_array() ? glm::vec2(j[0].get<float>(), j[1].get<float>()) : glm::vec2(0.0f);
+}
+glm::vec3 JsonToVec3(const nlohmann::json& j) { return { j[0].get<float>(), j[1].get<float>(), j[2].get<float>() }; }
 inline glm::vec4 JsonToVec4(const nlohmann::json& j) { return { j[0].get<float>(), j[1].get<float>(), j[2].get<float>(), j[3].get<float>() }; }
 
 inline void ApplyTimelineJson(nlohmann::json::const_reference jtl, TimelineComponent& tl) {
@@ -122,6 +126,15 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
             { "Alignment", (int)tc.Alignment },
             { "SortingLayer", tc.SortingLayer }
         };
+    }
+
+    if (entity.HasComponent<FoliageComponent>()) {
+        auto& fc = entity.GetComponent<FoliageComponent>();
+        je["Foliage"] = { { "MeshSource", fc.MeshSource }, { "AreaSize", Vec2ToJson(fc.AreaSize) },
+                          { "HeightScale", fc.HeightScale }, { "Count", fc.Count },
+                          { "ScaleMin", fc.ScaleMin }, { "ScaleMax", fc.ScaleMax },
+                          { "Seed", fc.Seed }, { "AvoidCenter", fc.AvoidCenter },
+                          { "Color", Vec4ToJson(fc.Color) } };
     }
 
     if (entity.HasComponent<OccluderComponent>()) {
@@ -536,7 +549,26 @@ if (je.contains("CharacterController")) {
         tc.SortingLayer = jt.value("SortingLayer", 0);
     }
 
-            if (je.contains("Occluder")) {
+                if (je.contains("Foliage")) {
+        auto& jf = je["Foliage"];
+        auto& fc = entity.HasComponent<FoliageComponent>()
+            ? entity.GetComponent<FoliageComponent>()
+            : entity.AddComponent<FoliageComponent>();
+        fc.MeshSource = jf.value("MeshSource", "builtin:cone");
+        fc.AreaSize = JsonToVec2(jf["AreaSize"]);
+        fc.HeightScale = jf.value("HeightScale", 1.0f);
+        fc.Count = jf.value("Count", 200u);
+        fc.ScaleMin = jf.value("ScaleMin", 0.6f);
+        fc.ScaleMax = jf.value("ScaleMax", 1.3f);
+        fc.Seed = jf.value("Seed", 42u);
+        fc.AvoidCenter = jf.value("AvoidCenter", true);
+        fc.Color = JsonToVec4(jf["Color"]);
+        fc.Regenerate();
+    } else if (entity.HasComponent<FoliageComponent>()) {
+        entity.RemoveComponent<FoliageComponent>();
+    }
+
+if (je.contains("Occluder")) {
         auto& jo = je["Occluder"];
         auto& oc = entity.HasComponent<OccluderComponent>()
             ? entity.GetComponent<OccluderComponent>()
@@ -902,7 +934,26 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         entity.RemoveComponent<TextComponent>();
     }
 
-            if (je.contains("Occluder")) {
+                if (je.contains("Foliage")) {
+        auto& jf = je["Foliage"];
+        auto& fc = entity.HasComponent<FoliageComponent>()
+            ? entity.GetComponent<FoliageComponent>()
+            : entity.AddComponent<FoliageComponent>();
+        fc.MeshSource = jf.value("MeshSource", "builtin:cone");
+        fc.AreaSize = JsonToVec2(jf["AreaSize"]);
+        fc.HeightScale = jf.value("HeightScale", 1.0f);
+        fc.Count = jf.value("Count", 200u);
+        fc.ScaleMin = jf.value("ScaleMin", 0.6f);
+        fc.ScaleMax = jf.value("ScaleMax", 1.3f);
+        fc.Seed = jf.value("Seed", 42u);
+        fc.AvoidCenter = jf.value("AvoidCenter", true);
+        fc.Color = JsonToVec4(jf["Color"]);
+        fc.Regenerate();
+    } else if (entity.HasComponent<FoliageComponent>()) {
+        entity.RemoveComponent<FoliageComponent>();
+    }
+
+if (je.contains("Occluder")) {
         auto& jo = je["Occluder"];
         auto& oc = entity.HasComponent<OccluderComponent>()
             ? entity.GetComponent<OccluderComponent>()

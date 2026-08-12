@@ -1598,6 +1598,20 @@ void Scene::UpdateAnimators(Timestep ts) {
             if (!ac.Skin) return;
         }
         if (ac.Skin->Joints.empty()) return; // arquivo sem skin
+        // Máquina de estados (pilar AAA v0.35): o clip vem do estado atual.
+        if (auto* sm = m_Registry.try_get<AnimatorStateMachineComponent>((entt::entity)e)) {
+            if (sm->m_TransitionTime < sm->m_TransitionDuration)
+                sm->m_TransitionTime += (float)ts;
+            else
+                sm->m_TransitionFrom = -1; // transição concluída — clip único
+            if (sm->CurrentState >= 0 && sm->CurrentState < (int)sm->States.size()) {
+                const auto& st = sm->States[sm->CurrentState];
+                ac.ClipName = st.Clip;
+                ac.Speed = st.Speed;
+                ac.Loop = st.Loop;
+            }
+        }
+
         if (!ac.Playing || ac.ClipName.empty()) return;
 
         ac.Time += (float)ts * ac.Speed;
@@ -1693,16 +1707,35 @@ static void ApplyTwoBoneIK(const SkinData* skin, glm::mat4* global, const TwoBon
 // global, e aplica o inverseBind no fim. 'count' = nº de juntas da skin.
 static bool ComputeSkinnedPose(const SkinData* skin, const AnimatorComponent& ac,
                                const AnimationBlendComponent* blend, const TwoBoneIKComponent* ik,
+                               const AnimatorStateMachineComponent* sm,
                                glm::mat4* outJoints, int count) {
     if (!skin || skin->Joints.empty()) return false;
 
+    // Estado atual da máquina de animação (pilar AAA v0.35): clip primário =
+    // clip do estado; durante a transição, mistura com o estado de origem.
+    std::string clipA = ac.ClipName;
+    std::string clipB;
+    float w = 0.0f;
+    if (sm && sm->CurrentState >= 0 && sm->CurrentState < (int)sm->States.size()) {
+        clipA = sm->States[sm->CurrentState].Clip;
+        if (sm->m_TransitionFrom >= 0 && sm->m_TransitionFrom < (int)sm->States.size() &&
+            sm->m_TransitionTime < sm->m_TransitionDuration) {
+            clipB = sm->States[sm->m_TransitionFrom].Clip;
+            w = glm::clamp(sm->m_TransitionTime / glm::max(sm->m_TransitionDuration, 0.001f), 0.0f, 1.0f);
+        }
+    }
+    if (clipA.empty()) clipA = ac.ClipName;
+
     glm::mat4 gA[kMaxSkinJoints];
-    if (!skin->EvaluateGlobal(ac.ClipName, ac.Time, gA, count)) return false;
+    if (!skin->EvaluateGlobal(clipA, ac.Time, gA, count)) return false;
 
     glm::mat4 gB[kMaxSkinJoints];
-    bool haveB = blend && blend->UseBlend && !blend->ClipB.empty() &&
-                 skin->EvaluateGlobal(blend->ClipB, ac.Time, gB, count);
-    float w = blend ? glm::clamp(blend->BlendWeight, 0.0f, 1.0f) : 0.0f;
+    bool haveB = false;
+    if (!clipB.empty() && skin->EvaluateGlobal(clipB, ac.Time, gB, count)) haveB = true;
+    if (!haveB && blend && blend->UseBlend && !blend->ClipB.empty()) {
+        if (skin->EvaluateGlobal(blend->ClipB, ac.Time, gB, count)) { haveB = true; clipB = blend->ClipB; }
+    }
+    if (!haveB) w = 0.0f;
 
     glm::mat4 global[kMaxSkinJoints];
     for (int i = 0; i < count; ++i) {
@@ -2556,8 +2589,9 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
                 glm::mat4 joints[kMaxSkinJoints];
                 auto* blend = m_Registry.try_get<AnimationBlendComponent>(me);
                 auto* ik = m_Registry.try_get<TwoBoneIKComponent>(me);
+                auto* sm = m_Registry.try_get<AnimatorStateMachineComponent>(me);
                 int jointCount = (int)std::min((size_t)animator->Skin->Joints.size(), (size_t)kMaxSkinJoints);
-                if (ComputeSkinnedPose(animator->Skin.get(), *animator, blend, ik, joints, jointCount))
+                if (ComputeSkinnedPose(animator->Skin.get(), *animator, blend, ik, sm, joints, jointCount))
                     Renderer3D::SubmitSkinned(mr.MeshAsset, mr.MeshMaterial, world, joints,
                                               (uint32_t)jointCount);
                 else

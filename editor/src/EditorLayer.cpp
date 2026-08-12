@@ -4421,6 +4421,84 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<AnimatorComponent>();
         }
 
+        if (m_SelectedEntity.HasComponent<AnimatorStateMachineComponent>()) {
+            auto& sm = m_SelectedEntity.GetComponent<AnimatorStateMachineComponent>();
+            bool removeSM = false;
+            if (DrawComponentHeader("Máquina de Estados (animação)", &removeSM)) {
+                if (sm.CurrentState >= 0 && sm.CurrentState < (int)sm.States.size())
+                    ImGui::TextDisabled("Estado atual: %s (blend: %.0f%%)",
+                                        sm.States[(size_t)sm.CurrentState].Name.c_str(),
+                                        sm.m_TransitionDuration > 0.0f
+                                            ? 100.0f * glm::clamp(sm.m_TransitionTime / sm.m_TransitionDuration, 0.0f, 1.0f)
+                                            : 100.0f);
+                else
+                    ImGui::TextDisabled("Nenhum estado selecionado.");
+
+                int removeIdx = -1;
+                for (int i = 0; i < (int)sm.States.size(); ++i) {
+                    auto& st = sm.States[(size_t)i];
+                    std::string label = "Estado " + std::to_string(i + 1);
+                    if (ImGui::TreeNodeEx(label.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
+                        char nameBuf[128], clipBuf[128];
+                        strncpy(nameBuf, st.Name.c_str(), sizeof(nameBuf) - 1); nameBuf[sizeof(nameBuf) - 1] = '\0';
+                        strncpy(clipBuf, st.Clip.c_str(), sizeof(clipBuf) - 1); clipBuf[sizeof(clipBuf) - 1] = '\0';
+                        ImGui::InputText("Nome", nameBuf, sizeof(nameBuf));
+                        st.Name = nameBuf;
+                        ImGui::InputText("Clip", clipBuf, sizeof(clipBuf));
+                        st.Clip = clipBuf;
+                        ImGui::DragFloat("Velocidade", &st.Speed, 0.05f, 0.0f, 10.0f);
+                        ImGui::Checkbox("Loop", &st.Loop);
+                        bool isCurrent = (i == sm.CurrentState);
+                        if (ImGui::Button(isCurrent ? "Tocando..." : "Tocar")) {
+                            sm.SetState(st.Name);
+                            if (m_SelectedEntity.HasComponent<AnimatorComponent>()) {
+                                auto& ac = m_SelectedEntity.GetComponent<AnimatorComponent>();
+                                if (ac.Skin) ac.Play(st.Clip);
+                            }
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Remover")) removeIdx = i;
+                        ImGui::TreePop();
+                    }
+                }
+                if (ImGui::Button("+ Adicionar Estado")) {
+                    sm.States.push_back({ "idle", "", 1.0f, true });
+                    if (sm.CurrentState < 0) sm.CurrentState = 0;
+                }
+                if (removeIdx >= 0 && removeIdx < (int)sm.States.size()) {
+                    sm.States.erase(sm.States.begin() + removeIdx);
+                    sm.CurrentState = sm.States.empty() ? -1 : 0;
+                }
+
+                ImGui::Separator();
+                int removeTr = -1;
+                for (int i = 0; i < (int)sm.Transitions.size(); ++i) {
+                    auto& tr = sm.Transitions[(size_t)i];
+                    std::string from = tr.From >= 0 && tr.From < (int)sm.States.size() ? sm.States[(size_t)tr.From].Name : "(qualquer)";
+                    std::string to = tr.To >= 0 && tr.To < (int)sm.States.size() ? sm.States[(size_t)tr.To].Name : "?";
+                    if (ImGui::TreeNodeEx(("Transição " + std::to_string(i + 1) + "  [" + from + " -> " + to + "]").c_str())) {
+                        int fromIdx = tr.From, toIdx = tr.To;
+                        ImGui::SliderInt("De", &fromIdx, -1, (int)sm.States.size() - 1);
+                        ImGui::SliderInt("Para", &toIdx, 0, (int)sm.States.size() - 1);
+                        ImGui::DragFloat("Crossfade (s)", &tr.BlendTime, 0.01f, 0.01f, 5.0f);
+                        tr.From = glm::clamp(fromIdx, -1, (int)sm.States.size() - 1);
+                        tr.To = glm::clamp(toIdx, 0, glm::max((int)sm.States.size() - 1, 0));
+                        if (ImGui::Button("Remover")) removeTr = i;
+                        ImGui::TreePop();
+                    }
+                }
+                if (ImGui::Button("+ Adicionar Transição"))
+                    sm.Transitions.push_back({ -1, 0, 0.3f });
+                if (removeTr >= 0 && removeTr < (int)sm.Transitions.size())
+                    sm.Transitions.erase(sm.Transitions.begin() + removeTr);
+
+                ImGui::TextDisabled("API: Entity.PlayAnimationState(\"correr\") faz o crossfade.");
+
+                ImGui::TreePop();
+            }
+            if (removeSM) m_SelectedEntity.RemoveComponent<AnimatorStateMachineComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<AnimationBlendComponent>()) {
             auto& ab = m_SelectedEntity.GetComponent<AnimationBlendComponent>();
             if (DrawComponentHeader("Blend de Animação", &removeThis)) {
@@ -5004,6 +5082,8 @@ void EditorLayer::DrawAddComponentButton() {
             m_SelectedEntity.AddComponent<LightComponent>();
         if (!m_SelectedEntity.HasComponent<AnimatorComponent>() && ImGui::MenuItem("Animador (skinning)"))
             m_SelectedEntity.AddComponent<AnimatorComponent>();
+        if (!m_SelectedEntity.HasComponent<AnimatorStateMachineComponent>() && ImGui::MenuItem("Máquina de Estados (animação)"))
+            m_SelectedEntity.AddComponent<AnimatorStateMachineComponent>();
         if (!m_SelectedEntity.HasComponent<AnimationBlendComponent>() && ImGui::MenuItem("Blend de Animação (2 clips)"))
             m_SelectedEntity.AddComponent<AnimationBlendComponent>();
         if (!m_SelectedEntity.HasComponent<TwoBoneIKComponent>() && ImGui::MenuItem("IK de Dois Ossos")) {

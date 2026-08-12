@@ -1,3 +1,7 @@
+if(WIN32)
+    enable_language(RC)
+endif()
+
 add_executable(KizuriEditor
     src/EditorApp.cpp
     src/EditorLayer.cpp
@@ -8,6 +12,7 @@ add_executable(KizuriEditor
     src/UI/Panels/GameViewPanel.cpp
     src/UI/Panels/MaterialEditorPanel.cpp
     src/UI/Panels/ProjectSettingsPanel.cpp
+    $<$<BOOL:${WIN32}>:resources/kizuri-editor.rc>
 )
 target_link_libraries(KizuriEditor PRIVATE KizuriEngine)
 target_include_directories(KizuriEditor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)

@@ -7,7 +7,9 @@
 # Sem argumentos, tenta "Start.kzscene" na pasta atual. Os caminhos de
 # assets dentro da cena são relativos ao diretório de trabalho, então rode
 # a partir da pasta do projeto/do jogo.
-add_executable(KizuriGame src/GameApp.cpp)
+add_executable(KizuriGame src/GameApp.cpp
+    $<$<BOOL:${WIN32}>:${CMAKE_CURRENT_SOURCE_DIR}/../../editor/resources/kizuri-editor.rc>
+)
 target_link_libraries(KizuriGame PRIVATE KizuriEngine)
 target_include_directories(KizuriGame PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 

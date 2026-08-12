@@ -387,6 +387,12 @@ public readonly struct Entity
 	public void SetAnimationLoop(bool loop) => Interop.KizuriNative.kz_animator_set_loop(Handle, loop ? 1 : 0);
 	public void SetAnimationPlaying(bool playing) => Interop.KizuriNative.kz_animator_set_playing(Handle, playing ? 1 : 0);
 
+	// Máquina de estados (Pilar AAA v0.35): troca o estado com crossfade.
+	public bool PlayAnimationState(string stateName, float crossfadeSeconds = 0.3f)
+		=> Interop.KizuriNative.kz_animator_set_state(Handle, stateName, crossfadeSeconds) != 0;
+
+	public string AnimationState => Interop.KizuriNative.kz_animator_get_state(Handle);
+
 	// ---- Física 3D (Bullet3) ----
 
 	// bodyType: 0=Estático, 1=Dinâmico, 2=Cinemático. Só simula durante o Play.

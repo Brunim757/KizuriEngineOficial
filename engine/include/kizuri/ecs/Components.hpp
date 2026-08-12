@@ -357,10 +357,43 @@ struct AnimatorComponent {
     }
 };
 
+// Estado de animação (pilar AAA v0.35): um clip + velocidade + loop.
+struct AnimStateDef {
+    std::string Name;      // identificador usado pela API (PlayState("correr"))
+    std::string Clip;      // clip da skin tocado neste estado
+    float Speed = 1.0f;
+    bool Loop = true;
+};
+
+// Transição entre estados: de From até To com crossfade de BlendTime segundos.
+struct AnimTransitionDef {
+    int From = -1;         // índice do estado de origem (-1 = qualquer)
+    int To = 0;            // índice do estado de destino
+    float BlendTime = 0.3f;
+};
+
 // Blend de animação (pilar AAA v0.34): mistura dois clips da MESMA skin por
 // um peso 0..1 (ex: idle↔andando pelo speed). A mistura é feita nas matrizes
 // globais (TRS: lerp posição, slerp rotação, lerp escala) ANTES do inverse
 // bind — o mesmo resultado do crossfade dos motores AAA.
+// Máquina de estados de animação (pilar AAA v0.35): Estados + Transições
+// com crossfade — o estado atual define o clip; a transição mistura os dois
+// clips pelo tempo de blend (reutiliza o caminho de blend da pose).
+struct AnimatorStateMachineComponent {
+    std::vector<AnimStateDef> States;
+    std::vector<AnimTransitionDef> Transitions;
+
+    int CurrentState = -1;            // runtime
+    int m_TransitionFrom = -1;        // runtime
+    float m_TransitionTime = 0.0f;    // runtime
+    float m_TransitionDuration = 0.3f;// runtime
+
+    // Toca um estado pelo nome; retorna true se achou. Crossfade se existir
+    // transição (ou o blend padrão de 0.3s).
+    bool SetState(const std::string& name, float defaultBlend = 0.3f);
+    bool IsInState(const std::string& name) const;
+};
+
 struct AnimationBlendComponent {
     std::string ClipA;         // clip base (peso 0)
     std::string ClipB;         // clip alvo (peso 1)

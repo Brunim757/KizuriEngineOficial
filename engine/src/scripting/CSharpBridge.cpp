@@ -1249,6 +1249,29 @@ KZ_SCRIPT_API void kz_animator_set_playing(uint32_t entity, int playing) {
     e.GetComponent<kizuri::AnimatorComponent>().Playing = playing != 0;
 }
 
+// Máquina de estados (pilar AAA v0.35): troca o estado com crossfade.
+// Retorna 1 se o estado existe e foi agendado, 0 caso contrário.
+KZ_SCRIPT_API int kz_animator_set_state(uint32_t entity, const char* stateName, float blendTime) {
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::AnimatorStateMachineComponent>() || stateName == nullptr) return 0;
+    auto& sm = e.GetComponent<kizuri::AnimatorStateMachineComponent>();
+    // Garante que o animador base existe (o estado precisa de um Skin pra tocar).
+    if (!e.HasComponent<kizuri::AnimatorComponent>()) return 0;
+    return sm.SetState(stateName, blendTime) ? 1 : 0;
+}
+
+KZ_SCRIPT_API const char* kz_animator_get_state_ptr(uint32_t entity) {
+    static std::string cached;
+    auto e = Resolve(entity);
+    if (!e || !e.HasComponent<kizuri::AnimatorStateMachineComponent>()) return "";
+    const auto& sm = e.GetComponent<kizuri::AnimatorStateMachineComponent>();
+    if (sm.IsInState("")) return ""; // mantém leitura simples embaixo
+    if (sm.CurrentState >= 0 && sm.CurrentState < (int)sm.States.size())
+        cached = sm.States[(size_t)sm.CurrentState].Name;
+    else cached.clear();
+    return cached.c_str();
+}
+
 // ---------------------------------------------------------------------------
 // Física 3D (Bullet3) — os corpos existem só durante o Play; adicionar o
 // componente em runtime é seguro (o UpdatePhysics3D registra sob demanda).

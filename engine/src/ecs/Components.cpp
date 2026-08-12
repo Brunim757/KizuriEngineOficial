@@ -8,6 +8,31 @@
 
 namespace kizuri {
 
+
+// SetState: procura pelo nome; se é um estado novo, inicia o crossfade.
+bool AnimatorStateMachineComponent::SetState(const std::string& name, float defaultBlend) {
+    for (int i = 0; i < (int)States.size(); ++i) {
+        if (States[i].Name != name) continue;
+        if (i == CurrentState) return true; // já está nele
+        // Acha uma transição específica (senão usa o blend padrão).
+        float blend = defaultBlend;
+        for (const auto& tr : Transitions) {
+            if (tr.To == i && (tr.From == -1 || tr.From == CurrentState)) { blend = tr.BlendTime; break; }
+        }
+        m_TransitionFrom = CurrentState;
+        m_TransitionTime = 0.0f;
+        m_TransitionDuration = glm::max(blend, 0.01f);
+        CurrentState = i;
+        return true;
+    }
+    return false;
+}
+
+bool AnimatorStateMachineComponent::IsInState(const std::string& name) const {
+    return CurrentState >= 0 && CurrentState < (int)States.size() && States[CurrentState].Name == name;
+}
+
+
 // Gera as instâncias de vegetação (determinístico pela seed): posições XZ
 // na área, escala aleatória e yaw aleatório; um raio vazio no centro.
 void FoliageComponent::Regenerate() {

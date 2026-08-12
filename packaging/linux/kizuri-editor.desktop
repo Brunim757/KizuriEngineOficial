@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Kizuri Editor
+GenericName=Game Editor
+Comment=Kizuri Engine — editor de jogos
+Exec=KizuriEditor
+Icon=kizuri-torii
+Terminal=false
+Categories=Development;IDE;Graphics;
+Keywords=game;engine;editor;3d;

@@ -112,6 +112,15 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_animator_set_speed(uint entity, float speed);
     [DllImport(Lib)] internal static extern void kz_animator_set_loop(uint entity, int loop);
     [DllImport(Lib)] internal static extern void kz_animator_set_playing(uint entity, int playing);
+    [DllImport(Lib)] internal static extern int kz_animator_set_state(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string stateName, float blendTime);
+    internal static string kz_animator_get_state(uint entity)
+    {
+        // A engine mantém o último estado num buffer estático (thread-safe
+        // aqui: chamado sempre da thread principal).
+        IntPtr p = kz_animator_get_state_ptr(entity);
+        return p == IntPtr.Zero ? "" : Marshal.PtrToStringUTF8(p);
+    }
+    [DllImport(Lib)] internal static extern IntPtr kz_animator_get_state_ptr(uint entity);
 
     // ---- Física 3D (Bullet3) ---------------------------------------------------
     [DllImport(Lib)] internal static extern int kz_entity_add_rigidbody3d(uint entity, int bodyType, float mass);

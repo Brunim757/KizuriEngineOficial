@@ -410,6 +410,17 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
         };
     }
 
+    if (entity.HasComponent<AnimatorStateMachineComponent>()) {
+        const auto& sm = entity.GetComponent<AnimatorStateMachineComponent>();
+        nlohmann::json jstates = nlohmann::json::array();
+        for (const auto& st : sm.States)
+            jstates.push_back({ { "Name", st.Name }, { "Clip", st.Clip }, { "Speed", st.Speed }, { "Loop", st.Loop } });
+        nlohmann::json jtrans = nlohmann::json::array();
+        for (const auto& tr : sm.Transitions)
+            jtrans.push_back({ { "From", tr.From }, { "To", tr.To }, { "BlendTime", tr.BlendTime } });
+        je["AnimatorSM"] = { { "States", std::move(jstates) }, { "Transitions", std::move(jtrans) } };
+    }
+
     return je;
 }
 
@@ -883,6 +894,31 @@ if (je.contains("SpriteAnimation")) {
         // Skin é carregada sob demanda no primeiro UpdateAnimators (Scene.cpp).
     }
 
+    if (je.contains("AnimatorSM")) {
+        const auto& jsm = je["AnimatorSM"];
+        auto& sm = entity.AddComponent<AnimatorStateMachineComponent>();
+        if (jsm.contains("States") && jsm["States"].is_array()) {
+            for (const auto& js : jsm["States"]) {
+                AnimStateDef st;
+                st.Name = js.value("Name", "");
+                st.Clip = js.value("Clip", "");
+                st.Speed = js.value("Speed", 1.0f);
+                st.Loop = js.value("Loop", true);
+                if (!st.Name.empty()) sm.States.push_back(std::move(st));
+            }
+        }
+        if (jsm.contains("Transitions") && jsm["Transitions"].is_array()) {
+            for (const auto& jt : jsm["Transitions"]) {
+                AnimTransitionDef tr;
+                tr.From = jt.value("From", -1);
+                tr.To = jt.value("To", 0);
+                tr.BlendTime = jt.value("BlendTime", 0.3f);
+                sm.Transitions.push_back(tr);
+            }
+        }
+        if (!sm.States.empty()) sm.CurrentState = 0; // começa tocando o 1º
+    }
+
     return entity;
 }
 
@@ -1285,6 +1321,39 @@ if (je.contains("SpriteAnimation")) {
         entity.GetComponent<NativeScriptComponent>().BindByName(className);
     } else if (entity.HasComponent<NativeScriptComponent>()) {
         entity.RemoveComponent<NativeScriptComponent>();
+    }
+
+    if (je.contains("AnimatorSM")) {
+        auto& sm = entity.HasComponent<AnimatorStateMachineComponent>()
+            ? entity.GetComponent<AnimatorStateMachineComponent>()
+            : entity.AddComponent<AnimatorStateMachineComponent>();
+        sm.States.clear();
+        sm.Transitions.clear();
+        sm.CurrentState = -1;
+        sm.m_TransitionFrom = -1;
+        sm.m_TransitionTime = 0.0f;
+        if (je["AnimatorSM"].contains("States") && je["AnimatorSM"]["States"].is_array()) {
+            for (const auto& js : je["AnimatorSM"]["States"]) {
+                AnimStateDef st;
+                st.Name = js.value("Name", "");
+                st.Clip = js.value("Clip", "");
+                st.Speed = js.value("Speed", 1.0f);
+                st.Loop = js.value("Loop", true);
+                if (!st.Name.empty()) sm.States.push_back(std::move(st));
+            }
+        }
+        if (je["AnimatorSM"].contains("Transitions") && je["AnimatorSM"]["Transitions"].is_array()) {
+            for (const auto& jt : je["AnimatorSM"]["Transitions"]) {
+                AnimTransitionDef tr;
+                tr.From = jt.value("From", -1);
+                tr.To = jt.value("To", 0);
+                tr.BlendTime = jt.value("BlendTime", 0.3f);
+                sm.Transitions.push_back(tr);
+            }
+        }
+        if (!sm.States.empty()) sm.CurrentState = 0;
+    } else if (entity.HasComponent<AnimatorStateMachineComponent>()) {
+        entity.RemoveComponent<AnimatorStateMachineComponent>();
     }
 
     if (je.contains("Animator")) {

@@ -115,7 +115,10 @@ struct NetTransform {
     uint8_t Flags = 0;       // bits livres pro jogo (vivo, atacando...)
 };
 
-// Empacota/desempacota um NetTransform num buffer (16 bytes: 4+3*4+4+1).
+// Empacota/desempacota um NetTransform num buffer:
+//   EntityId(4) + pos(12) + Yaw(4) + Flags(1) = 21 bytes (kNetTransformSize).
+// GCC com -Warray-bounds/-Wstringop-overflow valida o tamanho via static_assert
+// abaixo — se o layout mudar e o tamanho não acompanhar, o build quebra.
 inline void WriteNetTransform(NetTransform t, uint8_t* out) {
     uint8_t* p = out;
     *reinterpret_cast<uint32_t*>(p) = t.EntityId; p += 4;
@@ -136,7 +139,9 @@ inline NetTransform ReadNetTransform(const uint8_t* in) {
     t.Flags = *p;
     return t;
 }
-inline constexpr size_t kNetTransformSize = 17;
+inline constexpr size_t kNetTransformSize = 21;
+static_assert(kNetTransformSize == sizeof(uint32_t) + 3 * sizeof(float) + sizeof(float) + sizeof(uint8_t),
+              "kNetTransformSize desatualizado vs WriteNetTransform/ReadNetTransform");
 
 } // namespace net
 } // namespace kizuri

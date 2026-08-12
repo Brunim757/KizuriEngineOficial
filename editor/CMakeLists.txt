@@ -2,6 +2,8 @@ add_executable(KizuriEditor
     src/EditorApp.cpp
     src/EditorLayer.cpp
     src/UI/Icons.cpp
+    src/UI/Panels/AnimatorPanel.cpp
+    src/UI/Panels/ParticleEditorPanel.cpp
     src/UI/Panels/ProfilerPanel.cpp
     src/UI/Panels/GameViewPanel.cpp
     src/UI/Panels/MaterialEditorPanel.cpp

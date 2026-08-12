@@ -124,6 +124,12 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
         };
     }
 
+    if (entity.HasComponent<OccluderComponent>()) {
+        auto& oc = entity.GetComponent<OccluderComponent>();
+        je["Occluder"] = { { "HalfExtents", Vec3ToJson(oc.HalfExtents) },
+                           { "MaxOcclusionDistance", oc.MaxOcclusionDistance } };
+    }
+
     if (entity.HasComponent<DecalComponent>()) {
         auto& dc = entity.GetComponent<DecalComponent>();
         je["Decal"] = { { "TexturePath", dc.TexturePath }, { "Color", Vec4ToJson(dc.Color) },
@@ -530,7 +536,18 @@ if (je.contains("CharacterController")) {
         tc.SortingLayer = jt.value("SortingLayer", 0);
     }
 
-        if (je.contains("Decal")) {
+            if (je.contains("Occluder")) {
+        auto& jo = je["Occluder"];
+        auto& oc = entity.HasComponent<OccluderComponent>()
+            ? entity.GetComponent<OccluderComponent>()
+            : entity.AddComponent<OccluderComponent>();
+        oc.HalfExtents = JsonToVec3(jo["HalfExtents"]);
+        oc.MaxOcclusionDistance = jo.value("MaxOcclusionDistance", 60.0f);
+    } else if (entity.HasComponent<OccluderComponent>()) {
+        entity.RemoveComponent<OccluderComponent>();
+    }
+
+if (je.contains("Decal")) {
         auto& jd = je["Decal"];
         auto& dc = entity.HasComponent<DecalComponent>()
             ? entity.GetComponent<DecalComponent>()
@@ -885,7 +902,18 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         entity.RemoveComponent<TextComponent>();
     }
 
-        if (je.contains("Decal")) {
+            if (je.contains("Occluder")) {
+        auto& jo = je["Occluder"];
+        auto& oc = entity.HasComponent<OccluderComponent>()
+            ? entity.GetComponent<OccluderComponent>()
+            : entity.AddComponent<OccluderComponent>();
+        oc.HalfExtents = JsonToVec3(jo["HalfExtents"]);
+        oc.MaxOcclusionDistance = jo.value("MaxOcclusionDistance", 60.0f);
+    } else if (entity.HasComponent<OccluderComponent>()) {
+        entity.RemoveComponent<OccluderComponent>();
+    }
+
+if (je.contains("Decal")) {
         auto& jd = je["Decal"];
         auto& dc = entity.HasComponent<DecalComponent>()
             ? entity.GetComponent<DecalComponent>()

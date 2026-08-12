@@ -2447,6 +2447,70 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
         }
     }
 
+    // Culling de OCULSÃO por occluders (pilar AAA v0.35): um objeto é
+    // descartado quando a projeção da AABB dele cabe inteira DENTRO da
+    // projeção de um OccluderComponent E está mais fundo que ele (margens
+    // de segurança pra não abrir furos nas bordas).
+    struct OccluderProj { float MinX, MinY, MaxX, MaxY; float NearZ; };
+    std::vector<OccluderProj> occluders;
+    if (cullCam) {
+        auto occView = m_Registry.view<TransformComponent, OccluderComponent>();
+        for (auto oe : occView) {
+            Entity oEnt{ oe, this };
+            if (!IsEntityActive(oEnt)) continue;
+            auto& occ = occView.get<OccluderComponent>(oe);
+            glm::mat4 ow = GetWorldTransform(oEnt);
+            glm::vec3 half = occ.HalfExtents;
+            if (half.x <= 0.0f && half.y <= 0.0f && half.z <= 0.0f)
+                half = oEnt.GetComponent<TransformComponent>().Scale * 0.5f;
+            glm::vec3 center = glm::vec3(ow[3]);
+            if (glm::length(center - camPos) > occ.MaxOcclusionDistance) continue;
+
+            OccluderProj op;
+            op.MinX = op.MinY = 1e30f;
+            op.MaxX = op.MaxY = -1e30f;
+            op.NearZ = 1e30f;
+            bool ok = true;
+            for (int i = 0; i < 8; ++i) {
+                glm::vec3 sgn((i & 1) ? half.x : -half.x, (i & 2) ? half.y : -half.y, (i & 4) ? half.z : -half.z);
+                glm::vec4 wp = ow * glm::vec4(sgn, 1.0f);
+                glm::vec4 clip = cullVP * wp;
+                if (clip.w <= 0.001f) { ok = false; break; }
+                glm::vec3 ndc = glm::vec3(clip) / clip.w;
+                op.MinX = std::min(op.MinX, ndc.x); op.MaxX = std::max(op.MaxX, ndc.x);
+                op.MinY = std::min(op.MinY, ndc.y); op.MaxY = std::max(op.MaxY, ndc.y);
+                op.NearZ = std::min(op.NearZ, ndc.z);
+            }
+            if (!ok) continue;
+            occluders.push_back(op);
+        }
+    }
+    auto IsOccluded = [&](const glm::vec3& wmin, const glm::vec3& wmax) {
+        if (occluders.empty()) return false;
+        for (const auto& op : occluders) {
+            float oMinX = 1e30f, oMinY = 1e30f, oMaxX = -1e30f, oMaxY = -1e30f, farZ = -1e30f;
+            bool ok = true;
+            glm::vec3 c[8];
+            for (int i = 0; i < 8; ++i) {
+                glm::vec3 sgn((i & 1) ? wmax.x : wmin.x, (i & 2) ? wmax.y : wmin.y, (i & 4) ? wmax.z : wmin.z);
+                c[i] = sgn;
+                glm::vec4 clip = cullVP * glm::vec4(c[i], 1.0f);
+                if (clip.w <= 0.001f) { ok = false; break; }
+                glm::vec3 ndc = glm::vec3(clip) / clip.w;
+                oMinX = std::min(oMinX, ndc.x); oMaxX = std::max(oMaxX, ndc.x);
+                oMinY = std::min(oMinY, ndc.y); oMaxY = std::max(oMaxY, ndc.y);
+                farZ = std::max(farZ, ndc.z);
+            }
+            if (!ok) continue;
+            const float margin = 0.02f; // ~2% da tela nas bordas
+            if (oMinX >= op.MinX + margin && oMaxX <= op.MaxX - margin &&
+                oMinY >= op.MinY + margin && oMaxY <= op.MaxY - margin &&
+                farZ >= op.NearZ + 0.001f)
+                return true;
+        }
+        return false;
+    };
+
     auto SubmitMeshes = [&]() {
         auto meshes = m_Registry.view<TransformComponent, MeshRendererComponent>();
 
@@ -2480,20 +2544,26 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
                 continue;
             }
 
-            // Frustum culling: AABB do mundo (8 cantos transformados) fora da
-            // câmera => não submete (economiza vértices/pixels no passe 3D).
+            // AABB da malha em espaço de MUNDO (base dos dois cullings).
+            glm::vec3 wmin(1e30f), wmax(-1e30f);
             if (cullCam) {
                 glm::vec3 mn = mr.MeshAsset->GetBoundsMin(), mx = mr.MeshAsset->GetBoundsMax();
                 glm::vec3 corners[8] = {
                     {mn.x,mn.y,mn.z},{mx.x,mn.y,mn.z},{mn.x,mx.y,mn.z},{mx.x,mx.y,mn.z},
                     {mn.x,mn.y,mx.z},{mx.x,mn.y,mx.z},{mn.x,mx.y,mx.z},{mx.x,mx.y,mx.z}
                 };
-                glm::vec3 wmin(1e30f), wmax(-1e30f);
                 for (auto& c : corners) {
                     glm::vec3 w = glm::vec3(world * glm::vec4(c, 1.0f));
                     wmin = glm::min(wmin, w);
                     wmax = glm::max(wmax, w);
                 }
+            }
+
+            // Culling de oclusão: totalmente atrás de um occluder => pula.
+            if (cullCam && IsOccluded(wmin, wmax)) continue;
+
+            // Frustum culling: AABB fora da câmera => não submete.
+            if (cullCam) {
                 if (!AABBInFrustum(cullVP, wmin, wmax)) continue;
 
                 // Culling por TAMANHO DE TELA: objeto cuja AABB projetada cabe

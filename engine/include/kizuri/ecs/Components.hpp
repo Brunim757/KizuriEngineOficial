@@ -92,6 +92,14 @@ struct TextComponent {
 // orientada — a escala do transform é o tamanho do decal; a projeção sai
 // pelo eixo Z local (gire o decal pra encostar na superfície desejada).
 // Usado pra sujeira, sangue, marcas de pneu, luzes de neon, poças...
+// Occluder (pilar AAA v0.35): caixa sólida que BLOQUEIA a visão de tudo
+// que estiver atrás dela — o renderer descarta objetos totalmente ocultos
+// por ela (culling de oclusão por projeção em tela).
+struct OccluderComponent {
+    glm::vec3 HalfExtents{ 0.0f }; // 0 = usa a escala do transform
+    float MaxOcclusionDistance = 60.0f; // só oclui alvos até essa distância
+};
+
 struct DecalComponent {
     std::string TexturePath;     // serializável
     Ref<Texture2D> Texture;      // runtime (carregada sob demanda)

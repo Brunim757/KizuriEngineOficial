@@ -4544,6 +4544,17 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<EnemyAIComponent>();
         }
 
+        if (m_SelectedEntity.HasComponent<OccluderComponent>()) {
+            auto& oc = m_SelectedEntity.GetComponent<OccluderComponent>();
+            if (DrawComponentHeader("Occluder", &removeThis)) {
+                ImGui::DragFloat3("Meia-extensão", &oc.HalfExtents.x, 0.1f);
+                ImGui::DragFloat("Distância máxima de oclusão", &oc.MaxOcclusionDistance, 1.0f, 1.0f, 1000.0f);
+                ImGui::TextDisabled("(0,0,0) = usa a escala. Objetos inteiramente atrás não são desenhados.");
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<OccluderComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<DecalComponent>()) {
             auto& dc = m_SelectedEntity.GetComponent<DecalComponent>();
             if (DrawComponentHeader("Decal (textura projetada)", &removeThis)) {
@@ -4981,6 +4992,8 @@ void EditorLayer::DrawAddComponentButton() {
             m_SelectedEntity.AddComponent<SpriteAnimationComponent>();
         if (!m_SelectedEntity.HasComponent<DecalComponent>() && ImGui::MenuItem("Decal (textura projetada)"))
             m_SelectedEntity.AddComponent<DecalComponent>();
+        if (!m_SelectedEntity.HasComponent<OccluderComponent>() && ImGui::MenuItem("Occluder (bloqueia visão)"))
+            m_SelectedEntity.AddComponent<OccluderComponent>();
         if (!m_SelectedEntity.HasComponent<TilemapComponent>() && ImGui::MenuItem("Tilemap"))
             m_SelectedEntity.AddComponent<TilemapComponent>();
         if (!m_SelectedEntity.HasComponent<ParticleSystemComponent>() && ImGui::MenuItem("Particle System"))

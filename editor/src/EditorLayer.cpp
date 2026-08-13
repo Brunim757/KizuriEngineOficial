@@ -5,6 +5,7 @@
 // isso o #define precisa vir antes até desse include.
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "EditorLayer.hpp"
+#include <glad/gl.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 #define GLM_ENABLE_EXPERIMENTAL
@@ -22,6 +23,7 @@
 #include <kizuri/scripting/ScriptEngine.hpp>
 #include <kizuri/net/NetworkFacade.hpp>
 #include <kizuri/core/CommandLineArgs.hpp>
+#include "kizuri/renderer/TextRenderer.hpp"
 #include <fstream>
 #include <cfloat>
 #include <cctype>
@@ -1075,14 +1077,19 @@ void EditorLayer::OnUpdate(Timestep ts) {
         }
         m_ActiveScene->SetUIMouseNDC(ndc, Input::IsMouseButtonPressed(Mouse::Left));
 
-        // Play: roda a LÓGICA do jogo uma vez e renderiza o VIEWPORT com a
-        // CÂMERA DO EDITOR — você voa pela cena enquanto o jogo roda (o
-        // GameView mostra a câmera do jogador). Navegação livre ativa.
-        // (2D usa a câmera ortográfica — senão a rodinha não dava zoom.)
-        if (m_ViewportMode == ViewportMode::Mode2D) UpdateEditor2DCamera(ts);
-        else UpdateEditorCamera(ts);
+        // Play: roda a LÓGICA do jogo uma vez e renderiza o viewport.
+        // Padrão (recomendado): CÂMERA DO JOGO — o que o jogador vê, WASD
+        // move o personagem na tela. A câmera do editor (voar pela cena) é
+        // um modo opcional pra cenas sem câmera própria ou quando o usuário
+        // desligar a preferência nas Configurações.
         m_ActiveScene->OnUpdateRuntimeLogic(ts);
-        m_ActiveScene->RenderRuntimeWithEditorCamera(m_EditorCamera);
+        if (m_PlayUsesGameCamera && m_ActiveScene->HasPrimaryCamera()) {
+            m_ActiveScene->RenderRuntimeView();
+        } else {
+            if (m_ViewportMode == ViewportMode::Mode2D) UpdateEditor2DCamera(ts);
+            else UpdateEditorCamera(ts);
+            m_ActiveScene->RenderRuntimeWithEditorCamera(m_EditorCamera);
+        }
 
         std::string nextScene;
         if (m_ActiveScene->PollPendingLoad(nextScene)) {
@@ -2186,6 +2193,10 @@ void EditorLayer::DrawSettingsEditor() {
     ImGui::SameLine();
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Roda dotnet build no Source/*.csproj antes de entrar no Play.");
+    ImGui::Checkbox("Play no viewport usa a CÂMERA DO JOGO", &m_PlayUsesGameCamera);
+    ImGui::SameLine();
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Mostra no viewport principal o que o jogador vê (WASD move o personagem). Desligue pra voar pela cena com a câmera do editor.");
     ImGui::Spacing();
 
     ImGui::TextUnformatted("Câmera do editor");
@@ -2209,6 +2220,11 @@ void EditorLayer::DrawSettingsEditor() {
     ImGui::TextUnformatted("Viewport");
     ImGui::Separator();
     ImGui::Checkbox("Mostrar estatísticas (FPS / draw calls / triângulos)", &m_ShowStats);
+    ImGui::SameLine();
+    if (ImGui::Button("Diagnóstico de Texto")) m_ShowTextDiag = !m_ShowTextDiag;
+    ImGui::SameLine();
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Janela que mostra o atlas da fonte + estado do blending — pra diagnosticar texto em retângulo branco.");
     ImGui::Checkbox("Mostrar colliders de todos os objetos (overlay de física)", &m_ShowColliders);
     ImGui::Checkbox("Maximizar viewport (botão fullscreen da toolbar)", &m_ViewportMaximized);
     ImGui::Spacing();
@@ -5528,6 +5544,31 @@ void EditorLayer::OnImGuiRender() {
         dl->AddText(ImVec2(pos.x + pad * 2.0f, pos.y + pad * 2.0f),
                     IM_COL32(220, 230, 245, 235), buf);
         (void)gs;
+    }
+
+    // Janela de diagnóstico do TEXTO: atlas da fonte em tempo real + estado
+    // do blending + status do bake. Ligada em Configurações > Editor >
+    // "Diagnóstico de Texto" — pra investigar "texto em retângulo branco".
+    if (m_ShowTextDiag) {
+        ImGui::SetNextWindowSize(ImVec2(560, 380), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowPos(ImVec2(60, 60), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin("Diagnóstico de Texto", &m_ShowTextDiag)) {
+            ImGui::TextUnformatted(kizuri::TextRenderer::GetDiagnostics().c_str());
+            ImGui::Text("GL_BLEND agora: %s", glIsEnabled(GL_BLEND) ? "LIGADO" : "DESLIGADO");
+            ImGui::Text("(o texto força blending no draw; ver TextRenderer::DrawString)");
+            ImGui::Separator();
+            auto atlas = kizuri::TextRenderer::GetAtlasTexture();
+            if (atlas) {
+                ImGui::Text("Atlas (cada letra = glifo branco sobre transparente):");
+                ImGui::Image((ImTextureID)(uint64_t)atlas->GetRendererID(), ImVec2(512, 512));
+            } else {
+                ImGui::TextColored(ImVec4(1, 0.4f, 0.4f, 1), "Atlas NÃO gerado — procure no log por 'TextRenderer:'.");
+            }
+            ImGui::Spacing();
+            ImGui::TextDisabled("Letras visíveis no atlas = bake OK. Se o texto na cena sair branco\n"
+                                "com o atlas cheio, é estado de blending/ordem de passe.");
+        }
+        ImGui::End();
     }
 
     // Faixa de DIAGNÓSTICO (vermelha): mostra na tela a última falha de

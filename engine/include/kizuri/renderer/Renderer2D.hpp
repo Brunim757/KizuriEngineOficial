@@ -43,6 +43,10 @@ public:
 
     // Círculo 2D (preenchido ou anel) com borda suavizada — pipeline próprio
     // (shader de SDF por distância ao centro), não um quad texturizado.
+    // Contorno de retângulo (4 quads finos) — guia de "limite da tela" no
+    // viewport 2D do editor. Espessura em unidades de mundo.
+    static void DrawRectOutline(const glm::vec2& center, const glm::vec2& size, float thickness, const glm::vec4& color);
+
     static void DrawCircle(const glm::mat4& transform, const glm::vec4& color,
                            float thickness = 1.0f, float fade = 0.005f, int entityID = -1);
 

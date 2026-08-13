@@ -411,6 +411,17 @@ void Renderer2D::DrawTransformedQuadUV(const glm::mat4& transform, const Ref<Tex
     PushQuadVertices(transform, tint, texCoords, 0.0f, tilingFactor);
 }
 
+void Renderer2D::DrawRectOutline(const glm::vec2& center, const glm::vec2& size, float thickness, const glm::vec4& color) {
+    const float t = glm::max(thickness, 0.001f);
+    const glm::vec2 half = size * 0.5f;
+    // Topo e base (barras horizontais) + esquerda e direita (verticais) —
+    // sobreposição nas pontas é invisível (mesma cor).
+    DrawQuad({ center.x, center.y + half.y - t * 0.5f, 0.0f }, { size.x, t }, color);
+    DrawQuad({ center.x, center.y - half.y + t * 0.5f, 0.0f }, { size.x, t }, color);
+    DrawQuad({ center.x - half.x + t * 0.5f, center.y, 0.0f }, { t, size.y }, color);
+    DrawQuad({ center.x + half.x - t * 0.5f, center.y, 0.0f }, { t, size.y }, color);
+}
+
 void Renderer2D::DrawCircle(const glm::mat4& transform, const glm::vec4& color, float thickness, float fade, int) {
     if (s_Data.CircleIndexCount >= Renderer2DData::MaxCircleIndices) {
         // Lote cheio: despeja o que tem e recomeça — mesmo padrão dos quads.

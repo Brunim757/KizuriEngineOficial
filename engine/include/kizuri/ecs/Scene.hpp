@@ -160,6 +160,9 @@ public:
     // você voa pela cena enquanto o jogo roda.
     void RenderRuntimeWithEditorCamera(class PerspectiveCamera& editorCamera);
 
+    // true se a cena tem uma CameraComponent primária ativa (2D ou 3D).
+    bool HasPrimaryCamera();
+
     void OnUpdateEditor3D(Timestep ts, class PerspectiveCamera& editorCamera);
     void OnUpdateEditor2D(Timestep ts, class OrthographicCamera& editorCamera);
     void OnViewportResize(uint32_t width, uint32_t height);

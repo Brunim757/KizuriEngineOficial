@@ -203,8 +203,12 @@ private:
     char m_ExportVersion[32] = "1.0";
     int m_ExportWidth = 1280;
     int m_ExportHeight = 720;
-    bool m_AutoCompileOnPlay = true;   // compila o assembly C# antes do Play (estilo Unity)
+    bool m_AutoCompileOnPlay = true;
+    // Play com a CÂMERA DO JOGO no viewport (o que o jogador vê) — WASD mexe
+    // o personagem na tela. Desliga pra voar com a câmera do editor.
+    bool m_PlayUsesGameCamera = true;   // compila o assembly C# antes do Play (estilo Unity)
     bool m_ShowStats = true;           // overlay de estatísticas no viewport (FPS/draw calls/tris)
+    bool m_ShowTextDiag = false;       // janela de diagnóstico do texto (atlas + estado GL)
     float m_FpsSmoothed = 0.0f;        // FPS médio suavizado (Profiler do viewport)
     bool m_ShowColliders = false;      // overlay de física: desenha TODOS os colliders da cena (debug)
     // Escultura de terreno (pilar AAA v0.34): pincel no viewport 3D.

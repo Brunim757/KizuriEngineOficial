@@ -1413,6 +1413,15 @@ void Scene::RenderRuntimeView() {
     RenderUI();
 }
 
+bool Scene::HasPrimaryCamera() {
+    auto camView = m_Registry.view<TransformComponent, CameraComponent>();
+    for (auto e : camView) {
+        const auto& cam = camView.get<CameraComponent>(e);
+        if (cam.Primary && IsEntityActive(Entity{ e, this })) return true;
+    }
+    return false;
+}
+
 void Scene::RenderRuntimeWithEditorCamera(PerspectiveCamera& editorCamera) {
     KZ_TRACE_SCOPE("Scene::RenderRuntimeWithEditorCamera");
     // Viewport durante o Play: o mundo do jogo (já atualizado pela lógica)
@@ -1472,6 +1481,17 @@ void Scene::RenderScene2D(OrthographicCamera* overrideCamera) {
         Renderer2D::BeginScene(*overrideCamera);
         Renderer2D::DrawGrid();
         Render2DEntities();
+        // Guia de "fim do espaço de tela": retângulo com os limites visíveis
+        // da câmera ortográfica do editor (pan/zoom) — o usuário vê onde a
+        // área do jogo termina antes de criar sprites fora da tela.
+        const glm::mat4 proj = overrideCamera->GetProjectionMatrix();
+        float halfW = 1.0f / glm::max(glm::abs(proj[0][0]), 1e-6f);
+        float halfH = 1.0f / glm::max(glm::abs(proj[1][1]), 1e-6f);
+        Renderer2D::DrawRectOutline(
+            overrideCamera->GetPosition(),
+            { halfW * 2.0f, halfH * 2.0f },
+            glm::max(halfH * 0.012f, 0.03f),
+            { 1.0f, 0.72f, 0.20f, 0.85f });
         Renderer2D::EndScene();
         return;
     }

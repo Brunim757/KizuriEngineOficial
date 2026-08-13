@@ -1,5 +1,6 @@
 #include "kizuri/renderer/TextRenderer.hpp"
 #include "kizuri/renderer/Renderer2D.hpp"
+#include "kizuri/renderer/RenderCommand.hpp"
 #include "kizuri/core/Log.hpp"
 #include <glad/gl.h>
 
@@ -201,10 +202,24 @@ float TextRenderer::MeasureWidth(const std::string& text, float fontSize) {
     return glm::max(maxWidth, lineWidth);
 }
 
+bool TextRenderer::IsReady() { return s_Ready; }
+Ref<Texture2D> TextRenderer::GetAtlasTexture() { return s_AtlasTexture; }
+std::string TextRenderer::GetDiagnostics() {
+    if (!s_Ready) return "atlas: NAO PRONTO";
+    return "atlas: " + std::to_string(kAtlasWidth) + "x" + std::to_string(kAtlasHeight) +
+           " (ASCII " + std::to_string(kAsciiCount) + " + Latin-1 " + std::to_string(kLatinCount) + ")";
+}
+
 void TextRenderer::DrawString(const std::string& text, const glm::vec3& position,
                               float fontSize, const glm::vec4& color, TextAlignment alignment) {
     if (!s_Ready) EnsureAtlas();
     if (!s_Ready || text.empty()) return;
+
+    // Blindagem: o texto PRECISA de alpha blending. Qualquer passe que tenha
+    // deixado o GL_BLEND desligado (ex.: decals/partículas do 3D) virava os
+    // glifos em retângulos brancos opacos — força aqui, no desenho.
+    RenderCommand::SetBlending(true);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // Divide o texto em linhas e desenha cada uma — posição é o canto
     // esquerdo-superior da primeira linha; alinhamento desloca cada linha.

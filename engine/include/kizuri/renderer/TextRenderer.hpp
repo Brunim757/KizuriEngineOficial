@@ -19,6 +19,12 @@ enum class TextAlignment : int { Left = 0, Center = 1, Right = 2 };
 // fonte) e o alinhamento desloca cada linha em relação à posição âncora.
 class TextRenderer {
 public:
+    // Diagnóstico (janela do editor): atlas gerado + estado de prontidão.
+    static bool IsReady();
+    static Ref<Texture2D> GetAtlasTexture();
+    static std::string GetDiagnostics();
+
+public:
     static void Init();
     static void Shutdown();
 

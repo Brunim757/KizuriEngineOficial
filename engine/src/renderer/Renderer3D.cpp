@@ -1596,6 +1596,11 @@ void main() {
     // normalize() vira NaN, que POISONA o composite (tela preta). Descarta.
     if (dot(n, n) < 1e-8) return;
     vec3 normal = normalize(n);
+    // Orientação ROBUSTA: o sinal do cross(dFdx,dFdy) varia com o driver e
+    // com o lado do face — normal invertida reflete o raio pra TRÁS (SSR
+    // some ou vira manchas que acompanham a câmera). Força a normal pra
+    // fora da superfície (contra a câmera) antes de refletir.
+    if (dot(normal, -fragPos) < 0.0) normal = -normal;
     if (dot(normal, -fragPos) < 0.001) return; // face voltada pra longe da câmera
 
     vec3 viewDir = normalize(fragPos);

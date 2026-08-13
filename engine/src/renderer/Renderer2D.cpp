@@ -3,6 +3,7 @@
 #include "kizuri/renderer/RenderCommand.hpp"
 #include "kizuri/renderer/Shader.hpp"
 #include "kizuri/core/Log.hpp"
+#include <glad/gl.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <array>
 
@@ -303,6 +304,14 @@ void Renderer2D::BeginScene(const OrthographicCamera& camera) { BeginScene(camer
 
 void Renderer2D::BeginScene(const glm::mat4& viewProjection) {
     KZ_TRACE_SCOPE("Renderer2D::BeginScene");
+    // Estado de blend DONO do pipeline 2D: o 3D desliga/religa o GL_BLEND à
+    // vontade (decals/partículas), e um frame deixado com blend OFF aqui
+    // apagava a transparência do texto (retângulos brancos em vez de letras).
+    // Cada BeginScene força o estado correto de novo — nunca depende do que
+    // veio antes no frame.
+    RenderCommand::SetBlending(true);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     s_Data.ViewProjection = viewProjection;
     s_Data.QuadShader->Bind();
     s_Data.QuadShader->SetMat4("u_ViewProjection", viewProjection);

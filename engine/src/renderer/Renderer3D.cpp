@@ -3170,7 +3170,10 @@ void Renderer3D::EndScene() {
             s_DecalShader->SetInt("u_DecalTexture", 0);
             RenderCommand::DrawIndexed(s_DecalCube->GetVertexArray(), s_DecalCube->GetIndexCount());
         }
-        RenderCommand::SetBlending(false);
+        // Estado restaurado PROPOSITALMENTE: deixar o blend desligado aqui
+        // apagava a transparência do texto/2D do resto do frame (retângulos
+        // brancos no lugar das letras — bug clássico de estado global GL).
+        RenderCommand::SetBlending(true);
         glDepthMask(GL_TRUE);
         s_DecalList.clear();
     }
@@ -3201,7 +3204,9 @@ void Renderer3D::EndScene() {
         }
         glBindVertexArray(0);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // volta pro padrão
-        RenderCommand::SetBlending(false);
+        // Blend RELIGADO: o texto/2D desenha depois no frame e precisa de
+        // alpha — desligado aqui gerava "texto = retângulos brancos".
+        RenderCommand::SetBlending(true);
         glDepthMask(GL_TRUE);
     }
 

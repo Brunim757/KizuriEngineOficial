@@ -133,7 +133,29 @@ Entity Scene::CreateEntityWithUUID(uint64_t uuid, const std::string& name) {
     return entity;
 }
 
+void Scene::FlushPendingDestroys() {
+    if (m_PendingDestroy.empty()) return;
+    std::vector<entt::entity> pending;
+    pending.swap(m_PendingDestroy);
+    for (entt::entity e : pending) {
+        Entity entity{ e, this };
+        if (entity && m_Registry.valid(e)) DestroyEntityNow(entity);
+    }
+}
+
 void Scene::DestroyEntity(Entity entity) {
+    if (!entity) return;
+    // Durante a iteração de scripts (OnUpdate de NativeScript) destruir a
+    // entidade imediatamente invalida a view do entt -> UB/crash. Deferido:
+    // o flush roda no fim do loop (FlushPendingDestroys em OnUpdateRuntimeLogic).
+    if (m_InScriptUpdate) {
+        m_PendingDestroy.push_back(entity.GetHandle());
+        return;
+    }
+    DestroyEntityNow(entity);
+}
+
+void Scene::DestroyEntityNow(Entity entity) {
     if (!entity) return;
 
     if (entity.HasComponent<RelationshipComponent>()) {
@@ -567,6 +589,14 @@ void Scene::StartScriptIfNeeded(Entity entity) {
         nsc.Instance->BindEntity(entity);
         nsc.Instance->OnCreate();
     }
+}
+
+Entity Scene::FindEntityByName(const std::string& tag) {
+    auto view = m_Registry.view<TagComponent>();
+    for (auto e : view) {
+        if (view.get<TagComponent>(e).Tag == tag) return Entity{ e, this };
+    }
+    return {};
 }
 
 Entity Scene::GetEntityByUUID(UUID id) {
@@ -1349,10 +1379,13 @@ void Scene::OnUpdateRuntimeLogic(Timestep ts) {
     KZ_TRACE_SCOPE("Scene::OnUpdateRuntimeLogic");
     UpdateUIPointer(); // hit-test dos UIButton antes dos scripts (que leem WasClicked)
 
+    m_InScriptUpdate = true;
     m_Registry.view<NativeScriptComponent>().each([this, ts](auto entityHandle, auto& nsc) {
         if (!IsEntityActive(Entity{ entityHandle, this })) return; // inativa não roda script
         if (nsc.Instance) nsc.Instance->OnUpdate(ts);
     });
+    m_InScriptUpdate = false;
+    FlushPendingDestroys(); // destroi o que os scripts enfileiraram no loop
 
     UpdatePhysics2D(ts);
     UpdatePhysics3D(ts);

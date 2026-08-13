@@ -36,9 +36,20 @@ public:
     Scene(std::string name = "Cena sem nome");
     ~Scene();
 
+    bool m_InScriptUpdate = false;              // runtime interno
+    std::vector<entt::entity> m_PendingDestroy; // DestroyEntity durante scripts
+    void FlushPendingDestroys();
+
     Entity CreateEntity(const std::string& name = std::string());
     Entity CreateEntityWithUUID(uint64_t uuid, const std::string& name);
     void DestroyEntity(Entity entity);
+
+    // Encontra a 1ª entidade viva com a tag (case-sensitive). Jogos usam pra
+    // achar jogador/HUD sem guardar handle (handles morrem com a entidade).
+    // Retorna inválida se não achar.
+    Entity FindEntityByName(const std::string& tag);
+
+    void DestroyEntityNow(Entity entity); // imediato (interno; usada pelo flush)
 
     // Instancia um .kzprefab. Em runtime (Play/KizuriGame) também cria
     // corpos de física e dispara OnCreate do NativeScript, se houver.

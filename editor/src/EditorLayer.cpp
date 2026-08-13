@@ -693,6 +693,160 @@ void EditorLayer::CreateDemoSceneNet() {
     KZ_CORE_INFO("Cena de demonstração Rede criada (host/cliente na porta 26000).");
 }
 
+// Moeda da demo completa: gira, e quando o jogador chega perto pontua e
+// some (destruição deferida é segura dentro do OnUpdate — ver Scene.cpp).
+class DemoCoinScript : public NativeScript {
+public:
+    static int s_Score;
+    void OnUpdate(Timestep ts) override {
+        auto& tc = GetComponent<TransformComponent>();
+        tc.Rotation.y += 2.2f * (float)ts;
+        Entity player = GetScene()->FindEntityByName("Jogador");
+        if (!player) return;
+        auto& pt = player.GetComponent<TransformComponent>();
+        glm::vec2 me(tc.Translation.x, tc.Translation.z);
+        glm::vec2 pp(pt.Translation.x, pt.Translation.z);
+        if (glm::distance(me, pp) < 1.6f) {
+            ++s_Score;
+            Entity placar = GetScene()->FindEntityByName("Placar");
+            if (placar) {
+                const std::string msg = s_Score >= 8
+                    ? "PONTOS 8/8 — VOCÊ VENCEU! (Play de novo pra rejogar)"
+                    : "Pontos: " + std::to_string(s_Score) + " / 8  ·  WASD pra coletar";
+                placar.GetComponent<TextComponent>().Text = msg;
+            }
+            DestroyEntity();
+        }
+    }
+};
+int DemoCoinScript::s_Score = 0;
+
+void EditorLayer::CreateDemoSceneGame() {
+    if (m_SceneState != SceneState::Edit) return;
+
+    m_ActiveScene = CreateRef<Scene>("Demo Completa");
+    m_ScenePath.clear();
+    m_SelectedEntity = {};
+    m_ViewportMode = ViewportMode::Mode3D;
+
+    ScriptEngine::GetRegistry().Register<DemoPlayerMove>("DemoPlayerMove");
+    ScriptEngine::GetRegistry().Register<DemoEnemyScript>("DemoEnemyScript");
+    ScriptEngine::GetRegistry().Register<DemoCoinScript>("DemoCoinScript");
+    DemoCoinScript::s_Score = 0;
+
+    auto& scene = m_ActiveScene;
+
+    Entity camera = scene->CreateEntity("Câmera Principal");
+    auto& cc = camera.AddComponent<CameraComponent>();
+    cc.Type = CameraComponent::ProjectionType::Perspective3D;
+    cc.Primary = true;
+    cc.PerspectiveFOV = 55.0f;
+    auto& camT = camera.GetComponent<TransformComponent>();
+    camT.Translation = { 0.0f, 15.0f, 15.0f };
+    camT.Rotation = { glm::radians(-45.0f), glm::radians(-90.0f), 0.0f };
+    auto& cf = camera.AddComponent<CameraFollowComponent>();
+    cf.TargetName = "Jogador";
+    cf.Offset = { 0.0f, 16.0f, -16.0f };
+    cf.UseWorldOffset = true;
+    cf.FollowRotation = false;
+
+    Entity sun = scene->CreateEntity("Sol");
+    auto& sl = sun.AddComponent<LightComponent>();
+    sl.Type = LightType::Directional;
+    sl.Color = { 1.0f, 0.95f, 0.85f };
+    sl.Intensity = 1.8f;
+    sun.GetComponent<TransformComponent>().Rotation = { glm::radians(55.0f), glm::radians(30.0f), 0.0f };
+
+    Entity ground = scene->CreateEntity("Chão");
+    auto& gm = ground.AddComponent<MeshRendererComponent>();
+    gm.MeshSource = "builtin:plane";
+    gm.MeshAsset = Mesh::FromSource(gm.MeshSource);
+    gm.MeshMaterial.Albedo = { 0.18f, 0.20f, 0.24f };
+    gm.MeshMaterial.Roughness = 0.9f;
+    ground.GetComponent<TransformComponent>().Scale = { 22.0f, 1.0f, 22.0f };
+
+    // Jogador (mesmo script WASD da demo IA).
+    Entity player = scene->CreateEntity("Jogador");
+    auto& pm = player.AddComponent<MeshRendererComponent>();
+    pm.MeshSource = "builtin:cube";
+    pm.MeshAsset = Mesh::FromSource(pm.MeshSource);
+    pm.MeshMaterial.Albedo = { 0.25f, 0.6f, 0.9f };
+    pm.MeshMaterial.Roughness = 0.4f;
+    player.GetComponent<TransformComponent>().Translation = { 0.0f, 0.5f, 6.0f };
+    player.AddComponent<NativeScriptComponent>().BindByName("DemoPlayerMove");
+
+    // 8 moedas douradas (cilindros girando).
+    const glm::vec3 coinPos[8] = {
+        { -6.0f, 0.5f, -6.0f }, { 6.0f, 0.5f, -6.0f }, { 6.0f, 0.5f, 6.0f }, { -6.0f, 0.5f, 6.0f },
+        { 0.0f, 0.5f, -8.0f },  { 8.0f, 0.5f, 0.0f },  { 0.0f, 0.5f, 8.0f },  { -8.0f, 0.5f, 0.0f },
+    };
+    for (int i = 0; i < 8; ++i) {
+        Entity coin = scene->CreateEntity("Moeda " + std::to_string(i + 1));
+        auto& cim = coin.AddComponent<MeshRendererComponent>();
+        cim.MeshSource = "builtin:cylinder";
+        cim.MeshAsset = Mesh::FromSource(cim.MeshSource);
+        cim.MeshMaterial.Albedo = { 1.0f, 0.75f, 0.15f };
+        cim.MeshMaterial.Metallic = 0.8f;
+        cim.MeshMaterial.Roughness = 0.35f;
+        auto& ct = coin.GetComponent<TransformComponent>();
+        ct.Translation = coinPos[i];
+        ct.Scale = { 0.9f, 0.15f, 0.9f };
+        coin.AddComponent<NativeScriptComponent>().BindByName("DemoCoinScript");
+    }
+
+    // 2 inimigos guardando as moedas (patrulham, perseguem, atacam).
+    const glm::vec3 enePos[2] = { { -4.0f, 0.5f, 4.0f }, { 4.0f, 0.5f, -4.0f } };
+    const glm::vec3 patl[2][2] = {
+        { { -6.0f, 0.5f, 6.0f }, { -2.0f, 0.5f, 2.0f } },
+        { { 6.0f, 0.5f, -6.0f }, { 2.0f, 0.5f, -2.0f } },
+    };
+    for (int i = 0; i < 2; ++i) {
+        Entity enemy = scene->CreateEntity("Inimigo " + std::to_string(i + 1));
+        auto& em = enemy.AddComponent<MeshRendererComponent>();
+        em.MeshSource = "builtin:sphere";
+        em.MeshAsset = Mesh::FromSource(em.MeshSource);
+        em.MeshMaterial.Albedo = { 0.85f, 0.22f, 0.18f };
+        em.MeshMaterial.Roughness = 0.35f;
+        auto& et = enemy.GetComponent<TransformComponent>();
+        et.Translation = enePos[i];
+        et.Scale = { 1.2f, 1.2f, 1.2f };
+        auto& na = enemy.AddComponent<NavAgentComponent>();
+        na.Speed = 3.4f + (float)i * 0.4f;
+        na.TurnSpeed = 6.0f;
+        auto& ai = enemy.AddComponent<EnemyAIComponent>();
+        ai.SightRange = 13.0f;
+        ai.LoseRange = 19.0f;
+        ai.ChaseRange = 1.7f;
+        ai.AttackCooldown = 1.2f;
+        ai.AttackDamage = 10.0f;
+        ai.PatrolWait = 0.8f;
+        ai.TargetTag = "Jogador";
+        for (int p = 0; p < 2; ++p) ai.PatrolPoints.push_back(patl[i][p]);
+        enemy.AddComponent<NativeScriptComponent>().BindByName("DemoEnemyScript");
+    }
+
+    // Placar (HUD) + instruções (texto 2D sobre a cena).
+    Entity placar = scene->CreateEntity("Placar");
+    auto& ptxt = placar.AddComponent<TextComponent>();
+    ptxt.Text = "Pontos: 0 / 8  ·  WASD pra coletar as moedas";
+    ptxt.FontSize = 18.0f;
+    ptxt.Color = { 1.0f, 0.85f, 0.3f, 1.0f };
+    placar.GetComponent<TransformComponent>().Translation = { -12.0f, 6.5f, 0.0f };
+
+    Entity label = scene->CreateEntity("Instruções");
+    auto& lt = label.AddComponent<TextComponent>();
+    lt.Text = "DEMO COMPLETA — colete as 8 moedas douradas; os inimigos patrulham, perseguem e atacam";
+    lt.FontSize = 14.0f;
+    lt.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+    label.GetComponent<TransformComponent>().Translation = { -12.0f, 5.4f, 0.0f };
+
+    m_EditorCamPos = { 0.0f, 15.0f, 15.0f };
+    m_EditorCamYaw = -90.0f;
+    m_EditorCamPitch = -45.0f;
+    m_SelectedEntity = player;
+    KZ_CORE_INFO("Demo completa criada — colete 8 moedas fugindo dos inimigos.");
+}
+
 // Cena de demonstração 2D — showcase do pipeline 2D: sprites, física Box2D
 // (chão + caixas caindo), círculos, texto e UI (canvas + botão). Roda 100%
 // no Play com a câmera ortográfica.
@@ -2067,6 +2221,9 @@ void EditorLayer::DrawSettingsEditor() {
     if (ImGui::Button("Criar demo IA")) CreateDemoSceneAI();
     ImGui::SameLine();
     if (ImGui::Button("Criar demo Rede")) CreateDemoSceneNet();
+    ImGui::SameLine();
+    if (ImGui::Button("Criar DEMO COMPLETA (mini-jogo)")) CreateDemoSceneGame();
+    ImGui::TextDisabled("Demo completa: colete as 8 moedas fugindo dos inimigos — WASD pra mover, pontuação no placar.");
 }
 
 void EditorLayer::DrawGizmo() {
@@ -2628,6 +2785,8 @@ void EditorLayer::DrawDockspace() {
             CreateDemoSceneNet();
         if (ImGui::MenuItem("Cena de Demonstração 3D...", nullptr, false, m_SceneState == SceneState::Edit))
             CreateDemoScene3D();
+        if (ImGui::MenuItem("Cena DEMO COMPLETA (mini-jogo)...", nullptr, false, m_SceneState == SceneState::Edit))
+            CreateDemoSceneGame();
         ImGui::EndPopup();
     }
 

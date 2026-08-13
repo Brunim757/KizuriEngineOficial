@@ -99,6 +99,7 @@ private:
     // Cena de demonstração IA (v0.34): NavGrid + obstáculos + inimigos com
     // EnemyAIComponent (patrulha/persegue/ataca) — fuja com WASD.
     void CreateDemoSceneAI();
+    void CreateDemoSceneGame();
     // Cena de demonstração REDE (v0.34): 2 instâncias (host + cliente) na
     // porta 26000 — WASD no host, o cliente vê o cubo se mover.
     void CreateDemoSceneNet();

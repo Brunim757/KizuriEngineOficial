@@ -313,30 +313,24 @@ jobs:
             -o android_dotnet --nologo
           # O publish de um projeto puro do .NET SDK NÃO copia os .so do
           # runtime pack android-arm64 (só o workload Android faz isso).
-          # 1) Tenta o pack já restaurado no cache do NuGet; senão
-          # 2) resolve a versão exata no deps.json e baixa o nupkg do NuGet.
-          PACK_DIR=$(ls -d "$HOME/.nuget/packages/microsoft.netcore.app.runtime.android-arm64/"*/ 2>/dev/null | sort -V | tail -1)
-          if [ -n "$PACK_DIR" ] && [ -d "$PACK_DIR/runtimes/android-arm64/native" ]; then
-            echo "Usando runtime pack do cache NuGet: $(basename "$PACK_DIR")"
-            NATIVE_DIR="$PACK_DIR/runtimes/android-arm64/native"
-            LIB_DIR="$PACK_DIR/runtimes/android-arm64/lib"
-          else
-            RPM_VER=$(grep -oE 'Microsoft\.NETCore\.App\.Runtime\.android-arm64/[0-9.]+' android_dotnet/SampleGame.deps.json | head -1 | cut -d/ -f2)
-            test -n "$RPM_VER" || { echo "::error::versão do runtime pack não achada no deps.json"; exit 1; }
-            echo "Baixando runtime pack $RPM_VER do NuGet..."
-            curl -fsSL -o pack.nupkg \
-              "https://api.nuget.org/v3-flatcontainer/microsoft.netcore.app.runtime.android-arm64/${RPM_VER}/microsoft.netcore.app.runtime.android-arm64.${RPM_VER}.nupkg"
-            unzip -q -o pack.nupkg -d pack
-            NATIVE_DIR=pack/runtimes/android-arm64/native
-            LIB_DIR=pack/runtimes/android-arm64/lib
-          fi
-          cp -f "$NATIVE_DIR/"*.so android_dotnet/
-          if [ -d "$LIB_DIR" ]; then cp -rf "$LIB_DIR/."* android_dotnet/ 2>/dev/null || true; fi
+          # Layout garantido: baixa o .nupkg original do NuGet (o cache do
+          # restore reestrutura a extração e alguns arquivos somem de lá).
+          RPM_VER=$(grep -oE 'Microsoft\.NETCore\.App\.Runtime\.android-arm64/[0-9.]+' android_dotnet/SampleGame.deps.json | head -1 | cut -d/ -f2)
+          test -n "$RPM_VER" || { echo "::error::versão do runtime pack não achada no deps.json"; exit 1; }
+          echo "Baixando runtime pack $RPM_VER do NuGet..."
+          curl -fsSL -o pack.nupkg \
+            "https://api.nuget.org/v3-flatcontainer/microsoft.netcore.app.runtime.android-arm64/${RPM_VER}/microsoft.netcore.app.runtime.android-arm64.${RPM_VER}.nupkg"
+          unzip -q -o pack.nupkg -d pack
+          # Debug de layout: mostra onde os .so e os System.*.dll estão.
+          find pack -name "*.so" -o -name "System.Private.CoreLib.dll" | head -10
+          cp -f pack/runtimes/android-arm64/native/*.so android_dotnet/
+          cp -rf pack/runtimes/android-arm64/lib/.* android_dotnet/ 2>/dev/null || true
           test -f android_dotnet/libhostfxr.so \
             || { echo "::error::libhostfxr.so ausente no runtime pack"; exit 1; }
           test -f android_dotnet/libcoreclr.so \
             || { echo "::error::libcoreclr.so ausente no runtime pack"; exit 1; }
-          echo "Runtime embutível pronto em android_dotnet/ (libhostfxr.so + libcoreclr.so)"
+          echo "Runtime embutível pronto em android_dotnet/ ($RPM_VER)"
+          ls android_dotnet | head -20
 
       - name: Empacotar APK (aapt2 + zipalign + apksigner)
         run: |

@@ -1,11 +1,8 @@
-// CoreCLRHost.cpp — host embutido do runtime .NET (CoreCLR).
-// Desktop: via hostfxr (carrega dinam.) + .runtimeconfig.json do jogo.
-// Android: o runtime pack android NÃO tem hostfxr (o .NET Android oficial
-// é iniciado pelo workload) — o libcoreclr.so exporta o "simplified
-// hosting" (coreclr_initialize/coreclr_create_delegate/coreclr_shutdown),
-// que é o caminho usado aqui (mesma delegate load_assembly_and_
-// get_function_pointer no final). Nos dois casos resolve o ponto de entrada
-// managed (Kizuri.Hosting.Host) e expõe o ciclo de vida dos scripts C#.
+// CoreCLRHost.cpp — host embutido do runtime .NET (CoreCLR) via hostfxr.
+// Carrega o hostfxr dinamicamente (LoadLibrary/dlopen), inicializa o runtime
+// com o .runtimeconfig.json do jogo, resolve os pontos de entrada managed
+// (Kizuri.Hosting.Host via load_assembly_and_get_function_pointer) e expõe
+// o ciclo de vida dos scripts C# para o resto da engine.
 #include "kizuri/scripting/CoreCLRHost.hpp"
 #include "kizuri/scripting/dotnet/hostfxr.h"
 #include "kizuri/scripting/dotnet/coreclr_delegates.h"
@@ -28,65 +25,7 @@ namespace fs = std::filesystem;
 namespace kizuri {
 namespace scripting {
 
-#if defined(KZ_PLATFORM_ANDROID)
-// Android: hosting simplificado exportado pelo próprio libcoreclr.so (sem
-// hostfxr — o runtime pack android não o inclui).
-using CoreclrInitializeFn =
-    int32_t (*)(const char* exePath, const char* appDomainFriendlyName,
-                int propertyCount, const char** propertyKeys,
-                const char** propertyValues, void** hostHandle,
-                unsigned int* domainId);
-using CoreclrCreateDelegateFn =
-    int32_t (*)(void* hostHandle, unsigned int domainId,
-                const char* entryPointAssemblyName, const char* entryPointTypeName,
-                const char* entryPointMethodName, void** delegate);
-using CoreclrShutdownFn =
-    int32_t (*)(void* hostHandle, unsigned int domainId);
-#endif
-
-using LoadAssemblyAndGetFunctionPointerFn =
-    int (CORECLR_DELEGATE_CALLTYPE*)(const NativeChar* assemblyPath,
-                                     const NativeChar* typeName,
-                                     const NativeChar* methodName,
-                                     const NativeChar* delegateTypeName,
-                                     void* reserved,
-                                     void** delegate);
-using HostfxrInitializeRuntimeConfigFn =
-    int32_t (HOSTFXR_CALLTYPE*)(const NativeChar* runtimeConfigPath,
-                                const hostfxr_initialize_parameters* parameters,
-                                hostfxr_handle* hostContextHandle);
-using HostfxrGetRuntimeDelegateFn =
-    int32_t (HOSTFXR_CALLTYPE*)(hostfxr_handle hostContextHandle,
-                                hostfxr_delegate_type type,
-                                void** delegate);
-using HostfxrCloseFn = int32_t (HOSTFXR_CALLTYPE*)(hostfxr_handle hostContextHandle);
-using HostfxrSetErrorWriterFn =
-    hostfxr_error_writer_fn (HOSTFXR_CALLTYPE*)(hostfxr_error_writer_fn errorWriter);
-
-
-
-
-// Assinaturas dos pontos de entrada managed (espelham Hosting/Host.cs).
-using InitializeGameModuleFn = void (*)(const char* gameAssemblyPath);
-using GetScriptCountFn = int (*)();
-using GetScriptNameFn = int (*)(int index, char* buffer, int bufferSize);
-using GetLastInitErrorFn = int (*)(char* buffer, int bufferSize);
-using CreateScriptFn = void* (*)(const char* className, uint32_t entityHandle);
-using DestroyScriptFn = void (*)(void* handle);
-using UpdateScriptFn = void (*)(void* handle, float deltaSeconds);
-using CollisionScriptFn = void (*)(void* handle, uint32_t otherHandle, int begin);
-
-
-constexpr const char* kHostTypeName = "Kizuri.Hosting.Host, Kizuri.Scripting";
-
-std::string s_HostfxrError;
-
-#if !defined(KZ_PLATFORM_ANDROID)
-void HostfxrErrorWriter(const NativeChar* message) {
-    s_HostfxrError = ToUtf8(message);
-}
-#endif
-
+namespace {
 
 // ---------------------------------------------------------------------------
 // Carregamento de biblioteca dinâmica (hostfxr) por plataforma.
@@ -135,46 +74,45 @@ void HostfxrErrorWriter(const NativeChar* message) {
     static std::string ToNativePath(const fs::path& p) { return p.string(); }
 #endif
 
-
-struct CoreCLRHost::Impl {
-    void* HostfxrLib = nullptr;
-    hostfxr_handle Context = nullptr;
-    LoadAssemblyAndGetFunctionPointerFn LoadAssemblyAndGetFunctionPointer = nullptr;
-    HostfxrCloseFn Close = nullptr;
-    HostfxrSetErrorWriterFn SetErrorWriter = nullptr;
-
-#if defined(KZ_PLATFORM_ANDROID)
-    void* CoreclrLib = nullptr;
-    void* HostHandle = nullptr;
-    unsigned int DomainId = 0;
-    CoreclrShutdownFn CoreclrShutdown = nullptr;
-#endif
-
-    InitializeGameModuleFn InitializeGameModule = nullptr;
-    GetScriptCountFn GetScriptCount = nullptr;
-    GetScriptNameFn GetScriptName = nullptr;
-    GetLastInitErrorFn GetLastInitError = nullptr;
-    CreateScriptFn CreateScript = nullptr;
-    DestroyScriptFn DestroyScript = nullptr;
-    UpdateScriptFn UpdateScript = nullptr;
-    CollisionScriptFn CollisionScript = nullptr;
-};
-
-namespace {
-
-
-
-
 // ---------------------------------------------------------------------------
 // Tipos das funções do hostfxr (espelham hostfxr.h / coreclr_delegates.h).
 // ---------------------------------------------------------------------------
+using LoadAssemblyAndGetFunctionPointerFn =
+    int (CORECLR_DELEGATE_CALLTYPE*)(const NativeChar* assemblyPath,
+                                     const NativeChar* typeName,
+                                     const NativeChar* methodName,
+                                     const NativeChar* delegateTypeName,
+                                     void* reserved,
+                                     void** delegate);
+using HostfxrInitializeRuntimeConfigFn =
+    int32_t (HOSTFXR_CALLTYPE*)(const NativeChar* runtimeConfigPath,
+                                const hostfxr_initialize_parameters* parameters,
+                                hostfxr_handle* hostContextHandle);
+using HostfxrGetRuntimeDelegateFn =
+    int32_t (HOSTFXR_CALLTYPE*)(hostfxr_handle hostContextHandle,
+                                hostfxr_delegate_type type,
+                                void** delegate);
+using HostfxrCloseFn = int32_t (HOSTFXR_CALLTYPE*)(hostfxr_handle hostContextHandle);
+using HostfxrSetErrorWriterFn =
+    hostfxr_error_writer_fn (HOSTFXR_CALLTYPE*)(hostfxr_error_writer_fn errorWriter);
 
+// Assinaturas dos pontos de entrada managed (espelham Hosting/Host.cs).
+using InitializeGameModuleFn = void (*)(const char* gameAssemblyPath);
+using GetScriptCountFn = int (*)();
+using GetScriptNameFn = int (*)(int index, char* buffer, int bufferSize);
+using GetLastInitErrorFn = int (*)(char* buffer, int bufferSize);
+using CreateScriptFn = void* (*)(const char* className, uint32_t entityHandle);
+using DestroyScriptFn = void (*)(void* handle);
+using UpdateScriptFn = void (*)(void* handle, float deltaSeconds);
+using CollisionScriptFn = void (*)(void* handle, uint32_t otherHandle, int begin);
 
+constexpr const char* kHostTypeName = "Kizuri.Hosting.Host, Kizuri.Scripting";
 
+std::string s_HostfxrError;
 
-// Guarda o texto do último erro do host (usada também pelos caminhos
-// compartilhados do bind — por isso não é desktop-only).
-
+void HostfxrErrorWriter(const NativeChar* message) {
+    s_HostfxrError = ToUtf8(message);
+}
 
 // ---------------------------------------------------------------------------
 // Descoberta do hostfxr (auto-contido primeiro, depois instalações do .NET).
@@ -184,7 +122,6 @@ static bool FileExists(const fs::path& p) {
     return fs::is_regular_file(p, ec);
 }
 
-#if !defined(KZ_PLATFORM_ANDROID)
 static bool IsNewerVersion(const std::string& a, const std::string& b) {
     auto parts = [](const std::string& s) {
         std::vector<int> out;
@@ -228,102 +165,7 @@ static fs::path FindHostfxrInFxrRoot(const fs::path& fxrRoot) {
     }
     return best;
 }
-#endif // !KZ_PLATFORM_ANDROID
 
-#if defined(KZ_PLATFORM_ANDROID)
-// Android: inicializa o CoreCLR direto pelas exports do libcoreclr.so
-// (coreclr_initialize + coreclr_create_delegate) e devolve a delegate
-// load_assembly_and_get_function_pointer — o MESMO delegate que o desktop
-// obtém via hostfxr. As propriedades substituem o .runtimeconfig.json
-// (que o coreclr_initialize não lê): TPA = todas as dlls do diretório.
-static bool InitializeAndroid(CoreCLRHost::Impl* impl,
-                              const std::string& runtimeConfigPath,
-                              const std::string& assemblyPath,
-                              std::string& outError) {
-    fs::path appBase = fs::path(runtimeConfigPath).parent_path();
-    fs::path coreclrPath = appBase / "libcoreclr.so";
-    if (!FileExists(coreclrPath)) {
-        outError = "libcoreclr.so não encontrado em: " + appBase.string() +
-                   " (publique o jogo com o runtime pack android-arm64)";
-        return false;
-    }
-
-    impl->CoreclrLib = LoadLibraryNative(ToNativePath(coreclrPath));
-    if (impl->CoreclrLib == nullptr) {
-        outError = "Falha ao carregar libcoreclr.so.";
-        return false;
-    }
-
-    auto initialize = reinterpret_cast<CoreclrInitializeFn>(
-        GetProcNative(impl->CoreclrLib, "coreclr_initialize"));
-    auto createDelegate = reinterpret_cast<CoreclrCreateDelegateFn>(
-        GetProcNative(impl->CoreclrLib, "coreclr_create_delegate"));
-    impl->CoreclrShutdown = reinterpret_cast<CoreclrShutdownFn>(
-        GetProcNative(impl->CoreclrLib, "coreclr_shutdown"));
-    if (initialize == nullptr || createDelegate == nullptr || impl->CoreclrShutdown == nullptr) {
-        outError = "libcoreclr.so não exporta coreclr_initialize/coreclr_create_delegate.";
-        FreeLibraryNative(impl->CoreclrLib);
-        impl->CoreclrLib = nullptr;
-        return false;
-    }
-
-    // TRUSTED_PLATFORM_ASSEMBLIES: todas as dlls do diretório (runtime +
-    // jogo), separadas por ':' — o coreclr_initialize não lê deps.json.
-    std::string tpa;
-    {
-        std::error_code ec;
-        for (auto& entry : fs::directory_iterator(appBase, ec)) {
-            if (!entry.is_regular_file(ec)) continue;
-            if (entry.path().extension() == ".dll") {
-                if (!tpa.empty()) tpa += ':';
-                tpa += ToNativePath(entry.path());
-            }
-        }
-    }
-    if (tpa.empty()) {
-        outError = "Nenhuma dll encontrada em: " + appBase.string();
-        FreeLibraryNative(impl->CoreclrLib);
-        impl->CoreclrLib = nullptr;
-        return false;
-    }
-
-    std::string appPaths = ToNativePath(appBase);
-    std::string baseDir = ToNativePath(appBase);
-    const char* propertyKeys[] = {
-        "TRUSTED_PLATFORM_ASSEMBLIES",
-        "APP_PATHS",
-        "APP_CONTEXT_BASE_DIRECTORY",
-    };
-    const char* propertyValues[] = { tpa.c_str(), appPaths.c_str(), baseDir.c_str() };
-
-    int rc = initialize(assemblyPath.c_str(), "Kizuri.Domain", 3,
-                        propertyKeys, propertyValues,
-                        &impl->HostHandle, &impl->DomainId);
-    if (rc != 0) {
-        outError = "coreclr_initialize falhou (código " + std::to_string(rc) + ").";
-        FreeLibraryNative(impl->CoreclrLib);
-        impl->CoreclrLib = nullptr;
-        return false;
-    }
-
-    rc = createDelegate(impl->HostHandle, impl->DomainId,
-                        "System.Private.CoreLib",
-                        "Internal.Runtime.InteropServices.ComponentActivator",
-                        "LoadAssemblyAndGetFunctionPointer",
-                        reinterpret_cast<void**>(&impl->LoadAssemblyAndGetFunctionPointer));
-    if (rc != 0 || impl->LoadAssemblyAndGetFunctionPointer == nullptr) {
-        outError = "coreclr_create_delegate falhou (código " + std::to_string(rc) + ").";
-        impl->CoreclrShutdown(impl->HostHandle, impl->DomainId);
-        impl->HostHandle = nullptr;
-        FreeLibraryNative(impl->CoreclrLib);
-        impl->CoreclrLib = nullptr;
-        return false;
-    }
-    return true;
-}
-#endif
-
-#if !defined(KZ_PLATFORM_ANDROID)
 static fs::path FindHostfxr(const fs::path& appBase) {
     // 1. Auto-contido: hostfxr do lado do assembly do jogo.
 #if defined(_WIN32)
@@ -356,13 +198,29 @@ static fs::path FindHostfxr(const fs::path& appBase) {
     }
     return {};
 }
-#endif // !KZ_PLATFORM_ANDROID
 
 } // namespace
 
 // ---------------------------------------------------------------------------
 // Implementação (esconde os tipos do hosting .NET do header público).
 // ---------------------------------------------------------------------------
+struct CoreCLRHost::Impl {
+    void* HostfxrLib = nullptr;
+    hostfxr_handle Context = nullptr;
+    LoadAssemblyAndGetFunctionPointerFn LoadAssemblyAndGetFunctionPointer = nullptr;
+    HostfxrCloseFn Close = nullptr;
+    HostfxrSetErrorWriterFn SetErrorWriter = nullptr;
+
+    InitializeGameModuleFn InitializeGameModule = nullptr;
+    GetScriptCountFn GetScriptCount = nullptr;
+    GetScriptNameFn GetScriptName = nullptr;
+    GetLastInitErrorFn GetLastInitError = nullptr;
+    CreateScriptFn CreateScript = nullptr;
+    DestroyScriptFn DestroyScript = nullptr;
+    UpdateScriptFn UpdateScript = nullptr;
+    CollisionScriptFn CollisionScript = nullptr;
+};
+
 CoreCLRHost::Impl* CoreCLRHost::s_Impl = nullptr;
 
 bool CoreCLRHost::Initialize(const std::string& runtimeConfigPath,
@@ -379,19 +237,13 @@ bool CoreCLRHost::Initialize(const std::string& runtimeConfigPath,
         return false;
     }
 
-    std::unique_ptr<Impl> impl(new Impl());
-#if defined(KZ_PLATFORM_ANDROID)
-    // Android não tem hostfxr (nem .NET instalado no sistema): inicializa o
-    // runtime pelas exports do própria libcoreclr.so (ver InitializeAndroid).
-    if (!InitializeAndroid(impl.get(), runtimeConfigPath, assemblyPath, outError))
-        return false;
-#else
     fs::path hostfxrPath = FindHostfxr(rcPath.parent_path());
     if (hostfxrPath.empty()) {
         outError = "hostfxr não encontrado. Instale o .NET Runtime 8 ou publique o jogo como self-contained.";
         return false;
     }
 
+    std::unique_ptr<Impl> impl(new Impl());
     impl->HostfxrLib = LoadLibraryNative(ToNativePath(hostfxrPath));
     if (impl->HostfxrLib == nullptr) {
         outError = "Falha ao carregar o hostfxr: " + hostfxrPath.string();
@@ -447,7 +299,6 @@ bool CoreCLRHost::Initialize(const std::string& runtimeConfigPath,
         FreeLibraryNative(impl->HostfxrLib);
         return false;
     }
-#endif // !KZ_PLATFORM_ANDROID
 
     // Resolve os pontos de entrada managed (Kizuri.Hosting.Host no assembly
     // do jogo; a Kizuri.Scripting.dll é resolvida via deps.json no mesmo
@@ -497,19 +348,12 @@ bool CoreCLRHost::Initialize(const std::string& runtimeConfigPath,
 
 void CoreCLRHost::Shutdown() {
     if (s_Impl == nullptr) return;
-#if defined(KZ_PLATFORM_ANDROID)
-    if (s_Impl->CoreclrShutdown != nullptr && s_Impl->HostHandle != nullptr)
-        s_Impl->CoreclrShutdown(s_Impl->HostHandle, s_Impl->DomainId);
-    if (s_Impl->CoreclrLib != nullptr)
-        FreeLibraryNative(s_Impl->CoreclrLib);
-#else
     if (s_Impl->SetErrorWriter != nullptr)
         s_Impl->SetErrorWriter(nullptr);
     if (s_Impl->Close != nullptr && s_Impl->Context != nullptr)
         s_Impl->Close(s_Impl->Context);
     if (s_Impl->HostfxrLib != nullptr)
         FreeLibraryNative(s_Impl->HostfxrLib);
-#endif
     delete s_Impl;
     s_Impl = nullptr;
 }

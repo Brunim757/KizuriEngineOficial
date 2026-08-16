@@ -3,13 +3,17 @@ file(GLOB_RECURSE KIZURI_SOURCES CONFIGURE_DEPENDS
 )
 
 # Android: módulos de editor/desktop não existem no mobile (ImGui é UI de
-# editor com backend GLFW; FileDialog é nativo do SO desktop).
+# editor com backend GLFW; FileDialog é nativo do SO desktop) e o host do
+# CoreCLR troca (CoreCLRHost.cpp usa hostfxr, que não existe no Android —
+# o CoreCLRHostAndroid.cpp usa as exports coreclr_initialize do próprio
+# libcoreclr). Desktop nunca compila o arquivo Android e vice-versa.
 if(ANDROID)
     list(FILTER KIZURI_SOURCES EXCLUDE REGEX
-        "src/core/ImGuiLayer\\.cpp$|src/core/FileDialog\\.cpp$")
+        "src/core/ImGuiLayer\\.cpp$|src/core/FileDialog\\.cpp$|src/scripting/CoreCLRHost\\.cpp$")
 else()
-    # AndroidPlatform.cpp usa headers do NDK (only Android).
-    list(FILTER KIZURI_SOURCES EXCLUDE REGEX "src/core/AndroidPlatform\\.cpp$")
+    # AndroidPlatform.cpp e CoreCLRHostAndroid.cpp usam headers do NDK/Android.
+    list(FILTER KIZURI_SOURCES EXCLUDE REGEX
+        "src/core/AndroidPlatform\\.cpp$|src/scripting/CoreCLRHostAndroid\\.cpp$")
 endif()
 
 file(GLOB_RECURSE KIZURI_HEADERS CONFIGURE_DEPENDS

@@ -15,6 +15,7 @@
 #include <android/asset_manager.h>
 #include <android/log.h>
 #include <android/native_window.h>
+#include <android/native_activity.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>

@@ -282,7 +282,14 @@ jobs:
             find "$ANDROID_HOME" -maxdepth 4 -name sdkmanager 2>/dev/null || true
             exit 1
           fi
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          # yes + pipefail: o sdkmanager fecha o stdin cedo e o yes morre com
+          # broken pipe (status 141) — desliga o pipefail só nesses comandos.
+          set +o pipefail
           yes | "$SDKMANAGER" --install "ndk;27.2.12479018" "build-tools;34.0.0" "platforms;android-34" >/dev/null
+          set -o pipefail
+          test -d "$ANDROID_HOME/ndk/27.2.12479018" \
+            || { echo "::error::NDK 27.2.12479018 não instalado"; exit 1; }
           echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
 

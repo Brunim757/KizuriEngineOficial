@@ -325,8 +325,8 @@ jobs:
           find pack -name "*.so" -o -name "System.Private.CoreLib.dll" | head -10
           cp -f pack/runtimes/android-arm64/native/*.so android_dotnet/
           cp -rf pack/runtimes/android-arm64/lib/.* android_dotnet/ 2>/dev/null || true
-          test -f android_dotnet/libhostfxr.so \
-            || { echo "::error::libhostfxr.so ausente no runtime pack"; exit 1; }
+          # Android não tem hostfxr (nem apphost): a engine inicializa o
+          # CoreCLR pelas exports do próprio libcoreclr (coreclr_initialize).
           test -f android_dotnet/libcoreclr.so \
             || { echo "::error::libcoreclr.so ausente no runtime pack"; exit 1; }
           echo "Runtime embutível pronto em android_dotnet/ ($RPM_VER)"

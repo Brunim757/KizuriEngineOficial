@@ -28,7 +28,66 @@ namespace fs = std::filesystem;
 namespace kizuri {
 namespace scripting {
 
-namespace {
+#if defined(KZ_PLATFORM_ANDROID)
+// Android: hosting simplificado exportado pelo próprio libcoreclr.so (sem
+// hostfxr — o runtime pack android não o inclui).
+using CoreclrInitializeFn =
+    int32_t (*)(const char* exePath, const char* appDomainFriendlyName,
+                int propertyCount, const char** propertyKeys,
+                const char** propertyValues, void** hostHandle,
+                unsigned int* domainId);
+using CoreclrCreateDelegateFn =
+    int32_t (*)(void* hostHandle, unsigned int domainId,
+                const char* entryPointAssemblyName, const char* entryPointTypeName,
+                const char* entryPointMethodName, void** delegate);
+using CoreclrShutdownFn =
+    int32_t (*)(void* hostHandle, unsigned int domainId);
+#endif
+
+using LoadAssemblyAndGetFunctionPointerFn =
+    int (CORECLR_DELEGATE_CALLTYPE*)(const NativeChar* assemblyPath,
+                                     const NativeChar* typeName,
+                                     const NativeChar* methodName,
+                                     const NativeChar* delegateTypeName,
+                                     void* reserved,
+                                     void** delegate);
+using HostfxrInitializeRuntimeConfigFn =
+    int32_t (HOSTFXR_CALLTYPE*)(const NativeChar* runtimeConfigPath,
+                                const hostfxr_initialize_parameters* parameters,
+                                hostfxr_handle* hostContextHandle);
+using HostfxrGetRuntimeDelegateFn =
+    int32_t (HOSTFXR_CALLTYPE*)(hostfxr_handle hostContextHandle,
+                                hostfxr_delegate_type type,
+                                void** delegate);
+using HostfxrCloseFn = int32_t (HOSTFXR_CALLTYPE*)(hostfxr_handle hostContextHandle);
+using HostfxrSetErrorWriterFn =
+    hostfxr_error_writer_fn (HOSTFXR_CALLTYPE*)(hostfxr_error_writer_fn errorWriter);
+
+
+
+
+// Assinaturas dos pontos de entrada managed (espelham Hosting/Host.cs).
+using InitializeGameModuleFn = void (*)(const char* gameAssemblyPath);
+using GetScriptCountFn = int (*)();
+using GetScriptNameFn = int (*)(int index, char* buffer, int bufferSize);
+using GetLastInitErrorFn = int (*)(char* buffer, int bufferSize);
+using CreateScriptFn = void* (*)(const char* className, uint32_t entityHandle);
+using DestroyScriptFn = void (*)(void* handle);
+using UpdateScriptFn = void (*)(void* handle, float deltaSeconds);
+using CollisionScriptFn = void (*)(void* handle, uint32_t otherHandle, int begin);
+
+
+constexpr const char* kHostTypeName = "Kizuri.Hosting.Host, Kizuri.Scripting";
+
+std::string s_HostfxrError;
+
+#if !defined(KZ_PLATFORM_ANDROID)
+void HostfxrErrorWriter(const NativeChar* message) {
+    s_HostfxrError = ToUtf8(message);
+}
+#endif
+
+
 struct CoreCLRHost::Impl {
     void* HostfxrLib = nullptr;
     hostfxr_handle Context = nullptr;
@@ -52,6 +111,9 @@ struct CoreCLRHost::Impl {
     UpdateScriptFn UpdateScript = nullptr;
     CollisionScriptFn CollisionScript = nullptr;
 };
+
+namespace {
+
 
 
 // ---------------------------------------------------------------------------
@@ -104,62 +166,13 @@ struct CoreCLRHost::Impl {
 // ---------------------------------------------------------------------------
 // Tipos das funções do hostfxr (espelham hostfxr.h / coreclr_delegates.h).
 // ---------------------------------------------------------------------------
-using LoadAssemblyAndGetFunctionPointerFn =
-    int (CORECLR_DELEGATE_CALLTYPE*)(const NativeChar* assemblyPath,
-                                     const NativeChar* typeName,
-                                     const NativeChar* methodName,
-                                     const NativeChar* delegateTypeName,
-                                     void* reserved,
-                                     void** delegate);
-using HostfxrInitializeRuntimeConfigFn =
-    int32_t (HOSTFXR_CALLTYPE*)(const NativeChar* runtimeConfigPath,
-                                const hostfxr_initialize_parameters* parameters,
-                                hostfxr_handle* hostContextHandle);
-using HostfxrGetRuntimeDelegateFn =
-    int32_t (HOSTFXR_CALLTYPE*)(hostfxr_handle hostContextHandle,
-                                hostfxr_delegate_type type,
-                                void** delegate);
-using HostfxrCloseFn = int32_t (HOSTFXR_CALLTYPE*)(hostfxr_handle hostContextHandle);
-using HostfxrSetErrorWriterFn =
-    hostfxr_error_writer_fn (HOSTFXR_CALLTYPE*)(hostfxr_error_writer_fn errorWriter);
 
-#if defined(KZ_PLATFORM_ANDROID)
-// Android: hosting simplificado exportado pelo próprio libcoreclr.so (sem
-// hostfxr — o runtime pack android não o inclui).
-using CoreclrInitializeFn =
-    int32_t (*)(const char* exePath, const char* appDomainFriendlyName,
-                int propertyCount, const char** propertyKeys,
-                const char** propertyValues, void** hostHandle,
-                unsigned int* domainId);
-using CoreclrCreateDelegateFn =
-    int32_t (*)(void* hostHandle, unsigned int domainId,
-                const char* entryPointAssemblyName, const char* entryPointTypeName,
-                const char* entryPointMethodName, void** delegate);
-using CoreclrShutdownFn =
-    int32_t (*)(void* hostHandle, unsigned int domainId);
-#endif
 
-// Assinaturas dos pontos de entrada managed (espelham Hosting/Host.cs).
-using InitializeGameModuleFn = void (*)(const char* gameAssemblyPath);
-using GetScriptCountFn = int (*)();
-using GetScriptNameFn = int (*)(int index, char* buffer, int bufferSize);
-using GetLastInitErrorFn = int (*)(char* buffer, int bufferSize);
-using CreateScriptFn = void* (*)(const char* className, uint32_t entityHandle);
-using DestroyScriptFn = void (*)(void* handle);
-using UpdateScriptFn = void (*)(void* handle, float deltaSeconds);
-using CollisionScriptFn = void (*)(void* handle, uint32_t otherHandle, int begin);
 
-constexpr const char* kHostTypeName = "Kizuri.Hosting.Host, Kizuri.Scripting";
 
 // Guarda o texto do último erro do host (usada também pelos caminhos
 // compartilhados do bind — por isso não é desktop-only).
-std::string s_HostfxrError;
 
-#if !defined(KZ_PLATFORM_ANDROID)
-void HostfxrErrorWriter(const NativeChar* message) {
-    s_HostfxrError = ToUtf8(message);
-}
-#endif
 
 // ---------------------------------------------------------------------------
 // Descoberta do hostfxr (auto-contido primeiro, depois instalações do .NET).

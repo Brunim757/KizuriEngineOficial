@@ -247,8 +247,27 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Configurar Android SDK (build-tools 34, platform 34)
-        uses: android-actions/setup-android@v3
+      - name: Cache do FetchContent (_deps do Android)
+        uses: actions/cache@v4
+        with:
+          path: build-android/_deps
+          key: android-kizuri-deps-${{ hashFiles('CMakeLists.txt', 'engine/CMakeLists.txt') }}
+          restore-keys: |
+            android-kizuri-deps-
+
+      - name: Cache de compilação (ccache)
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          max-size: "1G"
+          key: android
+
+      - name: Cache de pacotes NuGet (runtime pack android-arm64)
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: android-nuget-${{ hashFiles('managed/**/*.csproj') }}
+          restore-keys: |
+            android-nuget-
 
       - name: Instalar NDK, build-tools e plataforma
         run: |
@@ -263,6 +282,7 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-24 \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DKZ_BUILD_EDITOR=OFF -DKZ_BUILD_SANDBOX=OFF -DKZ_BUILD_TESTS=OFF
 
       - name: Compilar (libKizuriGame.so + libKizuriEngine.so)

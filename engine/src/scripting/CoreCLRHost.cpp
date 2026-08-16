@@ -127,9 +127,11 @@ using CollisionScriptFn = void (*)(void* handle, uint32_t otherHandle, int begin
 
 constexpr const char* kHostTypeName = "Kizuri.Hosting.Host, Kizuri.Scripting";
 
-#if !defined(KZ_PLATFORM_ANDROID)
+// Guarda o texto do último erro do host (usada também pelos caminhos
+// compartilhados do bind — por isso não é desktop-only).
 std::string s_HostfxrError;
 
+#if !defined(KZ_PLATFORM_ANDROID)
 void HostfxrErrorWriter(const NativeChar* message) {
     s_HostfxrError = ToUtf8(message);
 }
@@ -187,6 +189,7 @@ static fs::path FindHostfxrInFxrRoot(const fs::path& fxrRoot) {
     }
     return best;
 }
+#endif // !KZ_PLATFORM_ANDROID
 
 #if defined(KZ_PLATFORM_ANDROID)
 // Android: inicializa o CoreCLR direto pelas exports do libcoreclr.so
@@ -281,6 +284,7 @@ static bool InitializeAndroid(CoreCLRHost::Impl* impl,
 }
 #endif
 
+#if !defined(KZ_PLATFORM_ANDROID)
 static fs::path FindHostfxr(const fs::path& appBase) {
     // 1. Auto-contido: hostfxr do lado do assembly do jogo.
 #if defined(_WIN32)

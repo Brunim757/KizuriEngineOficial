@@ -250,8 +250,11 @@ void android_main(android_app* app) {
     // Loop do glue: bloqueia até a primeira janela; depois deixa o
     // Application::Run() comandar os frames (retorna quando o app fechar).
     // O Application é criado no APP_CMD_INIT_WINDOW (HandleAppCmd).
-    ANativeActivity_setWindowFlags(app->activity, AWINDOW_FLAG_KEEP_SCREEN_ON,
-                                   AWINDOW_FLAG_KEEP_SCREEN_ON);
+    // Mantém a tela acesa: AWINDOW_FLAG_KEEP_SCREEN_ON (0x1) só é declarado no
+// header pra __ANDROID_API__ >= 26 e a engine mira API 24; o valor é
+// estável há anos, então o literal resolve sem depender do header.
+    ANativeActivity_setWindowFlags(app->activity,
+                                   (uint32_t)0x00000001, (uint32_t)0x00000001);
 
     // Espera bloqueante pela primeira APP_CMD_INIT_WINDOW.
     while (!kizuri::android::s_GameApp && !app->destroyRequested) {

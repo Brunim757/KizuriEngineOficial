@@ -95,6 +95,11 @@ void Texture2D::Bind(uint32_t slot) const {
 
 Ref<Texture2D> Texture2D::Create(uint32_t width, uint32_t height) { return CreateRef<Texture2D>(width, height); }
 bool Texture2D::SaveToFile(const Ref<Texture2D>& texture, const std::string& path) {
+#if defined(KZ_PLATFORM_ANDROID)
+    // glGetTexImage não existe em GLES — export/editor é recurso de desktop.
+    (void)texture; (void)path;
+    return false;
+#else
     if (!texture || path.empty()) return false;
     const uint32_t w = texture->GetWidth(), h = texture->GetHeight();
     if (w == 0 || h == 0) return false;
@@ -106,6 +111,7 @@ bool Texture2D::SaveToFile(const Ref<Texture2D>& texture, const std::string& pat
     for (uint32_t y = 0; y < h; ++y)
         std::memcpy(flipped.data() + (size_t)(h - 1 - y) * w * 4, pixels.data() + (size_t)y * w * 4, (size_t)w * 4);
     return stbi_write_png(path.c_str(), (int)w, (int)h, 4, flipped.data(), (int)w * 4) != 0;
+#endif
 }
 
 Ref<Texture2D> Texture2D::Create(const std::string& path) {

@@ -1,5 +1,9 @@
 #include "kizuri/core/Input.hpp"
-#include <GLFW/glfw3.h>
+#if defined(KZ_PLATFORM_ANDROID)
+    #include "kizuri/core/AndroidPlatform.hpp"
+#else
+    #include <GLFW/glfw3.h>
+#endif
 #include <unordered_map>
 
 namespace kizuri {
@@ -24,24 +28,40 @@ void Input::SetContext(void* nativeWindow) {
 }
 
 bool Input::IsKeyPressed(int keycode) {
+#if defined(KZ_PLATFORM_ANDROID)
+    // Android não tem teclado físico: só teclas virtuais (zonas de toque
+    // mapeadas pelo jogo via SetActionKey + AndroidPlatform::SetVirtualKey).
+    return AndroidPlatform::IsVirtualKeyDown(keycode);
+#else
     auto* window = static_cast<GLFWwindow*>(s_Window);
     if (!window) return false;
     int state = glfwGetKey(window, keycode);
     return state == GLFW_PRESS || state == GLFW_REPEAT;
+#endif
 }
 
 bool Input::IsMouseButtonPressed(int button) {
+#if defined(KZ_PLATFORM_ANDROID)
+    // Tocar na tela == clique de mouse (qualquer dedo). Botão 0 = esquerdo.
+    if (button != 0) return false;
+    return AndroidPlatform::IsAnyTouchDown();
+#else
     auto* window = static_cast<GLFWwindow*>(s_Window);
     if (!window) return false;
     return glfwGetMouseButton(window, button) == GLFW_PRESS;
+#endif
 }
 
 std::pair<float, float> Input::GetMousePosition() {
+#if defined(KZ_PLATFORM_ANDROID)
+    return { AndroidPlatform::GetLastTouchX(), AndroidPlatform::GetLastTouchY() };
+#else
     auto* window = static_cast<GLFWwindow*>(s_Window);
     if (!window) return { 0.0f, 0.0f };
     double x, y;
     glfwGetCursorPos(window, &x, &y);
     return { (float)x, (float)y };
+#endif
 }
 
 float Input::GetMouseX() { return GetMousePosition().first; }

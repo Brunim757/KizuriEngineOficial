@@ -105,16 +105,20 @@ set(FETCHCONTENT_QUIET OFF)
 # ---------------------------------------------------------------------------
 
 # GLFW - janelas/contexto/input
-FetchContent_Declare(glfw
-    GIT_REPOSITORY https://github.com/glfw/glfw.git
-    GIT_TAG        3.4)
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
-# Evita exigir wayland-scanner/wayland-protocols em runners de CI que não
-# têm esses pacotes instalados; X11 continua habilitado normalmente.
-set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "" FORCE)
+# Android: GLFW não tem suporte a Android (o backend de lá é EGL direto —
+# Window.cpp tem seção própria) — nem é baixado.
+if(NOT ANDROID)
+    FetchContent_Declare(glfw
+        GIT_REPOSITORY https://github.com/glfw/glfw.git
+        GIT_TAG        3.4)
+    set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+    # Evita exigir wayland-scanner/wayland-protocols em runners de CI que não
+    # têm esses pacotes instalados; X11 continua habilitado normalmente.
+    set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "" FORCE)
+endif()
 
 # GLM - matemática
 FetchContent_Declare(glm
@@ -194,7 +198,11 @@ FetchContent_Declare(json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG        v3.11.3)
 
-FetchContent_MakeAvailable(glfw glm entt spdlog miniaudio stb tinyobjloader cgltf json)
+if(ANDROID)
+    FetchContent_MakeAvailable(glm entt spdlog miniaudio stb tinyobjloader cgltf json)
+else()
+    FetchContent_MakeAvailable(glfw glm entt spdlog miniaudio stb tinyobjloader cgltf json)
+endif()
 
 # Bullet e Box2D são maiores; deixamos como submódulos opcionais de física
 FetchContent_MakeAvailable(bullet3 box2d)
@@ -216,6 +224,20 @@ add_subdirectory(engine)
 # Quando a pasta existir, o subdiretório entra no build automaticamente.
 if(KZ_BUILD_V2 AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/kizuri_v2")
     add_subdirectory(kizuri_v2)
+endif()
+
+# Android: o editor e o sandbox (ambos GLFW/ImGui desktop) não compilam —
+# força OFF a menos que alguém peça explicitamente (vai quebrar de qualquer
+# jeito; melhor um erro claro no configure).
+if(ANDROID)
+    if(KZ_BUILD_EDITOR)
+        message(WARNING "KZ_BUILD_EDITOR não é suportado em Android — desligado.")
+        set(KZ_BUILD_EDITOR OFF)
+    endif()
+    if(KZ_BUILD_SANDBOX)
+        message(WARNING "KZ_BUILD_SANDBOX não é suportado em Android — desligado.")
+        set(KZ_BUILD_SANDBOX OFF)
+    endif()
 endif()
 
 if(KZ_BUILD_SANDBOX)

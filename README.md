@@ -106,6 +106,31 @@ Binários vão para `build/bin/` (ou `build-debug/bin/`):
 | `KizuriGame`   | Jogo standalone — roda a cena inicial + GameModule |
 | `Sandbox`      | Exemplo mínimo de uso da API pela engine |
 
+### Android (APK)
+
+O MESMO runtime C# (CoreCLR, não Mono) roda no Android: a CI
+(`.github/workflows/build.yml`, job `android`) compila `libKizuriGame.so`
+(engine + EGL/GLES 3.x — sem GLFW/ImGui, que são desktop) e embute o
+runtime .NET publicado com `dotnet publish -r android-arm64 --self-contained`
+— `libhostfxr.so`/`libcoreclr.so` e os assemblies do jogo vão nos assets do
+APK e são extraídos pro `filesDir` na primeira execução (`AndroidEntry.cpp`).
+Instale via `adb install KizuriGame-android.apk` (`adb logcat -s Kizuri`).
+
+```bash
+# Manual (NDK r27 + build-tools 34 + .NET 10 no PATH):
+export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018
+cmake --preset android-arm64
+cmake --build --preset android-arm64 --target KizuriGame
+dotnet publish managed/SampleGame -c Release -r android-arm64 --self-contained -o android_dotnet
+platform/android/package_apk.sh build-android/bin android_dotnet content/game \
+  "$ANDROID_HOME/build-tools/34.0.0" KizuriGame-android.apk
+```
+
+Limitações atuais do mobile: sem ImGui/editor, sem teclado físico (input por
+toque = mouse + teclas virtuais via `SetActionKey`), `SaveToFile`/filedialog
+desktop-only, e iOS ainda não suportado (JIT proibido — precisaria de
+NativeAOT).
+
 Opções do CMake:
 
 | Opção              | Padrão | Descrição |

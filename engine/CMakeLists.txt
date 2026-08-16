@@ -2,6 +2,16 @@ file(GLOB_RECURSE KIZURI_SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
 )
 
+# Android: módulos de editor/desktop não existem no mobile (ImGui é UI de
+# editor com backend GLFW; FileDialog é nativo do SO desktop).
+if(ANDROID)
+    list(FILTER KIZURI_SOURCES EXCLUDE REGEX
+        "src/core/ImGuiLayer\\.cpp$|src/core/FileDialog\\.cpp$")
+else()
+    # AndroidPlatform.cpp usa headers do NDK (only Android).
+    list(FILTER KIZURI_SOURCES EXCLUDE REGEX "src/core/AndroidPlatform\\.cpp$")
+endif()
+
 file(GLOB_RECURSE KIZURI_HEADERS CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp
 )
@@ -13,9 +23,18 @@ file(GLOB_RECURSE KIZURI_HEADERS CONFIGURE_DEPENDS
 get_filename_component(KIZURI_REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}" DIRECTORY)
 
 # ---- glad (bindings gerados pelo glad2 para GL 4.5 core, comitados em
-# third_party_generated/glad — ver README nessa pasta para como regerar) ----
-add_library(glad STATIC ${KIZURI_REPO_ROOT}/third_party_generated/glad/src/gl.c)
-target_include_directories(glad PUBLIC ${KIZURI_REPO_ROOT}/third_party_generated/glad/include)
+# third_party_generated/glad — ver README nessa pasta para como regerar).
+# No Android o loader é o glad GLES 3.x (third_party_generated/glad_gles,
+# mesma geração com --api "gles2=3.2") — as MESMAS funções/nomes; só muda o
+# include (glad/gl.h é um shim lá) e a função de load (eglGetProcAddress)
+# ----
+if(ANDROID)
+    add_library(glad STATIC ${KIZURI_REPO_ROOT}/third_party_generated/glad_gles/src/glad.c)
+    target_include_directories(glad PUBLIC ${KIZURI_REPO_ROOT}/third_party_generated/glad_gles/include)
+else()
+    add_library(glad STATIC ${KIZURI_REPO_ROOT}/third_party_generated/glad/src/gl.c)
+    target_include_directories(glad PUBLIC ${KIZURI_REPO_ROOT}/third_party_generated/glad/include)
+endif()
 
 # ---- Fontes embutidas (JetBrains Mono) -------------------------------------
 # Em vez de carregar os .ttf de um caminho relativo em tempo de execução (o
@@ -193,41 +212,67 @@ target_include_directories(KizuriEngine SYSTEM PUBLIC
     ${box2d_SOURCE_DIR}/include
 )
 
-# ---- ImGui (compilado direto como parte da engine, com backend GLFW+GL3) --
-add_library(imgui STATIC
-    ${imgui_SOURCE_DIR}/imgui.cpp
-    ${imgui_SOURCE_DIR}/imgui_draw.cpp
-    ${imgui_SOURCE_DIR}/imgui_tables.cpp
-    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-    ${imgui_SOURCE_DIR}/imgui_demo.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
-)
-target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
-target_link_libraries(imgui PUBLIC glfw glad)
-# Evita que imgui_impl_glfw.cpp arraste GL/gl.h e GL/glext.h do sistema
-# (que conflitam com o KHR/khrplatform.h vindo do glad em third_party_generated/glad).
-target_compile_definitions(imgui PUBLIC GLFW_INCLUDE_NONE)
-# Loader explícito: sem isso o imgui tentaria auto-detectar via __has_include()
-# e cairia certo mesmo (achou <glad/gl.h> => IMGUI_IMPL_OPENGL_LOADER_GLAD2),
-# mas deixamos explícito pra não depender de detecção implícita do compilador.
-target_compile_definitions(imgui PUBLIC IMGUI_IMPL_OPENGL_LOADER_GLAD2)
+# ---- ImGui (compilado direto como parte da engine, com backend GLFW+GL3).
+# No Android não existe editor: o ImGui fica só como HEADERS (o jogo mobile
+# usa a UI 2D da própria engine; GameLayer não chama função nenhuma do
+# imgui) e o backend GLFW é descartado. ----
+if(NOT ANDROID)
+    add_library(imgui STATIC
+        ${imgui_SOURCE_DIR}/imgui.cpp
+        ${imgui_SOURCE_DIR}/imgui_draw.cpp
+        ${imgui_SOURCE_DIR}/imgui_tables.cpp
+        ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+        ${imgui_SOURCE_DIR}/imgui_demo.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+    )
+    target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
+    target_link_libraries(imgui PUBLIC glfw glad)
+    # Evita que imgui_impl_glfw.cpp arraste GL/gl.h e GL/glext.h do sistema
+    # (que conflitam com o KHR/khrplatform.h vindo do glad em third_party_generated/glad).
+    target_compile_definitions(imgui PUBLIC GLFW_INCLUDE_NONE)
+    # Loader explícito: sem isso o imgui tentaria auto-detectar via __has_include()
+    # e cairia certo mesmo (achou <glad/gl.h> => IMGUI_IMPL_OPENGL_LOADER_GLAD2),
+    # mas deixamos explícito pra não depender de detecção implícita do compilador.
+    target_compile_definitions(imgui PUBLIC IMGUI_IMPL_OPENGL_LOADER_GLAD2)
+endif()
 
-target_link_libraries(KizuriEngine
-    PUBLIC
-        glfw
-        glad
-        glm::glm
-        EnTT::EnTT
-        spdlog::spdlog
-        nlohmann_json::nlohmann_json
-        imgui
-        BulletDynamics
-        BulletCollision
-        LinearMath
-        box2d
-        ${CMAKE_DL_LIBS}
-)
+if(ANDROID)
+    target_link_libraries(KizuriEngine
+        PUBLIC
+            glad
+            glm::glm
+            EnTT::EnTT
+            spdlog::spdlog
+            nlohmann_json::nlohmann_json
+            BulletDynamics
+            BulletCollision
+            LinearMath
+            box2d
+            ${CMAKE_DL_LIBS}
+            # Plataforma Android: EGL direto (sem GLFW), android_native_window,
+            # logcat (Log.cpp) e dynamic loader pra Linux-style dlopen.
+            EGL
+            android
+            log
+    )
+else()
+    target_link_libraries(KizuriEngine
+        PUBLIC
+            glfw
+            glad
+            glm::glm
+            EnTT::EnTT
+            spdlog::spdlog
+            nlohmann_json::nlohmann_json
+            imgui
+            BulletDynamics
+            BulletCollision
+            LinearMath
+            box2d
+            ${CMAKE_DL_LIBS}
+    )
+endif()
 
 if(WIN32)
     # ole32: CoCreateInstance/CoInitializeEx/CoTaskMemFree (kizuri/core/FileDialog.cpp, IFileDialog).
@@ -244,9 +289,15 @@ target_compile_definitions(KizuriEngine PUBLIC
 # Marcas como SYSTEM os includes propagados pelos alvos de terceiros que
 # ainda não são system (glm/entt/spdlog/json/glfw/glad): com -Werror isso é
 # essencial — warnings de LIB não podem derrubar o build da engine.
-foreach(dep glfw glad glm::glm EnTT::EnTT spdlog::spdlog nlohmann_json::nlohmann_json)
-    target_include_directories(KizuriEngine SYSTEM PRIVATE $<TARGET_PROPERTY:${dep},INTERFACE_INCLUDE_DIRECTORIES>)
-endforeach()
+if(ANDROID)
+    foreach(dep glad glm::glm EnTT::EnTT spdlog::spdlog nlohmann_json::nlohmann_json)
+        target_include_directories(KizuriEngine SYSTEM PRIVATE $<TARGET_PROPERTY:${dep},INTERFACE_INCLUDE_DIRECTORIES>)
+    endforeach()
+else()
+    foreach(dep glfw glad glm::glm EnTT::EnTT spdlog::spdlog nlohmann_json::nlohmann_json)
+        target_include_directories(KizuriEngine SYSTEM PRIVATE $<TARGET_PROPERTY:${dep},INTERFACE_INCLUDE_DIRECTORIES>)
+    endforeach()
+endif()
 
 if(MSVC)
     target_compile_options(KizuriEngine PUBLIC /W4 /permissive- /WX)

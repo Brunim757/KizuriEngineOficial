@@ -58,7 +58,7 @@ namespace {
 // Remove a diretiva de versão de QUALQUER lugar (e pré-adiciona a 330),
 // garantindo que o resultado sempre começa com "#version".
 std::string RewriteVersionFor(const std::string& src, int glsl) {
-    (void)glsl; // reservado: GLES 300 se KIZURI_GLES
+    (void)glsl;
     std::string body = src;
     size_t pos = body.find("#version");
     if (pos != std::string::npos) {
@@ -66,9 +66,19 @@ std::string RewriteVersionFor(const std::string& src, int glsl) {
         if (lineEnd != std::string::npos) body.erase(pos, lineEnd - pos + 1);
         else body.erase(pos);
     }
+#if defined(KZ_PLATFORM_ANDROID)
+    // Android roda GLES 3.x: GLSL ES 300. Difere do desktop em dois pontos
+    // tratados aqui: a versão e a declaração de precisão (obrigatória no
+    // fragment shader ES — highp pro float/int evita artefatos de
+    // precisão em PBR/composição).
+    return "#version 300 es\n"
+           "precision highp float;\n"
+           "precision highp int;\n" + body;
+#else
     // A engine roda SEMPRE em GLSL 330 core (não há mais escalonamento por
     // versão — as features 4.x foram removidas do código).
     return "#version 330 core\n" + body;
+#endif
 }
 
 } // namespace

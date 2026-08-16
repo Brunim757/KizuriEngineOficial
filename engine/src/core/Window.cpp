@@ -3,7 +3,13 @@
 #include "kizuri/renderer/Shader.hpp"
 #include "kizuri/core/WindowIcon.hpp"
 #include <glad/gl.h>
-#include <GLFW/glfw3.h>
+#if defined(KZ_PLATFORM_ANDROID)
+    #include "kizuri/core/AndroidPlatform.hpp"
+    #include <EGL/egl.h>
+    #include <android/native_window.h>
+#else
+    #include <GLFW/glfw3.h>
+#endif
 #include <cstdlib>
 #include <new>
 
@@ -12,12 +18,251 @@
     #include <Windows.h>
 #endif
 
+#if defined(KZ_PLATFORM_ANDROID)
 namespace kizuri {
+
+// Converte os eventos brutos do android_main (AndroidPlatform) nos eventos
+// Kizuri equivalentes (KeyPressed/MouseButton/Resize), igual GLFW faria.
+void Window::Init(const WindowProps& props) {
+    m_Data.Title = props.Title;
+
+    // ---- registra a ponte de eventos (android_main alimenta a fila) ----
+    AndroidPlatform::SetEventHandler([](void* userData, uint32_t type, int keyCode, int action,
+                                        float x, float y) {
+        auto& data = *(WindowData*)userData;
+        switch (type) {
+            case AndroidPlatform::EvWindowResize: {
+                WindowResizeEvent event(keyCode, action);
+                if (data.EventCallback) data.EventCallback(event);
+                break;
+            }
+            case AndroidPlatform::EvKeyPressed: {
+                KeyPressedEvent event(keyCode, action != 0);
+                if (data.EventCallback) data.EventCallback(event);
+                break;
+            }
+            case AndroidPlatform::EvKeyReleased: {
+                KeyReleasedEvent event(keyCode);
+                if (data.EventCallback) data.EventCallback(event);
+                break;
+            }
+            case AndroidPlatform::EvMouseButtonPressed: {
+                MouseButtonPressedEvent event(keyCode);
+                if (data.EventCallback) data.EventCallback(event);
+                break;
+            }
+            case AndroidPlatform::EvMouseButtonReleased: {
+                MouseButtonReleasedEvent event(keyCode);
+                if (data.EventCallback) data.EventCallback(event);
+                break;
+            }
+            case AndroidPlatform::EvMouseMoved: {
+                MouseMovedEvent event(x, y);
+                if (data.EventCallback) data.EventCallback(event);
+                break;
+            }
+        }
+    }, &m_Data);
+
+    ANativeWindow* nativeWindow = AndroidPlatform::GetNativeWindow();
+    if (!nativeWindow) {
+        KZ_CORE_CRITICAL("FALHA FATAL: nenhuma ANativeWindow disponível (APP_CMD_INIT_WINDOW não chegou).");
+        std::exit(1);
+    }
+
+    int winW = ANativeWindow_getWidth(nativeWindow);
+    int winH = ANativeWindow_getHeight(nativeWindow);
+    if (winW <= 0 || winH <= 0) {
+        KZ_CORE_WARN("ANativeWindow com tamanho inválido ({0}x{1}); usando spec.", winW, winH);
+        winW = (int)props.Width;
+        winH = (int)props.Height;
+    }
+
+    EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    KZ_ASSERT(display != EGL_NO_DISPLAY, "eglGetDisplay falhou!");
+    if (!eglInitialize(display, nullptr, nullptr)) {
+        KZ_CORE_CRITICAL("FALHA FATAL: eglInitialize falhou (código 0x{0:x}).", (unsigned)eglGetError());
+        std::exit(1);
+    }
+
+    // Config ES 3.x: RGBA8 + depth24 + MSAA 4. Cai pra ES 2 se o driver só
+    // tiver isso (a engine não é testada em ES2; melhor telas com aviso).
+    EGLint configAttribs[] = {
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+        EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8,
+        EGL_DEPTH_SIZE, 24,
+        EGL_SAMPLE_BUFFERS, 1, EGL_SAMPLES, 4,
+        EGL_NONE
+    };
+    EGLint configCount = 0;
+    EGLConfig config = nullptr;
+    eglChooseConfig(display, configAttribs, &config, 1, &configCount);
+    if (configCount == 0) {
+        // Sem MSAA no driver: tenta sem antialias.
+        EGLint fallbackAttribs[] = {
+            EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+            EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+            EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8,
+            EGL_DEPTH_SIZE, 24,
+            EGL_NONE
+        };
+        eglChooseConfig(display, fallbackAttribs, &config, 1, &configCount);
+        KZ_CORE_WARN("MSAA 4 não disponível no dispositivo; usando sem MSAA.");
+    }
+    if (configCount == 0) {
+        KZ_CORE_CRITICAL("FALHA FATAL: nenhum EGLConfig compatível (EGL 0x{0:x}).", (unsigned)eglGetError());
+        std::exit(1);
+    }
+
+    EGLint contextAttribs[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE };
+    EGLContext context = eglCreateContext(display, config, EGL_NO_CONTEXT, contextAttribs);
+    if (context == EGL_NO_CONTEXT) {
+        KZ_CORE_WARN("Contexto GLES 3.0 falhou (EGL 0x{0:x}); tentando ES 2...", (unsigned)eglGetError());
+        EGLint es2Attribs[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE };
+        context = eglCreateContext(display, config, EGL_NO_CONTEXT, es2Attribs);
+        if (context == EGL_NO_CONTEXT) {
+            KZ_CORE_CRITICAL("FALHA FATAL: não foi possível criar contexto GLES (EGL 0x{0:x}).", (unsigned)eglGetError());
+            std::exit(1);
+        }
+    }
+
+    EGLSurface surface = eglCreateWindowSurface(display, config, nativeWindow, nullptr);
+    if (surface == EGL_NO_SURFACE) {
+        KZ_CORE_CRITICAL("FALHA FATAL: eglCreateWindowSurface falhou (EGL 0x{0:x}).", (unsigned)eglGetError());
+        std::exit(1);
+    }
+
+    if (!eglMakeCurrent(display, surface, surface, context)) {
+        KZ_CORE_CRITICAL("FALHA FATAL: eglMakeCurrent falhou (EGL 0x{0:x}).", (unsigned)eglGetError());
+        std::exit(1);
+    }
+
+    m_EGLDisplay = display;
+    m_EGLSurface = surface;
+    m_EGLContext = context;
+    m_EGLConfig = config;
+    m_SurfaceValid = true;
+
+    m_Data.Width = (uint32_t)winW;
+    m_Data.Height = (uint32_t)winH;
+    m_GLVersionMajor = 3;
+    m_GLVersionMinor = 0;
+
+    // Tetos: GLSL ES 300 (a transformação #version em Shader.cpp cuida do
+    // resto — "330 core" vira "300 es" + precision).
+    kizuri::SetContextGLSLVersion(300);
+
+    int gladOk = gladLoadGL((GLADloadfunc)eglGetProcAddress);
+    if (!gladOk) {
+        KZ_CORE_CRITICAL("FALHA FATAL: glad não conseguiu carregar as funções GLES.");
+        std::exit(1);
+    }
+
+    KZ_CORE_INFO("GLES: {0}", (const char*)glGetString(GL_VERSION));
+    KZ_CORE_INFO("GLES renderer: {0}", (const char*)glGetString(GL_RENDERER));
+    KZ_CORE_INFO("Janela Android criada: {0}x{1}.", winW, winH);
+
+    SetVSync(props.VSync);
+    AndroidPlatform::HandleResize(winW, winH);
+    AndroidPlatform::SetSurfaceChangedCallback([](void* nativeWindow, void* userData) {
+        static_cast<Window*>(userData)->HandleAndroidSurfaceChanged(nativeWindow);
+    }, this);
+}
+
+void Window::DestroyAndroidEGLSurface() {
+    if (!m_SurfaceValid) return;
+    eglMakeCurrent((EGLDisplay)m_EGLDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    eglDestroySurface((EGLDisplay)m_EGLDisplay, (EGLSurface)m_EGLSurface);
+    m_EGLSurface = nullptr;
+    m_SurfaceValid = false;
+}
+
+void Window::HandleAndroidSurfaceChanged(void* nativeWindow) {
+    ANativeWindow* window = (ANativeWindow*)nativeWindow;
+    if (!window) {
+        // Tela destruída (app em background / rotação): derruba a superfície.
+        DestroyAndroidEGLSurface();
+        return;
+    }
+    if (!m_EGLDisplay || !m_EGLContext) {
+        // A janela ainda não foi criada (Init roda depois do primeiro
+        // INIT_WINDOW) — nada a fazer; o Init cuida da superfície.
+        return;
+    }
+    // (Re)cria a superfície EGL sobre a ANativeWindow nova.
+    DestroyAndroidEGLSurface();
+    EGLSurface surface = eglCreateWindowSurface((EGLDisplay)m_EGLDisplay, (EGLConfig)m_EGLConfig,
+                                                window, nullptr);
+    if (surface == EGL_NO_SURFACE) {
+        KZ_CORE_ERROR("eglCreateWindowSurface falhou ao recriar (EGL 0x{0:x}).", (unsigned)eglGetError());
+        return;
+    }
+    m_EGLSurface = surface;
+    if (!eglMakeCurrent((EGLDisplay)m_EGLDisplay, surface, surface, (EGLContext)m_EGLContext)) {
+        KZ_CORE_ERROR("eglMakeCurrent falhou ao recriar superfície (0x{0:x}).", (unsigned)eglGetError());
+        eglDestroySurface((EGLDisplay)m_EGLDisplay, surface);
+        return;
+    }
+    m_SurfaceValid = true;
+
+    EGLint w = 0, h = 0;
+    eglQuerySurface((EGLDisplay)m_EGLDisplay, surface, EGL_WIDTH, &w);
+    eglQuerySurface((EGLDisplay)m_EGLDisplay, surface, EGL_HEIGHT, &h);
+    if (w > 0 && h > 0 && ((uint32_t)w != m_Data.Width || (uint32_t)h != m_Data.Height)) {
+        m_Data.Width = (uint32_t)w;
+        m_Data.Height = (uint32_t)h;
+        AndroidPlatform::HandleResize(w, h);
+    }
+    SetVSync(m_Data.VSync);
+    KZ_CORE_INFO("Superfície EGL recriada: {0}x{1}.", w, h);
+}
+
+void Window::Shutdown() {
+    if (!m_SurfaceValid && !m_EGLDisplay) return;
+    if (m_SurfaceValid) DestroyAndroidEGLSurface();
+    if (m_EGLContext) {
+        eglDestroyContext((EGLDisplay)m_EGLDisplay, (EGLContext)m_EGLContext);
+        m_EGLContext = nullptr;
+    }
+    if (m_EGLDisplay) {
+        eglTerminate((EGLDisplay)m_EGLDisplay);
+        m_EGLDisplay = nullptr;
+    }
+}
+
+void Window::OnUpdate() {
+    AndroidPlatform::PollEvents();
+    if (m_SurfaceValid)
+        eglSwapBuffers((EGLDisplay)m_EGLDisplay, (EGLSurface)m_EGLSurface);
+}
+
+void Window::SetVSync(bool enabled) {
+    if (m_SurfaceValid)
+        eglSwapInterval((EGLDisplay)m_EGLDisplay, enabled ? 1 : 0);
+    m_Data.VSync = enabled;
+}
+
+void Window::GetPosition(int& x, int& y) const { x = 0; y = 0; }
+void Window::SetPosition(int, int) {}
+void Window::SetSize(int width, int height) {
+    m_Data.Width = (uint32_t)width;
+    m_Data.Height = (uint32_t)height;
+}
+void Window::Minimize() {}
+void Window::ToggleMaximize() {}
+bool Window::IsMaximized() const { return false; }
+
+} // namespace kizuri
+#else
+namespace kizuri {
+#endif
 
 // Mostra um popup nativo do sistema operacional. Necessário porque em
 // ambientes sem console visível (ex: emuladores como Winlator, ou o app
 // aberto por duplo-clique sem terminal) uma mensagem de log não é vista
 // por ninguém — o usuário só vê "nada abriu".
+#if !defined(KZ_PLATFORM_ANDROID)
 static void ShowFatalErrorPopup(const std::string& title, const std::string& message) {
 #if defined(_WIN32)
     // MessageBoxA interpreta os bytes pela ANSI codepage do sistema (ex: CP-1252), não como
@@ -42,6 +287,7 @@ static uint8_t s_GLFWWindowCount = 0;
 static void GLFWErrorCallback(int error, const char* description) {
     KZ_CORE_ERROR("Erro do GLFW ({0}): {1}", error, description);
 }
+#endif // !KZ_PLATFORM_ANDROID
 
 Window::Window(const WindowProps& props) {
     Init(props);
@@ -51,6 +297,11 @@ Window::~Window() {
     Shutdown();
 }
 
+// ===========================================================================
+// Backend desktop: GLFW + OpenGL 3.3 core (Win32/Linux/macOS). No Android a
+// implementação está no bloco #else do topo (EGL direto) — ver acima.
+// ===========================================================================
+#if !defined(KZ_PLATFORM_ANDROID)
 void Window::Init(const WindowProps& props) {
     m_Data.Title = props.Title;
     m_Data.Width = props.Width;
@@ -292,5 +543,7 @@ void Window::ToggleMaximize() {
 bool Window::IsMaximized() const {
     return glfwGetWindowAttrib(m_Window, GLFW_MAXIMIZED) != 0;
 }
+
+#endif // !KZ_PLATFORM_ANDROID
 
 } // namespace kizuri

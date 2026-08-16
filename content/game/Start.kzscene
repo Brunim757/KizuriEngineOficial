@@ -1,0 +1,66 @@
+{
+    "Entities": [
+        {
+            "ID": 1,
+            "Tag": "CameraPrincipal",
+            "TagLayer": 0,
+            "TagCollisionMask": 4294967295,
+            "Transform": { "Translation": [0.0, 0.0, 4.0], "Rotation": [0.0, 0.0, 0.0], "Scale": [1.0, 1.0, 1.0] },
+            "Camera": { "Type": 1, "OrthoSize": 5.0, "PerspectiveFOV": 60.0, "NearClip": 0.1, "FarClip": 100.0, "Primary": true }
+        },
+        {
+            "ID": 2,
+            "Tag": "Sol",
+            "TagLayer": 0,
+            "TagCollisionMask": 4294967295,
+            "Transform": { "Translation": [-2.0, 6.0, 3.0], "Rotation": [0.0, 0.0, 0.0], "Scale": [1.0, 1.0, 1.0] },
+            "Light": { "Type": 0, "Color": [1.0, 0.98, 0.9], "Intensity": 2.0, "Range": 0.0, "InnerConeDeg": 0.0, "OuterConeDeg": 45.0, "CastsShadow": true }
+        },
+        {
+            "ID": 3,
+            "Tag": "CuboDemonstracao",
+            "TagLayer": 0,
+            "TagCollisionMask": 4294967295,
+            "Transform": { "Translation": [0.0, 0.0, 0.0], "Rotation": [0.35, 0.6, 0.0], "Scale": [1.0, 1.0, 1.0] },
+            "MeshRenderer": {
+                "MeshSource": "builtin:cube",
+                "Albedo": [0.75, 0.78, 0.82],
+                "Metallic": 0.2,
+                "Roughness": 0.55,
+                "AO": 1.0,
+                "Emissive": [0.0, 0.0, 0.0],
+                "EmissiveStrength": 0.0,
+                "AlbedoMapPath": "",
+                "NormalMapPath": "",
+                "MetallicRoughnessMapPath": "",
+                "EmissiveMapPath": "",
+                "HeightMapPath": "",
+                "HeightScale": 0.08,
+                "PlanarReflect": false
+            }
+        },
+        {
+            "ID": 4,
+            "Tag": "Chao",
+            "TagLayer": 0,
+            "TagCollisionMask": 4294967295,
+            "Transform": { "Translation": [0.0, -1.2, 0.0], "Rotation": [0.0, 0.0, 0.0], "Scale": [6.0, 0.2, 6.0] },
+            "MeshRenderer": {
+                "MeshSource": "builtin:cube",
+                "Albedo": [0.3, 0.35, 0.4],
+                "Metallic": 0.0,
+                "Roughness": 0.9,
+                "AO": 1.0,
+                "Emissive": [0.0, 0.0, 0.0],
+                "EmissiveStrength": 0.0,
+                "AlbedoMapPath": "",
+                "NormalMapPath": "",
+                "MetallicRoughnessMapPath": "",
+                "EmissiveMapPath": "",
+                "HeightMapPath": "",
+                "HeightScale": 0.08,
+                "PlanarReflect": false
+            }
+        }
+    ]
+}

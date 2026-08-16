@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Manifest do app Android do KizuriGame (o jogo standalone da engine).
+     Empacotado pelo platform/android/package_apk.sh com aapt2:
+     libKizuriGame.so (com a engine embutida) + runtime .NET no lib/<abi>/
+     + assets/{dotnet,game} (extraídos pro filesDir na primeira execução). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="br.com.kizuri.game"
+    android:versionCode="1"
+    android:versionName="0.8.0">
+
+    <uses-feature android:glEsVersion="0x00030000" android:required="true" />
+
+    <application
+        android:label="Kizuri Game"
+        android:hasCode="false"
+        android:allowBackup="true"
+        android:extractNativeLibs="true"
+        android:hardwareAccelerated="true">
+        <activity
+            android:name="android.app.NativeActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize"
+            android:screenOrientation="sensorLandscape">
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="KizuriGame" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

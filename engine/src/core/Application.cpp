@@ -1,12 +1,20 @@
 #include "kizuri/core/Application.hpp"
 #include "kizuri/core/Log.hpp"
 #include "kizuri/core/Input.hpp"
-#include "kizuri/core/ImGuiLayer.hpp"
+#if defined(KZ_PLATFORM_ANDROID)
+    #include "kizuri/core/AndroidPlatform.hpp"
+    #include <chrono>
+#else
+    #include <GLFW/glfw3.h>
+#endif
 #include "kizuri/renderer/Renderer.hpp"
 #include "kizuri/renderer/RenderCommand.hpp"
 #include "kizuri/audio/AudioEngine.hpp"
 #include "kizuri/assets/AssetManager.hpp"
-#include <GLFW/glfw3.h>
+
+#if !defined(KZ_PLATFORM_ANDROID)
+    #include "kizuri/core/ImGuiLayer.hpp"
+#endif
 
 namespace kizuri {
 
@@ -44,8 +52,11 @@ Application::Application(const ApplicationSpec& spec) {
     Renderer::Init();
     AudioEngine::Init();
 
+#if !defined(KZ_PLATFORM_ANDROID)
+    // ImGui é UI de editor/desktop; no Android não existe (sem GLFW backend).
     m_ImGuiLayer = new ImGuiLayer();
     PushOverlay(m_ImGuiLayer);
+#endif
 }
 
 Application::~Application() {
@@ -87,6 +98,31 @@ bool Application::OnWindowResize(WindowResizeEvent& e) {
 
 void Application::Run() {
     KZ_CORE_INFO("Kizuri Engine: iniciando o loop principal.");
+#if defined(KZ_PLATFORM_ANDROID)
+    // Android: sem ImGui e sem GLFW — o delta é medido com chrono e os
+    // eventos do app chegam via AndroidPlatform (drenados pelo Window).
+    using Clock = std::chrono::steady_clock;
+    auto lastTick = Clock::now();
+    while (m_Running && !AndroidPlatform::ShouldExit()) {
+        // Drena o ALooper do app glue (comandos de janela, toque, ciclo de
+        // vida) antes de processar o frame.
+        AndroidPlatform::PumpGlue();
+        auto now = Clock::now();
+        float time = (float)std::chrono::duration<double>(now - lastTick).count();
+        lastTick = now;
+        Timestep timestep(time);
+        m_LastFrameTime = time;
+
+        if (!m_Minimized) {
+            RenderCommand::ResetFrameStats();
+            for (Layer* layer : m_LayerStack) {
+                layer->OnUpdate(timestep);
+            }
+        }
+
+        m_Window->OnUpdate();
+    }
+#else
     while (m_Running) {
         float time = (float)glfwGetTime();
         Timestep timestep(time - m_LastFrameTime);
@@ -113,6 +149,7 @@ void Application::Run() {
         m_Window->OnUpdate();
         KZ_CORE_TRACE("Application::Run — fim do frame");
     }
+#endif
 }
 
 } // namespace kizuri

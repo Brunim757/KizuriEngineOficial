@@ -13,6 +13,15 @@
 #include <cmath>
 #include <utility>
 
+// GLES (Android) não garante RGB16F como color-renderable; RGBA16F é o
+// formato obrigatório (ES 3.1+). Nos dois lados os shaders só leem .rgb, e
+// os formatos de texel (GL_RGB/GL_FLOAT) continuam válidos no upload.
+#if defined(KZ_PLATFORM_ANDROID)
+    #define KZ_HDR_INTERNAL_FORMAT GL_RGBA16F
+#else
+    #define KZ_HDR_INTERNAL_FORMAT KZ_HDR_INTERNAL_FORMAT
+#endif
+
 namespace kizuri {
 
 Ref<Shader> Renderer3D::s_MeshShader;
@@ -2046,7 +2055,7 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
     // --- Destino simples (o que os passes de pós amostram): cor HDR + depth textura ---
     glGenTextures(1, &s_HDRColorBuffer);
     glBindTexture(GL_TEXTURE_2D, s_HDRColorBuffer);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, (GLsizei)width, (GLsizei)height, 0, GL_RGB, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, KZ_HDR_INTERNAL_FORMAT, (GLsizei)width, (GLsizei)height, 0, GL_RGB, GL_FLOAT, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -2085,8 +2094,17 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
     if (msaa > 1) {
         glGenTextures(1, &s_MSAAHDRColor);
         glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, s_MSAAHDRColor);
-        glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, (GLsizei)msaa, GL_RGB16F,
+#if defined(KZ_PLATFORM_ANDROID)
+        // GLES: glTexImage2DMultisample não existe (é glTexStorage2DMultisample,
+        // do ES 3.1+). Sem ES 3.1 a textura fica vazia, o FBO abaixo fica
+        // incompleto e o fallback existente desliga o MSAA sozinho.
+        if (GLAD_GL_ES_VERSION_3_1)
+            glTexStorage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, (GLsizei)msaa, KZ_HDR_INTERNAL_FORMAT,
+                                      (GLsizei)width, (GLsizei)height, GL_TRUE);
+#else
+        glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, (GLsizei)msaa, KZ_HDR_INTERNAL_FORMAT,
                                 (GLsizei)width, (GLsizei)height, GL_TRUE);
+#endif
         glGenRenderbuffers(1, &s_MSAAHDRDepthRBO);
         glBindRenderbuffer(GL_RENDERBUFFER, s_MSAAHDRDepthRBO);
         glRenderbufferStorageMultisample(GL_RENDERBUFFER, (GLsizei)msaa, GL_DEPTH_COMPONENT24,
@@ -2113,7 +2131,7 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
     glGenTextures(2, s_BloomColorBuffer);
     for (int i = 0; i < 2; ++i) {
         glBindTexture(GL_TEXTURE_2D, s_BloomColorBuffer[i]);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, (GLsizei)bloomW, (GLsizei)bloomH, 0, GL_RGB, GL_FLOAT, nullptr);
+        glTexImage2D(GL_TEXTURE_2D, 0, KZ_HDR_INTERNAL_FORMAT, (GLsizei)bloomW, (GLsizei)bloomH, 0, GL_RGB, GL_FLOAT, nullptr);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -2436,14 +2454,31 @@ void Renderer3D::EnsureShadowMaps(uint32_t size) {
         // por cima). Filtragem de textura de profundidade é GL 3.0+.
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+#if defined(KZ_PLATFORM_ANDROID)
+        // CLAMP_TO_BORDER só existe no ES 3.2+; em 3.0/3.1 as bordas ficam
+        // CLAMP_TO_EDGE (a diferença é visível só no miolo do PCF manual).
+        if (GLAD_GL_ES_VERSION_3_2) {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+            glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+        } else {
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        }
+#else
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
         glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+#endif
 
         glBindFramebuffer(GL_FRAMEBUFFER, s_ShadowFBO[i]);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, s_ShadowMap[i], 0);
+#if !defined(KZ_PLATFORM_ANDROID)
+        // GLES: não existe glDrawBuffer/glReadBuffer — FBO só com depth já
+        // completa sem color attachment (draw/read = NONE implícito).
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
+#endif
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
             KZ_CORE_ERROR("Framebuffer de sombra da cascata {0} incompleto.", i);
     }
@@ -2548,7 +2583,7 @@ void Renderer3D::GenerateEnvironment() {
     glGenTextures(1, &s_EnvironmentCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, s_EnvironmentCubemap);
     for (uint32_t i = 0; i < 6; ++i) {
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F,
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, KZ_HDR_INTERNAL_FORMAT,
                      (GLsizei)kEnvironmentSize, (GLsizei)kEnvironmentSize, 0, GL_RGB, GL_FLOAT, nullptr);
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -2594,7 +2629,7 @@ void Renderer3D::GenerateEnvironment() {
     glGenTextures(1, &s_IrradianceCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, s_IrradianceCubemap);
     for (uint32_t i = 0; i < 6; ++i) {
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F,
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, KZ_HDR_INTERNAL_FORMAT,
                      (GLsizei)kIrradianceSize, (GLsizei)kIrradianceSize, 0, GL_RGB, GL_FLOAT, nullptr);
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -2623,7 +2658,7 @@ void Renderer3D::GenerateEnvironment() {
     glGenTextures(1, &s_PrefilterCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, s_PrefilterCubemap);
     for (uint32_t i = 0; i < 6; ++i) {
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F,
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, KZ_HDR_INTERNAL_FORMAT,
                      (GLsizei)kPrefilterBaseSize, (GLsizei)kPrefilterBaseSize, 0, GL_RGB, GL_FLOAT, nullptr);
     }
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -2702,7 +2737,7 @@ bool Renderer3D::LoadHDRI(const std::string& path) {
     }
     if (s_EquirectTexture == 0) glGenTextures(1, &s_EquirectTexture);
     glBindTexture(GL_TEXTURE_2D, s_EquirectTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, w, h, 0, GL_RGBA, GL_FLOAT, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, KZ_HDR_INTERNAL_FORMAT, w, h, 0, GL_RGBA, GL_FLOAT, data);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 
+#if defined(KZ_PLATFORM_ANDROID)
+struct ANativeWindow;
+#endif
 struct GLFWwindow;
 
 namespace kizuri {
@@ -23,7 +26,9 @@ struct WindowProps {
     bool CustomTitlebar = false;
 };
 
-// Janela nativa multiplataforma (Win32/Linux/macOS via GLFW) com contexto OpenGL 4.5 core.
+// Janela nativa multiplataforma. Desktop: GLFW + OpenGL 3.3 core. Android
+// (KZ_PLATFORM_ANDROID): EGL + GLES 3.x direto via android_native_app_glue
+// — ver Window.cpp (a API pública é a mesma pros dois backends).
 class Window {
 public:
     explicit Window(const WindowProps& props = WindowProps());
@@ -69,6 +74,15 @@ private:
     void Init(const WindowProps& props);
     void Shutdown();
 
+#if defined(KZ_PLATFORM_ANDROID)
+    void* m_EGLDisplay = nullptr;
+    void* m_EGLSurface = nullptr;
+    void* m_EGLContext = nullptr;
+    void* m_EGLConfig = nullptr;
+    bool m_SurfaceValid = false;
+    void HandleAndroidSurfaceChanged(void* nativeWindow);
+    void DestroyAndroidEGLSurface();
+#endif
     GLFWwindow* m_Window = nullptr;
     int m_GLVersionMajor = 0;
     int m_GLVersionMinor = 0;

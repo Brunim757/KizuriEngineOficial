@@ -22,6 +22,9 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
 WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
 
+# Diagnóstico da CI: mostra todos os comandos e decisions (temporário).
+set -x
+
 echo "==> (1/6) recursos + assets"
 RES="$WORK/res"
 mkdir -p "$RES"
@@ -29,8 +32,13 @@ echo "default" > "$RES/compatibility_version.txt"
 cp -r "$GAME_ASSETS" "$WORK/game_src"
 
 echo "==> (2/6) aapt2 compile/link"
-PLATFORM_JAR=$(ls "$SDK_BUILD_TOOLS"/../platforms/android-*/android.jar 2>/dev/null | sort -V | tail -1)
-test -n "$PLATFORM_JAR" || { echo "ERRO: android.jar não encontrado (platforms/android-*)"; exit 1; }
+PLATFORM_JAR="$(cd "$SDK_BUILD_TOOLS/../platforms" && pwd)/android-34/android.jar"
+test -f "$PLATFORM_JAR" || {
+    echo "ERRO: $PLATFORM_JAR ausente";
+    ls -la "$(dirname "$PLATFORM_JAR")/.." || true;
+    exit 1;
+}
+echo "PLATFORM_JAR=$PLATFORM_JAR"
 "$AAPT2" compile --dir "$RES" -o "$WORK/resources.zip"
 "$AAPT2" link \
     -o "$WORK/unsigned.apk" \

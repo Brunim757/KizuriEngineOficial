@@ -311,9 +311,21 @@ jobs:
           dotnet publish managed/SampleGame/SampleGame.csproj \
             -c Release -r android-arm64 --self-contained true \
             -o android_dotnet --nologo
-          # O runtime pack android-arm64 entrega o hostfxr embutível:
-          test -f android_dotnet/libhostfxr.so || {
-            echo "::error::runtime pack android-arm64 sem libhostfxr.so — publish incompleto"; exit 1; }
+          # O publish de um projeto puro do .NET SDK NÃO copia os .so do
+          # runtime pack android-arm64 (isso só acontece com o workload
+          # Android instalado). Baixa o runtime pack exato do NuGet e
+          # monta o runtime embutível manualmente (libhostfxr+libcoreclr):
+          RPM_VER=$(dotnet --list-runtimes | awk '/Microsoft.NETCore.App/{print $2; exit}')
+          curl -fsSL -o pack.nupkg \
+            "https://api.nuget.org/v3-flatcontainer/microsoft.netcore.app.runtime.android-arm64/${RPM_VER}/microsoft.netcore.app.runtime.android-arm64.${RPM_VER}.nupkg"
+          unzip -q -o pack.nupkg -d pack
+          cp -f pack/runtimes/android-arm64/native/* android_dotnet/
+          cp -f pack/runtimes/android-arm64/lib/* android_dotnet/ 2>/dev/null || true
+          test -f android_dotnet/libhostfxr.so \
+            || { echo "::error::libhostfxr.so ausente no runtime pack"; exit 1; }
+          test -f android_dotnet/libcoreclr.so \
+            || { echo "::error::libcoreclr.so ausente no runtime pack"; exit 1; }
+          echo "Runtime embutível pronto em android_dotnet/ ($RPM_VER)"
 
       - name: Empacotar APK (aapt2 + zipalign + apksigner)
         run: |

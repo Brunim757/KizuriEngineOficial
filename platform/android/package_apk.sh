@@ -29,10 +29,12 @@ echo "default" > "$RES/compatibility_version.txt"
 cp -r "$GAME_ASSETS" "$WORK/game_src"
 
 echo "==> (2/6) aapt2 compile/link"
+PLATFORM_JAR=$(ls "$SDK_BUILD_TOOLS"/../platforms/android-*/android.jar 2>/dev/null | sort -V | tail -1)
+test -n "$PLATFORM_JAR" || { echo "ERRO: android.jar não encontrado (platforms/android-*)"; exit 1; }
 "$AAPT2" compile --dir "$RES" -o "$WORK/resources.zip"
 "$AAPT2" link \
     -o "$WORK/unsigned.apk" \
-    -I "$SDK_BUILD_TOOLS/../platforms/android-34/android.jar" \
+    -I "$PLATFORM_JAR" \
     --manifest "$SCRIPT_DIR/AndroidManifest.xml" \
     --min-sdk-version 24 --target-sdk-version 34 \
     --version-code 1 --version-name 0.8.0 \
@@ -44,8 +46,8 @@ cp "$BIN_DIR/libKizuriGame.so"   "$WORK/apk/lib/arm64-v8a/"
 cp "$BIN_DIR/libKizuriEngine.so" "$WORK/apk/lib/arm64-v8a/"
 
 echo "==> (4/6) runtime .NET (CoreCLR) + assemblies + cena"
-# O jogo C# + libhostfxr/libcoreclr vão em assets/dotnet (extraídos pro
-# filesDir na primeira execução — AndroidEntry.cpp).
+# O jogo C# + libcoreclr/libhostfxr da engine vão em assets/dotnet
+# (extraídos pro filesDir na primeira execução — AndroidEntry.cpp).
 mkdir -p "$WORK/apk/assets/dotnet" "$WORK/apk/assets/game"
 cp -r "$DOTNET_DIR"/. "$WORK/apk/assets/dotnet/"
 cp -r "$GAME_ASSETS"/. "$WORK/apk/assets/game/"
@@ -53,10 +55,11 @@ cp -r "$GAME_ASSETS"/. "$WORK/apk/assets/game/"
 test -f "$WORK/apk/assets/dotnet/SampleGame.runtimeconfig.json" \
     || { echo "ERRO: publish sem runtimeconfig (SampleGame.runtimeconfig.json)"; exit 1; }
 
-echo "==> (5/6) zipar (libs + assets) + zipalign"
-# aapt2 não copia lib/assets; entra via zip.
-( cd "$WORK/apk" && zip -qr "$WORK/unsigned.zip" . )
-"$ZIPALIGN" -f 4 "$WORK/unsigned.zip" "$WORK/aligned.apk"
+echo "==> (5/6) libs+assets direto no APK + zipalign"
+# Adiciona lib/ e assets/ DENTRO do apk gerado pelo aapt2 (evita zip
+# intermediário separado — fonte de "I/O error" do apksigner).
+( cd "$WORK/apk" && zip -qr "$WORK/unsigned.apk" lib assets )
+"$ZIPALIGN" -f 4 "$WORK/unsigned.apk" "$WORK/aligned.apk"
 
 echo "==> (6/6) assinar (keystore de debug gerado na hora)"
 KEY="$WORK/debug.keystore"

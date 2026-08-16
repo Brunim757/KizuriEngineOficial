@@ -286,10 +286,15 @@ jobs:
           # yes + pipefail: o sdkmanager fecha o stdin cedo e o yes morre com
           # broken pipe (status 141) — desliga o pipefail só nesses comandos.
           set +o pipefail
-          yes | "$SDKMANAGER" --install "ndk;27.2.12479018" "build-tools;34.0.0" "platforms;android-34" >/dev/null
+          "$SDKMANAGER" --install "platform-tools" "ndk;27.2.12479018" \
+            "platforms;android-34" "build-tools;34.0.0" \
+            || { echo "::error::sdkmanager --install falhou"; exit 1; }
           set -o pipefail
-          test -d "$ANDROID_HOME/ndk/27.2.12479018" \
-            || { echo "::error::NDK 27.2.12479018 não instalado"; exit 1; }
+          # Valida cada componente (o aapt2 link exige o android.jar).
+          for d in platforms/android-34 build-tools/34.0.0 ndk/27.2.12479018; do
+            test -d "$ANDROID_HOME/$d" \
+              || { echo "::error::$d não instalado em $ANDROID_HOME"; find "$ANDROID_HOME" -maxdepth 2 | head -20; exit 1; }
+          done
           echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
 

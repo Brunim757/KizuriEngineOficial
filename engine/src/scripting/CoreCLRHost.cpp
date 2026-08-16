@@ -29,6 +29,30 @@ namespace kizuri {
 namespace scripting {
 
 namespace {
+struct CoreCLRHost::Impl {
+    void* HostfxrLib = nullptr;
+    hostfxr_handle Context = nullptr;
+    LoadAssemblyAndGetFunctionPointerFn LoadAssemblyAndGetFunctionPointer = nullptr;
+    HostfxrCloseFn Close = nullptr;
+    HostfxrSetErrorWriterFn SetErrorWriter = nullptr;
+
+#if defined(KZ_PLATFORM_ANDROID)
+    void* CoreclrLib = nullptr;
+    void* HostHandle = nullptr;
+    unsigned int DomainId = 0;
+    CoreclrShutdownFn CoreclrShutdown = nullptr;
+#endif
+
+    InitializeGameModuleFn InitializeGameModule = nullptr;
+    GetScriptCountFn GetScriptCount = nullptr;
+    GetScriptNameFn GetScriptName = nullptr;
+    GetLastInitErrorFn GetLastInitError = nullptr;
+    CreateScriptFn CreateScript = nullptr;
+    DestroyScriptFn DestroyScript = nullptr;
+    UpdateScriptFn UpdateScript = nullptr;
+    CollisionScriptFn CollisionScript = nullptr;
+};
+
 
 // ---------------------------------------------------------------------------
 // Carregamento de biblioteca dinâmica (hostfxr) por plataforma.
@@ -324,30 +348,6 @@ static fs::path FindHostfxr(const fs::path& appBase) {
 // ---------------------------------------------------------------------------
 // Implementação (esconde os tipos do hosting .NET do header público).
 // ---------------------------------------------------------------------------
-struct CoreCLRHost::Impl {
-    void* HostfxrLib = nullptr;
-    hostfxr_handle Context = nullptr;
-    LoadAssemblyAndGetFunctionPointerFn LoadAssemblyAndGetFunctionPointer = nullptr;
-    HostfxrCloseFn Close = nullptr;
-    HostfxrSetErrorWriterFn SetErrorWriter = nullptr;
-
-#if defined(KZ_PLATFORM_ANDROID)
-    void* CoreclrLib = nullptr;
-    void* HostHandle = nullptr;
-    unsigned int DomainId = 0;
-    CoreclrShutdownFn CoreclrShutdown = nullptr;
-#endif
-
-    InitializeGameModuleFn InitializeGameModule = nullptr;
-    GetScriptCountFn GetScriptCount = nullptr;
-    GetScriptNameFn GetScriptName = nullptr;
-    GetLastInitErrorFn GetLastInitError = nullptr;
-    CreateScriptFn CreateScript = nullptr;
-    DestroyScriptFn DestroyScript = nullptr;
-    UpdateScriptFn UpdateScript = nullptr;
-    CollisionScriptFn CollisionScript = nullptr;
-};
-
 CoreCLRHost::Impl* CoreCLRHost::s_Impl = nullptr;
 
 bool CoreCLRHost::Initialize(const std::string& runtimeConfigPath,

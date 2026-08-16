@@ -331,7 +331,7 @@ jobs:
             LIB_DIR=pack/runtimes/android-arm64/lib
           fi
           cp -f "$NATIVE_DIR/"*.so android_dotnet/
-          if [ -d "$LIB_DIR" ]; then cp -f "$LIB_DIR/"* android_dotnet/; fi
+          if [ -d "$LIB_DIR" ]; then cp -rf "$LIB_DIR/."* android_dotnet/ 2>/dev/null || true; fi
           test -f android_dotnet/libhostfxr.so \
             || { echo "::error::libhostfxr.so ausente no runtime pack"; exit 1; }
           test -f android_dotnet/libcoreclr.so \

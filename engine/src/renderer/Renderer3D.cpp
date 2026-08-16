@@ -19,7 +19,7 @@
 #if defined(KZ_PLATFORM_ANDROID)
     #define KZ_HDR_INTERNAL_FORMAT GL_RGBA16F
 #else
-    #define KZ_HDR_INTERNAL_FORMAT KZ_HDR_INTERNAL_FORMAT
+    #define KZ_HDR_INTERNAL_FORMAT GL_RGB16F
 #endif
 
 namespace kizuri {

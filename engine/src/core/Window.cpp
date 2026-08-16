@@ -18,9 +18,9 @@
     #include <Windows.h>
 #endif
 
-#if defined(KZ_PLATFORM_ANDROID)
 namespace kizuri {
 
+#if defined(KZ_PLATFORM_ANDROID)
 // Converte os eventos brutos do android_main (AndroidPlatform) nos eventos
 // Kizuri equivalentes (KeyPressed/MouseButton/Resize), igual GLFW faria.
 void Window::Init(const WindowProps& props) {
@@ -253,9 +253,7 @@ void Window::Minimize() {}
 void Window::ToggleMaximize() {}
 bool Window::IsMaximized() const { return false; }
 
-} // namespace kizuri
 #else
-namespace kizuri {
 #endif
 
 // Mostra um popup nativo do sistema operacional. Necessário porque em

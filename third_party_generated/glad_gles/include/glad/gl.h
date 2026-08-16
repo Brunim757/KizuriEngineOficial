@@ -4,4 +4,5 @@
 // que expõe as MESMAS funções com os MESMOS nomes (GLES 3.x compartilha o
 // núcleo com GL 3.3). Só a função de load e o tipo do callback mudam.
 #include "glad/glad.h"
-#define gladLoadGL(load) gladLoadGLES2Loader((GLADloadproc)(load))
+typedef GLADloadproc GLADloadfunc;
+#define gladLoadGL(load) gladLoadGLES2Loader((GLADloadfunc)(load))

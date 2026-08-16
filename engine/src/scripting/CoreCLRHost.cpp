@@ -88,34 +88,6 @@ void HostfxrErrorWriter(const NativeChar* message) {
 #endif
 
 
-struct CoreCLRHost::Impl {
-    void* HostfxrLib = nullptr;
-    hostfxr_handle Context = nullptr;
-    LoadAssemblyAndGetFunctionPointerFn LoadAssemblyAndGetFunctionPointer = nullptr;
-    HostfxrCloseFn Close = nullptr;
-    HostfxrSetErrorWriterFn SetErrorWriter = nullptr;
-
-#if defined(KZ_PLATFORM_ANDROID)
-    void* CoreclrLib = nullptr;
-    void* HostHandle = nullptr;
-    unsigned int DomainId = 0;
-    CoreclrShutdownFn CoreclrShutdown = nullptr;
-#endif
-
-    InitializeGameModuleFn InitializeGameModule = nullptr;
-    GetScriptCountFn GetScriptCount = nullptr;
-    GetScriptNameFn GetScriptName = nullptr;
-    GetLastInitErrorFn GetLastInitError = nullptr;
-    CreateScriptFn CreateScript = nullptr;
-    DestroyScriptFn DestroyScript = nullptr;
-    UpdateScriptFn UpdateScript = nullptr;
-    CollisionScriptFn CollisionScript = nullptr;
-};
-
-namespace {
-
-
-
 // ---------------------------------------------------------------------------
 // Carregamento de biblioteca dinâmica (hostfxr) por plataforma.
 // ---------------------------------------------------------------------------
@@ -162,6 +134,36 @@ namespace {
     static std::string ToUtf8(const std::string& s) { return s; }
     static std::string ToNativePath(const fs::path& p) { return p.string(); }
 #endif
+
+
+struct CoreCLRHost::Impl {
+    void* HostfxrLib = nullptr;
+    hostfxr_handle Context = nullptr;
+    LoadAssemblyAndGetFunctionPointerFn LoadAssemblyAndGetFunctionPointer = nullptr;
+    HostfxrCloseFn Close = nullptr;
+    HostfxrSetErrorWriterFn SetErrorWriter = nullptr;
+
+#if defined(KZ_PLATFORM_ANDROID)
+    void* CoreclrLib = nullptr;
+    void* HostHandle = nullptr;
+    unsigned int DomainId = 0;
+    CoreclrShutdownFn CoreclrShutdown = nullptr;
+#endif
+
+    InitializeGameModuleFn InitializeGameModule = nullptr;
+    GetScriptCountFn GetScriptCount = nullptr;
+    GetScriptNameFn GetScriptName = nullptr;
+    GetLastInitErrorFn GetLastInitError = nullptr;
+    CreateScriptFn CreateScript = nullptr;
+    DestroyScriptFn DestroyScript = nullptr;
+    UpdateScriptFn UpdateScript = nullptr;
+    CollisionScriptFn CollisionScript = nullptr;
+};
+
+namespace {
+
+
+
 
 // ---------------------------------------------------------------------------
 // Tipos das funções do hostfxr (espelham hostfxr.h / coreclr_delegates.h).

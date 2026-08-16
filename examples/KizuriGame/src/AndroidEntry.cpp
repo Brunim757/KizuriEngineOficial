@@ -14,6 +14,7 @@
 #include <android_native_app_glue.h>
 #include <android/asset_manager.h>
 #include <android/log.h>
+#include <android/native_window.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -22,13 +23,14 @@
 #include <cstring>
 #include <string>
 
+#include "kizuri/core/Application.hpp"
 #include "kizuri/core/CommandLineArgs.hpp"
 #include "kizuri/core/AndroidPlatform.hpp"
 #include "kizuri/core/Log.hpp"
 
-// Declarado em EntryPoint.hpp (que também define main() — não incluímos
-// pra não duplicar a entrada desktop dentro da lib do jogo).
-namespace kizuri { struct Application; Application* CreateApplication(); }
+// CreateApplication é declarado no EntryPoint.hpp (que também define main()
+// — não incluímos pra não duplicar a entrada desktop dentro da lib do jogo).
+namespace kizuri { Application* CreateApplication(); }
 
 namespace kizuri {
 namespace android {
@@ -115,9 +117,10 @@ static void ExtractAppAssets(AAssetManager* mgr, const std::string& filesDir) {
 static void PumpGlue() {
     if (!s_App) return;
     // Alooper com timeout 0: não bloqueia; só drena o que chegou.
-    int events = 0;
+    // (ALooper_pollAll é obsoleto — pode ignorar wakes; pollOnce é o padrão.)
+    int fd = 0, events = 0;
     android_poll_source* source = nullptr;
-    while (ALooper_pollAll(0, nullptr, &events, (void**)&source) >= 0) {
+    while (ALooper_pollOnce(0, &fd, &events, (void**)&source) >= 0) {
         if (source) source->process(s_App, source);
         if (s_App->destroyRequested) return;
     }
@@ -248,13 +251,12 @@ void android_main(android_app* app) {
     // O Application é criado no APP_CMD_INIT_WINDOW (HandleAppCmd).
     ANativeActivity_setWindowFlags(app->activity, AWINDOW_FLAG_KEEP_SCREEN_ON,
                                    AWINDOW_FLAG_KEEP_SCREEN_ON);
-    app_dummy(); // garante que o glue não seja descartado pelo linker
 
     // Espera bloqueante pela primeira APP_CMD_INIT_WINDOW.
     while (!kizuri::android::s_GameApp && !app->destroyRequested) {
-        int events = 0;
+        int fd = 0, events = 0;
         android_poll_source* source = nullptr;
-        ALooper_pollAll(-1, nullptr, &events, (void**)&source);
+        ALooper_pollOnce(-1, &fd, &events, (void**)&source);
         if (source) source->process(app, source);
     }
 

@@ -247,12 +247,10 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Configurar Android SDK (build-tools 34, platform 34, NDK r27)
+      - name: Configurar Android SDK (build-tools 34, platform 34)
         uses: android-actions/setup-android@v3
-        with:
-          ndk-version: 27.2.12479018
 
-      - name: Instalar NDK e plataforma
+      - name: Instalar NDK, build-tools e plataforma
         run: |
           sdkmanager --install "ndk;27.2.12479018" "build-tools;34.0.0" "platforms;android-34" >/dev/null
           echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"

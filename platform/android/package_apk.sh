@@ -32,17 +32,28 @@ echo "default" > "$RES/compatibility_version.txt"
 cp -r "$GAME_ASSETS" "$WORK/game_src"
 
 echo "==> (2/6) aapt2 compile/link"
-PLATFORM_JAR="$(cd "$SDK_BUILD_TOOLS/../platforms" && pwd)/android-34/android.jar"
-test -f "$PLATFORM_JAR" || {
-    echo "ERRO: $PLATFORM_JAR ausente";
-    ls -la "$(dirname "$PLATFORM_JAR")/.." || true;
-    exit 1;
-}
-echo "PLATFORM_JAR=$PLATFORM_JAR"
 "$AAPT2" compile --dir "$RES" -o "$WORK/resources.zip"
+# O android.jar fica em <sdk>/platforms/android-<api>/ — procura em
+# candidatos; o manifest é 100% nativo (sem resources do framework), então
+# o -I é opcional: se não achar, linka sem ele.
+PLATFORM_JAR=""
+for cand in \
+    "$ANDROID_SDK_ROOT/platforms/android-34/android.jar" \
+    "$(dirname "$SDK_BUILD_TOOLS")/platforms/android-34/android.jar" \
+    "$HOME/Android/Sdk/platforms/android-34/android.jar" \
+    "$ANDROID_HOME/platforms/android-34/android.jar"; do
+    [ -f "$cand" ] && { PLATFORM_JAR="$cand"; break; }
+done
+LINK_ARGS=()
+if [ -n "$PLATFORM_JAR" ]; then
+    echo "PLATFORM_JAR=$PLATFORM_JAR"
+    LINK_ARGS+=(-I "$PLATFORM_JAR")
+else
+    echo "AVISO: android.jar não encontrado — aapt2 link sem -I."
+fi
 "$AAPT2" link \
     -o "$WORK/unsigned.apk" \
-    -I "$PLATFORM_JAR" \
+    "${LINK_ARGS[@]}" \
     --manifest "$SCRIPT_DIR/AndroidManifest.xml" \
     --min-sdk-version 24 --target-sdk-version 34 \
     --version-code 1 --version-name 0.8.0 \

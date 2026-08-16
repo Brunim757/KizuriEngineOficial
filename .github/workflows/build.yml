@@ -290,8 +290,9 @@ jobs:
             "platforms;android-34" "build-tools;34.0.0" \
             || { echo "::error::sdkmanager --install falhou"; exit 1; }
           set -o pipefail
-          # Valida cada componente (o aapt2 link exige o android.jar).
-          for d in platforms/android-34 build-tools/34.0.0 ndk/27.2.12479018; do
+          # Valida o essencial (o android.jar do platform é opcional pro
+          # aapt2 no nosso manifest 100% nativo; o NDK é obrigatório).
+          for d in build-tools/34.0.0 ndk/27.2.12479018; do
             test -d "$ANDROID_HOME/$d" \
               || { echo "::error::$d não instalado em $ANDROID_HOME"; find "$ANDROID_HOME" -maxdepth 2 | head -20; exit 1; }
           done

@@ -1530,24 +1530,14 @@ void EditorLayer::DrawCameraGizmo() {
     glm::mat4 world = m_ActiveScene->GetWorldTransform(m_SelectedEntity);
     glm::vec3 pos = glm::vec3(world[3]);
 
-    // A direção do render vem da fórmula fps de PerspectiveCamera (Camera.cpp:
-    // yaw = degrees(euler.y), pitch = degrees(euler.x)) — o gizmo tem que
-    // reproduzir EXATAMENTE essa convenção, não o eixo -Z da matrix de rotação
-    // (que pra euler não-trivial aponta pra outro lado). Era esse o bug: o
-    // desenho apontava ~90°~180° longe do que a câmera realmente vê.
-    glm::vec3 euler;
-    {
-        glm::vec3 translation, scale;
-        DecomposeTransform(world, translation, euler, scale);
-    }
-    float yawRad = euler.y;
-    float pitchRad = euler.x;
-    glm::vec3 forward = glm::normalize(glm::vec3(
-        glm::cos(yawRad) * glm::cos(pitchRad),
-        glm::sin(pitchRad),
-        glm::sin(yawRad) * glm::cos(pitchRad)));
-    // Base ortonormal do lookAt(forward, up=+Y): right = forward x up, up = right x forward.
-    glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0.0f, 1.0f, 0.0f)));
+    // A view da câmera do jogo agora vem da MATRIZ do Transform (ver
+    // PerspectiveCamera::SetWorldTransform) — o gizmo usa a MESMA base
+    // (forward/up das colunas), então desenha exatamente onde a câmera vê,
+    // mesmo com rotações como -90° em Y ou roll.
+    glm::vec3 forward = glm::normalize(glm::mat3(world) * glm::vec3(0.0f, 0.0f, -1.0f));
+    glm::vec3 worldUp = glm::normalize(glm::mat3(world) * glm::vec3(0.0f, 1.0f, 0.0f));
+    // Base ortonormal do lookAt: right = forward x up, up = right x forward.
+    glm::vec3 right = glm::normalize(glm::cross(forward, worldUp));
     glm::vec3 up = glm::cross(right, forward);
 
     float gizmoDist = 1.5f;
@@ -5224,8 +5214,16 @@ void EditorLayer::DrawAddComponentButton() {
             m_SelectedEntity.AddComponent<SpriteRendererComponent>();
         if (!m_SelectedEntity.HasComponent<CircleRendererComponent>() && ImGui::MenuItem("Circle Renderer"))
             m_SelectedEntity.AddComponent<CircleRendererComponent>();
-        if (!m_SelectedEntity.HasComponent<CameraComponent>() && ImGui::MenuItem("Camera"))
-            m_SelectedEntity.AddComponent<CameraComponent>();
+        if (!m_SelectedEntity.HasComponent<CameraComponent>() && ImGui::MenuItem("Camera")) {
+            // Câmera nova nasce no modo do viewport atual (o default do
+            // componente é 2D — o testador reclamou que "câmera nova sempre
+            // nasce 2D mesmo em cena 3D").
+            auto& newCam = m_SelectedEntity.AddComponent<CameraComponent>();
+            if (m_ViewportMode == ViewportMode::Mode3D) {
+                newCam.Type = CameraComponent::ProjectionType::Perspective3D;
+                newCam.Primary = true;
+            }
+        }
         if (!m_SelectedEntity.HasComponent<CameraFollowComponent>() && ImGui::MenuItem("Camera Follow (segue alvo)"))
             m_SelectedEntity.AddComponent<CameraFollowComponent>();
         if (!m_SelectedEntity.HasComponent<MeshRendererComponent>() && ImGui::MenuItem("Mesh Renderer")) {

@@ -2521,11 +2521,11 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
             if (!camera.Primary || camera.Type != CameraComponent::ProjectionType::Perspective3D) continue;
             if (!IsEntityActive(Entity{ e, this })) continue;
             glm::vec3 pos = glm::vec3(GetWorldTransform(Entity{ e, this })[3]);
-            const auto& tc = camView.get<TransformComponent>(e);
             float aspect = m_ViewportHeight ? (float)m_ViewportWidth / (float)m_ViewportHeight : 16.0f / 9.0f;
             PerspectiveCamera cam(camera.PerspectiveFOV, aspect, camera.NearClip, camera.FarClip);
-            cam.SetPosition(pos);
-            cam.SetRotation(glm::degrees(tc.Rotation.y), glm::degrees(tc.Rotation.x));
+            // View pela MATRIZ do Transform (mesma orientação do mesh — a
+            // convenção yaw/pitch falseava rotações, ex. -90° em Y).
+            cam.SetWorldTransform(GetWorldTransform(Entity{ e, this }));
             cullVP = cam.GetViewProjectionMatrix();
             camPos = pos;
             cullCam = true;
@@ -2731,12 +2731,10 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
         // virando a câmera de cabeça pra baixo/trás no Play — era o bug da
         // cena de demonstração sumir ao apertar Play).
         glm::vec3 pos = glm::vec3(GetWorldTransform(Entity{ e, this })[3]);
-        const auto& tc = camView.get<TransformComponent>(e);
-
         float aspect = m_ViewportHeight ? (float)m_ViewportWidth / (float)m_ViewportHeight : 16.0f / 9.0f;
         PerspectiveCamera cam(camera.PerspectiveFOV, aspect, camera.NearClip, camera.FarClip);
-        cam.SetPosition(pos);
-        cam.SetRotation(glm::degrees(tc.Rotation.y), glm::degrees(tc.Rotation.x));
+        // View pela MATRIZ do Transform (mesma orientação do mesh).
+        cam.SetWorldTransform(GetWorldTransform(Entity{ e, this }));
 
         Renderer3D::BeginScene(cam);
         SubmitLights();

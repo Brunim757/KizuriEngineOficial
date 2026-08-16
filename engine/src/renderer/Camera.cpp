@@ -40,4 +40,15 @@ void PerspectiveCamera::RecalculateViewMatrix() {
     m_ViewMatrix = glm::lookAt(m_Position, m_Position + m_Forward, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
+void PerspectiveCamera::SetWorldTransform(const glm::mat4& world) {
+    // Mesma decomposição que o UpdateAudio usa para o listener: forward/up
+    // vêm das colunas da matriz, então qualquer rotação (incl. roll) e a
+    // hierarquia de pais são respeitadas exatamente como no mesh.
+    m_Position = glm::vec3(world[3]);
+    glm::vec3 forward = glm::normalize(glm::mat3(world) * glm::vec3(0.0f, 0.0f, -1.0f));
+    glm::vec3 up = glm::normalize(glm::mat3(world) * glm::vec3(0.0f, 1.0f, 0.0f));
+    m_Forward = forward;
+    m_ViewMatrix = glm::lookAt(m_Position, m_Position + forward, up);
+}
+
 } // namespace kizuri

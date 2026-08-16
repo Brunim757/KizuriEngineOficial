@@ -41,6 +41,13 @@ public:
     void SetPosition(const glm::vec3& pos) { m_Position = pos; RecalculateViewMatrix(); }
     void SetRotation(float yawDeg, float pitchDeg) { m_Yaw = yawDeg; m_Pitch = pitchDeg; RecalculateViewMatrix(); }
 
+    // Orienta a câmera pela MATRIZ de transform da entidade (a mesma que o
+    // mesh usa): posição + forward/up extraídos das colunas. É o que casa a
+    // câmera do jogo com a rotação real do Transform — a fórmula yaw/pitch
+    // (SetRotation) falseava ângulos (ex.: rotacionar -90° em Y deixava a
+    // câmera olhando pra outra direção que o mesh) e ignorava o roll.
+    void SetWorldTransform(const glm::mat4& world);
+
     const glm::vec3& GetPosition() const { return m_Position; }
     glm::vec3 GetForward() const { return m_Forward; }
     float GetFOV() const { return m_FOV; }

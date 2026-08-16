@@ -142,7 +142,8 @@ jobs:
             cp packaging/icons/kizuri-torii-256.png release/share/icons/hicolor/256x256/apps/kizuri-torii.png
             cp packaging/linux/kizuri-editor.desktop release/share/applications/
           fi
-          (cd release && tar -a -c -f "../KizuriEngine-${{ matrix.os }}.zip" .)
+          # Cada plataforma exporta SÓ a dela: zip único, sem mistura.
+          (cd release && tar -a -c -f "../KizuriGame-${{ matrix.os }}-x86_64.zip" .)
 
       - name: Empacotar Content Pack (separado do zip da engine)
         if: startsWith(github.ref, 'refs/tags/v') && matrix.os == 'ubuntu-latest'
@@ -160,7 +161,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: KizuriEngine-${{ matrix.os }}.zip
+          files: KizuriGame-${{ matrix.os }}-x86_64.zip
           generate_release_notes: true
 
       - name: Publicar Content Pack na Release (uma vez)
@@ -360,4 +361,57 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: KizuriGame-android.apk
+          generate_release_notes: false
+
+  # ------- Linux AppImage (jogo autônomo num arquivo) -----------------
+  # O .exe fica no job do Windows e o .apk no do Android — aqui o LINUX
+  # exporta SÓ o .AppImage (nada de plataformas misturadas num pacote).
+  linux-appimage:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Instalar dependências
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            xorg-dev libgl1-mesa-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxi-dev libx11-dev libasound2-dev ninja-build zip
+
+      - name: Configurar (CMake — só o jogo, sem editor)
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DKZ_BUILD_EDITOR=OFF -DKZ_BUILD_SANDBOX=OFF -DKZ_BUILD_TESTS=OFF
+
+      - name: Compilar (KizuriGame)
+        run: cmake --build build --target KizuriGame --parallel
+
+      - name: Gerar .AppImage
+        run: |
+          chmod +x platform/linux/make-appimage.sh
+          platform/linux/make-appimage.sh \
+            "${{ github.workspace }}/build/bin" \
+            "${{ github.workspace }}/content/game" \
+            "${{ github.workspace }}/KizuriGame-linux-x86_64.AppImage"
+
+      - name: Upload do AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: KizuriGame-linux-x86_64.AppImage
+          path: KizuriGame-linux-x86_64.AppImage
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publicar na Release (AppImage, push de tag v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: KizuriGame-linux-x86_64.AppImage
           generate_release_notes: false

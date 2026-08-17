@@ -6325,7 +6325,7 @@ void EditorLayer::DrawAndroidExportModals() {
 #else
                     cmd = "xdg-open \"" + std::filesystem::path(result.substr(10)).parent_path().string() + "\"";
 #endif
-                    (void)std::system(cmd.c_str());
+                    if (std::system(cmd.c_str()) != 0) { /* ignora: abrir pasta é best-effort */ }
                 }
                 m_AndroidDone = false;
                 m_AndroidErrPopupOpened = false;

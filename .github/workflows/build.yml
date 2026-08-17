@@ -340,7 +340,7 @@ jobs:
           test -f android_dotnet/libcoreclr.so \
             || { echo "::error::libcoreclr.so ausente no runtime pack"; exit 1; }
           echo "Runtime embutível pronto em android_dotnet/ ($RPM_VER)"
-          ls android_dotnet | head -20
+          ls android_dotnet
 
       - name: Empacotar APK (aapt2 + zipalign + apksigner)
         run: |

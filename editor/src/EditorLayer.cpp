@@ -1320,8 +1320,9 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
 
         glm::vec3 target = m_EditorOrbitTarget;
         if (m_SelectedEntity && m_SelectedEntity.HasComponent<TransformComponent>()) {
-            target = m_ActiveScene->GetWorldTransform(m_SelectedEntity);
-            m_EditorOrbitTarget = glm::vec3(target[3]);
+            const glm::mat4& world = m_ActiveScene->GetWorldTransform(m_SelectedEntity);
+            target = glm::vec3(world[3]);
+            m_EditorOrbitTarget = target;
         } else if (m_EditorOrbitDist < 0.0f) {
             // Sem alvo ainda: usa o ponto central da tela na distância atual.
             m_EditorOrbitTarget = m_EditorCamPos + forward * glm::length(m_EditorCamPos);
@@ -1333,8 +1334,9 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
         glm::vec3 toCam = m_EditorCamPos - m_EditorOrbitTarget;
         float dist = std::max(glm::length(toCam), 0.5f);
 
+        constexpr float kOrbitLookSensitivity = 0.12f;
         m_EditorCamYaw += delta.x * m_EditorCamSensitivity;
-        m_EditorCamPitch = std::clamp(m_EditorCamPitch - delta.y * kLookSensitivity, -89.0f, 89.0f);
+        m_EditorCamPitch = std::clamp(m_EditorCamPitch - delta.y * kOrbitLookSensitivity, -89.0f, 89.0f);
 
         glm::vec3 fwd{
             cos(glm::radians(m_EditorCamYaw)) * cos(glm::radians(m_EditorCamPitch)),
@@ -2893,7 +2895,7 @@ void EditorLayer::DrawDockspace() {
 
     // ---- Ajuda ----
     if (ImGui::BeginPopup("##menu_Ajuda")) {
-        ImGui::TextDisabled("Kizuri Engine v{0}", kizuri::KIZURI_VERSION);
+        ImGui::TextDisabled("Kizuri Engine v{0}", KIZURI_VERSION);
         ImGui::TextDisabled("C++20 · OpenGL %s · GLSL %d core",
             kizuri::GetOpenGLVersionString().c_str(), kizuri::GetGLSLVersion());
         ImGui::Separator();
@@ -3868,7 +3870,7 @@ public sealed class NovoScript : Script
 	public override void OnCollisionEnd(Entity other) { }
 	public override void OnDestroy() { }
 }
-)CS;
+)CS";
 
     {
         std::ofstream out(file);
@@ -6100,7 +6102,7 @@ void EditorLayer::DrawUpdateModals() {
         ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
         if (ImGui::BeginPopupModal("Nova versão disponível", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             ImGui::TextWrapped("A versão %s da Kizuri Engine está disponível.", m_UpdateVersion.c_str());
-            ImGui::TextWrapped("Você está na v%s.", kizuri::KIZURI_VERSION);
+            ImGui::TextWrapped("Você está na v%s.", KIZURI_VERSION);
             ImGui::Spacing();
             ImGui::Checkbox("Não perguntar novamente", &m_UpdateSkipAsk);
             ImGui::Spacing();

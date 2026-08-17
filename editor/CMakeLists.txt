@@ -15,7 +15,12 @@ add_executable(KizuriEditor
     src/UI/Panels/ProjectSettingsPanel.cpp
     $<$<BOOL:${WIN32}>:resources/kizuri-editor.rc>
 )
-target_link_libraries(KizuriEditor PRIVATE KizuriEngine curl miniz)
+# O cURL moderno nomeia o alvo estático de libcurl_static (não "curl");
+# consumidores de lib estática precisam do define CURL_STATICLIB no Windows.
+target_link_libraries(KizuriEditor PRIVATE KizuriEngine libcurl_static miniz)
+if(WIN32)
+    target_compile_definitions(KizuriEditor PRIVATE CURL_STATICLIB)
+endif()
 target_include_directories(KizuriEditor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # ImGuizmo — gizmo de transformação no viewport. É só uma UI de edição, não

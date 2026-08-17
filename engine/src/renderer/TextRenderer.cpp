@@ -35,12 +35,9 @@ namespace {
     // Bloco 3: pontuação tipográfica comum em 3 bytes (— “ ” ‘ ’ … « »).
     // A JetBrains Mono tem esses glifos; sem eles o travessão da demo 2D
     // (e textos com aspas curvas) sumiria/viraria retângulo.
-    constexpr int kExtraFirst = 0x2013;                 // – até …
-    constexpr int kExtraCount = 0x2015 - 0x2013 + 1 +  // – — ―
-                                0x2018 + 1 - 0x2018 + 1 + // ‘ ’
-                                0x201C + 1 - 0x201C + 1 + // “ ”
-                                2 + 2 + 1;              // … « » (aproximado; ajustado abaixo)
-    // melhor: lista explícita de codepoints
+    // Bloco 3: pontuação tipográfica comum (— “ ” ‘ ’ …). Lista explícita;
+    // o bake usa uma FAIXA contígua que cobre a lista e o DecodeGlyphIndex
+    // consulta por codepoint (ver kExtraSpanFirst/Count abaixo).
     static constexpr int kExtraCodepoints[] = {
         0x2013, 0x2014, 0x2015,   // – — ―
         0x2018, 0x2019,           // ‘ ’
@@ -96,25 +93,6 @@ namespace {
         return -1; // fora do conjunto: pula o caractere
     }
 
-    // Retorna true se coube TUDO (ou só uma parte aceitável).
-    bool BakeBlock(const unsigned char* font, int pixelHeight, unsigned char* bitmap,
-                   int atlasWidth, int atlasHeight, int firstChar, int numChars,
-                   stbtt_bakedchar* out, int* bakedCount) {
-        int r = stbtt_BakeFontBitmap(font, 0, (float)pixelHeight, bitmap,
-                                     atlasWidth, atlasHeight, firstChar, numChars, out);
-        // stbtt: positivo = primeira linha livre; negativo = -nº de glifos que couberam.
-        if (r >= 0) { *bakedCount = numChars; return true; }
-        *bakedCount = -r;
-        if (*bakedCount <= 0) {
-            KZ_CORE_ERROR("TextRenderer: bake falhou pra faixa [{0}..{1}] (couberam {2}).",
-                          firstChar, firstChar + numChars - 1, *bakedCount);
-            return false;
-        }
-        KZ_CORE_WARN("TextRenderer: só {0}/{1} glifos couberam no atlas; o resto fica pendente.",
-                     *bakedCount, numChars);
-        return true;
-    }
-
     // Escala determinística: px por unidade de mundo vem da projeção 2D
     // ATUAL (já aberta por BeginScene) e do tamanho do viewport REAL.
     // Casos degenerados caem num fallback saninho em vez de explodir
@@ -164,9 +142,9 @@ void TextRenderer::EnsureAtlas() {
     // DecodeGlyphIndex (busca explícita por codepoint).
     stbtt_packedchar extraSpan[kExtraSpanCount];
     stbtt_pack_range ranges[] = {
-        { kAsciiFirst, kAsciiCount, asciiPacked, 0 },
-        { kLatinFirst, kLatinCount, latinPacked, 0 },
-        { kExtraSpanFirst, kExtraSpanCount, extraSpan, 0 },
+        { (float)kPixelHeight, kAsciiFirst, nullptr, kAsciiCount, asciiPacked },
+        { (float)kPixelHeight, kLatinFirst, nullptr, kLatinCount, latinPacked },
+        { (float)kPixelHeight, kExtraSpanFirst, nullptr, kExtraSpanCount, extraSpan },
     };
     int packedTotal = stbtt_PackFontRanges(&pack, (const unsigned char*)font, 0, ranges, 3);
     if (packedTotal <= 0)
@@ -185,9 +163,9 @@ void TextRenderer::EnsureAtlas() {
     copyBaked(asciiPacked, s_AsciiBaked, kAsciiCount);
     copyBaked(latinPacked, s_LatinBaked, kLatinCount);
 
-    // Mapeia a faixa 0x2012..0x2027 para a tabela extra (por nome de glifo).
+    // Mapeia a faixa 0x2012..0x2027 para a tabela extra (por codepoint).
     for (int i = 0; i < kExtraCount; ++i)
-        s_ExtraBaked[i] = extraSpan[kExtraCodepoints[i] - kExtraSpanFirst];
+        copyBaked(&extraSpan[kExtraCodepoints[i] - kExtraSpanFirst], &s_ExtraBaked[i], 1);
 
     // Expande 1 canal (alfa) → RGBA (branco + alfa), como a engine exige.
     std::vector<uint8_t> rgba(kAtlasWidth * kAtlasHeight * 4);

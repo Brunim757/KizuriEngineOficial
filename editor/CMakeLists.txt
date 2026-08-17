@@ -5,6 +5,7 @@ endif()
 add_executable(KizuriEditor
     src/EditorApp.cpp
     src/EditorLayer.cpp
+    src/Updater.cpp
     src/UI/Icons.cpp
     src/UI/Panels/AnimatorPanel.cpp
     src/UI/Panels/ParticleEditorPanel.cpp
@@ -14,7 +15,7 @@ add_executable(KizuriEditor
     src/UI/Panels/ProjectSettingsPanel.cpp
     $<$<BOOL:${WIN32}>:resources/kizuri-editor.rc>
 )
-target_link_libraries(KizuriEditor PRIVATE KizuriEngine)
+target_link_libraries(KizuriEditor PRIVATE KizuriEngine curl miniz)
 target_include_directories(KizuriEditor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # ImGuizmo — gizmo de transformação no viewport. É só uma UI de edição, não

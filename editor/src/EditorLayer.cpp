@@ -20,6 +20,8 @@
 #include "UI/Panels/ParticleEditorPanel.hpp"
 #include "UI/Panels/AnimatorPanel.hpp"
 #include <kizuri/project/GameExporter.hpp>
+#include <kizuri/core/Version.hpp>
+#include "Updater.hpp"
 #include <kizuri/scripting/ScriptEngine.hpp>
 #include <kizuri/net/NetworkFacade.hpp>
 #include <kizuri/core/CommandLineArgs.hpp>
@@ -88,7 +90,11 @@ static void BeginPanelNoMenuButton() {
 
 EditorLayer::EditorLayer() : Layer("EditorLayer") {}
 
-EditorLayer::~EditorLayer() = default;
+EditorLayer::~EditorLayer() {
+    // Evita crash no encerramento se um check/download de atualização
+    // ainda estiver rodando na thread.
+    if (m_UpdateThread.joinable()) m_UpdateThread.join();
+}
 
 void EditorLayer::OnAttach() {
     KZ_TRACE_SCOPE("EditorLayer::OnAttach");
@@ -951,6 +957,13 @@ void EditorLayer::OnDetach() {
 void EditorLayer::OnUpdate(Timestep ts) {
     KZ_CORE_TRACE("EditorLayer::OnUpdate — início (viewport {0}x{1})", m_ViewportSize.x, m_ViewportSize.y);
 
+    // Checagem automática de atualização no início (a thread dorme ~2s pra
+    // não grudar o startup).
+    if (m_UpdateCheckOnStartup && !m_UpdateStartupCheckDone) {
+        m_UpdateStartupCheckDone = true;
+        StartUpdateCheck();
+    }
+
     // FPS suavizado pro Profiler do viewport (média móvel exponencial).
     if ((float)ts > 0.0f) {
         float inst = 1.0f / (float)ts;
@@ -1295,6 +1308,48 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
         if (Input::IsKeyPressed(Key::D)) m_EditorCamPos += right * speed;
         if (Input::IsKeyPressed(Key::E)) m_EditorCamPos += up * speed;
         if (Input::IsKeyPressed(Key::Q)) m_EditorCamPos -= up * speed;
+    } else if (m_ViewportHovered && Input::IsKeyPressed(Key::LeftAlt)) {
+        // ---- ÓRBITA (pivô): estilo Blender — Alt + arrastar gira a câmera
+        // ao redor do alvo (entidade selecionada, ou o ponto em que ela
+        // está olhando) em vez de girar no próprio eixo.
+        if (m_FirstMouseLook) {
+            m_LastMousePos = mousePos;
+            m_FirstMouseLook = false;
+        }
+        glm::vec2 delta = mousePos - m_LastMousePos;
+
+        glm::vec3 target = m_EditorOrbitTarget;
+        if (m_SelectedEntity && m_SelectedEntity.HasComponent<TransformComponent>()) {
+            target = m_ActiveScene->GetWorldTransform(m_SelectedEntity);
+            m_EditorOrbitTarget = glm::vec3(target[3]);
+        } else if (m_EditorOrbitDist < 0.0f) {
+            // Sem alvo ainda: usa o ponto central da tela na distância atual.
+            m_EditorOrbitTarget = m_EditorCamPos + forward * glm::length(m_EditorCamPos);
+            m_EditorOrbitDist = glm::length(m_EditorCamPos - m_EditorOrbitTarget);
+        }
+
+        // Distância alvo->câmera (recaptura a cada órbita; zoom no scroll já
+        // existe e redimensiona essa distância quando orbitando).
+        glm::vec3 toCam = m_EditorCamPos - m_EditorOrbitTarget;
+        float dist = std::max(glm::length(toCam), 0.5f);
+
+        m_EditorCamYaw += delta.x * m_EditorCamSensitivity;
+        m_EditorCamPitch = std::clamp(m_EditorCamPitch - delta.y * kLookSensitivity, -89.0f, 89.0f);
+
+        glm::vec3 fwd{
+            cos(glm::radians(m_EditorCamYaw)) * cos(glm::radians(m_EditorCamPitch)),
+            sin(glm::radians(m_EditorCamPitch)),
+            sin(glm::radians(m_EditorCamYaw)) * cos(glm::radians(m_EditorCamPitch))
+        };
+        m_EditorCamPos = m_EditorOrbitTarget - fwd * dist;
+        m_EditorOrbitDist = dist;
+
+        // Zoom continua funcionando na órbita (recalcula depois).
+        if (ImGui::GetIO().MouseWheel != 0.0f) {
+            float k = 1.0f - ImGui::GetIO().MouseWheel * 0.12f;
+            m_EditorOrbitDist = std::max(0.5f, m_EditorOrbitDist * k);
+            m_EditorCamPos = m_EditorOrbitTarget - fwd * m_EditorOrbitDist;
+        }
     } else {
         // Solta o botão direito -> próxima vez que apertar não deve "pular"
         // usando o delta acumulado enquanto o mouse não estava sendo lido.
@@ -1315,6 +1370,20 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
     }
 
     m_EditorCamera.SetPosition(m_EditorCamPos);
+    // ---- Vistas rápidas estilo Blender: 1 = frente (-Z), 3 = direita (+X),
+    // 7 = topo (-Y). Só com o viewport 3D sob o cursor e sem voar/digitando.
+    if (m_ViewportMode == ViewportMode::Mode3D && m_ViewportHovered &&
+        !Input::IsMouseButtonPressed(Mouse::Right) &&
+        !Input::IsKeyPressed(Key::LeftAlt) && !ImGui::GetIO().WantTextInput) {
+        if (Input::IsKeyPressed(Key::D1)) {
+            m_EditorCamYaw = -90.0f; m_EditorCamPitch = -10.0f; // frente
+        } else if (Input::IsKeyPressed(Key::D3)) {
+            m_EditorCamYaw = 0.0f;   m_EditorCamPitch = 0.0f;   // direita
+        } else if (Input::IsKeyPressed(Key::D7)) {
+            m_EditorCamPitch = -89.5f;                          // topo
+        }
+    }
+
     m_EditorCamera.SetRotation(m_EditorCamYaw, m_EditorCamPitch);
 }
 
@@ -2824,15 +2893,40 @@ void EditorLayer::DrawDockspace() {
 
     // ---- Ajuda ----
     if (ImGui::BeginPopup("##menu_Ajuda")) {
-        ImGui::TextDisabled("Kizuri Engine v0.8.0");
+        ImGui::TextDisabled("Kizuri Engine v{0}", kizuri::KIZURI_VERSION);
         ImGui::TextDisabled("C++20 · OpenGL %s · GLSL %d core",
             kizuri::GetOpenGLVersionString().c_str(), kizuri::GetGLSLVersion());
+        ImGui::Separator();
+        if (ImGui::MenuItem("Verificar Atualizações...")) {
+            m_UpdateApiUrlBufInput = kizuri::Updater::GetApiUrl();
+            if (!m_UpdateApiUrlBufInput.empty() && m_UpdateApiUrlBufInput.size() < sizeof(m_UpdateApiUrlBuf) - 1)
+                strncpy(m_UpdateApiUrlBuf, m_UpdateApiUrlBufInput.c_str(), sizeof(m_UpdateApiUrlBuf) - 1);
+            m_UpdateApiUrlBuf[sizeof(m_UpdateApiUrlBuf) - 1] = '\0';
+            StartUpdateCheck();
+        }
+        if (ImGui::MenuItem("Configurar Atualizações..."))
+            ImGui::OpenPopup("##update_config");
+        if (ImGui::BeginPopup("##update_config")) {
+            ImGui::TextDisabled("API do site (GET /api/version):");
+            ImGui::SetNextItemWidth(400.0f);
+            if (ImGui::InputText("##update_api_url", m_UpdateApiUrlBuf, sizeof(m_UpdateApiUrlBuf)))
+                m_UpdateApiUrlBufInput = m_UpdateApiUrlBuf;
+            if (ImGui::Button("Salvar", ImVec2(100.0f, 0.0f))) {
+                kizuri::Updater::SetApiUrl(m_UpdateApiUrlBufInput);
+                KZ_CORE_INFO("API de atualizações: {0}", kizuri::Updater::GetApiUrl());
+                StartUpdateCheck();
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
         ImGui::Separator();
         if (ImGui::MenuItem("Atalhos do editor"))
             ImGui::OpenPopup("##atalhos");
         if (ImGui::BeginPopup("##atalhos")) {
             ImGui::Text("F5 / Shift+F5  Play / Stop");
             ImGui::Text("W / E / R       Gizmo mover/rotacionar/escalar");
+            ImGui::Text("1 / 3 / 7       Câmera: frente / direita / topo (Blender)");
+            ImGui::Text("Alt + arrastar  Câmera órbita no pivô (Blender)");
             ImGui::Text("Ctrl+Z / Ctrl+Y  Desfazer / Refazer");
             ImGui::Text("Ctrl+D / Del     Duplicar / Excluir");
             ImGui::Text("F11              Fullscreen do viewport");
@@ -3583,6 +3677,19 @@ void EditorLayer::DrawExportModal() {
         }
 
         ImGui::Spacing();
+        ImGui::TextDisabled("Plataforma de destino:");
+        ImGui::SetNextItemWidth(-1.0f);
+        ImGui::Combo("##export_platform", &m_ExportPlatform,
+                     "Windows (.exe)\0Linux (binários)\0Android (.apk via CI)\0");
+        if (m_ExportPlatform == 2) {
+            ImGui::TextWrapped(
+                "O .apk é montado pela CI do GitHub no push de tag (ex: v0.37.0) — "
+                "o export abaixo prepara cena+scripts, e a CI empacota o CoreCLR, "
+                "libs e tudo sozinha. No Windows/Linux o export gera a pasta pronta "
+                "pra rodar (KizuriGame.exe ou binário Linux).");
+        }
+
+        ImGui::Spacing();
         ImGui::TextDisabled("Build settings (janela do jogo):");
         ImGui::SetNextItemWidth(-1.0f);
         ImGui::InputText("Nome do jogo", m_ExportGameName, sizeof(m_ExportGameName));
@@ -3724,6 +3831,58 @@ void EditorLayer::RevealFileInContentBrowser(const std::string& filePath) {
     m_ContentBrowserRevealRequested = true;
 }
 
+
+namespace {
+
+// Cria um arquivo de script C# novo na pasta (template da API Kizuri.Scripting).
+// A engine REGISTRA a classe automaticamente no Play (Host escaneia o
+// assembly do jogo) — não precisa mexer em nenhum registro manual.
+void CreateNewCSharpScript(const std::filesystem::path& dir) {
+    namespace fs = std::filesystem;
+    std::error_code ec;
+    if (!fs::is_directory(dir, ec)) return;
+
+    std::string base = "NovoScript";
+    fs::path file = dir / (base + ".cs");
+    int n = 1;
+    while (fs::exists(file, ec)) file = dir / (base + std::to_string(++n) + ".cs");
+
+    const char* templateCs = R"CS(using Kizuri;
+
+// Script de jogo. O nome da CLASSE é o que aparece no Inspetor
+// (componente "Script C#"). Nada de registro manual: a engine compila e
+// registra este script automaticamente no Play.
+public sealed class NovoScript : Script
+{
+	public override void OnCreate()
+	{
+		Log.Info("NovoScript criado.");
+	}
+
+	public override void OnUpdate(float deltaSeconds)
+	{
+		// deltaSeconds = tempo do último frame em segundos.
+	}
+
+	public override void OnCollisionBegin(Entity other) { }
+	public override void OnCollisionEnd(Entity other) { }
+	public override void OnDestroy() { }
+}
+)CS;
+
+    {
+        std::ofstream out(file);
+        out << templateCs;
+    }
+    if (ec) {
+        KZ_CORE_ERROR("Falha ao criar script: {0}", ec.message());
+        return;
+    }
+    KZ_CORE_INFO("Script C# criado: {0}", file.string());
+}
+
+} // namespace
+
 void EditorLayer::DrawContentBrowser() {
     KZ_TRACE_SCOPE("EditorLayer::DrawContentBrowser");
     BeginPanelNoMenuButton();
@@ -3780,6 +3939,9 @@ void EditorLayer::DrawContentBrowser() {
             std::error_code ec;
             std::filesystem::create_directory(m_ContentBrowserCurrentDir / "Nova Pasta", ec);
         }
+        if (ImGui::MenuItem("Criar Script C#...")) {
+            CreateNewCSharpScript(m_ContentBrowserCurrentDir);
+        }
         ImGui::EndPopup();
     }
 
@@ -3835,6 +3997,7 @@ void EditorLayer::DrawContentBrowser() {
             else if (ext == ".kzprefab") iconColor = IM_COL32(100, 200, 190, 255);
             else if (ext == ".wav" || ext == ".mp3" || ext == ".ogg" || ext == ".flac") iconColor = IM_COL32(190, 130, 220, 255);
             else if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".tga") iconColor = IM_COL32(230, 120, 120, 255);
+            else if (ext == ".cs")     iconColor = IM_COL32(90, 170, 220, 255);
         }
         if (isDir) {
             kizuri::editor::icons::Folder(dl, ImVec2(cursor.x + thumbSize * 0.15f, cursor.y + thumbSize * 0.15f), thumbSize * 0.7f, iconColor);
@@ -4248,6 +4411,54 @@ void EditorLayer::DrawInspector() {
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<CameraComponent>();
+        }
+
+        // ---- Script C# (NativeScript) — o componente que roda código do
+        // jogo. A engine registra as classes automaticamente quando o
+        // jogo compila (Play) — aqui só escolhe qual classe roda.
+        if (m_SelectedEntity.HasComponent<NativeScriptComponent>()) {
+            auto& nsc = m_SelectedEntity.GetComponent<NativeScriptComponent>();
+            if (DrawComponentHeader("Script C#", &removeThis)) {
+                auto classNames = ScriptEngine::GetRegistry().GetClassNames();
+                if (classNames.empty()) {
+                    ImGui::TextDisabled("Nenhum script compilado ainda.");
+                    ImGui::TextDisabled("Dê Play uma vez (compilação automática do projeto) e as classes aparecem aqui.");
+                } else {
+                    const char* preview = nsc.ClassName.empty() ? "(nenhuma)" : nsc.ClassName.c_str();
+                    int current = 0;
+                    std::vector<const char*> items;
+                    items.reserve(classNames.size() + 1);
+                    items.push_back("(nenhuma)");
+                    for (auto& cn : classNames) items.push_back(cn.c_str());
+                    for (size_t i = 1; i < items.size(); ++i)
+                        if (nsc.ClassName == items[i]) { current = (int)i; break; }
+                    int chosen = current;
+                    if (ImGui::Combo("Classe", &chosen, items.data(), (int)items.size())) {
+                        nsc.ClassName = (chosen == 0) ? std::string() : classNames[(size_t)chosen - 1];
+                        nsc.DestroyInstance();
+                    }
+                    if (!nsc.ClassName.empty())
+                        ImGui::TextDisabled("Roda '%s' quando der Play.", nsc.ClassName.c_str());
+                }
+                ImGui::Spacing();
+                if (ImGui::Button("+ Criar script novo...")) {
+                    std::string csproj, engineRoot;
+                    GetGameBuildInfo(csproj, engineRoot);
+                    std::filesystem::path dir = std::filesystem::path(csproj).parent_path();
+                    std::error_code ec;
+                    if (dir.empty() || !std::filesystem::is_directory(dir, ec))
+                        dir = m_ContentBrowserCurrentDir;
+                    CreateNewCSharpScript(dir);
+                    ImGui::OpenPopup("##script_hint");
+                }
+                if (ImGui::BeginPopup("##script_hint")) {
+                    ImGui::Text("Script criado. Dê Play para compilar e");
+                    ImGui::Text("a classe aparece no dropdown acima.");
+                    ImGui::EndPopup();
+                }
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<NativeScriptComponent>();
         }
 
         if (m_SelectedEntity.HasComponent<CameraFollowComponent>()) {
@@ -5460,6 +5671,7 @@ void EditorLayer::OnImGuiRender() {
     DrawGameModuleModal();
     DrawExportModal();
     DrawSavePrefabModal();
+    DrawUpdateModals();
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — modais ok");
     if (!m_ViewportMaximized) {
         DrawSceneHierarchy();
@@ -5814,4 +6026,173 @@ void EditorLayer::OnImGuiRender() {
 
     ImGui::End();
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — fim");
+}
+
+// ---------------------------------------------------------------------------
+// Atualização automática — fluxo: check (thread) -> modal Sim/Não (com
+// "não perguntar novamente" persistido) -> download -> instala -> relaunch.
+// ---------------------------------------------------------------------------
+void EditorLayer::StartUpdateCheck() {
+    {
+        std::lock_guard lock(m_UpdateMutex);
+        if (m_UpdateBusy) return;
+        m_UpdateBusy = true;
+        m_UpdateState = 1;
+        m_UpdateError.clear();
+    }
+    if (m_UpdateThread.joinable()) m_UpdateThread.join();
+
+    m_UpdateThread = std::thread([this]() {
+        // No startup o check espera ~2s pra não engrossar a abertura;
+        // checks manuais (menu Ajuda) rodam na hora.
+        if (!m_UpdateStartupCheckDone) {
+            m_UpdateStartupCheckDone = true;
+            std::this_thread::sleep_for(std::chrono::seconds(2));
+        }
+        std::string err;
+        auto info = kizuri::Updater::CheckForUpdate(err);
+        {
+            std::lock_guard lock(m_UpdateMutex);
+            m_UpdateError = std::move(err);
+            m_UpdateBusy = false;
+            if (info.Valid && kizuri::Updater::GetSkipVersion() != info.Version) {
+                m_UpdateVersion = info.Version;
+                m_UpdateUrl = info.DownloadUrl;
+                m_UpdateState = 2; // nova versão disponível — pergunta
+            } else if (!err.empty() && !kizuri::Updater::GetApiUrl().empty()) {
+                // API configurada mas falhou (rede/HTTP) — mostra o motivo
+                // (silencioso se nunca foi configurada).
+                m_UpdateState = 6;
+            } else {
+                m_UpdateState = 0;
+            }
+        }
+    });
+}
+
+void EditorLayer::DrawUpdateModals() {
+    int state = m_UpdateState;
+
+    // BeginPopupModal precisa de um OpenPopup antes (a transição pro estado
+    // acontece na thread do check).
+    if (state == 2 && !m_UpdatePopupOpened) {
+        m_UpdatePopupOpened = true;
+        ImGui::OpenPopup("Nova versão disponível");
+    }
+    if (state == 6 && !m_UpdateErrPopupOpened) {
+        m_UpdateErrPopupOpened = true;
+        ImGui::OpenPopup("Falha na atualização");
+    }
+
+    if (state == 1) {
+        // Verificando (sem modal cheio — deixa uma linha discreta).
+        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowBgAlpha(0.9f);
+        if (ImGui::Begin("##update_checking", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+            ImGui::Text("Verificando atualizações...");
+            ImGui::End();
+        }
+        return;
+    }
+
+    if (state == 2) {
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        if (ImGui::BeginPopupModal("Nova versão disponível", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::TextWrapped("A versão %s da Kizuri Engine está disponível.", m_UpdateVersion.c_str());
+            ImGui::TextWrapped("Você está na v%s.", kizuri::KIZURI_VERSION);
+            ImGui::Spacing();
+            ImGui::Checkbox("Não perguntar novamente", &m_UpdateSkipAsk);
+            ImGui::Spacing();
+            if (ImGui::Button("Atualizar agora", ImVec2(140.0f, 0.0f))) {
+                if (m_UpdateSkipAsk) kizuri::Updater::SetSkipVersion(m_UpdateVersion);
+                m_UpdateSkipAsk = false;
+                // Baixa na thread; progresso aparece no modal seguinte.
+                {
+                    std::lock_guard lock(m_UpdateMutex);
+                    m_UpdateState = 3;
+                    m_UpdateBusy = true;
+                }
+                if (m_UpdateThread.joinable()) m_UpdateThread.join();
+                std::string url = m_UpdateUrl;
+                m_UpdateThread = std::thread([this, url]() {
+                    std::string err;
+                    std::string zip = "kizuri_update.zip";
+                    bool ok = kizuri::Updater::Download(url, zip, err);
+                    {
+                        std::lock_guard lock(m_UpdateMutex);
+                        m_UpdateError = std::move(err);
+                        m_UpdateBusy = false;
+                        m_UpdateState = ok ? 4 : 6; // 4 instala
+                        m_UpdateZip = zip;
+                    }
+                });
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Depois", ImVec2(100.0f, 0.0f))) {
+                if (m_UpdateSkipAsk) kizuri::Updater::SetSkipVersion(m_UpdateVersion);
+                m_UpdateSkipAsk = false;
+                m_UpdateState = 0;
+                m_UpdatePopupOpened = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+        return;
+    }
+
+    if (state >= 3 && state <= 5) {
+        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowBgAlpha(0.9f);
+        if (ImGui::Begin("##update_work", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+            if (state == 3)
+                ImGui::Text("Baixando a nova versão...");
+            else if (state == 4) {
+                ImGui::Text("Instalando a nova versão...");
+                // Inicia a instalação SO uma vez (quando a thread do
+                // download terminou).
+                std::lock_guard lock(m_UpdateMutex);
+                if (!m_UpdateBusy && !m_UpdateInstallStarted) {
+                    m_UpdateInstallStarted = true;
+                    m_UpdateBusy = true;
+                    m_UpdateState = 4;
+                    std::string zip = m_UpdateZip;
+                    if (m_UpdateThread.joinable()) m_UpdateThread.join();
+                    m_UpdateThread = std::thread([this, zip]() {
+                        std::string err;
+                        bool ok = kizuri::Updater::Install(zip, err);
+                        {
+                            std::lock_guard lock(m_UpdateMutex);
+                            m_UpdateError = std::move(err);
+                            m_UpdateBusy = false;
+                            m_UpdateState = ok ? 5 : 6;
+                        }
+                    });
+                }
+            } else {
+                ImGui::Text("Reiniciando editor...");
+                std::string err;
+                kizuri::Updater::Relaunch(err);
+                kizuri::Application::Get().Close();
+            }
+            ImGui::End();
+        }
+        return;
+    }
+
+    if (state == 6) {
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        if (ImGui::BeginPopupModal("Falha na atualização", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::TextWrapped("Não foi possível atualizar: %s", m_UpdateError.empty() ? "erro desconhecido" : m_UpdateError.c_str());
+            ImGui::Spacing();
+            if (ImGui::Button("OK", ImVec2(100.0f, 0.0f))) {
+                m_UpdateState = 0;
+                m_UpdateErrPopupOpened = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+    }
 }

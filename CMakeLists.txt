@@ -198,10 +198,38 @@ FetchContent_Declare(json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG        v3.11.3)
 
+# libcurl + miniz — SÓ desktop: o atualizador do editor (menu Ajuda >
+# Verificar Atualizações) baixa e instala releases novas. O Android não
+# compila nada disso (o updater é UI de editor).
+if(NOT ANDROID)
+    FetchContent_Declare(curl
+        GIT_REPOSITORY https://github.com/curl/curl.git
+        GIT_TAG        curl-8_11_0)
+    set(BUILD_CURL_EXE OFF CACHE BOOL "" FORCE)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(CURL_USE_OPENSSL OFF CACHE BOOL "" FORCE)
+    if(WIN32)
+        # Windows: TLS nativo (Schannel) — nada de openssl no CI.
+        set(CURL_USE_SCHANNEL ON CACHE BOOL "" FORCE)
+        set(CURL_WINDOWS_SSPI ON CACHE BOOL "" FORCE)
+    else()
+        set(CURL_USE_OPENSSL ON CACHE BOOL "" FORCE)
+    endif()
+    FetchContent_Declare(miniz
+        GIT_REPOSITORY https://github.com/richgel999/miniz.git
+        GIT_TAG        3.0.2)
+endif()
+
 if(ANDROID)
     FetchContent_MakeAvailable(glm entt spdlog miniaudio stb tinyobjloader cgltf json)
 else()
     FetchContent_MakeAvailable(glfw glm entt spdlog miniaudio stb tinyobjloader cgltf json)
+    FetchContent_MakeAvailable(curl miniz)
+    if(NOT TARGET miniz)
+        add_library(miniz STATIC ${miniz_SOURCE_DIR}/miniz.c)
+        target_include_directories(miniz PUBLIC ${miniz_SOURCE_DIR})
+    endif()
 endif()
 
 # Bullet e Box2D são maiores; deixamos como submódulos opcionais de física

@@ -20,7 +20,7 @@ ideal para jogos 3D, veículos e mundos abertos.
 | **Terreno + Rigidbody3D (estático)** | **Heightfield** do Bullet — objetos e personagens andam no relevo |
 | **CharacterController** | Cápsula com gravidade, colisão com **paredes**, **step** e rampas |
 
-## Terreno com colisão (0.8.0)
+## Terreno com colisão (0.36.0)
 
 1. Adicione **Terreno** (Inspetor → + Adicionar Componente) — o editor já
    cria o **Rigidbody3D estático** automaticamente.

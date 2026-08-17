@@ -197,7 +197,29 @@ private:
 
     bool m_RequestOpenExportPopup = false;
     char m_ExportDirBuffer[512] = "export";
-    bool m_ExportSelfContained = true; // embute o runtime .NET via dotnet publish
+    bool m_ExportSelfContained = true;
+    int m_ExportPlatform = 0; // 0=Windows, 1=Linux, 2=Android (CI)
+
+    // ---- Atualização automática (menu Ajuda > Verificar Atualizações) ----
+    void StartUpdateCheck();
+    void DrawUpdateModals();
+    std::thread m_UpdateThread;
+    std::mutex m_UpdateMutex;
+    bool m_UpdateBusy = false;
+    int m_UpdateState = 0;  // 0 idle, 1 verificando, 2 nova versão, 3 baixando,
+                            // 4 instalando, 5 relaunch, 6 erro
+    std::string m_UpdateVersion;
+    std::string m_UpdateUrl;
+    std::string m_UpdateError;
+    bool m_UpdateSkipAsk = false;
+    bool m_UpdateStartupCheckDone = false;
+    bool m_UpdateCheckOnStartup = true;
+    char m_UpdateApiUrlBuf[512] = {};
+    std::string m_UpdateApiUrlBufInput;
+    std::string m_UpdateZip;        // caminho do zip baixado
+    bool m_UpdateInstallStarted = false;
+    bool m_UpdatePopupOpened = false;   // edge p/ OpenPopup do modal
+    bool m_UpdateErrPopupOpened = false; // embute o runtime .NET via dotnet publish
     // Build settings (export): nome/versão/resolução da janela do jogo.
     char m_ExportGameName[128] = "MeuJogo";
     char m_ExportVersion[32] = "1.0";
@@ -314,6 +336,9 @@ private:
     glm::vec3 m_EditorCamPos = { 0.0f, 3.0f, 8.0f };
     float m_EditorCamYaw = -90.0f;
     float m_EditorCamPitch = -10.0f;
+    // Órbita (Alt+arrastar): alvo ao redor do qual a câmera gira.
+    glm::vec3 m_EditorOrbitTarget = { 0.0f, 0.0f, 0.0f };
+    float m_EditorOrbitDist = -1.0f; // -1 = ainda sem alvo (calcula no 1º uso)
     glm::vec2 m_LastMousePos = { 0.0f, 0.0f };
     bool m_FirstMouseLook = true;
 

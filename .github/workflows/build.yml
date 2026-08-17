@@ -37,7 +37,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y squashfs-tools \
             xorg-dev libgl1-mesa-dev libxrandr-dev libxinerama-dev \
-            libxcursor-dev libxi-dev libx11-dev libasound2-dev ninja-build zip
+            libxcursor-dev libxi-dev libx11-dev libasound2-dev libssl-dev ninja-build zip
 
       - name: Instalar Ninja (Windows)
         if: matrix.os == 'windows-latest'
@@ -383,7 +383,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y squashfs-tools \
             xorg-dev libgl1-mesa-dev libxrandr-dev libxinerama-dev \
-            libxcursor-dev libxi-dev libx11-dev libasound2-dev ninja-build zip
+            libxcursor-dev libxi-dev libx11-dev libasound2-dev libssl-dev ninja-build zip
 
       - name: Configurar (CMake — só o jogo, sem editor)
         run: |

@@ -2727,10 +2727,6 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
 
         // Posição pelo transform MUNDIAL (respeita pai). Orientação pelo
         // euler LOCAL do TransformComponent — NÃO decompor a matriz composta
-        // (gimbal lock: em yaw = ±90° o glm::eulerAngles devolve pitch ±180°,
-        // virando a câmera de cabeça pra baixo/trás no Play — era o bug da
-        // cena de demonstração sumir ao apertar Play).
-        glm::vec3 pos = glm::vec3(GetWorldTransform(Entity{ e, this })[3]);
         float aspect = m_ViewportHeight ? (float)m_ViewportWidth / (float)m_ViewportHeight : 16.0f / 9.0f;
         PerspectiveCamera cam(camera.PerspectiveFOV, aspect, camera.NearClip, camera.FarClip);
         // View pela MATRIZ do Transform (mesma orientação do mesh).

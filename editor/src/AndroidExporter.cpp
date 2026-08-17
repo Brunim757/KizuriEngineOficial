@@ -119,14 +119,6 @@ bool ZipAppendDir(mz_zip_archive& zip, const fs::path& base, const fs::path& dir
     return true;
 }
 
-bool RunCommand(const std::string& cmd, std::string& outLog, int& outCode) {
-    // system() com redirecionamento capturável não é portátil; registramos a
-    // linha e rodamos. O console do editor mostra o cmd; falhas vêm no code.
-    outCode = std::system(cmd.c_str());
-    outLog = cmd;
-    return outCode == 0;
-}
-
 } // namespace
 
 namespace kizuri {
@@ -312,7 +304,6 @@ bool AndroidExporter::Export(const Tools& tools,
         outError = "Não foi possível abrir o APK intermediário.";
         return false;
     }
-    mz_zip_writer_set_zip_oxflag(&zip, 0);
     if (!ZipAppendDir(zip, apkBuild, apkBuild / "lib", "lib", outError) ||
         !ZipAppendDir(zip, apkBuild, apkBuild / "assets", "assets", outError)) {
         mz_zip_writer_end(&zip);

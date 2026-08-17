@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <vector>
 #include <unordered_map>
+#include "AndroidExporter.hpp"
 #include <unordered_set>
 #include <memory>
 #include <thread>

@@ -161,8 +161,7 @@ float TextRenderer::MeasureWidth(const std::string& text, float fontSize) {
         int idx = DecodeGlyphIndex(p, end);
         if (idx < 0) continue;
         if (p == before) ++p; // avanço garantido (proteção anti-loop)
-        if (idx < kAsciiCount) lineWidth += s_AsciiBaked[idx].xadvance * scale;
-        else if (idx - kAsciiCount < kLatinCount) lineWidth += s_LatinBaked[idx - kAsciiCount].xadvance * scale;
+        if (idx < kGlyphCount) lineWidth += s_Baked[idx].xadvance * scale;
     }
     return glm::max(maxWidth, lineWidth);
 }
@@ -172,7 +171,7 @@ Ref<Texture2D> TextRenderer::GetAtlasTexture() { return s_AtlasTexture; }
 std::string TextRenderer::GetDiagnostics() {
     if (!s_Ready) return "atlas: NAO PRONTO";
     return "atlas: " + std::to_string(kAtlasWidth) + "x" + std::to_string(kAtlasHeight) +
-           " (ASCII " + std::to_string(kAsciiCount) + " + Latin-1 " + std::to_string(kLatinCount) + ")";
+           " (" + std::to_string(kGlyphCount) + " glifos, faixa 32..255)";
 }
 
 void TextRenderer::DrawString(const std::string& text, const glm::vec3& position,

@@ -224,7 +224,7 @@ void EditorLayer::CreateDefaultSceneContent() {
         cc.Type = CameraComponent::ProjectionType::Perspective3D;
         auto& camTransform = camera.GetComponent<TransformComponent>();
         camTransform.Translation = { 0.0f, 2.0f, 6.0f };
-        camTransform.Rotation = { glm::radians(-15.0f), glm::radians(-90.0f), 0.0f }; // pitch, yaw
+        camTransform.Rotation = { glm::radians(-15.0f), 0.0f, 0.0f }; // pitch, yaw
 
         Entity cube = m_ActiveScene->CreateEntity("Cubo de Exemplo");
         auto& mr = cube.AddComponent<MeshRendererComponent>();
@@ -256,7 +256,7 @@ void EditorLayer::CreateDemoScene3D() {
     cc.PerspectiveFOV = 50.0f;
     auto& camT = camera.GetComponent<TransformComponent>();
     camT.Translation = { 0.0f, 2.6f, 7.5f };
-    camT.Rotation = { glm::radians(-12.0f), glm::radians(-90.0f), 0.0f };
+    camT.Rotation = { glm::radians(-12.0f), 0.0f, 0.0f };
 
     Entity sun = m_ActiveScene->CreateEntity("Sol");
     auto& lc = sun.AddComponent<LightComponent>();
@@ -452,7 +452,7 @@ void EditorLayer::CreateDemoSceneAI() {
     cc.PerspectiveFOV = 50.0f;
     auto& camT = camera.GetComponent<TransformComponent>();
     camT.Translation = { 0.0f, 12.0f, 12.0f };
-    camT.Rotation = { glm::radians(-40.0f), glm::radians(-90.0f), 0.0f };
+    camT.Rotation = { glm::radians(-40.0f), 0.0f, 0.0f };
     auto& cf = camera.AddComponent<CameraFollowComponent>();
     cf.TargetName = "Jogador";
     cf.Offset = { 0.0f, 14.0f, -14.0f };
@@ -655,7 +655,7 @@ void EditorLayer::CreateDemoSceneNet() {
     cc.PerspectiveFOV = 55.0f;
     auto& camT = camera.GetComponent<TransformComponent>();
     camT.Translation = { 0.0f, 6.0f, 8.0f };
-    camT.Rotation = { glm::radians(-35.0f), glm::radians(-90.0f), 0.0f };
+    camT.Rotation = { glm::radians(-35.0f), 0.0f, 0.0f };
     auto& cf = camera.AddComponent<CameraFollowComponent>();
     cf.TargetName = "Cubo de Rede";
     cf.Offset = { 0.0f, 5.0f, -7.0f };
@@ -751,7 +751,7 @@ void EditorLayer::CreateDemoSceneGame() {
     cc.PerspectiveFOV = 55.0f;
     auto& camT = camera.GetComponent<TransformComponent>();
     camT.Translation = { 0.0f, 15.0f, 15.0f };
-    camT.Rotation = { glm::radians(-45.0f), glm::radians(-90.0f), 0.0f };
+    camT.Rotation = { glm::radians(-45.0f), 0.0f, 0.0f };
     auto& cf = camera.AddComponent<CameraFollowComponent>();
     cf.TargetName = "Jogador";
     cf.Offset = { 0.0f, 16.0f, -16.0f };
@@ -1308,7 +1308,10 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
         if (Input::IsKeyPressed(Key::D)) m_EditorCamPos += right * speed;
         if (Input::IsKeyPressed(Key::E)) m_EditorCamPos += up * speed;
         if (Input::IsKeyPressed(Key::Q)) m_EditorCamPos -= up * speed;
-    } else if (m_ViewportHovered && Input::IsKeyPressed(Key::LeftAlt)) {
+    } else if (m_ViewportHovered && Input::IsKeyPressed(Key::LeftAlt) &&
+               (Input::IsMouseButtonPressed(Mouse::Left) ||
+                Input::IsMouseButtonPressed(Mouse::Right) ||
+                Input::IsMouseButtonPressed(Mouse::Middle))) {
         // ---- ÓRBITA (pivô): estilo Blender — Alt + arrastar gira a câmera
         // ao redor do alvo (entidade selecionada, ou o ponto em que ela
         // está olhando) em vez de girar no próprio eixo.
@@ -2453,6 +2456,36 @@ void EditorLayer::OnSceneStop() {
 
     m_ActiveScene->OnRuntimeStop();
     AudioEngine::StopAll(); // OnRuntimeStop só cuida de física/scripts — sem isso, som ficava tocando pra sempre
+
+    // Ajustes de CÂMERA feitos durante o Play (inspetor / Game View) voltam
+    // pra cena original — "mexeu ao vivo, não perde ao parar".
+    if (m_ActiveScene && m_EditorScene) {
+        auto& copyReg = m_ActiveScene->GetRegistry();
+        auto& editReg = m_EditorScene->GetRegistry();
+        auto camView = copyReg.view<kizuri::TransformComponent, kizuri::CameraComponent>();
+        for (auto e : camView) {
+            kizuri::Entity copyEnt{ e, m_ActiveScene.get() };
+            auto& copyCam = camView.get<kizuri::CameraComponent>(e);
+            kizuri::Entity orig = m_EditorScene->GetEntityByUUID(copyEnt.GetUUID());
+            if (!orig || !orig.HasComponent<kizuri::CameraComponent>()) continue;
+            auto& oc = orig.GetComponent<kizuri::CameraComponent>();
+            oc.Type = copyCam.Type;
+            oc.Primary = copyCam.Primary;
+            oc.OrthoSize = copyCam.OrthoSize;
+            oc.PerspectiveFOV = copyCam.PerspectiveFOV;
+            oc.NearClip = copyCam.NearClip;
+            oc.FarClip = copyCam.FarClip;
+            if (orig.HasComponent<kizuri::TransformComponent>() && copyReg.all_of<kizuri::TransformComponent>(e)) {
+                auto& ot = orig.GetComponent<kizuri::TransformComponent>();
+                auto& ct = copyReg.get<kizuri::TransformComponent>(e);
+                ot.Translation = ct.Translation;
+                ot.Rotation = ct.Rotation;
+                ot.Scale = ct.Scale;
+            }
+        }
+        KZ_CORE_INFO("Play encerrado: ajustes de câmera preservados na cena.");
+    }
+
     m_SelectedEntity = {};
     m_ActiveScene = m_EditorScene; // cena original nunca foi tocada — restaurar é só isso
     m_EditorScene = nullptr;
@@ -6102,13 +6135,9 @@ void EditorLayer::DrawUpdateModals() {
     }
 
     if (state == 1) {
-        // Verificando (sem modal cheio — deixa uma linha discreta).
-        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-        ImGui::SetNextWindowBgAlpha(0.9f);
-        if (ImGui::Begin("##update_checking", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
-            ImGui::Text("Verificando atualizações...");
-            ImGui::End();
-        }
+        // Verificando em segundo plano: sem janela/aviso na tela (o testador
+        // reclamou de "coisas em cima sem pedir"). O resultado aparece
+        // somente via modal quando há atualização (ou erro).
         return;
     }
 

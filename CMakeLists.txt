@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(KizuriEngine VERSION 0.36.1 LANGUAGES C CXX)
+project(KizuriEngine VERSION 0.36.2 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

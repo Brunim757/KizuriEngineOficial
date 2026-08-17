@@ -226,6 +226,20 @@ bool Updater::Install(const std::string& zipPath, std::string& outError) {
         }
     }
 
+    // Magic bytes do ZIP ('PK\x03\x04'). Builds antigos da CI geravam TAR
+    // com extensão .zip (tar -a) — dá um diagnóstico claro em vez de
+    // "zip inválido".
+    {
+        std::ifstream zipHead(zipPath, std::ios::binary);
+        char magic[2] = { 0, 0 };
+        zipHead.read(magic, 2);
+        if (magic[0] != 'P' || magic[1] != 'K') {
+            outError = "O arquivo baixado não é um ZIP (era um build antigo que gerava TAR com "
+                       "extensão .zip — republique o zip na nova CI)";
+            return false;
+        }
+    }
+
     mz_zip_archive zip;
     memset(&zip, 0, sizeof(zip));
     if (!mz_zip_reader_init_file(&zip, zipPath.c_str(), 0)) {

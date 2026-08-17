@@ -21,5 +21,4 @@ private:
     kizuri::Ref<kizuri::Framebuffer> m_Framebuffer;
     bool m_Focused = false;
     bool m_Hovered = false;
-    bool m_ShowCameraEditor = false;
 };

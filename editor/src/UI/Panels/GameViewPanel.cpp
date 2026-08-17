@@ -97,44 +97,15 @@ void GameViewPanel::OnImGuiRender() {
     ImGui::SameLine();
     ImGui::TextDisabled("%s", m_Ctx.IsPlay ? "Play — câmera do jogador" : "preview ao vivo (sem Play)");
     ImGui::SameLine();
-    if (ImGui::SmallButton("✦ Editar câmera")) {
-        m_ShowCameraEditor = !m_ShowCameraEditor;
+    if (ImGui::SmallButton("Focar câmera")) {
+        // Seleciona a câmera principal NO INSPETOR: é lá que se edita (FOV,
+        // near/far, tipo...), inclusive durante o Play — e os ajustes voltam
+        // pra cena quando o Play para.
         if (scene) {
             kizuri::Entity cam;
             kizuri::CameraComponent* cc = nullptr;
             if (kizuri::FindPrimaryCamera(*scene, cam, cc) && m_Ctx.SelectEntity)
                 m_Ctx.SelectEntity(cam);
-        }
-    }
-
-    // ---- Mini-editor da câmera primária, AO VIVO (edit persiste; play
-    // atua na cópia em execução — config não se perde ao parar).
-    if (m_ShowCameraEditor && scene) {
-        ImGui::Separator();
-        kizuri::Entity cam;
-        kizuri::CameraComponent* cc = nullptr;
-        if (kizuri::FindPrimaryCamera(*scene, cam, cc)) {
-            bool changed = false;
-            int type = (int)cc->Type;
-            if (ImGui::Combo("Tipo", &type, "2D (Ortográfica)\0" "3D (Perspectiva)\0")) {
-                cc->Type = (kizuri::CameraComponent::ProjectionType)type;
-                changed = true;
-            }
-            if (cc->Type == kizuri::CameraComponent::ProjectionType::Perspective3D) {
-                changed |= ImGui::DragFloat("FOV (graus)", &cc->PerspectiveFOV, 0.5f, 20.0f, 120.0f);
-                changed |= ImGui::DragFloat("Near", &cc->NearClip, 0.01f, 0.01f, 10.0f);
-                changed |= ImGui::DragFloat("Far", &cc->FarClip, 1.0f, 10.0f, 2000.0f);
-            } else {
-                changed |= ImGui::DragFloat("Tamanho (Ortho)", &cc->OrthoSize, 0.1f, 0.5f, 200.0f);
-            }
-            if (ImGui::Checkbox("Câmera principal", &cc->Primary)) changed = true;
-            if (changed && scene)
-                scene->OnViewportResize((uint32_t)m_Ctx.ViewportSize.x, (uint32_t)m_Ctx.ViewportSize.y);
-            ImGui::TextDisabled("%s", m_Ctx.IsPlay
-                ? "Mudanças valem durante o Play (a cena original não é tocada)."
-                : "Mudanças vão pra cena (salve pra manter). Preview atualizado ao vivo.");
-        } else {
-            ImGui::TextDisabled("Nenhuma câmera na cena — crie uma (Inspetor > + Adicionar Componente > Camera).");
         }
     }
 

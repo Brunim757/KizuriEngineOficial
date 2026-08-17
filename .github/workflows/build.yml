@@ -57,6 +57,19 @@ jobs:
           max-size: "1G"
           key: ${{ matrix.os }}
 
+      - name: Configurar .NET SDK 10 (binding pré-compilado)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Kizuri.Scripting vai pro zip como DLL PRÉ-COMPILADA (API fechada):
+      # o csproj do jogo referencia a DLL em vez de recompilar o binding.
+      - name: Compilar binding (Kizuri.Scripting.dll)
+        shell: bash
+        run: |
+          dotnet build managed/Kizuri.Scripting/Kizuri.Scripting.csproj \
+            -c Release --nologo -o managed
+
       - name: Baixar assets de demonstração (embutir no exe)
         shell: bash
         run: |

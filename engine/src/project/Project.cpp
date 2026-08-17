@@ -54,7 +54,15 @@ static void WriteSourceTemplate(const fs::path& sourceDir) {
         "    <EngineDir Condition=\"'$(EngineDir)' == ''\">$(KIZURI_ENGINE_DIR)</EngineDir>\n"
         "  </PropertyGroup>\n\n"
         "  <ItemGroup>\n"
-        "    <ProjectReference Include=\"$(EngineDir)/managed/Kizuri.Scripting/Kizuri.Scripting.csproj\" />\n"
+        "    <!-- Binding PRÉ-COMPILADO (Kizuri.Scripting.dll): a API vem\n"
+        "         fechada e o build do jogo é rápido (não recompila binding).\n"
+        "         Se a DLL não existir no EngineDir, cai pro csproj (dev). -->\n"
+        "    <Reference Include=\"Kizuri.Scripting\"\n"
+        "               Condition=\"Exists('$(EngineDir)/managed/Kizuri.Scripting.dll')\">\n"
+        "      <HintPath>$(EngineDir)/managed/Kizuri.Scripting.dll</HintPath>\n"
+        "    </Reference>\n"
+        "    <ProjectReference Include=\"$(EngineDir)/managed/Kizuri.Scripting/Kizuri.Scripting.csproj\"\n"
+        "                       Condition=\"!Exists('$(EngineDir)/managed/Kizuri.Scripting.dll')\"/>\n"
         "  </ItemGroup>\n\n"
         "</Project>\n";
     csproj.close();

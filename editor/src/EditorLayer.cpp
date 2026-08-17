@@ -2461,7 +2461,6 @@ void EditorLayer::OnSceneStop() {
     // pra cena original — "mexeu ao vivo, não perde ao parar".
     if (m_ActiveScene && m_EditorScene) {
         auto& copyReg = m_ActiveScene->GetRegistry();
-        auto& editReg = m_EditorScene->GetRegistry();
         auto camView = copyReg.view<kizuri::TransformComponent, kizuri::CameraComponent>();
         for (auto e : camView) {
             kizuri::Entity copyEnt{ e, m_ActiveScene.get() };
@@ -4044,7 +4043,7 @@ void EditorLayer::DrawContentBrowser() {
     // Source/ (scripts) — o Content Browser abre na pasta de conteúdo por
     // padrão; com um clique você troca de pasta de trabalho.
     {
-        auto* proj = Project::GetActive();
+        auto proj = Project::GetActive(); // Ref<Project> (não-pointeiro)
         ImGui::PushID("cb_shortcuts");
         std::string label = "📁 " + (m_ContentBrowserCurrentDir == m_ContentBrowserRoot
             ? std::string("Conteúdo (assets)") : std::string("Pasta atual"));

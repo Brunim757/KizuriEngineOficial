@@ -219,6 +219,7 @@ void TextRenderer::DrawString(const std::string& text, const glm::vec3& position
     // glifos em retângulos brancos opacos — força aqui, no desenho.
     RenderCommand::SetBlending(true);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    Renderer2D::Flush(); // descarta quads pendentes e garante textura limpa pro atlas
 
     // Divide o texto em linhas e desenha cada uma — posição é o canto
     // esquerdo-superior da primeira linha; alinhamento desloca cada linha.

@@ -1,6 +1,7 @@
 #pragma once
 #include "kizuri/core/Application.hpp"
 #include "kizuri/core/CommandLineArgs.hpp"
+#include "kizuri/core/Version.hpp"
 #include "kizuri/core/Log.hpp"
 #include <exception>
 
@@ -38,7 +39,7 @@ int main(int argc, char** argv) {
     for (int i = 0; i < argc; ++i) kizuri::GetCommandLineArgs().emplace_back(argv[i]);
     kizuri::Log::Init();
     KZ_CORE_INFO("=================================================");
-    KZ_CORE_INFO("            KIZURI ENGINE v0.1.0                 ");
+    KZ_CORE_INFO("            KIZURI ENGINE v{0}                 ", KIZURI_VERSION);
     KZ_CORE_INFO("=================================================");
 
     try {

@@ -104,7 +104,7 @@ Entity.SetLightColor(r, g, b);
 Entity.SetLightIntensity(x);
 ```
 
-## Sistemas de engine (v0.28)
+## Sistemas de engine (0.8.0)
 
 ```csharp
 // Character Controller (gravidade + chão por raycast)
@@ -121,7 +121,7 @@ Entity.PlayTimeline();
 No editor: componentes **LOD** (malhas por distância), **Terreno** (heightmap
 procedural) e **Timeline** — veja o Inspetor.
 
-## Câmera de jogo (v0.30)
+## Câmera de jogo (0.8.0)
 
 ```csharp
 // Câmera segue a entidade com o nome dado, com suavidade e offset

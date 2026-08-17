@@ -3245,7 +3245,7 @@ void EditorLayer::DrawHub() {
     kizuri::editor::icons::Torii(dl, ImVec2(52.0f, 56.0f), markSize, accent);
     dl->AddText(titleFont, 46.0f, ImVec2(52.0f, 150.0f), textBright, "KIZURI");
     dl->AddText(ImGui::GetFont(), 16.0f, ImVec2(54.0f, 204.0f), textDim, "Editor de jogos 2D e 3D");
-    dl->AddText(ImGui::GetFont(), 13.0f, ImVec2(54.0f, 228.0f), IM_COL32(95, 95, 105, 255), "v0.1.0");
+    dl->AddText(ImGui::GetFont(), 13.0f, ImVec2(54.0f, 228.0f), IM_COL32(95, 95, 105, 255), KIZURI_VERSION);
 
     ImGui::SetCursorPos(ImVec2(52.0f, 280.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(14.0f, 9.0f));

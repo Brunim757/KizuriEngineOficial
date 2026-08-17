@@ -45,7 +45,7 @@ externas para as funções básicas — e você pode embutir os seus assets tamb
 ## Releases (GitHub)
 
 A engine é publicada como **Release do GitHub**: ao criar uma tag `vX.Y.Z`
-e enviá-la (`git tag v0.27.1 && git push origin v0.27.1`), o CI compila e
+e enviá-la (`git tag v0.36.0 && git push origin v0.36.0`), o CI compila e
 publica os pacotes: executáveis Windows/Linux + assembly C# + Content Pack.
 
 ::: dica

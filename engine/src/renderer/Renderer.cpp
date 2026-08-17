@@ -14,6 +14,7 @@ void Renderer::Init() {
     Renderer2D::Init();
     Renderer3D::Init();
     TextRenderer::Init();
+    KZ_CORE_INFO("Renderer inicializado (2D + 3D + texto).");
 }
 
 void Renderer::Shutdown() {

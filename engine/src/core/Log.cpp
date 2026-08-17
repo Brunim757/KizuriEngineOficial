@@ -69,27 +69,46 @@ void Log::Init() {
     sinks.push_back(std::make_shared<MemorySink>());
 #else
     sinks.push_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
+    // v0.37.x: o arquivo KizuriEngine.log e o nível TRACE são só de
+    // DESENVOLVIMENTO (testadores). Em Release (usuário final): nada de
+    // arquivo no disco e nenhum TRACE — só logs úteis (info/warn/error).
+#if defined(KZ_RELEASE)
+    sinks.push_back(std::make_shared<MemorySink>());
+#else
     sinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>("KizuriEngine.log", true));
     sinks.push_back(std::make_shared<MemorySink>());
+#endif
 #endif
 
     sinks[0]->set_pattern("%^[%T] %n: %v%$");
 #if !defined(KZ_PLATFORM_ANDROID)
+#if defined(KZ_RELEASE)
+    // Release: 2 sinks (stdout + memória p/ o console do editor quando roda
+    // debug build; em build final de jogo não há console — só o stdout).
+    sinks[1]->set_pattern("[%T] [%l] %n: %v");
+#else
     sinks[1]->set_pattern("[%T] [%l] %n: %v");
     sinks[2]->set_pattern("[%T] %n: %v");
+#endif
 #else
     sinks[1]->set_pattern("[%T] %n: %v");
 #endif
 
+    // Nível: TRACE só em Debug/editor (testador); em Release começa em INFO.
+    auto level = spdlog::level::info;
+#if !defined(KZ_RELEASE)
+    level = spdlog::level::trace;
+#endif
+
     s_CoreLogger = std::make_shared<spdlog::logger>("KIZURI", begin(sinks), end(sinks));
     spdlog::register_logger(s_CoreLogger);
-    s_CoreLogger->set_level(spdlog::level::trace);
-    s_CoreLogger->flush_on(spdlog::level::trace);
+    s_CoreLogger->set_level(level);
+    s_CoreLogger->flush_on(level);
 
     s_AppLogger = std::make_shared<spdlog::logger>("APP", begin(sinks), end(sinks));
     spdlog::register_logger(s_AppLogger);
-    s_AppLogger->set_level(spdlog::level::trace);
-    s_AppLogger->flush_on(spdlog::level::trace);
+    s_AppLogger->set_level(level);
+    s_AppLogger->flush_on(level);
 }
 
 } // namespace kizuri

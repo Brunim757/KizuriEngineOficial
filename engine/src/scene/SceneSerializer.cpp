@@ -15,6 +15,7 @@ using json = nlohmann::json;
 namespace kizuri {
 
 void SceneSerializer::Serialize(const std::string& filepath) {
+    KZ_CORE_INFO("Salvando cena: {0}", filepath);
     std::ofstream out(filepath);
     out << SerializeToJson().dump(4);
     KZ_CORE_INFO("Cena salva com sucesso em: {0}", filepath);
@@ -33,6 +34,7 @@ json SceneSerializer::SerializeToJson() {
 }
 
 bool SceneSerializer::Deserialize(const std::string& filepath) {
+    KZ_CORE_INFO("Carregando cena: {0}", filepath);
     std::ifstream in(filepath);
     if (!in.is_open()) {
         KZ_CORE_ERROR("Não foi possível abrir o arquivo de cena: {0}", filepath);

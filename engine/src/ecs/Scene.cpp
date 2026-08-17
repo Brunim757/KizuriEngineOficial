@@ -906,6 +906,7 @@ void Scene::RebuildDirtyTilemapColliders() {
 
 void Scene::OnPhysics2DStart() {
     m_PhysicsWorld2D = new b2World({ 0.0f, -9.81f });
+    KZ_CORE_INFO("Mundo de física 2D (Box2D) criado.");
 
     auto* listener = new ContactListener2D();
     listener->BeginQueue = &m_CollisionBeginQueue;

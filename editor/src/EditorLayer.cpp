@@ -3275,7 +3275,7 @@ void EditorLayer::RememberProject(const kizuri::Ref<kizuri::Project>& project) {
 
 void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
     if (!project) return;
-    m_ContentBrowserRoot = project->GetAssetDirectory();
+    m_ContentBrowserRoot = project->GetProjectDirectory();
     m_ContentBrowserCurrentDir = m_ContentBrowserRoot;
 
     ProjectMode mode = project->GetConfig().DefaultMode;
@@ -4093,8 +4093,8 @@ void EditorLayer::DrawContentBrowser() {
             std::filesystem::create_directory(m_ContentBrowserCurrentDir / "Nova Pasta", ec);
         }
         if (ImGui::MenuItem("Criar Script C#...")) {
-            m_ScriptTemplateDir = m_ContentBrowserCurrentDir;
-            m_RequestScriptTemplate = true;
+            CreateNewCSharpScript(m_ContentBrowserCurrentDir, 0);
+            CompileAndRegisterGame(); // registra na hora, sem precisar de Play
         }
         ImGui::EndPopup();
     }
@@ -4601,8 +4601,8 @@ void EditorLayer::DrawInspector() {
                     std::error_code ec;
                     if (dir.empty() || !std::filesystem::is_directory(dir, ec))
                         dir = m_ContentBrowserCurrentDir;
-                    m_ScriptTemplateDir = dir;
-                    m_RequestScriptTemplate = true;
+                    CreateNewCSharpScript(dir, 0);
+                    CompileAndRegisterGame();
                 }
                 ImGui::TreePop();
             }
@@ -5520,31 +5520,6 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<CircleCollider2DComponent>();
         }
 
-        if (m_SelectedEntity.HasComponent<NativeScriptComponent>()) {
-            auto& nsc = m_SelectedEntity.GetComponent<NativeScriptComponent>();
-            if (DrawComponentHeader("Script Nativo", &removeThis)) {
-                auto classNames = ScriptEngine::GetRegistry().GetClassNames();
-                if (classNames.empty()) {
-                    ImGui::TextDisabled("Nenhum script registrado. Abra um projeto (ou aperte Play — a engine compila e carrega sozinha).");
-                    if (!nsc.ClassName.empty())
-                        ImGui::TextDisabled("Classe vinculada na cena: %s (será religada ao carregar o módulo)", nsc.ClassName.c_str());
-                } else {
-                    std::string preview = nsc.ClassName.empty() ? "(nenhuma classe)" : nsc.ClassName;
-                    if (ImGui::BeginCombo("Classe", preview.c_str())) {
-                        for (auto& name : classNames) {
-                            bool selected = (name == nsc.ClassName);
-                            if (ImGui::Selectable(name.c_str(), selected))
-                                nsc.BindByName(name);
-                            if (selected) ImGui::SetItemDefaultFocus();
-                        }
-                        ImGui::EndCombo();
-                    }
-                }
-                ImGui::TreePop();
-            }
-            if (removeThis) m_SelectedEntity.RemoveComponent<NativeScriptComponent>();
-        }
-
         ImGui::Spacing();
         DrawAddComponentButton();
     }
@@ -5821,7 +5796,6 @@ void EditorLayer::OnImGuiRender() {
     DrawSavePrefabModal();
     DrawUpdateModals();
     DrawAndroidExportModals();
-    DrawScriptTemplateModal();
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — modais ok");
     if (!m_ViewportMaximized) {
         DrawSceneHierarchy();
@@ -6472,27 +6446,28 @@ void EditorLayer::DrawAndroidExportModals() {
     }
 }
 
-// Seletor de template de script (v0.37.0): pergunta qual script pronto criar.
-void EditorLayer::DrawScriptTemplateModal() {
-    if (m_RequestScriptTemplate) {
-        m_RequestScriptTemplate = false;
-        ImGui::OpenPopup("Criar Script C#");
-    }
-    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    if (ImGui::BeginPopupModal("Criar Script C#", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::TextWrapped("Escolha o template (código pronto, comentado em português):");
-        ImGui::Spacing();
-        const char* names[] = { "Vazio", "PlayerController (3D, WASD + pulo)", "Movement2D (setas + física)", "Coletável (colisão + som)" };
-        for (int i = 0; i < 4; ++i) {
-            if (ImGui::Button(names[i], ImVec2(320.0f, 0.0f))) {
-                CreateNewCSharpScript(m_ScriptTemplateDir, i);
-                ImGui::CloseCurrentPopup();
-            }
-            if (i < 3) ImGui::Spacing();
+
+// Compila o jogo C# em background e CARREGA o módulo (registra os scripts)
+// — o dropdown do Inspetor fica pronto SEM precisar apertar Play (v0.37.x).
+void EditorLayer::CompileAndRegisterGame() {
+    if (m_SceneState != SceneState::Edit) return;
+    if (m_CompileRegBusy) return;
+    std::string csproj, engineRoot;
+    GetGameBuildInfo(csproj, engineRoot);
+    if (csproj.empty() || engineRoot.empty()) return;
+    m_CompileRegBusy = true;
+    if (m_CompileRegThread.joinable()) m_CompileRegThread.join();
+    m_CompileRegThread = std::thread([this, csproj, engineRoot]() {
+        std::string dll, err;
+        bool ok = kizuri::GameExporter::BuildGameModule(csproj, engineRoot, dll, err);
+        if (ok && !dll.empty()) {
+            if (kizuri::ScriptEngine::LoadModule(dll))
+                KZ_CORE_INFO("Scripts carregados e registrados automaticamente.");
+            else
+                KZ_CORE_WARN("Módulo compilado mas não registrou scripts: {0}", kizuri::ScriptEngine::GetLastError());
+        } else {
+            KZ_CORE_ERROR("Falha ao compilar o jogo para registro: {0}", err);
         }
-        ImGui::Spacing();
-        ImGui::TextDisabled("O script vai pra pasta atual do Content Browser / Source.");
-        ImGui::EndPopup();
-    }
+        m_CompileRegBusy = false;
+    });
 }

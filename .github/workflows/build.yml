@@ -369,7 +369,7 @@ jobs:
   # ------- Linux AppImage (jogo autônomo num arquivo) -----------------
   # O .exe fica no job do Windows e o .apk no do Android — aqui o LINUX
   # exporta SÓ o .AppImage (nada de plataformas misturadas num pacote).
-linux-appimage:
+  linux-appimage:
     runs-on: ubuntu-latest
     defaults:
       run:

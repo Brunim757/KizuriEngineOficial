@@ -64,7 +64,13 @@ public sealed class MeuScript : Script
 
 - Namespace `Kizuri`; teclas são `Key.Space`, `Key.A`, `Key.Left` etc.
   (enums `Key`/`MouseButton`).
+- **Rotação em GRAUS** na API C# (`Entity.Rotation`, `SetRotation`, `Rotate`
+  — 45f é 45 graus).
+- **Callbacks todos opcionais** (v0.37.0): implemente só o que usar —
+  `OnCreate`, `OnUpdate`, `OnCollisionBegin/End`, `OnDestroy`.
 - C# moderno (.NET 10): `async/await`, LINQ etc. funcionam.
+- Ao criar script (botão direito → **Criar Script C#...**) escolha um
+  **template pronto**: PlayerController 3D, Movement2D ou Coletável.
 - O registro manual ainda existe (`[Kizuri.GameEntryPoint]` +
   `Kizuri.GameModule.Register<N>("Nome")`) para quem quiser nomes
   customizados — o automático tem prioridade menor.

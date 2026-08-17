@@ -19,7 +19,7 @@ using Kizuri.Math;
 		// Sol (direcional): a 1ª luz direcional da cena projeta sombra (CSM).
 		var sun = Scene.CreateEntity("Sol");
 		sun.AddLight(LightType.Directional, 1f, 0.95f, 0.85f, intensity: 2f);
-		sun.SetRotation(new Vector3(0.8f, 0.4f, 0f));
+		sun.SetRotation(new Vector3(46f, 23f, 0f));
 
 		// Luz pontual colorida com sombra (efeito de fogo/magia).
 		var point = Scene.CreateEntity("LuzPonto");
@@ -64,8 +64,8 @@ using Kizuri.Math;
 		_t += deltaSeconds;
 		if (_cube.IsValid && _cube.TryGetTransform(out var t))
 		{
-			t.Rotation.Y = _t * 0.8f;
-			t.Rotation.X = _t * 0.5f;
+			t.Rotation.Y = _t * 45f;
+			t.Rotation.X = _t * 29f;
 			t.Translation.Y = 1f + (float)System.Math.Sin(_t * 2f) * 0.3f;
 			_cube.SetRotation(t.Rotation);
 			_cube.SetPosition(t.Translation);

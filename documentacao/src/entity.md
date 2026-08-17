@@ -19,7 +19,7 @@ Entity.Parent;                  // entidade pai (ou Invalid se raiz)
 Entity.ChildCount;              // quantos filhos diretos
 Entity.GetChild(0);             // filho no índice
 Entity.GetChild("Olho");        // filho pelo nome
-Entity.Rotation;                // euler em RADIANOS (Vector3) — use Math.Radians() nos literais
+Entity.Rotation;                // euler em GRAUS (Vector3) — 45f = 45 graus
 Entity.Scale;                   // Vector3
 Entity.TryGetWorldPosition();   // posição de mundo (respeita o pai)
 ```
@@ -37,7 +37,9 @@ Entity.MoveForward(distancia);         // move ao longo da própria frente
 Entity.MoveRight(distancia);           // lateral
 Entity.SetPosition(x, y, z);
 Entity.SetWorldPosition(x, y, z);      // posição de mundo (mesmo com pai)
-Entity.SetRotation(new Math.Vector3(0f, 45f, 0f));
+Entity.SetRotation(new Math.Vector3(0f, 45f, 0f)); // graus
+Entity.Translate(x, y, z);          // soma à posição
+Entity.Rotate(new Math.Vector3(0f, 45f, 0f)); // soma à rotação (graus)
 Entity.SetRotation(new Math.Vector3(x, y, z));
 Entity.SetScale(x, y, z);
 Entity.LookAt(outro);

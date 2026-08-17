@@ -3893,21 +3893,88 @@ namespace {
 // Cria um arquivo de script C# novo na pasta (template da API Kizuri.Scripting).
 // A engine REGISTRA a classe automaticamente no Play (Host escaneia o
 // assembly do jogo) — não precisa mexer em nenhum registro manual.
-void CreateNewCSharpScript(const std::filesystem::path& dir) {
+void CreateNewCSharpScript(const std::filesystem::path& dir, int templateKind) {
     namespace fs = std::filesystem;
     std::error_code ec;
     if (!fs::is_directory(dir, ec)) return;
 
-    std::string base = "NovoScript";
-    fs::path file = dir / (base + ".cs");
+    // Nome base por template (v0.37.0: scripts prontos pra aprender e usar).
+    const char* baseName = "NovoScript";
+    if (templateKind == 1) baseName = "PlayerController";
+    else if (templateKind == 2) baseName = "Movement2D";
+    else if (templateKind == 3) baseName = "Coletavel";
+
+    fs::path file = dir / (std::string(baseName) + ".cs");
     int n = 1;
-    while (fs::exists(file, ec)) file = dir / (base + std::to_string(++n) + ".cs");
+    while (fs::exists(file, ec)) file = dir / (std::string(baseName) + std::to_string(++n) + ".cs");
 
-    const char* templateCs = R"CS(using Kizuri;
+    // Template escolhido pelo usuário no momento de criar (código pronto,
+    // comentado em português, todo método opcional na v0.37.0).
+    std::string view = R"CS(using Kizuri;
+)CS";
+    if (templateKind == 1) view += R"CS(
+// Player 3D: WASD move o personagem na direção da câmera/do mundo
+// e espaço pula (Character Controller). Anexe a um cubo/capsule.
+public sealed class PlayerController : Script
+{
+	public float velocidade = 6f;
+	public float forcaPulo = 8f;
 
-// Script de jogo. O nome da CLASSE é o que aparece no Inspetor
-// (componente "Script C#"). Nada de registro manual: a engine compila e
-// registra este script automaticamente no Play.
+	public override void OnCreate()
+	{
+		Entity.AddCharacterController(velocidade, -20f);
+	}
+
+	public override void OnUpdate(float deltaSeconds)
+	{
+		float x = 0f, z = 0f;
+		if (Input.IsKeyDown(Key.W) || Input.IsKeyDown(Key.Up))    z += 1f;
+		if (Input.IsKeyDown(Key.S) || Input.IsKeyDown(Key.Down))  z -= 1f;
+		if (Input.IsKeyDown(Key.A) || Input.IsKeyDown(Key.Left))  x -= 1f;
+		if (Input.IsKeyDown(Key.D) || Input.IsKeyDown(Key.Right)) x += 1f;
+
+		Entity.Translate(new Math.Vector3(x * velocidade * deltaSeconds, 0f, z * velocidade * deltaSeconds));
+
+		if (Input.IsKeyDown(Key.Space))
+			Entity.ApplyImpulse(new Math.Vector3(0f, forcaPulo, 0f));
+	}
+}
+)CS";
+    else if (templateKind == 2) view += R"CS(
+// Movimento 2D: setas movem um Rigidbody2D (adicione Rigidbody 2D e
+// Box Collider 2D no Inspetor da entidade).
+public sealed class Movement2D : Script
+{
+	public float velocidade = 5f;
+
+	public override void OnUpdate(float deltaSeconds)
+	{
+		float x = 0f;
+		if (Input.IsKeyDown(Key.A) || Input.IsKeyDown(Key.Left))  x -= 1f;
+		if (Input.IsKeyDown(Key.D) || Input.IsKeyDown(Key.Right)) x += 1f;
+
+		var rb = Entity.Rigidbody2D;
+		rb.SetLinearVelocity(new Math.Vector2(x * velocidade, rb.GetLinearVelocity().Y));
+	}
+}
+)CS";
+    else if (templateKind == 3) view += R"CS(
+// Coletável: some ao encostar e toca um som — exemplo de colisão/trigger.
+public sealed class Coletavel : Script
+{
+	public float pontos = 1f;
+
+	public override void OnCollisionBegin(Entity other)
+	{
+		Log.Info($"Coletado por '{other.Name}'! (+{pontos})");
+		Entity.AddAudio("assets/som/coleta.wav", false, true);
+		Entity.Destroy();
+	}
+}
+)CS";
+    else view += R"CS(
+// Script vazio — coloque a lógica aqui. O nome da CLASSE é o que aparece
+// no Inspetor (componente "Script C#") e a engine registra sozinha.
 public sealed class NovoScript : Script
 {
 	public override void OnCreate()
@@ -3919,16 +3986,12 @@ public sealed class NovoScript : Script
 	{
 		// deltaSeconds = tempo do último frame em segundos.
 	}
-
-	public override void OnCollisionBegin(Entity other) { }
-	public override void OnCollisionEnd(Entity other) { }
-	public override void OnDestroy() { }
 }
 )CS";
 
     {
         std::ofstream out(file);
-        out << templateCs;
+        out << view;
     }
     if (ec) {
         KZ_CORE_ERROR("Falha ao criar script: {0}", ec.message());
@@ -4029,7 +4092,8 @@ void EditorLayer::DrawContentBrowser() {
             std::filesystem::create_directory(m_ContentBrowserCurrentDir / "Nova Pasta", ec);
         }
         if (ImGui::MenuItem("Criar Script C#...")) {
-            CreateNewCSharpScript(m_ContentBrowserCurrentDir);
+            m_ScriptTemplateDir = m_ContentBrowserCurrentDir;
+            m_RequestScriptTemplate = true;
         }
         ImGui::EndPopup();
     }
@@ -4536,13 +4600,8 @@ void EditorLayer::DrawInspector() {
                     std::error_code ec;
                     if (dir.empty() || !std::filesystem::is_directory(dir, ec))
                         dir = m_ContentBrowserCurrentDir;
-                    CreateNewCSharpScript(dir);
-                    ImGui::OpenPopup("##script_hint");
-                }
-                if (ImGui::BeginPopup("##script_hint")) {
-                    ImGui::Text("Script criado. Dê Play para compilar e");
-                    ImGui::Text("a classe aparece no dropdown acima.");
-                    ImGui::EndPopup();
+                    m_ScriptTemplateDir = dir;
+                    m_RequestScriptTemplate = true;
                 }
                 ImGui::TreePop();
             }
@@ -5761,6 +5820,7 @@ void EditorLayer::OnImGuiRender() {
     DrawSavePrefabModal();
     DrawUpdateModals();
     DrawAndroidExportModals();
+    DrawScriptTemplateModal();
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — modais ok");
     if (!m_ViewportMaximized) {
         DrawSceneHierarchy();
@@ -6101,7 +6161,26 @@ void EditorLayer::OnImGuiRender() {
             ImGui::PopStyleColor();
             ImGui::Spacing();
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.85f, 0.8f, 1.0f));
-            ImGui::TextWrapped("%s", m_PlayBuildError.c_str());
+            std::string display = m_PlayBuildError;
+            // Dicas amigáveis (v0.37.0): se o código usa API antiga/errada,
+            // o erro mostra a correção provável.
+            std::string hints;
+            std::error_code sec;
+            if (Project::GetActive()) {
+                std::filesystem::path sourceDir = std::filesystem::path(Project::GetActive()->GetProjectDirectory()) / "Source";
+                for (auto& f : std::filesystem::directory_iterator(sourceDir, sec)) {
+                    if (f.path().extension() != ".cs") continue;
+                    std::ifstream in(f.path().string());
+                    std::string txt((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+                    if (txt.find("OnStart") != std::string::npos) hints += "OnStart nao existe — o metodo e OnCreate()\n";
+                    if (txt.find("KeyCode") != std::string::npos) hints += "KeyCode nao existe — use Key (ex: Key.A)\n";
+                    if (txt.find("Entity.Move(") != std::string::npos) hints += "Entity.Move nao existe — use Entity.Translate(...)\n";
+                    if (txt.find("KizuriScript") != std::string::npos) hints += "KizuriScript nao existe — a classe base e Script\n";
+                }
+            }
+            if (!hints.empty())
+                display += "\n\n---- TALVEZ VOCE QUISESSE DIZER ----\n" + hints;
+            ImGui::TextWrapped("%s", display.c_str());
             ImGui::PopStyleColor();
             ImGui::Spacing();
             if (ImGui::Button("Fechar")) m_PlayBuildError.clear();
@@ -6389,5 +6468,30 @@ void EditorLayer::DrawAndroidExportModals() {
             }
             ImGui::EndPopup();
         }
+    }
+}
+
+// Seletor de template de script (v0.37.0): pergunta qual script pronto criar.
+void EditorLayer::DrawScriptTemplateModal() {
+    if (m_RequestScriptTemplate) {
+        m_RequestScriptTemplate = false;
+        ImGui::OpenPopup("Criar Script C#");
+    }
+    ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    if (ImGui::BeginPopupModal("Criar Script C#", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::TextWrapped("Escolha o template (código pronto, comentado em português):");
+        ImGui::Spacing();
+        const char* names[] = { "Vazio", "PlayerController (3D, WASD + pulo)", "Movement2D (setas + física)", "Coletável (colisão + som)" };
+        for (int i = 0; i < 4; ++i) {
+            if (ImGui::Button(names[i], ImVec2(320.0f, 0.0f))) {
+                CreateNewCSharpScript(m_ScriptTemplateDir, i);
+                ImGui::CloseCurrentPopup();
+            }
+            if (i < 3) ImGui::Spacing();
+        }
+        ImGui::Spacing();
+        ImGui::TextDisabled("O script vai pra pasta atual do Content Browser / Source.");
+        ImGui::EndPopup();
     }
 }

@@ -16,7 +16,7 @@ public sealed class DemoCharacter3D : Script
 		// Sol (a 1ª direcional projeta sombra CSM).
 		var sun = Scene.CreateEntity("Sol");
 		sun.AddLight(LightType.Directional, 1f, 0.95f, 0.85f, intensity: 2f);
-		sun.SetRotation(new Vector3(0.8f, 0.4f, 0f));
+		sun.SetRotation(new Vector3(46f, 23f, 0f));
 
 		// Terreno procedural + colisor estático (heightfield do Bullet).
 		var terrain = Scene.CreateEntity("Terreno");

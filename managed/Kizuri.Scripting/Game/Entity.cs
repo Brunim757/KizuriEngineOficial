@@ -4,7 +4,7 @@ namespace Kizuri;
 public struct Transform
 {
 	public Math.Vector3 Translation;
-	public Math.Vector3 Rotation; // euler, radianos
+	public Math.Vector3 Rotation; // euler, GRAUS (v0.37.0)
 	public Math.Vector3 Scale;
 
 	public static Transform Identity => new()
@@ -61,7 +61,9 @@ public readonly struct Entity
 		t = Transform.Identity;
 		var pos = default(Math.Vector3); var rot = default(Math.Vector3); var scale = default(Math.Vector3);
 		if (Interop.KizuriNative.kz_entity_get_transform(Handle, out pos, out rot, out scale) == 0) return false;
-		t.Translation = pos; t.Rotation = rot; t.Scale = scale;
+		t.Translation = pos;
+		t.Rotation = new Math.Vector3(rot.X * K_RAD2DEG, rot.Y * K_RAD2DEG, rot.Z * K_RAD2DEG); // graus
+		t.Scale = scale;
 		return true;
 	}
 
@@ -79,6 +81,9 @@ public readonly struct Entity
 		TryGetRigidbody2D(out var rb);
 		return rb;
 	}
+
+	// Acesso direto à física 2D (v0.37.0): Entity.Rigidbody2D.Velocity = ...;
+	public Rigidbody2D Rigidbody2D => GetRigidbody2D();
 
 	public void SetPosition(Math.Vector3 position)
 		=> Interop.KizuriNative.kz_transform_set_position(Handle, position.X, position.Y, position.Z);
@@ -147,19 +152,41 @@ public readonly struct Entity
 		return Entity.Invalid;
 	}
 
-	// Rotação em radianos (euler) e escala — controle completo do Transform em runtime.
-	public void SetRotation(Math.Vector3 rotation)
-		=> Interop.KizuriNative.kz_transform_set_rotation(Handle, rotation.X, rotation.Y, rotation.Z);
+	// Rotação em GRAUS (euler) e escala — controle completo do Transform em
+	// runtime. A conversão pra radianos (essência da engine) acontece aqui na
+	// fronteira: no script você digita 90f, não Math.PI.
+	const float K_DEG2RAD = (float)(System.Math.PI / 180.0);
+	const float K_RAD2DEG = (float)(180.0 / System.Math.PI);
+
+	public void SetRotation(Math.Vector3 degrees)
+		=> Interop.KizuriNative.kz_transform_set_rotation(Handle,
+			degrees.X * K_DEG2RAD, degrees.Y * K_DEG2RAD, degrees.Z * K_DEG2RAD);
+
+	// Soma graus à rotação atual (90 graus por segundo = Rotate(new Vector3(0, 90f * dt, 0))).
+	public void Rotate(Math.Vector3 degrees)
+	{
+		var r = Rotation;
+		SetRotation(r + degrees);
+	}
+
+	// Translada por um delta no espaço local/mundo (soma a posição atual).
+	public void Translate(Math.Vector3 delta)
+	{
+		var p = Position;
+		SetPosition(p + delta);
+	}
 
 	public void SetScale(Math.Vector3 scale)
 		=> Interop.KizuriNative.kz_transform_set_scale(Handle, scale.X, scale.Y, scale.Z);
 
 	// Leituras atuais (espelho dos setters).
+	// Leitura atual da rotação, já em GRAUS.
 	public Math.Vector3 Rotation
 	{
 		get
 		{
-			if (Interop.KizuriNative.kz_entity_get_rotation(Handle, out var rot) != 0) return rot;
+			if (Interop.KizuriNative.kz_entity_get_rotation(Handle, out var rot) != 0)
+				return new Math.Vector3(rot.X * K_RAD2DEG, rot.Y * K_RAD2DEG, rot.Z * K_RAD2DEG);
 			return Math.Vector3.Zero;
 		}
 	}
@@ -187,9 +214,13 @@ public readonly struct Entity
 	// pitch em Rotation.X). Útil pra mover "pra onde olha".
 	public Math.Vector3 GetForward()
 	{
-		var r = Rotation;
-		float cy = (float)System.Math.Cos(r.Y), sy = (float)System.Math.Sin(r.Y);
-		float cp = (float)System.Math.Cos(r.X), sp = (float)System.Math.Sin(r.X);
+		return GetForwardFromDeg(Rotation);
+	}
+
+	internal static Math.Vector3 GetForwardFromDeg(Math.Vector3 r)
+	{
+		float cy = (float)System.Math.Cos(r.Y * K_DEG2RAD), sy = (float)System.Math.Sin(r.Y * K_DEG2RAD);
+		float cp = (float)System.Math.Cos(r.X * K_DEG2RAD), sp = (float)System.Math.Sin(r.X * K_DEG2RAD);
 		return new Math.Vector3(cy * cp, sp, sy * cp);
 	}
 
@@ -197,7 +228,8 @@ public readonly struct Entity
 	public Math.Vector3 GetRight()
 	{
 		var r = Rotation;
-		return new Math.Vector3(-(float)System.Math.Sin(r.Y), 0f, (float)System.Math.Cos(r.Y));
+		float sy = (float)System.Math.Sin(r.Y * K_DEG2RAD), cy = (float)System.Math.Cos(r.Y * K_DEG2RAD);
+		return new Math.Vector3(-sy, 0f, cy);
 	}
 
 	// Move ao longo da própria frente/direita (sem depender de rotação de câmera).

@@ -230,6 +230,11 @@ private:
     std::string m_AndroidResult;     // "APK: <path>" ou erro
     std::string m_AndroidMissing;
     bool m_AndroidErrPopupOpened = false;
+
+    // ---- Seletor de template de script (v0.37.0) ----
+    void DrawScriptTemplateModal();
+    bool m_RequestScriptTemplate = false;
+    std::filesystem::path m_ScriptTemplateDir;
     std::string m_UpdateZip;        // caminho do zip baixado
     bool m_UpdateInstallStarted = false;
     bool m_UpdatePopupOpened = false;   // edge p/ OpenPopup do modal

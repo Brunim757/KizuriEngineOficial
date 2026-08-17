@@ -7,11 +7,13 @@ namespace Kizuri;
 public abstract class Script
 {
 	public Entity Entity { get; internal set; }
-	public abstract void OnCreate();
-	public abstract void OnUpdate(float deltaSeconds);
-	public abstract void OnCollisionBegin(Entity other);
-	public abstract void OnCollisionEnd(Entity other);
-	public abstract void OnDestroy();
+	// v0.37.0: TODOS opcionais (virtual + corpo vazio) — o script implementa
+	// só o que usa; quem já tem override continua funcionando igual.
+	public virtual void OnCreate() { }
+	public virtual void OnUpdate(float deltaSeconds) { }
+	public virtual void OnCollisionBegin(Entity other) { }
+	public virtual void OnCollisionEnd(Entity other) { }
+	public virtual void OnDestroy() { }
 
 	private readonly List<Coroutine> m_Coroutines = new();
 

@@ -21,6 +21,9 @@ namespace kizuri {
 namespace {
 
 constexpr const char* kSettingsFile = "update_settings.json";
+// API do site oficial da engine (exemplo do README/comunidade). O dev pode
+// trocar em Ajuda > Configurar Atualizações; o default já aponta pro site.
+constexpr const char* kDefaultApiUrl = "https://kizuri-studio.vercel.app/api/version";
 
 std::string s_ApiUrl;         // cache em memória (lido do disco uma vez)
 std::string s_SkipVersion;
@@ -34,7 +37,7 @@ void LoadSettingsOnce() {
     try {
         nlohmann::json j;
         in >> j;
-        s_ApiUrl = j.value("api_url", std::string());
+        s_ApiUrl = j.value("api_url", std::string(kDefaultApiUrl));
         s_SkipVersion = j.value("skip_version", std::string());
     } catch (...) {
         KZ_CORE_WARN("update_settings.json inválido — ignorando.");
@@ -107,7 +110,7 @@ std::string GetExecutablePath() {
 
 std::string Updater::GetLocalVersion() { return KIZURI_VERSION; }
 
-std::string Updater::GetApiUrl() { LoadSettingsOnce(); return s_ApiUrl; }
+std::string Updater::GetApiUrl() { LoadSettingsOnce(); return s_ApiUrl.empty() ? kDefaultApiUrl : s_ApiUrl; }
 void Updater::SetApiUrl(const std::string& url) { LoadSettingsOnce(); s_ApiUrl = url; SaveSettings(); }
 std::string Updater::GetSkipVersion() { LoadSettingsOnce(); return s_SkipVersion; }
 void Updater::SetSkipVersion(const std::string& v) { LoadSettingsOnce(); s_SkipVersion = v; SaveSettings(); }

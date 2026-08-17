@@ -2895,7 +2895,7 @@ void EditorLayer::DrawDockspace() {
 
     // ---- Ajuda ----
     if (ImGui::BeginPopup("##menu_Ajuda")) {
-        ImGui::TextDisabled("Kizuri Engine v{0}", KIZURI_VERSION);
+        ImGui::TextDisabled("Kizuri Engine v%s", KIZURI_VERSION);
         ImGui::TextDisabled("C++20 · OpenGL %s · GLSL %d core",
             kizuri::GetOpenGLVersionString().c_str(), kizuri::GetGLSLVersion());
         ImGui::Separator();
@@ -4426,7 +4426,6 @@ void EditorLayer::DrawInspector() {
                     ImGui::TextDisabled("Nenhum script compilado ainda.");
                     ImGui::TextDisabled("Dê Play uma vez (compilação automática do projeto) e as classes aparecem aqui.");
                 } else {
-                    const char* preview = nsc.ClassName.empty() ? "(nenhuma)" : nsc.ClassName.c_str();
                     int current = 0;
                     std::vector<const char*> items;
                     items.reserve(classNames.size() + 1);

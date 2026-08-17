@@ -29,12 +29,12 @@ static bool FindPrimaryCamera(Scene& scene, Entity& outCamera, CameraComponent*&
     return false;
 }
 
-static bool SceneHasPrimaryCamera(const Scene& scene) {
-    auto& registry = const_cast<Scene&>(scene).GetRegistry();
-    auto view = registry.view<const TransformComponent, const CameraComponent>();
+static bool SceneHasPrimaryCamera(Scene& scene) {
+    auto& registry = scene.GetRegistry();
+    auto view = registry.view<TransformComponent, CameraComponent>();
     for (auto e : view) {
-        auto* cc = view.get<const CameraComponent>(e);
-        if (cc->Primary && scene.IsEntityActive(Entity{ e, &const_cast<Scene&>(scene) }))
+        auto& cc = view.get<CameraComponent>(e);
+        if (cc.Primary && scene.IsEntityActive(Entity{ e, &scene }))
             return true;
     }
     return false;
@@ -72,7 +72,7 @@ void GameViewPanel::OnUpdate(kizuri::Timestep ts) {
 
     // TAA/MotionBlur têm histórico global entre frames — render extra não pode
     // sobrescrever o histórico do viewport principal.
-    kizuri::ScopedTemporalOff temporal;
+    ScopedTemporalOff temporal;
     m_Framebuffer->Bind();
     kizuri::RenderCommand::SetClearColor({ 0.05f, 0.05f, 0.06f, 1.0f });
     kizuri::RenderCommand::Clear();

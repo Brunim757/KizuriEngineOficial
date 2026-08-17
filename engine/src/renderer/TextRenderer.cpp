@@ -113,6 +113,11 @@ void TextRenderer::EnsureAtlas() {
     // Sem ranges, sem oversampling, sem quadrantes: x0/y0..x1/y1 do
     // bakedchar apontam direto pros glifos no atlas.
     std::vector<uint8_t> bitmap(kAtlasWidth * kAtlasHeight, 0);
+    // Zera o array DE ANTES do bake — se algum glifo não couber no atlas,
+    // fica com x0=x1=y0=y1=0 (degenerado) e é ignorado no DrawString.
+    // SEM isso, os lixos pareciam glifos válidos mas todos mapeavam pro
+    // mesmo lugar errado → todas as letras iguais ("retângulos iguais").
+    std::fill(s_Baked, s_Baked + kGlyphCount, stbtt_bakedchar{});
     int baked = stbtt_BakeFontBitmap((const unsigned char*)font, 0, (float)kPixelHeight,
                                      bitmap.data(), kAtlasWidth, kAtlasHeight,
                                      kGlyphFirst, kGlyphCount, s_Baked);

@@ -69,7 +69,14 @@ void ImGuiLayer::OnAttach() {
 void ImGuiLayer::LoadFonts() {
     ImGuiIO& io = ImGui::GetIO();
 
-    static const ImWchar ranges[] = { 0x0020, 0x00FF, 0 }; // Latin básico + acentos (pt-BR)
+    // Intervalo de glifos: Latin-1 + setas + símbolos comuns.
+    // Sem as setas (←↑→↓), o Content Browser mostrava "?" no botão "← Voltar".
+    static const ImWchar ranges[] = {
+        0x0020, 0x00FF,  // Latin básico + acentos (pt-BR)
+        0x2010, 0x2027,  // tipografia: – — ‘ ’ “ ” …
+        0x2190, 0x21FF,  // setas: ← ↑ → ↓ ↩ ↪ etc
+        0,
+    };
 
     ImFontConfig config;
     config.OversampleH = 2;

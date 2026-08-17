@@ -4053,7 +4053,8 @@ void EditorLayer::DrawContentBrowser() {
             if (proj) {
                 ImGui::MenuItem("Raiz do projeto", nullptr, &clickRoot);
                 ImGui::MenuItem("Conteúdo (assets)", nullptr, &clickAsset);
-                if (std::filesystem::is_directory(std::filesystem::path(proj->GetProjectDirectory()) / "Source", std::error_code{}))
+                std::error_code sourceEc;
+                if (std::filesystem::is_directory(std::filesystem::path(proj->GetProjectDirectory()) / "Source", sourceEc))
                     ImGui::MenuItem("Source (scripts)", nullptr, &clickSource);
             }
             ImGui::MenuItem("Subir um nível", nullptr, &clickRoot);

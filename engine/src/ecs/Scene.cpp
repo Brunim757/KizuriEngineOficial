@@ -9,6 +9,7 @@
 #include "kizuri/scene/Prefab.hpp"
 #include "kizuri/project/Project.hpp"
 #include "kizuri/renderer/Renderer2D.hpp"
+#include "kizuri/renderer/RenderCommand.hpp"
 #include <glad/gl.h>
 // Detalhe de serialização por entidade (DuplicateEntity) — fica em src/, não
 // na API pública; o Prefab.cpp já o usa do mesmo jeito.

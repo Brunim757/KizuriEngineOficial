@@ -26,6 +26,7 @@ compilada, fechada). Você nunca mexe no C++ da engine.
 
 ```csharp
 using Kizuri;
+using Kizuri.Math;
 
 public sealed class MeuScript : Script
 {

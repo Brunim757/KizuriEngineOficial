@@ -41,6 +41,7 @@ para. Aperte **Stop** (Shift+F5).
 
 ```csharp
 using Kizuri;
+using Kizuri.Math;
 
 public sealed class Girar : Script
 {
@@ -48,7 +49,7 @@ public sealed class Girar : Script
     {
         // Rotaciona a entidade 90 graus por segundo
         var e = Entity.Rotation; // euler em radianos
-        Entity.SetRotation(new Math.Vector3(e.X, e.Y + 90f * deltaSeconds, e.Z));
+        Entity.SetRotation(new Vector3(e.X, e.Y + 90f * deltaSeconds, e.Z));
     }
 }
 ```

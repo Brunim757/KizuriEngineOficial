@@ -3911,6 +3911,7 @@ void CreateNewCSharpScript(const std::filesystem::path& dir, int templateKind) {
     // Template escolhido pelo usuário no momento de criar (código pronto,
     // comentado em português, todo método opcional na v0.37.0).
     std::string view = R"CS(using Kizuri;
+using Kizuri.Math;
 )CS";
     if (templateKind == 1) view += R"CS(
 // Player 3D: WASD move o personagem na direção da câmera/do mundo
@@ -3933,10 +3934,10 @@ public sealed class PlayerController : Script
 		if (Input.IsKeyDown(Key.A) || Input.IsKeyDown(Key.Left))  x -= 1f;
 		if (Input.IsKeyDown(Key.D) || Input.IsKeyDown(Key.Right)) x += 1f;
 
-		Entity.Translate(new Math.Vector3(x * velocidade * deltaSeconds, 0f, z * velocidade * deltaSeconds));
+		Entity.Translate(new Vector3(x * velocidade * deltaSeconds, 0f, z * velocidade * deltaSeconds));
 
 		if (Input.IsKeyDown(Key.Space))
-			Entity.ApplyImpulse(new Math.Vector3(0f, forcaPulo, 0f));
+			Entity.ApplyImpulse(new Vector3(0f, forcaPulo, 0f));
 	}
 }
 )CS";
@@ -3954,7 +3955,7 @@ public sealed class Movement2D : Script
 		if (Input.IsKeyDown(Key.D) || Input.IsKeyDown(Key.Right)) x += 1f;
 
 		var rb = Entity.Rigidbody2D;
-		rb.SetLinearVelocity(new Math.Vector2(x * velocidade, rb.GetLinearVelocity().Y));
+		rb.SetLinearVelocity(new Vector2(x * velocidade, rb.GetLinearVelocity().Y));
 	}
 }
 )CS";

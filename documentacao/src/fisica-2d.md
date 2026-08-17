@@ -35,9 +35,9 @@ jogos de plataforma, pinball, quebra-cabeças e qualquer coisa 2D.
 ```csharp
 // mover um corpo dinâmico
 var rb = Entity.GetRigidbody2D();
-rb.SetLinearVelocity(new Math.Vector2(5f, 0f));
-rb.ApplyForce(new Math.Vector2(0f, 100f));       // força contínua (todo frame)
-rb.ApplyLinearImpulse(new Math.Vector2(0f, 20f)); // impulso único (pulo)
+rb.SetLinearVelocity(new Vector2(5f, 0f));
+rb.ApplyForce(new Vector2(0f, 100f));       // força contínua (todo frame)
+rb.ApplyLinearImpulse(new Vector2(0f, 20f)); // impulso único (pulo)
 rb.SetAngularVelocity(3f);                         // gira (rad/s)
 rb.SetFixedRotation(true);                         // não tomba (tank)
 // detectar toque

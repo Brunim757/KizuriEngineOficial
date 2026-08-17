@@ -1,6 +1,6 @@
 # Kizuri Engine
 
-> **v0.37.0** — (foco: facilidade de scripts) engine de jogos 2D + 3D em C++20 com editor visual integrado.
+> **v0.37.1** — (foco: facilidade de scripts) engine de jogos 2D + 3D em C++20 com editor visual integrado.
 > Projeto pessoal em desenvolvimento ativo: hoje a v1 já permite criar jogos
 > híbridos (2D e 3D na mesma cena) e empacotá-los num executável standalone.
 

@@ -71,7 +71,7 @@ var transforms = new float[count * 16];
 for (int i = 0; i < count; i++)
     Array.Copy(Scene.MakeTransform(x[i], 0f, z[i], 1f), 0, transforms, i * 16, 16);
 
-Scene.DrawInstanced("builtin:cube", new Math.Vector3(0.3f, 0.6f, 0.2f), transforms, count);
+Scene.DrawInstanced("builtin:cube", new Vector3(0.3f, 0.6f, 0.2f), transforms, count);
 ```
 
 Chame dentro de `OnUpdate` — cada frame desenha as N cópias em um draw call.

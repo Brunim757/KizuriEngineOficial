@@ -6514,7 +6514,7 @@ void EditorLayer::DrawCamera2DPreview() {
         for (int i = 0; i < 4; ++i) worldCorners[i] = pos + rot * localCorners[i];
 
         glm::mat4 viewProj = m_EditorCamera.GetViewProjectionMatrix();
-        ImVec2 vpPos = m_ViewportBounds[0], vpSize = m_ViewportBounds[1] - m_ViewportBounds[0];
+        glm::vec2 vpPos = m_ViewportBounds[0], vpSize = m_ViewportBounds[1] - m_ViewportBounds[0];
         ImVec2 screen[4];
         bool ok = true;
         for (int i = 0; i < 4; ++i)

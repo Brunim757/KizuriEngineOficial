@@ -146,10 +146,19 @@ jobs:
           # (download_url da API) e extrai bin/ por cima da instalação.
           mkdir -p release/bin
           cp -r build/bin/* release/bin/
-          # Árvore managed/Kizuri.Scripting: sem ela o Play do editor não
-          # acha o EngineDir e o dotnet build do jogo falha no zip (o csproj
-          # referencia $(EngineDir)/managed/Kizuri.Scripting/...).
-          if [ -d managed/Kizuri.Scripting ]; then cp -r managed release/bin/managed; fi
+          # Atualização v0.37.x: a API é entregue como DLL PRÉ-COMPILADA (fechada)
+          # — os .cs e exemplos do SampleGame NÃO vêm mais no zip. Fica só:
+          #   bin/managed/Kizuri.Scripting.dll            (o binding)
+          #   bin/managed/Kizuri.Scripting/Kizuri.Scripting.csproj (marcador p/
+          #   o editor resolver o EngineDir e o Play compilar o jogo do usuário)
+          mkdir -p release/bin/managed/Kizuri.Scripting
+          cp managed/Kizuri.Scripting.dll release/bin/managed/Kizuri.Scripting.dll
+          cp managed/Kizuri.Scripting/Kizuri.Scripting.csproj release/bin/managed/Kizuri.Scripting/Kizuri.Scripting.csproj
+          # garantia: se por algum motivo a DLL não veio (CI off-line), copia a
+          # árvore de fontes como fallback (obriga o Play a compilar o binding).
+          if [ ! -f release/bin/managed/Kizuri.Scripting.dll ] && [ -d managed/Kizuri.Scripting ]; then
+            cp -r managed release/bin/managed
+          fi
           # Ícone + entrada de desktop: SÓ no zip do Linux (no Windows o
           # ícone já vem embutido no .exe via recurso .rc — nada de pasta
           # solta). Estrutura padrão FHS pra instalação manual.

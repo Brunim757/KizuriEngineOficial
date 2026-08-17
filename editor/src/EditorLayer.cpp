@@ -6066,12 +6066,6 @@ void EditorLayer::StartUpdateCheck() {
     if (m_UpdateThread.joinable()) m_UpdateThread.join();
 
     m_UpdateThread = std::thread([this]() {
-        // No startup o check espera ~2s pra não engrossar a abertura;
-        // checks manuais (menu Ajuda) rodam na hora.
-        if (!m_UpdateStartupCheckDone) {
-            m_UpdateStartupCheckDone = true;
-            std::this_thread::sleep_for(std::chrono::seconds(2));
-        }
         std::string err;
         auto info = kizuri::Updater::CheckForUpdate(err);
         {

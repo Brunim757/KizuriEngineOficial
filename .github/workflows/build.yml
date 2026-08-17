@@ -146,14 +146,21 @@ jobs:
             cp packaging/linux/kizuri-editor.desktop release/share/applications/
           fi
           # Cada plataforma exporta SÓ a dela: zip único, sem mistura.
-          (cd release && tar -a -c -f "../KizuriGame-${{ matrix.os }}-x86_64.zip" .)
+          # ATENÇÃO: tar -a com .zip gera TAR puro (o GNU tar não cria zip) —
+          # o updater da engine exige ZIP de verdade. zip -r (linux) /
+          # Compress-Archive (windows, nativo).
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            (cd release && powershell -Command "Compress-Archive -Path * -DestinationPath ../KizuriGame-${{ matrix.os }}-x86_64.zip -Force")
+          else
+            (cd release && zip -qr "../KizuriGame-${{ matrix.os }}-x86_64.zip" .)
+          fi
 
       - name: Empacotar Content Pack (separado do zip da engine)
         if: startsWith(github.ref, 'refs/tags/v') && matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
           if [ -d content ]; then
-            (cd content && tar -a -c -f "../KizuriEngine-Content-Pack.zip" .)
+            (cd content && zip -qr "../KizuriEngine-Content-Pack.zip" .)
             echo "Content Pack pronto:"
             ls -la KizuriEngine-Content-Pack.zip
           else
@@ -218,7 +225,11 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
-          (cd artifacts && tar -a -c -f "../Kizuri.Managed-${{ matrix.os }}.zip" .)
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            (cd artifacts && powershell -Command "Compress-Archive -Path * -DestinationPath ../Kizuri.Managed-${{ matrix.os }}.zip -Force")
+          else
+            (cd artifacts && zip -qr "../Kizuri.Managed-${{ matrix.os }}.zip" .)
+          fi
 
       - name: Publicar na Release (managed)
         if: startsWith(github.ref, 'refs/tags/v')

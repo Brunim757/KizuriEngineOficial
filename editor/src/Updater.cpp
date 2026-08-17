@@ -225,6 +225,25 @@ bool Updater::Install(const std::string& zipPath, std::string& outError) {
         return false;
     }
 
+    // Valida que o zip é da MESMA plataforma do editor (senão a "nova
+    // versão" quebra o editor). Espera: bin/KizuriEditor(.exe) +
+    // bin/KizuriEngine(.dll/.so).
+#if defined(_WIN32)
+    const char* kEditorEntry = "bin/KizuriEditor.exe";
+    const char* kEngineEntry = "bin/KizuriEngine.dll";
+#else
+    const char* kEditorEntry = "bin/KizuriEditor";
+    const char* kEngineEntry = "bin/libKizuriEngine.so";
+#endif
+    if (mz_zip_reader_locate_file_v2(&zip, kEditorEntry, nullptr, 0, nullptr) < 0 ||
+        mz_zip_reader_locate_file_v2(&zip, kEngineEntry, nullptr, 0, nullptr) < 0) {
+        outError = std::string("O zip do download não é desta plataforma (esperava ") +
+                   kEditorEntry + " e " + kEngineEntry +
+                   "). Verifique o download_url da API.";
+        mz_zip_reader_end(&zip);
+        return false;
+    }
+
     mz_uint fileCount = mz_zip_reader_get_num_files(&zip);
     for (mz_uint i = 0; i < fileCount; ++i) {
         mz_zip_archive_file_stat st;

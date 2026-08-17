@@ -17,6 +17,7 @@
 #include <android/native_window.h>
 #include <android/native_activity.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>
@@ -86,6 +87,27 @@ static void ExtractDir(AAssetManager* mgr, const std::string& assetDir,
     AAssetDir_close(dir);
 }
 
+// Descobre o assembly do jogo: o publish gera a dll com um
+// .runtimeconfig.json do lado (só o jogo tem isso — as dlls do runtime não).
+static std::string FindGameDll(const std::string& dotnetDir) {
+    struct stat st;
+    DIR* dir = opendir(dotnetDir.c_str());
+    if (!dir) return {};
+    std::string found;
+    while (dirent* e = readdir(dir)) {
+        std::string name = e->d_name;
+        if (name.size() < 4 || name.compare(name.size() - 4, 4, ".dll") != 0) continue;
+        std::string rc = dotnetDir + "/" + name.substr(0, name.size() - 4) + ".runtimeconfig.json";
+        if (stat(rc.c_str(), &st) == 0) { found = dotnetDir + "/" + name; break; }
+    }
+    closedir(dir);
+    if (found.empty()) {
+        // Fallback histórico (SampleGame de exemplo).
+        found = dotnetDir + "/SampleGame.dll";
+    }
+    return found;
+}
+
 // Extrai assets/{dotnet,game} pro filesDir na primeira execução (ou quando
 // o marker sumir — ex: "Clear data" do Android).
 static void ExtractAppAssets(AAssetManager* mgr, const std::string& filesDir) {
@@ -146,7 +168,7 @@ static void HandleAppCmd(android_app* app, int32_t cmd) {
                 if (args.empty()) {
                     const std::string& files = AndroidPlatform::GetFilesDir();
                     args.emplace_back(files + "/game/Start.kzscene");
-                    args.emplace_back(files + "/dotnet/SampleGame.dll");
+                    args.emplace_back(FindGameDll(files + "/dotnet"));
                 }
                 s_GameApp = CreateApplication();
             }

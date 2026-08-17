@@ -3682,13 +3682,25 @@ void EditorLayer::DrawExportModal() {
         ImGui::TextDisabled("Plataforma de destino:");
         ImGui::SetNextItemWidth(-1.0f);
         ImGui::Combo("##export_platform", &m_ExportPlatform,
-                     "Windows (.exe)\0Linux (binários)\0Android (.apk via CI)\0");
+                     "Windows (.exe)\0Linux (binários)\0Android (.apk — a engine compila)\0");
         if (m_ExportPlatform == 2) {
+            if (!m_AndroidToolsChecked) {
+                m_AndroidToolsChecked = true;
+                m_AndroidTools = kizuri::AndroidExporter::DetectTools();
+                m_AndroidMissing = m_AndroidTools.Missing;
+            }
+            if (m_AndroidTools.Ok) {
+                ImGui::TextDisabled("Android SDK/NDK + dotnet localizados. A engine compila o APK inteiro aqui.");
+            } else {
+                ImGui::TextWrapped(
+                    "A engine compila o Android sozinha, mas faltam ferramentas no seu PC "
+                    "(configuráveis via Android Studio / sdkmanager — igual Unity pede SDK+JDK):");
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "%s", m_AndroidMissing.c_str());
+                if (ImGui::Button("Re-detectar ferramentas")) m_AndroidToolsChecked = false;
+            }
             ImGui::TextWrapped(
-                "O .apk é montado pela CI do GitHub no push de tag (ex: v0.37.0) — "
-                "o export abaixo prepara cena+scripts, e a CI empacota o CoreCLR, "
-                "libs e tudo sozinha. No Windows/Linux o export gera a pasta pronta "
-                "pra rodar (KizuriGame.exe ou binário Linux).");
+                "O export copia cena+assets+scripts do projeto; a engine roda cmake/NDK, "
+                "dotnet publish (CoreCLR android-arm64) e monta o APK assinado.");
         }
 
         ImGui::Spacing();
@@ -3740,9 +3752,18 @@ void EditorLayer::DrawExportModal() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        if (ImGui::Button("Exportar", ImVec2(100.0f, 0.0f)) && m_ExportDirBuffer[0] != '\0') {
-            ExportGame(m_ExportDirBuffer);
-            ImGui::CloseCurrentPopup();
+        bool dirOk = m_ExportDirBuffer[0] != '\0';
+        if (m_ExportPlatform != 2) {
+            if (ImGui::Button("Exportar", ImVec2(120.0f, 0.0f)) && dirOk) {
+                ExportGame(m_ExportDirBuffer);
+                ImGui::CloseCurrentPopup();
+            }
+        } else {
+            if (ImGui::Button("Exportar (Android)", ImVec2(140.0f, 0.0f)) && dirOk &&
+                m_AndroidTools.Ok && !m_AndroidRunning) {
+                StartAndroidExport();
+                ImGui::CloseCurrentPopup();
+            }
         }
         ImGui::SameLine();
         if (ImGui::Button("Cancelar", ImVec2(100.0f, 0.0f)))
@@ -5673,6 +5694,7 @@ void EditorLayer::OnImGuiRender() {
     DrawExportModal();
     DrawSavePrefabModal();
     DrawUpdateModals();
+    DrawAndroidExportModals();
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — modais ok");
     if (!m_ViewportMaximized) {
         DrawSceneHierarchy();
@@ -6191,6 +6213,122 @@ void EditorLayer::DrawUpdateModals() {
             if (ImGui::Button("OK", ImVec2(100.0f, 0.0f))) {
                 m_UpdateState = 0;
                 m_UpdateErrPopupOpened = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Export Android LOCAL — a engine compila o APK sozinha (thread de fundo;
+// resultado aparece num popup e as etapas vão pro console).
+// ---------------------------------------------------------------------------
+void EditorLayer::StartAndroidExport() {
+    if (m_AndroidRunning) return;
+    {
+        std::lock_guard lock(m_AndroidMutex);
+        m_AndroidRunning = true;
+        m_AndroidDone = false;
+        m_AndroidResult.clear();
+    }
+    if (m_AndroidThread.joinable()) m_AndroidThread.join();
+
+    // Captura os parâmetros antes da thread.
+    std::string csproj, engineRoot;
+    GetGameBuildInfo(csproj, engineRoot);
+    std::string outputDir = m_ExportDirBuffer;
+    std::string gameName = m_ExportGameName;
+    std::string projectDir;
+    if (Project::GetActive())
+        projectDir = Project::GetActive()->GetProjectDirectory();
+    auto tools = m_AndroidTools;
+
+    m_AndroidThread = std::thread([this, csproj, engineRoot, outputDir, gameName, projectDir, tools]() {
+        // Staging do conteúdo do jogo (cena + assets), sem lixo de build.
+        namespace fs = std::filesystem;
+        std::string stageErr;
+        std::string stage = (fs::path(outputDir) / "android_build" / "stage_game").string();
+        {
+            std::error_code ec;
+            fs::create_directories(stage, ec);
+            if (!projectDir.empty() && fs::is_directory(projectDir, ec)) {
+                for (auto& e : fs::recursive_directory_iterator(projectDir, ec)) {
+                    if (e.is_directory(ec)) continue;
+                    std::string rel = fs::relative(e.path(), projectDir).generic_string();
+                    if (rel.rfind("bin/", 0) == 0 || rel.rfind("obj/", 0) == 0 ||
+                        rel.rfind("Export/", 0) == 0 || rel.rfind(".git/", 0) == 0)
+                        continue;
+                    fs::path dst = fs::path(stage) / rel;
+                    if (dst.has_parent_path()) fs::create_directories(dst.parent_path(), ec);
+                    fs::copy_file(e.path(), dst, fs::copy_options::overwrite_existing, ec);
+                }
+            }
+            // A cena atual vira a inicial se estiver fora da pasta do projeto.
+            if (!m_ScenePath.empty()) {
+                fs::path startScene = fs::path(stage) / "Start.kzscene";
+                if (!fs::exists(startScene, ec))
+                    fs::copy_file(m_ScenePath, startScene, fs::copy_options::overwrite_existing, ec);
+            }
+        }
+
+        auto logCb = [this](const std::string& m) { KZ_CORE_INFO("{0}", m); };
+        std::string apkPath, err;
+        bool ok = kizuri::AndroidExporter::Export(tools, engineRoot, csproj, stage,
+                                                  gameName.empty() ? "KizuriGame" : gameName,
+                                                  outputDir, apkPath, err, logCb);
+        {
+            std::lock_guard lock(m_AndroidMutex);
+            m_AndroidRunning = false;
+            m_AndroidDone = true;
+            m_AndroidResult = ok ? ("APK gerado: " + apkPath) : ("FALHOU: " + err);
+        }
+    });
+}
+
+void EditorLayer::DrawAndroidExportModals() {
+    bool running, done;
+    std::string result;
+    {
+        std::lock_guard lock(m_AndroidMutex);
+        running = m_AndroidRunning;
+        done = m_AndroidDone;
+        result = m_AndroidResult;
+    }
+
+    if (running) {
+        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowBgAlpha(0.9f);
+        if (ImGui::Begin("##android_export", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove)) {
+            ImGui::Text("Exportando Android...");
+            ImGui::TextDisabled("Etapas no console (CMake/NDK, dotnet publish, aapt2, assinatura).");
+            ImGui::End();
+        }
+        return;
+    }
+    if (done) {
+        if (!m_AndroidErrPopupOpened) {
+            m_AndroidErrPopupOpened = true;
+            ImGui::OpenPopup("Exportação Android");
+        }
+        bool failed = result.rfind("FALHOU", 0) == 0;
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        if (ImGui::BeginPopupModal("Exportação Android", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::TextWrapped("%s", result.c_str());
+            ImGui::Spacing();
+            if (ImGui::Button(failed ? "OK" : "Abrir pasta", ImVec2(120.0f, 0.0f))) {
+                if (!failed) {
+                    std::string cmd;
+#if defined(_WIN32)
+                    cmd = "explorer /select,\"" + std::filesystem::path(result.substr(10)).string() + "\"";
+#else
+                    cmd = "xdg-open \"" + std::filesystem::path(result.substr(10)).parent_path().string() + "\"";
+#endif
+                    (void)std::system(cmd.c_str());
+                }
+                m_AndroidDone = false;
+                m_AndroidErrPopupOpened = false;
                 ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();

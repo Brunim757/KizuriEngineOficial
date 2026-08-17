@@ -216,6 +216,19 @@ private:
     bool m_UpdateCheckOnStartup = true;
     char m_UpdateApiUrlBuf[512] = {};
     std::string m_UpdateApiUrlBufInput;
+
+    // ---- Export Android local (engine compila o APK: SDK/NDK/dotnet) ----
+    void StartAndroidExport();
+    void DrawAndroidExportModals();
+    std::thread m_AndroidThread;
+    std::mutex m_AndroidMutex;
+    bool m_AndroidRunning = false;
+    kizuri::AndroidExporter::Tools m_AndroidTools;
+    bool m_AndroidToolsChecked = false;
+    bool m_AndroidDone = false;      // resultado pronto (ver strings)
+    std::string m_AndroidResult;     // "APK: <path>" ou erro
+    std::string m_AndroidMissing;
+    bool m_AndroidErrPopupOpened = false;
     std::string m_UpdateZip;        // caminho do zip baixado
     bool m_UpdateInstallStarted = false;
     bool m_UpdatePopupOpened = false;   // edge p/ OpenPopup do modal

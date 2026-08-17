@@ -6,6 +6,7 @@ add_executable(KizuriEditor
     src/EditorApp.cpp
     src/EditorLayer.cpp
     src/Updater.cpp
+    src/AndroidExporter.cpp
     src/UI/Icons.cpp
     src/UI/Panels/AnimatorPanel.cpp
     src/UI/Panels/ParticleEditorPanel.cpp

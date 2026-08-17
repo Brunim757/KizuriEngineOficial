@@ -51,7 +51,7 @@ ln -sf usr/share/icons/hicolor/256x256/apps/kizuri-torii.png "$APP/.DirIcon"
 echo "==> (2/4) baixando o runtime do AppImageKit (sem FUSE — CI/VM ok)"
 RUNTIME="$WORK/runtime-x86_64"
 curl -fsSL -o "$RUNTIME" \
-    https://github.com/AppImage/AppImageKit/releases/download/13/runtime-x86_64
+    https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64
 chmod +x "$RUNTIME"
 
 echo "==> (3/4) montando o AppImage (tipo 2: runtime + squashfs)"

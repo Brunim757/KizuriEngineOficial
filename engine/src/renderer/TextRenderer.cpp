@@ -32,9 +32,29 @@ namespace {
     constexpr int kLatinFirst = 0xA0;
     constexpr int kLatinCount = 0x100 - 0xA0;
 
+    // Bloco 3: pontuação tipográfica comum em 3 bytes (— “ ” ‘ ’ … « »).
+    // A JetBrains Mono tem esses glifos; sem eles o travessão da demo 2D
+    // (e textos com aspas curvas) sumiria/viraria retângulo.
+    constexpr int kExtraFirst = 0x2013;                 // – até …
+    constexpr int kExtraCount = 0x2015 - 0x2013 + 1 +  // – — ―
+                                0x2018 + 1 - 0x2018 + 1 + // ‘ ’
+                                0x201C + 1 - 0x201C + 1 + // “ ”
+                                2 + 2 + 1;              // … « » (aproximado; ajustado abaixo)
+    // melhor: lista explícita de codepoints
+    static constexpr int kExtraCodepoints[] = {
+        0x2013, 0x2014, 0x2015,   // – — ―
+        0x2018, 0x2019,           // ‘ ’
+        0x201C, 0x201D,           // “ ”
+        0x2026,                   // …
+    };
+    constexpr int kExtraSpanFirst = 0x2012;
+    constexpr int kExtraSpanCount = 0x2027 - 0x2012 + 1;
+    constexpr int kExtraCount = (int)(sizeof(kExtraCodepoints) / sizeof(kExtraCodepoints[0]));
+
     Ref<Texture2D> s_AtlasTexture;
     stbtt_bakedchar s_AsciiBaked[kAsciiCount];
     stbtt_bakedchar s_LatinBaked[kLatinCount];
+    stbtt_bakedchar s_ExtraBaked[kExtraCount];
     bool s_Ready = false;
 
     // Uma única textura 1024² com os DOIS blocos: ASCII é bakes do canto
@@ -57,6 +77,18 @@ namespace {
                 if (cp >= (unsigned int)kLatinFirst && cp <= 0xFF) {
                     p += 2;
                     return kAsciiCount + (int)(cp - kLatinFirst);
+                }
+            }
+        }
+        if ((c & 0xF0) == 0xE0 && end - p >= 3) { // 3-byte: U+0800..U+FFFF
+            unsigned char c2 = (unsigned char)p[1], c3 = (unsigned char)p[2];
+            if ((c2 & 0xC0) == 0x80 && (c3 & 0xC0) == 0x80) {
+                unsigned int cp = ((c & 0x0Fu) << 12) | ((c2 & 0x3Fu) << 6) | (c3 & 0x3Fu);
+                for (int i = 0; i < kExtraCount; ++i) {
+                    if (kExtraCodepoints[i] == (int)cp) {
+                        p += 3;
+                        return kAsciiCount + kLatinCount + i;
+                    }
                 }
             }
         }
@@ -103,74 +135,72 @@ namespace {
 void TextRenderer::EnsureAtlas() {
     if (s_Ready) return;
 
-    s_Bitmap.assign(kAtlasWidth * kAtlasHeight, 0);
-
-    // ASCII na metade SUPERIOR (y = 0..H/2) e Latin na INFERIOR (y = H/2..H):
-    // dois bakes independentes no MESMO bitmap, cada um partindo de (1,1)
-    // do seu quadrante — sem colisão entre os dois blocos.
     const char* font = (const char*)kizuri::embedded::kFontRegularTTF;
     const size_t fontLen = (size_t)kizuri::embedded::kFontRegularTTF_size;
     if (!font || fontLen < 4) {
         KZ_CORE_ERROR("TextRenderer: fonte embutida vazia — texto desativado.");
         return;
     }
-    // stbtt espera o TTF; valida magic via InitFont (feito dentro do bake).
 
-    int bakedAscii = 0;
-    bool okAscii = BakeBlock((const unsigned char*)font, kPixelHeight,
-                             s_Bitmap.data(), kAtlasWidth, kAtlasHeight,
-                             kAsciiFirst, kAsciiCount, s_AsciiBaked, &bakedAscii);
-    if (!okAscii) { s_Ready = false; return; }
-
-    // Bloco Latin: aponta o bake pro quadrante de baixo (y offset = H/2).
-    // O stbtt sempre começa em (1,1) — então zeramos a metade de baixo e
-    // ajustamos as coodenadas Y do bakedchar após o bake.
-    std::memset(s_Bitmap.data() + kAtlasHeight / 2 * kAtlasWidth, 0,
-                kAtlasHeight / 2 * kAtlasWidth);
-    // Simula "começar em H/2+1": usamos um subview: o stbtt precisa do
-    // ponteiro do bitmap e do tamanho; fazemos bake numa SEPARADA e colamos.
-    std::vector<uint8_t> latinBit(kAtlasWidth * (kAtlasHeight / 2), 0);
-    int latinBakedInto = 0;
-    {
-        int r = stbtt_BakeFontBitmap((const unsigned char*)font, 0, (float)kPixelHeight,
-                                     latinBit.data(), kAtlasWidth, kAtlasHeight / 2,
-                                     kLatinFirst, kLatinCount, s_LatinBaked);
-        if (r >= 0) latinBakedInto = kLatinCount;
-        else { latinBakedInto = -r; }
-        if (latinBakedInto > 0) {
-            std::memcpy(s_Bitmap.data() + kAtlasHeight / 2 * kAtlasWidth,
-                        latinBit.data(), kAtlasWidth * (kAtlasHeight / 2));
-            // Eleva as coodenadas Y do Latin pro quadrante de baixo.
-            for (int i = 0; i < latinBakedInto; ++i) {
-                s_LatinBaked[i].y0 = (short)(s_LatinBaked[i].y0 + kAtlasHeight / 2);
-                s_LatinBaked[i].y1 = (short)(s_LatinBaked[i].y1 + kAtlasHeight / 2);
-            }
-        } else {
-            KZ_CORE_WARN("TextRenderer: faixa Latin-1 não coube no quadrante; acentos ficam fora.");
-        }
+    // Bake com a API OFICIAL de ranges múltiplos do stb (stbtt_PackBegin/
+    // PackFontRange/PackEnd): um único atlas, empacotamento real, sem o
+    // hack de "dois quadrantes" que produzia quads/UVs errados.
+    std::vector<uint8_t> bitmap(kAtlasWidth * kAtlasHeight, 0);
+    stbtt_pack_context pack;
+    if (!stbtt_PackBegin(&pack, bitmap.data(), kAtlasWidth, kAtlasHeight,
+                         0, 1, nullptr)) {
+        KZ_CORE_ERROR("TextRenderer: stbtt_PackBegin falhou.");
+        return;
     }
+
+    stbtt_PackSetOversampling(&pack, 2, 2);
+
+    stbtt_packedchar asciiPacked[kAsciiCount];
+    stbtt_packedchar latinPacked[kLatinCount];
+
+    // kExtra é uma lista esparsa; o stb empacota por FAIXA. Usamos uma
+    // faixa contígua que cobre toda a lista (0x2012..0x2027) e depois
+    // pegamos por índice — glifos fora da lista não são consultados pelo
+    // DecodeGlyphIndex (busca explícita por codepoint).
+    stbtt_packedchar extraSpan[kExtraSpanCount];
+    stbtt_pack_range ranges[] = {
+        { kAsciiFirst, kAsciiCount, asciiPacked, 0 },
+        { kLatinFirst, kLatinCount, latinPacked, 0 },
+        { kExtraSpanFirst, kExtraSpanCount, extraSpan, 0 },
+    };
+    int packedTotal = stbtt_PackFontRanges(&pack, (const unsigned char*)font, 0, ranges, 3);
+    if (packedTotal <= 0)
+        KZ_CORE_WARN("TextRenderer: bake de glifos devolveu {0} — atlas pode estar vazio.", packedTotal);
+    stbtt_PackEnd(&pack);
+
+    // stbtt_packedchar -> stbtt_bakedchar (mesma estrutura de layout).
+    auto copyBaked = [](const stbtt_packedchar* src, stbtt_bakedchar* dst, int n) {
+        for (int i = 0; i < n; ++i) {
+            dst[i].x0 = (short)src[i].x0; dst[i].y0 = (short)src[i].y0;
+            dst[i].x1 = (short)src[i].x1; dst[i].y1 = (short)src[i].y1;
+            dst[i].xoff = src[i].xoff; dst[i].yoff = src[i].yoff;
+            dst[i].xadvance = src[i].xadvance;
+        }
+    };
+    copyBaked(asciiPacked, s_AsciiBaked, kAsciiCount);
+    copyBaked(latinPacked, s_LatinBaked, kLatinCount);
+
+    // Mapeia a faixa 0x2012..0x2027 para a tabela extra (por nome de glifo).
+    for (int i = 0; i < kExtraCount; ++i)
+        s_ExtraBaked[i] = extraSpan[kExtraCodepoints[i] - kExtraSpanFirst];
 
     // Expande 1 canal (alfa) → RGBA (branco + alfa), como a engine exige.
     std::vector<uint8_t> rgba(kAtlasWidth * kAtlasHeight * 4);
-    for (size_t i = 0; i < s_Bitmap.size(); ++i) {
-        rgba[i * 4 + 0] = 255;
-        rgba[i * 4 + 1] = 255;
-        rgba[i * 4 + 2] = 255;
-        rgba[i * 4 + 3] = s_Bitmap[i];
+    for (size_t i = 0; i < bitmap.size(); ++i) {
+        rgba[i * 4 + 0] = 255; rgba[i * 4 + 1] = 255;
+        rgba[i * 4 + 2] = 255; rgba[i * 4 + 3] = bitmap[i];
     }
 
     s_AtlasTexture = Texture2D::Create(kAtlasWidth, kAtlasHeight);
     s_AtlasTexture->SetData(rgba.data(), (uint32_t)rgba.size());
     s_Ready = true;
-#ifdef KZ_DEBUG
-    // Diagnóstico de desenvolvimento: muda o atlas pra PNG no cwd do editor
-    // (só em build Debug) — se o texto sair esquisito, a imagem mostra na
-    // hora se o bake/upload está certo.
-    Texture2D::SaveToFile(s_AtlasTexture, "kizuri_debug_text_atlas.png");
-#endif
-    KZ_CORE_INFO("TextRenderer: atlas {0}x{1} pronto (ASCII {2}/{3} + Latin-1 {4}/{5}).",
-                 kAtlasWidth, kAtlasHeight, bakedAscii, kAsciiCount,
-                 latinBakedInto > 0 ? latinBakedInto : 0, kLatinCount);
+    KZ_CORE_INFO("TextRenderer: atlas {0}x{1} pronto (ASCII {2} + Latin-1 {3} + tipografia {4}).",
+                 kAtlasWidth, kAtlasHeight, kAsciiCount, kLatinCount, kExtraCount);
 }
 
 void TextRenderer::Init() {
@@ -292,6 +322,7 @@ void TextRenderer::DrawString(const std::string& text, const glm::vec3& position
             const stbtt_bakedchar* b;
             if (idx < kAsciiCount) b = &ascii[idx];
             else if (idx - kAsciiCount < kLatinCount) b = &latin[idx - kAsciiCount];
+            else if (idx - kAsciiCount - kLatinCount < kExtraCount) b = &s_ExtraBaked[idx - kAsciiCount - kLatinCount];
             else continue;
             if (b->x1 <= b->x0 || b->y1 <= b->y0) { penX += b->xadvance * scale; continue; }
 

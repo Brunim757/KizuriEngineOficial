@@ -48,19 +48,19 @@ RUN
 chmod +x "$APP/AppRun" "$APP/usr/bin/kizuri-game"
 ln -sf usr/share/icons/hicolor/256x256/apps/kizuri-torii.png "$APP/.DirIcon"
 
-echo "==> (2/4) baixando appimagetool"
-if [ -x "$REPO_ROOT/platform/linux/appimagetool-x86_64.AppImage" ]; then
-    TOOL="$REPO_ROOT/platform/linux/appimagetool-x86_64.AppImage"
-else
-    TOOL="$WORK/appimagetool"
-    curl -fsSL -o "$TOOL" \
-        https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
-    chmod +x "$TOOL"
-fi
+echo "==> (2/4) baixando o runtime do AppImageKit (sem FUSE — CI/VM ok)"
+RUNTIME="$WORK/runtime-x86_64"
+curl -fsSL -o "$RUNTIME" \
+    https://github.com/AppImage/AppImageKit/releases/download/13/runtime-x86_64
+chmod +x "$RUNTIME"
 
-echo "==> (3/4) gerando o AppImage"
-# CI sem FUSE: roda o appimagetool via extract-and-run.
-"$TOOL" --appimage-extract-and-run "$APP" "$OUT"
+echo "==> (3/4) montando o AppImage (tipo 2: runtime + squashfs)"
+# appimagetool exige FUSE/glibc novos no runner; o formato é simples:
+# arquivo único = [runtime][squashfs do AppDir]. mksquashfs do squashfs-tools.
+command -v mksquashfs >/dev/null || { echo "ERRO: instale squashfs-tools"; exit 1; }
+mksquashfs "$APP" "$WORK/kizuri.squashfs" -root-owned -noappend
+cat "$RUNTIME" "$WORK/kizuri.squashfs" > "$OUT"
+chmod +x "$OUT"
 
 echo "==> (4/4) verificação"
 test -s "$OUT" || { echo "ERRO: AppImage vazio"; exit 1; }

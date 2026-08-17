@@ -35,7 +35,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
+          sudo apt-get install -y squashfs-tools \
             xorg-dev libgl1-mesa-dev libxrandr-dev libxinerama-dev \
             libxcursor-dev libxi-dev libx11-dev libasound2-dev ninja-build zip
 
@@ -381,7 +381,7 @@ jobs:
       - name: Instalar dependências
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
+          sudo apt-get install -y squashfs-tools \
             xorg-dev libgl1-mesa-dev libxrandr-dev libxinerama-dev \
             libxcursor-dev libxi-dev libx11-dev libasound2-dev ninja-build zip
 

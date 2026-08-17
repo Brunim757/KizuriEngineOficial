@@ -273,7 +273,10 @@ bool Updater::Install(const std::string& zipPath, std::string& outError) {
         if (mz_zip_reader_is_file_a_directory(&zip, i)) continue;
 
         // Caminho de saída: remove o prefixo "bin/" do zip de release.
+        // O zip do Windows usa backslash (bin\KizuriEditor.exe) — normaliza
+        // pra '/' antes de remover o prefixo, senão a pasta bin/ fica duplicada.
         std::string rel = st.m_filename;
+        for (char& c : rel) if (c == '\') c = '/';
         while (rel.size() >= 4 && rel[0] == 'b' && rel[1] == 'i' && rel[2] == 'n' && rel[3] == '/')
             rel = rel.substr(4);
         if (rel.empty()) continue;

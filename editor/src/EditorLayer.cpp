@@ -3971,8 +3971,41 @@ void EditorLayer::DrawContentBrowser() {
     }
 
     if (m_ContentBrowserRoot.empty()) {
-        m_ContentBrowserRoot = project->GetAssetDirectory();
-        m_ContentBrowserCurrentDir = m_ContentBrowserRoot;
+        ImGui::TextDisabled("Nenhum projeto aberto.");
+        ImGui::End();
+        return;
+    }
+
+    // Atalho de pasta: raiz do projeto, pasta de conteúdo (assets) e
+    // Source/ (scripts) — o Content Browser abre na pasta de conteúdo por
+    // padrão; com um clique você troca de pasta de trabalho.
+    {
+        auto* proj = Project::GetActive();
+        ImGui::PushID("cb_shortcuts");
+        std::string label = "📁 " + (m_ContentBrowserCurrentDir == m_ContentBrowserRoot
+            ? std::string("Conteúdo (assets)") : std::string("Pasta atual"));
+        if (ImGui::Button(label.c_str())) ImGui::OpenPopup("cb_shortcuts_popup");
+        if (ImGui::BeginPopup("cb_shortcuts_popup")) {
+            bool clickRoot = false, clickAsset = false, clickSource = false;
+            if (proj) {
+                ImGui::MenuItem("Raiz do projeto", nullptr, &clickRoot);
+                ImGui::MenuItem("Conteúdo (assets)", nullptr, &clickAsset);
+                if (std::filesystem::is_directory(std::filesystem::path(proj->GetProjectDirectory()) / "Source", std::error_code{}))
+                    ImGui::MenuItem("Source (scripts)", nullptr, &clickSource);
+            }
+            ImGui::MenuItem("Subir um nível", nullptr, &clickRoot);
+            if (clickRoot && proj)
+                m_ContentBrowserCurrentDir = std::filesystem::path(proj->GetProjectDirectory());
+            if (clickAsset && proj)
+                m_ContentBrowserCurrentDir = std::filesystem::path(proj->GetAssetDirectory());
+            if (clickSource && proj)
+                m_ContentBrowserCurrentDir = std::filesystem::path(proj->GetProjectDirectory()) / "Source";
+            ImGui::EndPopup();
+        }
+        ImGui::SameLine();
+        ImGui::TextDisabled("%s", m_ContentBrowserCurrentDir.string().c_str());
+        ImGui::PopID();
+        ImGui::Separator();
     }
 
     // Breadcrumb + botão "voltar" — só habilitado enquanto ainda estamos
@@ -5551,7 +5584,7 @@ void EditorLayer::DrawAddComponentButton() {
             m_SelectedEntity.AddComponent<BoxCollider2DComponent>();
         if (!m_SelectedEntity.HasComponent<CircleCollider2DComponent>() && ImGui::MenuItem("Circle Collider 2D"))
             m_SelectedEntity.AddComponent<CircleCollider2DComponent>();
-        if (!m_SelectedEntity.HasComponent<NativeScriptComponent>() && ImGui::MenuItem("Script Nativo"))
+        if (!m_SelectedEntity.HasComponent<NativeScriptComponent>() && ImGui::MenuItem("Script C#"))
             m_SelectedEntity.AddComponent<NativeScriptComponent>();
         ImGui::Separator();
         // Física 3D (pilar AAA v0.34 — grupo completo no menu).

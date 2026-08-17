@@ -33,30 +33,41 @@ para. Aperte **Stop** (Shift+F5).
 
 ## 4. Escreva um script
 
-1. No painel **Content Browser**, clique com o botão direito na pasta `Assets` → **Novo Script C#** e nomeie `Girar`.
-2. Abra o arquivo (o editor cria o esqueleto) e cole:
+1. No **Content Browser**, navegue até `Source/` (use o seletor de pasta
+   na barra do painel: **Raiz / Conteúdo (assets) / Source**), clique com o
+   botão direito → **Criar Script C#...** e renomeie o arquivo pra `Girar.cs`
+   (botão direito no item → Renomear).
+2. Abra o arquivo e escreva:
 
 ```csharp
 using Kizuri;
 
-public class Girar : KizuriScript
+public sealed class Girar : Script
 {
-    public override void OnUpdate()
+    public override void OnUpdate(float deltaSeconds)
     {
         // Rotaciona a entidade 90 graus por segundo
-        var euler = Entity.GetEulerAngles();
-        Entity.SetEulerAngles(euler.X, euler.Y + 90f * Time.deltaTime, euler.Z);
+        var e = Entity.Rotation; // euler em radianos
+        Entity.SetRotation(new Math.Vector3(e.X, e.Y + 90f * deltaSeconds, e.Z));
     }
 }
 ```
 
-3. Selecione o cubo e, no Inspetor, **Adicionar Componente → Script C# → Girar**.
+3. Selecione o cubo e, no Inspetor, **+ Adicionar Componente → Script C# →
+   Girar** (o componente registra a classe sozinho no Play — nem precisa do
+   registro manual).
 4. Aperte **Play**: o cubo cai e gira.
+
+::: nota
+Os scripts live em `Source/` do projeto (o Content Browser te leva pra lá).
+Qualquer classe pública `: Script` vira opção no dropdown automaticamente.
+:::
 
 ## 5. Exporte o jogo
 
-Menu **Arquivo → Exportar Jogo...**, escolha a pasta e pronto — um executável
-standalone com seu jogo.
+Menu **Arquivo → Exportar Jogo...**: no seu PC gera a pasta com o
+`KizuriGame` (Windows/Linux) ou o **APK Android** (veja
+[Exportar](exportacao.html)).
 
 Continue na seção [Editor](interface.html) para conhecer cada painel, ou
 [Transform](transform.html) para os componentes de cena.

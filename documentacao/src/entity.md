@@ -19,7 +19,7 @@ Entity.Parent;                  // entidade pai (ou Invalid se raiz)
 Entity.ChildCount;              // quantos filhos diretos
 Entity.GetChild(0);             // filho no índice
 Entity.GetChild("Olho");        // filho pelo nome
-Entity.GetEulerAngles();        // rotação em graus (Vector3)
+Entity.Rotation;                // euler em RADIANOS (Vector3) — use Math.Radians() nos literais
 Entity.Scale;                   // Vector3
 Entity.TryGetWorldPosition();   // posição de mundo (respeita o pai)
 ```
@@ -33,11 +33,12 @@ forem). Igual ao `SetActive` do GameObject.
 ## Transform
 
 ```csharp
-Entity.Move(x, y, z);                  // translada (espaço local)
+Entity.MoveForward(distancia);         // move ao longo da própria frente
+Entity.MoveRight(distancia);           // lateral
 Entity.SetPosition(x, y, z);
 Entity.SetWorldPosition(x, y, z);      // posição de mundo (mesmo com pai)
-Entity.Rotate(0f, 45f, 0f);
-Entity.SetEulerAngles(x, y, z);
+Entity.SetRotation(new Math.Vector3(0f, 45f, 0f));
+Entity.SetRotation(new Math.Vector3(x, y, z));
 Entity.SetScale(x, y, z);
 Entity.LookAt(outro);
 Entity.GetForward();                 // direção pra onde olha (Vector3)
@@ -79,13 +80,14 @@ mapa.SetTile(2, 3, 3);  // põe o tile no mapa
 ## Física
 
 ```csharp
-Entity.AddRigidbody2D();
-Entity.AddBoxCollider2D();
+// Física 2D: no Inspetor, + Adicionar Componente → Rigidbody 2D (e Box Collider 2D)
+// No script: var rb = Entity.GetRigidbody2D();
+// Colisor 2D: + Adicionar Componente → Box Collider 2D (Inspetor)
 Entity.AddCircleCollider2D();
 Entity.AddRigidbody3D();
 Entity.AddBoxCollider3D();
 Entity.AddSphereCollider3D();
-Entity.SetLinearVelocity(x, y);          // 2D
+Entity.SetVelocity(new Math.Vector3(x, y, 0f));          // 2D/3D
 Entity.ApplyForce(x, y, z);              // 3D
 Entity.ApplyImpulse(x, y, z);
 Entity.TryGetVelocity(out vx, out vy, out vz);
@@ -148,7 +150,7 @@ diferentes que não se colidem atravessam umas às outras.
 ## Duplicar e instanciar
 
 ```csharp
-Entity.Duplicate();
+Scene.Duplicate(Entity);
 Scene.InstantiatePrefab("Assets/Prefabs/inimigo.kzprefab", x, y, z);
 ```
 

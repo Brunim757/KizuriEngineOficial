@@ -65,6 +65,21 @@ public static class Host
 						method.Invoke(null, null);
 				}
 			}
+
+			// AUTO-REGISTRO: qualquer classe pública não-abstrata que herde
+			// de Script vira um script usável no Inspetor automaticamente —
+			// sem precisar do [GameEntryPoint] + Register manual. Se o dev
+			// registrou manualmente com outro nome, não duplica (o Registro
+			// manual tem prioridade).
+			foreach (var type in asm.GetTypes())
+			{
+				if (!type.IsClass || type.IsAbstract) continue;
+				if (!typeof(Script).IsAssignableFrom(type)) continue;
+				if (type.Namespace?.StartsWith("Kizuri") == true) continue;
+				if (GameModule.Exists(type.Name)) continue;
+				var t = type;
+				GameModule.Register(type.Name, () => (Script)Activator.CreateInstance(t)!);
+			}
 		}
 		catch (Exception ex)
 		{

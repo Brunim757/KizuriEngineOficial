@@ -33,7 +33,7 @@ Time.TimeScale = 1f;
 
 ```csharp
 // movimento independente de FPS
-Entity.Move(velocidade * Time.deltaTime, 0f, 0f);
+Entity.MoveForward(velocidade * deltaSeconds);
 
 // contagem regressiva
 _tempoRestante -= Time.deltaTime;

@@ -30,7 +30,8 @@ automática — a base para jogos de plataforma, metroidvania e RPG.
 
 ```csharp
 // ler o valor do tile em uma posição
-int valor = Entity.GetTileAt(tileX, tileY);
+int valor = // a API atual do tilemap: criar e pintar tiles
+Entity.SetTile(tileX, tileY, valor);   // pinta um tile
 // mudar um tile em runtime
 Entity.SetTile(tileX, tileY, 3);
 ```

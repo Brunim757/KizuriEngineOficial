@@ -25,9 +25,9 @@ espaço de tela — menus, HUDs e barras de vida.
 3. No botão, defina o callback no script:
 
 ```csharp
-public class Menu : KizuriScript
+public sealed class Menu : Script
 {
-    public override void OnStart()
+    public override void OnCreate()
     {
         var botao = Entity; // entidade do botão
         botao.OnButtonClick(() =>

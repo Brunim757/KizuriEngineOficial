@@ -11,8 +11,8 @@ Acesse física 2D e 3D direto do script.
 ## Rigidbody2D
 
 ```csharp
-Entity.AddRigidbody2D();               // dinâmico por padrão
-Entity.SetLinearVelocity(vx, vy);      // velocidade linear
+// no Inspetor: Rigidbody 2D (+ Box Collider 2D); no script: Entity.GetRigidbody2D()               // dinâmico por padrão
+Entity.SetVelocity(new Math.Vector3(vx, vy, 0f));   // velocidade linear
 Entity.GravityScale = 0.5f;            // <0 flutua, 0 sem gravidade
 ```
 

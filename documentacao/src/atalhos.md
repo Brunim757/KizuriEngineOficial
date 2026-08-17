@@ -10,8 +10,8 @@ order: 7
 
 | Atalho | Ação |
 |---|---|
-| `F5` | **Play** (compila e roda o jogo) |
-| `Shift+F5` | **Stop** (volta para a edição) |
+| `F5` | **Play** (compila o C# e roda o jogo) |
+| `Shift+F5` | **Stop** (volta para a edição — ajustes de câmera feitos no Play voltam pra cena) |
 
 ## Gizmos e seleção
 
@@ -31,14 +31,15 @@ order: 7
 | `Ctrl+Z` | Desfazer |
 | `Ctrl+Y` | Refazer |
 
-## Viewport
+## Câmera do editor (viewport 3D)
 
 | Atalho | Ação |
 |---|---|
-| `F11` | Fullscreen do viewport |
-| Botão direito + `WASD` | Navegação 3D |
+| `1` / `3` / `7` | Vista rápida: **frente** / **direita** / **topo** (estilo Blender) |
+| `Alt` + arrastar (botão esq., dir. ou meio) | **Órbita** — gira a câmera ao redor do **pivô** (entidade selecionada) |
+| Botão direito + `WASD` | Navegação 3D (voar) |
 | Botão direito + `Q/E` | Subir/descer |
-| Scroll | Zoom (2D) |
+| `Scroll` | Zoom (também funciona orbitando) |
 | Botão direito + arrastar | Pan (2D) |
 
 ::: dica

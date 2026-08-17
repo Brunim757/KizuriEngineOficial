@@ -20,7 +20,7 @@ componente avança automaticamente a região do atlas ao longo do tempo.
 ```csharp
 // tocar a animação da entidade
 Entity.PlayAnimation();
-Entity.StopAnimation();
+Entity.SetAnimationPlaying(false);
 // trocar a velocidade
 Entity.SetAnimationSpeed(8f);
 ```

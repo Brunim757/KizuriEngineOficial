@@ -7,7 +7,7 @@ order: 2
 # Câmera
 
 A **câmera** define o que o jogador vê. Um jogo pode ter várias, mas a que
-tiver **Principal** marcado é a usada pelo **Game View** no Play.
+tiver **Principal** marcado é a usada pelo **Play** e pelo **Game View**.
 
 ## Tipos
 
@@ -16,21 +16,33 @@ tiver **Principal** marcado é a usada pelo **Game View** no Play.
 
 ## Propriedades
 
-- **Primary** — se é a câmera principal (usada no Play)
+- **Principal** — se é a câmera principal (usada no Play)
 - **FOV** (3D) — campo de visão (45° é o padrão)
 - **Near / Far** — planos de recorte (o que fica entre eles é renderizado)
 - **OrthoSize** (2D) — quanto do mundo aparece na tela
 
-## Dicas
+## Orientação (importante)
 
-- **Câmera do editor** é independente das câmeras da cena — você pode voar
-  pelo viewport sem mexer no jogo.
-- Uma cena **2.5D** usa uma câmera perspectiva (fundo 3D) + uma câmera
-  ortográfica **Principal** para a camada 2D — a engine compõe 3D → 2D → UI
-  automaticamente.
-- No código, veja a [API de câmera](entity.html) (FOV, clipes e posição).
+A direção da câmera vem da **matriz do Transform da entidade** — o mesmo
+que o mesh usa. Com rotação `(0,0,0)` a câmera olha para **-Z** (frente),
+que é onde ficam os objetos padrão das cenas de exemplo. Euler `Y=-90°`
+aponta para **+X** (lado direito) — não use -90° de yaw pra olhar "pra
+frente"; deixe `Y` em 0.
+
+## Editar vendo ao vivo
+
+- Selecione a câmera (botão **Focar câmera** no Game View faz isso) e edite
+  pelo **Inspetor** — funciona **durante o Play** também.
+- Ao parar o Play, os ajustes de câmera (tipo, FOV, near/far, ortho,
+  primary, posição/rotação) **voltam pra cena** — não se perdem.
+
+## Câmera do editor
+
+Independente das câmeras da cena: voe com botão direito + WASD, **Alt** +
+arrastar orbita no pivô (entidade selecionada) e `1`/`3`/`7` dão vistas
+rápidas (frente/direita/topo).
 
 ::: nota
 Sem câmera principal, o **Play** não renderiza nada no 3D. Se a tela ficar
-vazia, adicione uma câmera e marque **Primary**.
+vazia, adicione uma câmera e marque **Principal**.
 :::

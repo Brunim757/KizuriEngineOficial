@@ -11,15 +11,15 @@ Leitura de **teclado** e **mouse** para controlar o jogo.
 ## Teclado
 
 ```csharp
-if (Input.IsKeyDown(KeyCode.Space)) Pular();
-if (Input.IsKeyPressed(KeyCode.Left)) MoverEsquerda();
+if (Input.IsKeyDown(Key.Space)) Pular();
+if (Input.IsKeyPressed(Key.Left)) MoverEsquerda();
 ```
 
 ## Mouse
 
 ```csharp
-if (Input.IsMousePressed(0)) Atirar();          // 0 = esquerdo, 1 = direito
-if (Input.IsMouseButtonDown(MouseButton.Left)) Salto(); // só no frame do clique
+if (Input.IsMouseButtonPressed(MouseButton.Left)) Atirar();          // 0 = esquerdo, 1 = direito
+if (Input.IsMouseButtonPressed(MouseButton.Left)) Salto(); // só no frame do clique
 var (x, y) = Input.GetMousePosition();          // posição em pixels na janela
 ```
 
@@ -31,7 +31,7 @@ Para movimento, combine teclas:
 float mover = 0f;
 if (Input.IsKeyDown(Key.A)) mover -= 1f;
 if (Input.IsKeyDown(Key.D)) mover += 1f;
-Entity.Move(mover * Time.deltaTime * velocidade, 0f, 0f);
+Entity.MoveRight(mover * deltaSeconds * velocidade);
 ```
 
 ## Input Actions (com rebind)
@@ -55,11 +55,11 @@ Ações padrão já existem: `Pular`, `Esquerda`, `Direita`, `Cima`, `Baixo`,
 
 | Código | Tecla |
 |---|---|
-| `KeyCode.Space` | Espaço |
-| `KeyCode.W/A/S/D` | WASD |
-| `KeyCode.Up/Down/Left/Right` | Setas |
-| `KeyCode.Enter` / `KeyCode.Escape` | Enter / Esc |
-| `KeyCode.Shift` / `KeyCode.Ctrl` | Shift / Ctrl |
+| `Key.Space` | Espaço |
+| `Key.W/A/S/D` | WASD |
+| `Key.Up/Down/Left/Right` | Setas |
+| `Key.Enter` / `Key.Escape` | Enter / Esc |
+| `Key.Shift` / `Key.Ctrl` | Shift / Ctrl |
 
 ::: nota
 O mouse do **Play** acompanha o viewport (e o Game View) — os cliques de UI

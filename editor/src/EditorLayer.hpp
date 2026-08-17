@@ -60,6 +60,7 @@ private:
     void DrawConsole();
     void DrawContentBrowser();
     void UpdateEditorCamera(kizuri::Timestep ts);
+    void DrawCamera2DPreview();
     void UpdateEditor2DCamera(kizuri::Timestep ts);
     void DrawViewportToolbar();
     void DrawGizmo();

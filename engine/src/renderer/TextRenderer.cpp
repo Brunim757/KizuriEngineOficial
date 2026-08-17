@@ -3,6 +3,7 @@
 #include "kizuri/renderer/RenderCommand.hpp"
 #include "kizuri/core/Log.hpp"
 #include <glad/gl.h>
+#include <chrono>
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -214,6 +215,36 @@ void TextRenderer::DrawString(const std::string& text, const glm::vec3& position
                               float fontSize, const glm::vec4& color, TextAlignment alignment) {
     if (!s_Ready) EnsureAtlas();
     if (!s_Ready || text.empty()) return;
+
+    // Diagnóstico (v0.37.x): bytes que não são UTF-8 válido geram "letras
+    // estranhas" ou glifos ausentes. Loga uma vez por 10s com os bytes em
+    // hex pra identificar a origem (encoding errado no .cs / import).
+    static int64_t s_LastDiag = 0;
+    {
+        auto nowMs = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+        if (nowMs - s_LastDiag > 10000) {
+            const unsigned char* q = (const unsigned char*)text.data();
+            const unsigned char* qe = q + text.size();
+            while (q < qe) {
+                unsigned char c = *q;
+                bool ok = (c < 0x80) ||
+                          ((c & 0xE0) == 0xC0 && q + 1 < qe && (q[1] & 0xC0) == 0x80) ||
+                          ((c & 0xF0) == 0xE0 && q + 2 < qe && (q[1] & 0xC0) == 0x80 && (q[2] & 0xC0) == 0x80);
+                if (!ok) {
+                    s_LastDiag = nowMs;
+                    char hex[64]; int n = 0;
+                    for (int i = 0; i < 8 && q + i < qe; ++i) n += snprintf(hex + n, sizeof(hex) - n, "%02X ", q[i]);
+                    KZ_CORE_WARN("Texto com bytes não-UTF8 (ex: {0}) — o arquivo de script/import pode estar em outro encoding. Texto: {1}",
+                                 hex, text.substr(0, 60));
+                    break;
+                }
+                if ((c & 0xE0) == 0xC0) q += 2;
+                else if ((c & 0xF0) == 0xE0) q += 3;
+                else ++q;
+            }
+        }
+    }
 
     // Blindagem: o texto PRECISA de alpha blending. Qualquer passe que tenha
     // deixado o GL_BLEND desligado (ex.: decals/partículas do 3D) virava os

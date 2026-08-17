@@ -5952,6 +5952,7 @@ void EditorLayer::OnImGuiRender() {
         DrawGizmo();
         KZ_CORE_TRACE("EditorLayer::OnImGuiRender — DrawGizmo ok");
         DrawCameraGizmo();
+        DrawCamera2DPreview(); // quadrado da TELA DO JOGO no editor (v0.37.x)
         DrawLightGizmo();
         DrawColliderGizmo();
         if (m_ShowColliders) DrawAllColliders(); // overlay de física debug
@@ -6481,4 +6482,50 @@ void EditorLayer::CompileAndRegisterGame() {
         }
         m_CompileRegBusy = false;
     });
+}
+
+// Quadrado da TELA DO JOGO: desenha a área exata que a câmera ortográfica
+// primária enxerga (largura = OrthoSize * aspect do viewport). Serve de
+// guia no editor: o que ficar fora da linha não aparece no jogo.
+void EditorLayer::DrawCamera2DPreview() {
+    if (!m_ActiveScene || m_SceneState != SceneState::Edit) return;
+    auto& registry = m_ActiveScene->GetRegistry();
+    auto camView = registry.view<kizuri::TransformComponent, kizuri::CameraComponent>();
+    for (auto e : camView) {
+        auto& cc = camView.get<kizuri::CameraComponent>(e);
+        if (!cc.Primary || cc.Type != kizuri::CameraComponent::ProjectionType::Orthographic2D) continue;
+        kizuri::Entity ent{ e, m_ActiveScene.get() };
+        if (!m_ActiveScene->IsEntityActive(ent)) continue;
+
+        glm::mat4 world = m_ActiveScene->GetWorldTransform(ent);
+        glm::vec3 pos = glm::vec3(world[3]);
+        glm::mat3 rot = glm::mat3(world);
+        float aspect = m_ViewportSize.y > 0.0f ? m_ViewportSize.x / m_ViewportSize.y : 16.0f / 9.0f;
+        float halfW = cc.OrthoSize * aspect * 0.5f;
+        float halfH = cc.OrthoSize * 0.5f;
+
+        // Cantos do retângulo da vista, no espaço do mundo (com a rotação
+        // da própria câmera, pra seguir ela se girar).
+        glm::vec3 localCorners[4] = {
+            { -halfW, -halfH, 0.0f }, {  halfW, -halfH, 0.0f },
+            {  halfW,  halfH, 0.0f }, { -halfW,  halfH, 0.0f }
+        };
+        glm::vec3 worldCorners[4];
+        for (int i = 0; i < 4; ++i) worldCorners[i] = pos + rot * localCorners[i];
+
+        glm::mat4 viewProj = m_EditorCamera.GetViewProjectionMatrix();
+        ImVec2 vpPos = m_ViewportBounds[0], vpSize = m_ViewportBounds[1] - m_ViewportBounds[0];
+        ImVec2 screen[4];
+        bool ok = true;
+        for (int i = 0; i < 4; ++i)
+            ok = ok && ProjectToViewport(viewProj, worldCorners[i], vpPos, vpSize, screen[i]);
+        if (!ok) return;
+
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        const ImU32 color = IM_COL32(255, 190, 60, 255); // âmbar — visível sobre fundo claro/escuro
+        for (int i = 0; i < 4; ++i)
+            dl->AddLine(screen[i], screen[(i + 1) % 4], color, 2.0f);
+        dl->AddRectFilled(screen[0], screen[2], IM_COL32(255, 190, 60, 10));
+        return;
+    }
 }

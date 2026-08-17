@@ -128,12 +128,15 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
-          mkdir -p release
-          cp -r build/bin/* release/
+          # Estrutura do zip = o FORMATO DO UPDATE: bin/ na raiz com o
+          # editor + engine + managed. O updater da engine baixa este zip
+          # (download_url da API) e extrai bin/ por cima da instalação.
+          mkdir -p release/bin
+          cp -r build/bin/* release/bin/
           # Árvore managed/Kizuri.Scripting: sem ela o Play do editor não
           # acha o EngineDir e o dotnet build do jogo falha no zip (o csproj
           # referencia $(EngineDir)/managed/Kizuri.Scripting/...).
-          if [ -d managed/Kizuri.Scripting ]; then cp -r managed release/managed; fi
+          if [ -d managed/Kizuri.Scripting ]; then cp -r managed release/bin/managed; fi
           # Ícone + entrada de desktop: SÓ no zip do Linux (no Windows o
           # ícone já vem embutido no .exe via recurso .rc — nada de pasta
           # solta). Estrutura padrão FHS pra instalação manual.
@@ -366,7 +369,7 @@ jobs:
   # ------- Linux AppImage (jogo autônomo num arquivo) -----------------
   # O .exe fica no job do Windows e o .apk no do Android — aqui o LINUX
   # exporta SÓ o .AppImage (nada de plataformas misturadas num pacote).
-  linux-appimage:
+linux-appimage:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -378,6 +381,20 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Cache do FetchContent (_deps)
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: appimage-kizuri-deps-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            appimage-kizuri-deps-
+
+      - name: Cache de compilação (ccache)
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          max-size: "1G"
+          key: appimage
+
       - name: Instalar dependências
         run: |
           sudo apt-get update
@@ -388,6 +405,7 @@ jobs:
       - name: Configurar (CMake — só o jogo, sem editor)
         run: |
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DKZ_BUILD_EDITOR=OFF -DKZ_BUILD_SANDBOX=OFF -DKZ_BUILD_TESTS=OFF
 
       - name: Compilar (KizuriGame)

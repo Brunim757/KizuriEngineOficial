@@ -128,8 +128,13 @@ UpdateInfo Updater::CheckForUpdate(std::string& outError) {
     }
 
     long httpCode = 0;
+    KZ_CORE_INFO("Updater: consultando {0}...", apiUrl);
     std::string body = HttpGet(apiUrl, outError, &httpCode);
-    if (body.empty()) return info;
+    KZ_CORE_INFO("Updater: HTTP {0} — {1}", httpCode, body.substr(0, 160));
+    if (body.empty()) {
+        KZ_CORE_ERROR("Updater: falha na consulta: {0}", outError);
+        return info;
+    }
 
     try {
         nlohmann::json j = nlohmann::json::parse(body);
@@ -154,12 +159,15 @@ UpdateInfo Updater::CheckForUpdate(std::string& outError) {
     auto remote = parts(info.Version);
     bool newer = (remote.a > local.a) || (remote.a == local.a && remote.b > local.b)
         || (remote.a == local.a && remote.b == local.b && remote.c > local.c);
+    KZ_CORE_INFO("Updater: local={0} remoto={1} -> {2}",
+                  GetLocalVersion(), info.Version, newer ? "NOVA VERSÃO" : "atualizado");
     info.Valid = newer;
     return info;
 }
 
 bool Updater::Download(const std::string& url, const std::string& destPath,
                        std::string& outError, void (*progress)(double)) {
+    KZ_CORE_INFO("Updater: baixando {0} -> {1}", url, destPath);
     CURL* curl = curl_easy_init();
     if (!curl) { outError = "curl_easy_init falhou."; return false; }
 

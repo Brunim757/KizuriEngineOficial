@@ -1,8 +1,26 @@
-# Roadmap AAA — o que falta para um jogo no padrão GTA 4
+# Roadmap AAA — capacidade de um jogo grande
 
-> Lista de trabalho (não promessa): o que a Kizuri Engine ainda precisa
-> para sustentar um projeto grande de mundo aberto com veículos, IA,
-> narrativa e UI de console. Organizada por pilar; cada item = feature.
+> Lista de trabalho (não promessa) do que a Kizuri Engine ainda precisa
+> para sustentar projetos grandes. **A engine é neutra de gênero**: esses
+> recursos são falta de CAPACIDADE, não de um tipo de jogo.
+
+## Como ler esta lista
+
+Quase tudo aqui vale para QUALQUER jogo (FPS, corrida, RPG, plataforma,
+survival...):
+
+- **100% genéricos (qualquer jogo):** renderer/qualidade, áudio padrão AAA,
+  UI de console, ferramentas/editor, plataforma, multiplayer/netcode.
+- **Comuns a jogos com NPCs/mundo grande (também de gênero):** navmesh,
+  streaming de chunks (serve pra qualquer jogo com mundo grande), estado de
+  IA, missões, diálogo, HUD com minimapa.
+- **🌍 Específicos de mundo aberto** (marcados com 🌍): veículos, pedestres
+  andando pela cidade, polícia/foragido, economia de lojas — só se você
+  quiser esse tipo de jogo.
+
+Ou seja: um jogo de terror 2D usa o pilar de áudio, UI e editor; um RPG 3D
+usa renderer, IA e narrativa; um racing usa física de veículos 🌍 sem o
+resto. Nenhuma feature obriga o jogo a ser "GTA".
 
 ## 1. Mundo aberto / streaming
 - [ ] Chunked world: dividir a cena em chunks carregados/descarregados por distância
@@ -15,8 +33,8 @@
 - [ ] Posto de carregamento: Save do mundo em chunks
 
 ## 2. Jogabilidade
-- [ ] Veículos: carros/motos com física de chassis (Bullet vehicle), volante, câmera de perseguição
-- [ ] Pessoas pedrestres (NPCs animados com Fox-style skeleton) — precisa de sistema de navmesh + wander AI
+- [ ] 🌍 Veículos: carros/motos com física de chassis (Bullet vehicle), volante, câmera de perseguição
+- [ ] 🌍 Pessoas pedrestres (NPCs animados com Fox-style skeleton) — precisa de sistema de navmesh + wander AI
 - [ ] Interações: prompts "pressione E" (UI de prompt já existe parcialmente via UIButton)
 - [ ] Inventário/armas: slots, troca, recarga, dano por parte do corpo
 - [ ] Sistema de missões: quests com etapas, objetivos no minimapa, checkpoints
@@ -28,7 +46,7 @@
 - [ ] Busca de caminho com animação + evasão de obstáculos (steering)
 - [ ] Detecção: linha de visão, audição, alcance
 - [ ] Grupos: gangues seguem líder, reações em conjunto
-- [ ] Polícia/foragido: estrelas de procurado, spawn de viaturas
+- [ ] 🌍 Polícia/foragido: estrelas de procurado, spawn de viaturas
 
 ## 4. Narrativa
 - [ ] Sistema de diálogo (falas, escolhas, árvore) com legendas + dublagem

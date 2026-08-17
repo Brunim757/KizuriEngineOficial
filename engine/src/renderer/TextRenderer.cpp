@@ -141,10 +141,11 @@ void TextRenderer::EnsureAtlas() {
     // pegamos por índice — glifos fora da lista não são consultados pelo
     // DecodeGlyphIndex (busca explícita por codepoint).
     stbtt_packedchar extraSpan[kExtraSpanCount];
+    // A struct tem 2 campos extras de oversample (h/v) — { } zera o resto.
     stbtt_pack_range ranges[] = {
-        { (float)kPixelHeight, kAsciiFirst, nullptr, kAsciiCount, asciiPacked },
-        { (float)kPixelHeight, kLatinFirst, nullptr, kLatinCount, latinPacked },
-        { (float)kPixelHeight, kExtraSpanFirst, nullptr, kExtraSpanCount, extraSpan },
+        { (float)kPixelHeight, kAsciiFirst, nullptr, kAsciiCount, asciiPacked, 0, 0 },
+        { (float)kPixelHeight, kLatinFirst, nullptr, kLatinCount, latinPacked, 0, 0 },
+        { (float)kPixelHeight, kExtraSpanFirst, nullptr, kExtraSpanCount, extraSpan, 0, 0 },
     };
     int packedTotal = stbtt_PackFontRanges(&pack, (const unsigned char*)font, 0, ranges, 3);
     if (packedTotal <= 0)

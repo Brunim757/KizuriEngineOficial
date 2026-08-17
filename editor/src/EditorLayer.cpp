@@ -3297,6 +3297,17 @@ void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
     m_SelectedEntity = {};
     m_History.Clear();
 
+    // v0.37.5: projeto novo NÃO herda estado do anterior — reseta a câmera
+    // do editor (posição/vista/orbita), o modo 2D/3D e o gesto em andamento.
+    m_EditorCamPos = { 0.0f, 3.0f, 8.0f };
+    m_EditorCamYaw = -90.0f;
+    m_EditorCamPitch = -10.0f;
+    m_EditorOrbitTarget = { 0.0f, 0.0f, 0.0f };
+    m_EditorOrbitDist = -1.0f;
+    m_FirstMouseLook = true;
+    m_TilePainting = false;
+    m_ShowColliders = false;
+
     // Cena inicial do projeto: carrega de forma ASSÍNCRONA (projeto grande
     // não pode travar o editor). Enquanto carrega, mostra o conteúdo padrão
     // do modo — e a cena real substitui quando terminar.

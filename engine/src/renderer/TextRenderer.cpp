@@ -25,33 +25,18 @@ namespace {
     constexpr int kAtlasHeight = 1024;
     constexpr int kPixelHeight = 48;   // altura do bake (px)
 
-    // Bloco 1: ASCII imprimível 32..126 (95 glifos).
-    constexpr int kAsciiFirst = 32;
-    constexpr int kAsciiCount = 95;
-    // Bloco 2: Latin-1 0xA0..0xFF (96 glifos) — ç, ã, é, í, ó, ô, ê, °, ±…
-    constexpr int kLatinFirst = 0xA0;
-    constexpr int kLatinCount = 0x100 - 0xA0;
 
     // Bloco 3: pontuação tipográfica comum em 3 bytes (— “ ” ‘ ’ … « »).
     // A JetBrains Mono tem esses glifos; sem eles o travessão da demo 2D
     // (e textos com aspas curvas) sumiria/viraria retângulo.
-    // Bloco 3: pontuação tipográfica comum (— “ ” ‘ ’ …). Lista explícita;
-    // o bake usa uma FAIXA contígua que cobre a lista e o DecodeGlyphIndex
-    // consulta por codepoint (ver kExtraSpanFirst/Count abaixo).
-    static constexpr int kExtraCodepoints[] = {
-        0x2013, 0x2014, 0x2015,   // – — ―
-        0x2018, 0x2019,           // ‘ ’
-        0x201C, 0x201D,           // “ ”
-        0x2026,                   // …
-    };
-    constexpr int kExtraSpanFirst = 0x2012;
-    constexpr int kExtraSpanCount = 0x2027 - 0x2012 + 1;
-    constexpr int kExtraCount = (int)(sizeof(kExtraCodepoints) / sizeof(kExtraCodepoints[0]));
+    // Atlas ÚNICO e CONTÍNUO: 32..255 (ASCII + Latin-1 — ç ã é ê etc).
+    // Um único bake (stbtt_BakeFontBitmap), sem ranges/hacks: é o caminho
+    // mais simples e à prova de erro do stb.
+    constexpr int kGlyphFirst = 32;
+    constexpr int kGlyphCount = 0xFF - 32 + 1;   // 224 glifos
 
     Ref<Texture2D> s_AtlasTexture;
-    stbtt_bakedchar s_AsciiBaked[kAsciiCount];
-    stbtt_bakedchar s_LatinBaked[kLatinCount];
-    stbtt_bakedchar s_ExtraBaked[kExtraCount];
+    stbtt_bakedchar s_Baked[kGlyphCount];
     bool s_Ready = false;
 
     // Uma única textura 1024² com os DOIS blocos: ASCII é bakes do canto
@@ -64,28 +49,32 @@ namespace {
 
     // MeasureWidth/DrawString decodifica UTF-8 (até 2 bytes — suficiente
     // pro Latin-1; emojis/3+ bytes são ignorados sem quebrar a linha).
+    // Índice do glifo no atlas contínuo (32..255). Para codepoints de 3
+    // bytes (— “ ” …) normaliza pra um glifo Latin-1/ASCII próximo — sem
+    // glifo dedicado, sem retângulo, sem letra errada.
     int DecodeGlyphIndex(const char*& p, const char* end) {
         unsigned char c = (unsigned char)*p;
-        if (c >= 0x20 && c <= 0x7E) { return (int)(c - kAsciiFirst); }
+        if (c >= 0x20 && c <= 0x7E) { ++p; return (int)(c - kGlyphFirst); }
         if ((c & 0xE0) == 0xC0 && end - p >= 2) { // 2-byte: U+0080..U+07FF
             unsigned char c2 = (unsigned char)p[1];
             if ((c2 & 0xC0) == 0x80) {
                 unsigned int cp = ((c & 0x1Fu) << 6) | (c2 & 0x3Fu);
-                if (cp >= (unsigned int)kLatinFirst && cp <= 0xFF) {
+                if (cp >= 0xA0 && cp <= 0xFF) {
                     p += 2;
-                    return kAsciiCount + (int)(cp - kLatinFirst);
+                    return (int)(cp - kGlyphFirst);
                 }
             }
         }
-        if ((c & 0xF0) == 0xE0 && end - p >= 3) { // 3-byte: U+0800..U+FFFF
+        if ((c & 0xF0) == 0xE0 && end - p >= 3) { // 3-byte: tipografia
             unsigned char c2 = (unsigned char)p[1], c3 = (unsigned char)p[2];
             if ((c2 & 0xC0) == 0x80 && (c3 & 0xC0) == 0x80) {
                 unsigned int cp = ((c & 0x0Fu) << 12) | ((c2 & 0x3Fu) << 6) | (c3 & 0x3Fu);
-                for (int i = 0; i < kExtraCount; ++i) {
-                    if (kExtraCodepoints[i] == (int)cp) {
-                        p += 3;
-                        return kAsciiCount + kLatinCount + i;
-                    }
+                p += 3;
+                switch (cp) {
+                    case 0x2013: case 0x2014: case 0x2015: return '-'- kGlyphFirst; // – — ― → -
+                    case 0x2018: case 0x2019: case 0x201C: case 0x201D: return '"'- kGlyphFirst; // ‘ ’ “ ” → "
+                    case 0x2026: return '.'- kGlyphFirst;                                   // … → .
+                    default: return -1;
                 }
             }
         }
@@ -120,53 +109,19 @@ void TextRenderer::EnsureAtlas() {
         return;
     }
 
-    // Bake com a API OFICIAL de ranges múltiplos do stb (stbtt_PackBegin/
-    // PackFontRange/PackEnd): um único atlas, empacotamento real, sem o
-    // hack de "dois quadrantes" que produzia quads/UVs errados.
+    // UM único bake contínuo (32..255) — o mecanismo mais simples do stb.
+    // Sem ranges, sem oversampling, sem quadrantes: x0/y0..x1/y1 do
+    // bakedchar apontam direto pros glifos no atlas.
     std::vector<uint8_t> bitmap(kAtlasWidth * kAtlasHeight, 0);
-    stbtt_pack_context pack;
-    if (!stbtt_PackBegin(&pack, bitmap.data(), kAtlasWidth, kAtlasHeight,
-                         0, 1, nullptr)) {
-        KZ_CORE_ERROR("TextRenderer: stbtt_PackBegin falhou.");
+    int baked = stbtt_BakeFontBitmap((const unsigned char*)font, 0, (float)kPixelHeight,
+                                     bitmap.data(), kAtlasWidth, kAtlasHeight,
+                                     kGlyphFirst, kGlyphCount, s_Baked);
+    if (baked <= 0) {
+        KZ_CORE_ERROR("TextRenderer: bake do atlas falhou (couberam {0}).", baked);
         return;
     }
-
-    stbtt_PackSetOversampling(&pack, 2, 2);
-
-    stbtt_packedchar asciiPacked[kAsciiCount];
-    stbtt_packedchar latinPacked[kLatinCount];
-
-    // kExtra é uma lista esparsa; o stb empacota por FAIXA. Usamos uma
-    // faixa contígua que cobre toda a lista (0x2012..0x2027) e depois
-    // pegamos por índice — glifos fora da lista não são consultados pelo
-    // DecodeGlyphIndex (busca explícita por codepoint).
-    stbtt_packedchar extraSpan[kExtraSpanCount];
-    // A struct tem 2 campos extras de oversample (h/v) — { } zera o resto.
-    stbtt_pack_range ranges[] = {
-        { (float)kPixelHeight, kAsciiFirst, nullptr, kAsciiCount, asciiPacked, 0, 0 },
-        { (float)kPixelHeight, kLatinFirst, nullptr, kLatinCount, latinPacked, 0, 0 },
-        { (float)kPixelHeight, kExtraSpanFirst, nullptr, kExtraSpanCount, extraSpan, 0, 0 },
-    };
-    int packedTotal = stbtt_PackFontRanges(&pack, (const unsigned char*)font, 0, ranges, 3);
-    if (packedTotal <= 0)
-        KZ_CORE_WARN("TextRenderer: bake de glifos devolveu {0} — atlas pode estar vazio.", packedTotal);
-    stbtt_PackEnd(&pack);
-
-    // stbtt_packedchar -> stbtt_bakedchar (mesma estrutura de layout).
-    auto copyBaked = [](const stbtt_packedchar* src, stbtt_bakedchar* dst, int n) {
-        for (int i = 0; i < n; ++i) {
-            dst[i].x0 = (short)src[i].x0; dst[i].y0 = (short)src[i].y0;
-            dst[i].x1 = (short)src[i].x1; dst[i].y1 = (short)src[i].y1;
-            dst[i].xoff = src[i].xoff; dst[i].yoff = src[i].yoff;
-            dst[i].xadvance = src[i].xadvance;
-        }
-    };
-    copyBaked(asciiPacked, s_AsciiBaked, kAsciiCount);
-    copyBaked(latinPacked, s_LatinBaked, kLatinCount);
-
-    // Mapeia a faixa 0x2012..0x2027 para a tabela extra (por codepoint).
-    for (int i = 0; i < kExtraCount; ++i)
-        copyBaked(&extraSpan[kExtraCodepoints[i] - kExtraSpanFirst], &s_ExtraBaked[i], 1);
+    if (baked < kGlyphCount)
+        KZ_CORE_WARN("TextRenderer: só {0}/{1} glifos couberam no atlas.", baked, kGlyphCount);
 
     // Expande 1 canal (alfa) → RGBA (branco + alfa), como a engine exige.
     std::vector<uint8_t> rgba(kAtlasWidth * kAtlasHeight * 4);
@@ -178,8 +133,8 @@ void TextRenderer::EnsureAtlas() {
     s_AtlasTexture = Texture2D::Create(kAtlasWidth, kAtlasHeight);
     s_AtlasTexture->SetData(rgba.data(), (uint32_t)rgba.size());
     s_Ready = true;
-    KZ_CORE_INFO("TextRenderer: atlas {0}x{1} pronto (ASCII {2} + Latin-1 {3} + tipografia {4}).",
-                 kAtlasWidth, kAtlasHeight, kAsciiCount, kLatinCount, kExtraCount);
+    KZ_CORE_INFO("TextRenderer: atlas {0}x{1} pronto ({2}/{3} glifos, faixa 32..255).",
+                 kAtlasWidth, kAtlasHeight, baked, kGlyphCount);
 }
 
 void TextRenderer::Init() {
@@ -277,9 +232,6 @@ void TextRenderer::DrawString(const std::string& text, const glm::vec3& position
     if (lineHeight <= 0.0f) lineHeight = 0.01f;
     float penY = position.y;
 
-    // Atalho local pros two tables (evita indexação dupla no loop quente).
-    const stbtt_bakedchar* ascii = s_AsciiBaked;
-    const stbtt_bakedchar* latin = s_LatinBaked;
     const float invW = 1.0f / (float)kAtlasWidth;
     const float invH = 1.0f / (float)kAtlasHeight;
 
@@ -299,9 +251,7 @@ void TextRenderer::DrawString(const std::string& text, const glm::vec3& position
             if (p == before) ++p;
 
             const stbtt_bakedchar* b;
-            if (idx < kAsciiCount) b = &ascii[idx];
-            else if (idx - kAsciiCount < kLatinCount) b = &latin[idx - kAsciiCount];
-            else if (idx - kAsciiCount - kLatinCount < kExtraCount) b = &s_ExtraBaked[idx - kAsciiCount - kLatinCount];
+            if (idx < kGlyphCount) b = &s_Baked[idx];
             else continue;
             if (b->x1 <= b->x0 || b->y1 <= b->y0) { penX += b->xadvance * scale; continue; }
 

@@ -5,7 +5,7 @@
 // de release (v0.35.x, v0.36.0...) seguem outra numeração de empacotamento
 // — não confundir: o "0.1.0" antigo nos banners era um resíduo e foi
 // removido; qualquer novo lugar que mostre versão deve usar KIZURI_VERSION.
-#define KIZURI_VERSION       "0.37.7"
+#define KIZURI_VERSION       "0.37.8"
 #define KIZURI_VERSION_MAJOR 0
 #define KIZURI_VERSION_MINOR 37
-#define KIZURI_VERSION_PATCH 7
+#define KIZURI_VERSION_PATCH 8

@@ -9,6 +9,7 @@
 #include "kizuri/scene/Prefab.hpp"
 #include "kizuri/project/Project.hpp"
 #include "kizuri/renderer/Renderer2D.hpp"
+#include <glad/gl.h>
 // Detalhe de serialização por entidade (DuplicateEntity) — fica em src/, não
 // na API pública; o Prefab.cpp já o usa do mesmo jeito.
 #include "../scene/ComponentSerialization.hpp"
@@ -1519,6 +1520,13 @@ void Scene::RenderScene2D(OrthographicCamera* overrideCamera) {
 }
 
 void Scene::Render2DEntities() {
+    // DEFESAS: força blend ON no início do passo 2D. Se algum passe 3D
+    // anterior deixou o GL_BLEND desligado (decals, partículas), aqui
+    // restauramos — sem isso, sprites/textos ficam como retângulos brancos
+    // opacos (alpha = 0 = fundo transparente virando preto/sólido).
+    RenderCommand::SetBlending(true);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     // Ordenação por SortingLayer: menor desenha primeiro (atrás). Dentro da
     // mesma camada, a ordem é pelo tipo (sprite → círculo → animação →
     // tilemap → texto), estável (stable_sort) pra manter a ordem das views.

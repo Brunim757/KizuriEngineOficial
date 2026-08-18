@@ -325,6 +325,11 @@ void Renderer2D::DrawGrid() {
     s_Data.GridShader->Bind();
     s_Data.GridShader->SetMat4("u_ViewProjection", s_Data.ViewProjection);
     RenderCommand::DrawLines(s_Data.GridVertexArray, s_Data.GridVertexCount);
+    // Restaura o shader de quads pra que toda renderização subsequente
+    // (sprites, texto, rects) use o vertex layout correto — SEM isso,
+    // o GridShader ficava ativo e bagunçava as UVs/cor de tudo.
+    s_Data.QuadShader->Bind();
+    s_Data.QuadShader->SetMat4("u_ViewProjection", s_Data.ViewProjection);
 }
 
 void Renderer2D::StartBatch() {
@@ -354,6 +359,12 @@ void Renderer2D::EndScene() {
 void Renderer2D::Flush() {
     KZ_TRACE_SCOPE("Renderer2D::Flush");
     if (s_Data.QuadIndexCount == 0) return;
+
+    // Garante que o shader de quads está ativo — DrawGrid/DrawCircle podem
+    // ter trocado o programa ativo, e desenhar com o shader errado produz
+    // retângulos coloridos em vez de texto/sprites.
+    s_Data.QuadShader->Bind();
+    s_Data.QuadShader->SetMat4("u_ViewProjection", s_Data.ViewProjection);
 
     uint32_t dataSize = s_Data.QuadVertexBufferPtr * sizeof(QuadVertex);
     s_Data.QuadVertexBuffer->SetData(s_Data.QuadVertexBufferBase.data(), dataSize);

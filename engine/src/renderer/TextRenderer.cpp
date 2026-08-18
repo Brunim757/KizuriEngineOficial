@@ -136,6 +136,11 @@ void TextRenderer::EnsureAtlas() {
     }
 
     s_AtlasTexture = Texture2D::Create(kAtlasWidth, kAtlasHeight);
+    // CLAMP_TO_EDGE evita que UVs exatamente em 0.0 ou 1.0 wrapem pra
+    // outro glifo (GL_REPEAT causava bordas fantasma entre letras).
+    s_AtlasTexture->Bind(0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     s_AtlasTexture->SetData(rgba.data(), (uint32_t)rgba.size());
     s_Ready = true;
     KZ_CORE_INFO("TextRenderer: atlas {0}x{1} pronto ({2}/{3} glifos, faixa 32..255).",
@@ -219,7 +224,6 @@ void TextRenderer::DrawString(const std::string& text, const glm::vec3& position
     // glifos em retângulos brancos opacos — força aqui, no desenho.
     RenderCommand::SetBlending(true);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    Renderer2D::Flush(); // descarta quads pendentes e garante textura limpa pro atlas
 
     // Divide o texto em linhas e desenha cada uma — posição é o canto
     // esquerdo-superior da primeira linha; alinhamento desloca cada linha.

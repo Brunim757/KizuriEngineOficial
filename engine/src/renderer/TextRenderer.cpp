@@ -269,11 +269,16 @@ void TextRenderer::DrawString(const std::string& text, const glm::vec3& position
             float w = (b->x1 - b->x0) * scale;
             float h = (b->y1 - b->y0) * scale;
 
-            // Bitmap do stbtt tem y=0 no topo; a textura GL tem v=0 embaixo.
+            // UVs do atlas — o bitmap do stbtt tem linha 0 no TOPO do atlas e
+            // é enviado pra GL sem flip (linha 0 = v=0). Então o topo do
+            // glifo (y0 < y1) fica em v MENOR. O quad: vértice de cima
+            // (uvMax) recebe v do topo do glifo (y0); vértice de baixo (uvMin)
+            // recebe v da base (y1). Sem o "1.0f -": esse flip amostrava o
+            // lado espelhado do atlas = outros glifos = letras aleatórias.
             float u0 = b->x0 * invW;
             float u1 = b->x1 * invW;
-            float v0 = 1.0f - (float)b->y1 * invH;
-            float v1 = 1.0f - (float)b->y0 * invH;
+            float v0 = (float)b->y1 * invH;  // base do glifo (v maior)
+            float v1 = (float)b->y0 * invH;  // topo do glifo (v menor)
 
             glm::mat4 transform = glm::translate(glm::mat4(1.0f), { x + w * 0.5f, y + h * 0.5f, position.z })
                                 * glm::scale(glm::mat4(1.0f), { w, h, 1.0f });

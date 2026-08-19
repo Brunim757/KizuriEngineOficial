@@ -398,6 +398,15 @@ static void PushQuadVertices(const glm::mat4& transform, const glm::vec4& color,
 
 void Renderer2D::DrawTransformedQuad(const glm::mat4& transform, const glm::vec4& color, int) {
     static const glm::vec2 texCoords[4] = { {0,0}, {1,0}, {1,1}, {0,1} };
+    // Quad colorido usa a textura branca 1x1 — mas precisa TROCAR pra ela
+    // explicitamente. Se o quad anterior era texturizado (sprite, atlas de
+    // texto), esse quad herda a textura errada e amostra ela com UVs
+    // (0,0)-(1,1) — sintoma: o quadrado do fundo estampado com o atlas
+    // inteiro (caracteres aleatórios) e cobrindo o texto por cima.
+    if (*s_Data.CurrentTexture != *s_Data.WhiteTexture) {
+        Renderer2D::Flush();
+        s_Data.CurrentTexture = s_Data.WhiteTexture;
+    }
     PushQuadVertices(transform, color, texCoords, 0.0f, 1.0f);
 }
 

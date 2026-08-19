@@ -265,9 +265,16 @@ void TextRenderer::DrawString(const std::string& text, const glm::vec3& position
             if (b->x1 <= b->x0 || b->y1 <= b->y0) { penX += b->xadvance * scale; continue; }
 
             float x = penX + b->xoff * scale;
-            float y = penY + b->yoff * scale;
             float w = (b->x1 - b->x0) * scale;
             float h = (b->y1 - b->y0) * scale;
+            // stbtt: yoff = deslocamento do TOPO do glifo em relação à linha
+            // de base (negativo = acima dela), em px do bake. O mundo é Y-UP:
+            // topo do glifo fica ACIMA da base em +(-yoff)*scale, e o glifo
+            // desce h a partir do topo. Antes usávamos penY+yoff como BASE do
+            // quad — cada glifo (A vs p vs m) saía com topo/base em alturas
+            // diferentes = letras desalinhadas na mesma linha.
+            float yTop = penY - b->yoff * scale;
+            float y = yTop - h * 0.5f;
 
             // UVs do atlas — o bitmap do stbtt tem linha 0 no TOPO do atlas e
             // é enviado pra GL sem flip (linha 0 = v=0). Então o topo do
@@ -286,7 +293,7 @@ void TextRenderer::DrawString(const std::string& text, const glm::vec3& position
 
             penX += b->xadvance * scale;
         }
-        penY += lineHeight;
+        penY -= lineHeight; // mundo Y-up: a próxima linha desce na tela
     }
 }
 

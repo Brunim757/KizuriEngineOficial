@@ -2,9 +2,7 @@ using System;
 
 namespace Kizuri
 {
-	
-	
-	
+
 	public enum NetEventType : int { Connect = 0, Disconnect = 1, Data = 2, Error = 3 }
 
 	public struct NetEvent
@@ -28,7 +26,6 @@ namespace Kizuri
 		public static bool Send(uint peer, byte[] data)
 			=> Interop.KizuriNative.kz_net_send(peer, data, (uint)data.Length) != 0;
 
-		
 		public static bool PollEvent(out NetEvent ev)
 		{
 			ev = new NetEvent();

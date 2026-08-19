@@ -4,8 +4,6 @@
 
 namespace kizuri {
 
-
-
 static bool FindPrimaryCamera(Scene& scene, Entity& outCamera, CameraComponent*& outComp) {
     auto& registry = scene.GetRegistry();
     auto view = registry.view<TransformComponent, CameraComponent>();
@@ -40,7 +38,7 @@ static bool SceneHasPrimaryCamera(Scene& scene) {
     return false;
 }
 
-} 
+}
 
 void GameViewPanel::OnUpdate(kizuri::Timestep ts) {
     (void)ts;
@@ -48,11 +46,8 @@ void GameViewPanel::OnUpdate(kizuri::Timestep ts) {
     kizuri::Scene* scene = m_Ctx.ActiveScene.get();
     if (!scene) return;
 
-    
-    
-    
     if (!kizuri::SceneHasPrimaryCamera(*scene)) {
-        
+
         if (m_Framebuffer) {
             m_Framebuffer->Bind();
             kizuri::RenderCommand::SetClearColor({ 0.05f, 0.05f, 0.06f, 1.0f });
@@ -70,8 +65,6 @@ void GameViewPanel::OnUpdate(kizuri::Timestep ts) {
         m_Framebuffer = kizuri::Framebuffer::Create({ (uint32_t)m_Ctx.ViewportSize.x, (uint32_t)m_Ctx.ViewportSize.y, 1 });
     m_Framebuffer->Resize((uint32_t)m_Ctx.ViewportSize.x, (uint32_t)m_Ctx.ViewportSize.y);
 
-    
-    
     ScopedTemporalOff temporal;
     m_Framebuffer->Bind();
     kizuri::RenderCommand::SetClearColor({ 0.05f, 0.05f, 0.06f, 1.0f });
@@ -98,9 +91,7 @@ void GameViewPanel::OnImGuiRender() {
     ImGui::TextDisabled("%s", m_Ctx.IsPlay ? "Play — câmera do jogador" : "preview ao vivo (sem Play)");
     ImGui::SameLine();
     if (ImGui::SmallButton("Focar câmera")) {
-        
-        
-        
+
         if (scene) {
             kizuri::Entity cam;
             kizuri::CameraComponent* cc = nullptr;

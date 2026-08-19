@@ -22,4 +22,4 @@ bool HasEmbeddedResource(const std::string& name) {
     return false;
 }
 
-} 
+}

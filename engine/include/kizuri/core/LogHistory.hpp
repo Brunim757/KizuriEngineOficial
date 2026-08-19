@@ -8,12 +8,8 @@ enum class LogLevel { Trace, Debug, Info, Warn, Error, Critical };
 
 struct LogEntry {
     LogLevel Level;
-    std::string Message; 
+    std::string Message;
 };
-
-
-
-
 
 class LogHistory {
 public:
@@ -26,4 +22,4 @@ private:
     static constexpr size_t kMaxEntries = 2000;
 };
 
-} 
+}

@@ -1,8 +1,5 @@
 #pragma once
 
-
-
-
 #include "kizuri/ecs/Entity.hpp"
 #include "kizuri/ecs/Components.hpp"
 #include "kizuri/ecs/Scene.hpp"
@@ -67,8 +64,6 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
         }
     }
 }
-
-
 
  inline nlohmann::json SerializeEntityJson(Entity entity) {
     nlohmann::json je;
@@ -280,7 +275,7 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
     }
 
     if (entity.HasComponent<UIButtonComponent>()) {
-        je["UIButton"] = {}; 
+        je["UIButton"] = {};
     }
 
     if (entity.HasComponent<Rigidbody2DComponent>()) {
@@ -338,7 +333,6 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
         };
     }
 
-    
     if (entity.HasComponent<NavGridComponent>()) {
         auto& ng = entity.GetComponent<NavGridComponent>();
         je["NavGrid"] = { { "Origin", Vec3ToJson(ng.Origin) }, { "Width", ng.Width },
@@ -393,10 +387,7 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
 
     if (entity.HasComponent<NativeScriptComponent>()) {
         auto& nsc = entity.GetComponent<NativeScriptComponent>();
-        
-        
-        
-        
+
         if (!nsc.ClassName.empty())
             je["NativeScript"] = { { "ClassName", nsc.ClassName } };
     }
@@ -423,10 +414,6 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
 
     return je;
 }
-
-
-
-
 
 inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint64_t uuid) {
     std::string tag = je.value("Tag", "Entidade");
@@ -461,7 +448,7 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
             : entity.AddComponent<LODComponent>();
         ApplyLODJson(je["LOD"], lod);
     } else if (entity.HasComponent<LODComponent>() && !entity.HasComponent<MeshRendererComponent>()) {
-        entity.RemoveComponent<LODComponent>(); 
+        entity.RemoveComponent<LODComponent>();
     }
 
     if (je.contains("Terrain")) {
@@ -657,7 +644,7 @@ if (je.contains("SpriteAnimation")) {
         if (!mat.MetallicRoughnessMapPath.empty()) mat.MetallicRoughnessMap = Texture2D::Create(ResolveSerializedPath(mat.MetallicRoughnessMapPath));
         if (!mat.EmissiveMapPath.empty()) mat.EmissiveMap = Texture2D::Create(ResolveSerializedPath(mat.EmissiveMapPath));
         if (!mat.HeightMapPath.empty()) mat.HeightMap = Texture2D::Create(ResolveSerializedPath(mat.HeightMapPath));
-        RestoreGLTFTextureMaps(mr); 
+        RestoreGLTFTextureMaps(mr);
     }
 
     if (je.contains("LOD")) {
@@ -728,7 +715,7 @@ if (je.contains("SpriteAnimation")) {
     }
 
     if (je.contains("UIButton")) {
-        entity.AddComponent<UIButtonComponent>(); 
+        entity.AddComponent<UIButtonComponent>();
     }
 
     if (je.contains("Rigidbody2D")) {
@@ -819,7 +806,6 @@ if (je.contains("SpriteAnimation")) {
         if (!pc.TexturePath.empty()) pc.Texture = Texture2D::Create(ResolveSerializedPath(pc.TexturePath));
     }
 
-    
     if (je.contains("NavGrid")) {
         auto& jn = je["NavGrid"];
         auto& ng = entity.AddComponent<NavGridComponent>();
@@ -891,7 +877,7 @@ if (je.contains("SpriteAnimation")) {
         ac.Loop = ja.value("Loop", true);
         ac.Speed = ja.value("Speed", 1.0f);
         ac.Time = ja.value("Time", 0.0f);
-        
+
     }
 
     if (je.contains("AnimatorSM")) {
@@ -916,19 +902,11 @@ if (je.contains("SpriteAnimation")) {
                 sm.Transitions.push_back(tr);
             }
         }
-        if (!sm.States.empty()) sm.CurrentState = 0; 
+        if (!sm.States.empty()) sm.CurrentState = 0;
     }
 
     return entity;
 }
-
-
-
-
-
-
-
-
 
 inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
     auto& tagc = entity.GetComponent<TagComponent>();
@@ -1075,7 +1053,7 @@ if (je.contains("SpriteAnimation")) {
         mat.MetallicRoughnessMap = mat.MetallicRoughnessMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.MetallicRoughnessMapPath));
         mat.EmissiveMap = mat.EmissiveMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.EmissiveMapPath));
         mat.HeightMap = mat.HeightMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.HeightMapPath));
-        RestoreGLTFTextureMaps(mr); 
+        RestoreGLTFTextureMaps(mr);
     } else if (entity.HasComponent<MeshRendererComponent>()) {
         entity.RemoveComponent<MeshRendererComponent>();
     }
@@ -1086,7 +1064,7 @@ if (je.contains("SpriteAnimation")) {
             : entity.AddComponent<LODComponent>();
         ApplyLODJson(je["LOD"], lod);
     } else if (entity.HasComponent<LODComponent>() && !entity.HasComponent<MeshRendererComponent>()) {
-        entity.RemoveComponent<LODComponent>(); 
+        entity.RemoveComponent<LODComponent>();
     }
 
     if (je.contains("Terrain")) {
@@ -1367,10 +1345,10 @@ if (je.contains("SpriteAnimation")) {
         ac.Loop = ja.value("Loop", true);
         ac.Speed = ja.value("Speed", 1.0f);
         ac.Time = ja.value("Time", 0.0f);
-        ac.Skin = nullptr; 
+        ac.Skin = nullptr;
     } else if (entity.HasComponent<AnimatorComponent>()) {
         entity.RemoveComponent<AnimatorComponent>();
     }
 }
 
-} 
+}

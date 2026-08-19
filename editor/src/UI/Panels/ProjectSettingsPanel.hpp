@@ -1,9 +1,6 @@
 #pragma once
 #include "EditorPanel.hpp"
 
-
-
-
 class ProjectSettingsPanel : public EditorPanel {
 public:
     explicit ProjectSettingsPanel(const EditorContext& ctx) : m_Ctx(ctx) {}
@@ -20,7 +17,7 @@ private:
     void DrawAboutSection();
 
     const EditorContext& m_Ctx;
-    int m_Section = 0; 
+    int m_Section = 0;
     char m_EnvHDRIPath[512] = "";
 
     void ApplyPreset();

@@ -5,8 +5,6 @@
 
 using namespace kizuri;
 
-
-
 class SandboxLayer : public Layer {
 public:
     SandboxLayer() : Layer("SandboxLayer") {}
@@ -14,14 +12,12 @@ public:
     void OnAttach() override {
         m_Scene = CreateRef<Scene>("Cena de Demonstração");
 
-        
         Entity cameraEntity = m_Scene->CreateEntity("Camera2D");
         auto& cam = cameraEntity.AddComponent<CameraComponent>();
         cam.Type = CameraComponent::ProjectionType::Orthographic2D;
         cam.OrthoSize = 5.0f;
         cam.Primary = true;
 
-        
         m_Player = m_Scene->CreateEntity("Player");
         auto& sprite = m_Player.AddComponent<SpriteRendererComponent>();
         sprite.Color = { 0.9f, 0.2f, 0.25f, 1.0f };
@@ -30,7 +26,6 @@ public:
         auto& nsc = m_Player.AddComponent<NativeScriptComponent>();
         nsc.Bind<PlayerController>();
 
-        
         Entity ground = m_Scene->CreateEntity("Chao");
         auto& groundTransform = ground.GetComponent<TransformComponent>();
         groundTransform.Translation = { 0.0f, -3.0f, 0.0f };
@@ -40,10 +35,6 @@ public:
         auto& groundBody = ground.AddComponent<Rigidbody2DComponent>();
         groundBody.Type = Rigidbody2DComponent::BodyType::Static;
         ground.AddComponent<BoxCollider2DComponent>();
-
-        
-        
-        
 
         KZ_INFO("Kizuri Sandbox iniciado. Use WASD ou as setas para mover o jogador.");
         m_Scene->OnRuntimeStart();

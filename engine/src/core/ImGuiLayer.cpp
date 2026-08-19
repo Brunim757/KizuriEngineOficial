@@ -21,11 +21,6 @@ void ImGuiLayer::OnAttach() {
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
-    
-    
-    
-    
-    
     io.IniFilename = nullptr;
 
     LoadFonts();
@@ -34,19 +29,6 @@ void ImGuiLayer::OnAttach() {
     auto* window = static_cast<GLFWwindow*>(Application::Get().GetWindow().GetNativeWindow());
     ImGui_ImplGlfw_InitForOpenGL(window, true);
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     const auto& win = Application::Get().GetWindow();
     const char* glslVersion = "#version 330 core";
     if (win.GetGLVersionMajor() > 4 || (win.GetGLVersionMajor() == 4 && win.GetGLVersionMinor() >= 5))
@@ -58,32 +40,20 @@ void ImGuiLayer::OnAttach() {
     ImGui_ImplOpenGL3_Init(glslVersion);
 }
 
-
-
-
-
-
-
-
-
 void ImGuiLayer::LoadFonts() {
     ImGuiIO& io = ImGui::GetIO();
 
-    
-    
     static const ImWchar ranges[] = {
-        0x0020, 0x00FF,  
-        0x2010, 0x2027,  
-        0x2190, 0x21FF,  
+        0x0020, 0x00FF,
+        0x2010, 0x2027,
+        0x2190, 0x21FF,
         0,
     };
 
     ImFontConfig config;
     config.OversampleH = 2;
     config.OversampleV = 2;
-    
-    
-    
+
     config.FontDataOwnedByAtlas = false;
 
     m_FontRegular = io.Fonts->AddFontFromMemoryTTF(
@@ -105,10 +75,6 @@ void ImGuiLayer::LoadFonts() {
 
     io.FontDefault = m_FontRegular;
 }
-
-
-
-
 
 ImGuiContext* ImGuiLayer::GetContext() {
     return ImGui::GetCurrentContext();
@@ -168,14 +134,9 @@ void ImGuiLayer::End() {
     KZ_CORE_TRACE("ImGuiLayer::End — fim");
 }
 
-
 void ImGuiLayer::SetDarkThemeKizuri() {
     ImGuiStyle& style = ImGui::GetStyle();
 
-    
-    
-    
-    
     style.WindowRounding = 0.0f;
     style.ChildRounding = 0.0f;
     style.FrameRounding = 2.0f;
@@ -219,4 +180,4 @@ void ImGuiLayer::SetDarkThemeKizuri() {
     colors[ImGuiCol_TitleBgCollapsed] = ImVec4{ 0.08f, 0.08f, 0.09f, 1.0f };
 }
 
-} 
+}

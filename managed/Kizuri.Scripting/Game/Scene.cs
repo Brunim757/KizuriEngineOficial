@@ -1,22 +1,18 @@
 
-
 namespace Kizuri;
 
 public static class Scene
 {
-	
+
 	public static Entity CreateEntity(string name = "")
 		=> new(Interop.KizuriNative.kz_scene_create_entity(name));
 
-	
-	
 	public static Entity InstantiatePrefab(string prefabPath, Math.Vector3 position = default)
 	{
 		var p = position;
 		return new(Interop.KizuriNative.kz_scene_instantiate_prefab(prefabPath, p.X, p.Y, p.Z));
 	}
 
-	
 	public static Entity InstantiatePrefab(string prefabPath, Math.Vector3 position, Math.Vector3 rotation)
 	{
 		var p = position;
@@ -24,20 +20,12 @@ public static class Scene
 		return new(Interop.KizuriNative.kz_scene_instantiate_prefab_rot(prefabPath, p.X, p.Y, p.Z, r.X, r.Y, r.Z));
 	}
 
-	
-	
 	public static void Load(string scenePath)
 		=> Interop.KizuriNative.kz_scene_request_load(scenePath);
 
-	
-	
-	
-	
 	public static void DrawInstanced(string meshSource, Math.Vector3 color, float[] transforms, int count)
 		=> Interop.KizuriNative.kz_scene_draw_instanced(meshSource, color.X, color.Y, color.Z, transforms, count);
 
-	
-	
 	public static float[] MakeTransform(float x, float y, float z, float scale = 1f)
 	{
 		return new float[]
@@ -49,16 +37,12 @@ public static class Scene
 		};
 	}
 
-	
 	public static Entity GetPrimaryCamera()
 		=> new(Interop.KizuriNative.kz_scene_get_primary_camera());
 
-	
 	public static Entity Find(string name)
 		=> new(Interop.KizuriNative.kz_scene_find_entity(name));
 
-	
-	
 	public static Entity[] EntitiesWithTag(string tag)
 	{
 		int count = Interop.KizuriNative.kz_scene_count_entities_with_tag(tag);
@@ -70,13 +54,9 @@ public static class Scene
 		return result;
 	}
 
-	
-	
 	public static Entity Duplicate(Entity entity)
 		=> new(Interop.KizuriNative.kz_scene_duplicate_entity(entity.Handle));
 
-	
-	
 	public static Entity[] All
 	{
 		get
@@ -89,8 +69,6 @@ public static class Scene
 		}
 	}
 
-	
-	
 	public static bool Raycast2D(Math.Vector2 from, Math.Vector2 to, out Entity hit, out Math.Vector2 point)
 	{
 		hit = Entity.Invalid;
@@ -104,8 +82,6 @@ public static class Scene
 		return true;
 	}
 
-	
-	
 	public static bool Raycast3D(Math.Vector3 from, Math.Vector3 to, out Entity hit, out Math.Vector3 point, out float fraction)
 	{
 		hit = Entity.Invalid;
@@ -121,8 +97,6 @@ public static class Scene
 		return true;
 	}
 
-	
-	
 	public static bool OverlapSphere3D(Math.Vector3 center, float radius, out Entity hit)
 	{
 		hit = Entity.Invalid;
@@ -133,7 +107,6 @@ public static class Scene
 		return true;
 	}
 
-	
 	public static bool OverlapBox3D(Math.Vector3 center, Math.Vector3 halfExtents, out Entity hit)
 	{
 		hit = Entity.Invalid;
@@ -145,7 +118,6 @@ public static class Scene
 		return true;
 	}
 
-	
 	public static Entity[] OverlapSphereAll3D(Math.Vector3 center, float radius)
 	{
 		int count = Interop.KizuriNative.kz_physics3d_overlap_sphere_count(center.X, center.Y, center.Z, radius);
@@ -157,8 +129,6 @@ public static class Scene
 		return result;
 	}
 
-	
-	
 	public static bool OverlapCircle2D(Math.Vector2 center, float radius, out Entity hit)
 	{
 		hit = Entity.Invalid;

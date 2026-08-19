@@ -1,7 +1,4 @@
 
-
-
-
 namespace Kizuri;
 
 [AttributeUsage(AttributeTargets.Method)]

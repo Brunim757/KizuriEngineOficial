@@ -1,13 +1,4 @@
 
-
-
-
-
-
-
-
-
-
 set -euo pipefail
 
 BIN_DIR="${1:?bin dir}"; GAME_SRC="${2:?game assets}"; OUT="${3:?output .AppImage}"
@@ -38,7 +29,6 @@ Terminal=false
 DESKTOP
 
 
-
 cat > "$APP/AppRun" <<'RUN'
 
 HERE="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
@@ -55,7 +45,6 @@ curl -fsSL -o "$RUNTIME" \
 chmod +x "$RUNTIME"
 
 echo "==> (3/4) montando o AppImage (tipo 2: runtime + squashfs)"
-
 
 command -v mksquashfs >/dev/null || { echo "ERRO: instale squashfs-tools"; exit 1; }
 mksquashfs "$APP" "$WORK/kizuri.squashfs" -root-owned -noappend

@@ -1,31 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 if(NOT DEFINED OUTPUT_FILE OR NOT DEFINED MANIFEST_FILE)
     message(FATAL_ERROR "EmbedContent.cmake requer OUTPUT_FILE e MANIFEST_FILE")
 endif()
@@ -56,8 +29,7 @@ foreach(line IN LISTS LINES)
     file(READ "${PATH}" HEX HEX)
     string(LENGTH "${HEX}" HEXLEN)
     math(EXPR FILESIZE "${HEXLEN} / 2")
-    
-    
+
     set(CHUNK_CHARS 4096)
     set(OFF 0)
     string(APPEND OUTPUT "inline const char kRes_${INDEX}[] =\n")

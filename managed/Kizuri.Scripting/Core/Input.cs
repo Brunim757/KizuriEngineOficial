@@ -1,5 +1,4 @@
 
-
 namespace Kizuri;
 
 public enum Key
@@ -27,13 +26,11 @@ public static class Input
 {
 	public static bool IsKeyPressed(Key key) => Interop.KizuriNative.kz_input_is_key_pressed((int)key) != 0;
 
-	
 	public static bool IsKeyDown(Key key) => Interop.KizuriNative.kz_input_is_key_down((int)key) != 0;
 
 	public static bool IsMouseButtonPressed(MouseButton button)
 		=> Interop.KizuriNative.kz_input_is_mouse_button_pressed((int)button) != 0;
 
-	
 	public static bool IsMouseButtonDown(MouseButton button)
 		=> Interop.KizuriNative.kz_input_is_mouse_button_down((int)button) != 0;
 
@@ -43,9 +40,6 @@ public static class Input
 		return new Math.Vector2(x, y);
 	}
 
-	
-	
-	
 	public static bool IsActionPressed(string action)
 		=> Interop.KizuriNative.kz_input_is_action_pressed(action) != 0;
 

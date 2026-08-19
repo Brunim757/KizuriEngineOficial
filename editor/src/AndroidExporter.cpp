@@ -19,7 +19,6 @@ bool DirExists(const fs::path& p) { std::error_code ec; return fs::is_directory(
 
 std::string Quote(const std::string& s) { return "\"" + s + "\""; }
 
-
 std::string FindInPath(const std::string& name) {
     const char* pathEnv = getenv("PATH");
     if (!pathEnv) return {};
@@ -36,7 +35,6 @@ std::string FindInPath(const std::string& name) {
     return {};
 }
 
-
 std::string FindBuildTools(const std::string& sdkRoot, const char* tool) {
     fs::path bt = fs::path(sdkRoot) / "build-tools";
     std::error_code ec;
@@ -47,11 +45,11 @@ std::string FindBuildTools(const std::string& sdkRoot, const char* tool) {
         if (!e.is_directory(ec)) continue;
         std::string v = e.path().filename().string();
         if (FileExists(e.path() / tool)) {
-            
+
             auto parts = [](const std::string& s) {
                 int a = 0, b = 0, c = 0;
                 sscanf(s.c_str(), "%d.%d.%d", &a, &b, &c);
-                struct { long key; } o; 
+                struct { long key; } o;
                 o.key = a * 1000000L + b * 1000L + c;
                 return o.key;
             };
@@ -74,15 +72,13 @@ void CopyRecursive(const fs::path& from, const fs::path& to) {
     }
 }
 
-
-
 void CopyDotnetRuntimePack(const fs::path& dotnetDir) {
     const char* home = getenv("HOME");
     if (!home) return;
     fs::path packs = fs::path(home) / ".nuget" / "packages" / "microsoft.netcore.app.runtime.android-arm64";
     std::error_code ec;
     if (!DirExists(packs)) return;
-    
+
     fs::path best;
     for (auto& e : fs::directory_iterator(packs, ec)) {
         if (!e.is_directory(ec)) continue;
@@ -95,7 +91,6 @@ void CopyDotnetRuntimePack(const fs::path& dotnetDir) {
     if (DirExists(libs)) CopyRecursive(libs, dotnetDir);
 }
 
-
 bool ZipAppendDir(mz_zip_archive& zip, const fs::path& base, const fs::path& dir,
                   const std::string& prefix, std::string& err) {
     std::error_code ec;
@@ -103,7 +98,7 @@ bool ZipAppendDir(mz_zip_archive& zip, const fs::path& base, const fs::path& dir
         if (e.is_directory(ec)) continue;
         auto rel = fs::relative(e.path(), base);
         std::string entry = prefix + "/" + rel.generic_string();
-        
+
         for (auto& c : entry) if (c == '\\') c = '/';
         std::ifstream in(e.path(), std::ios::binary);
         if (!in.is_open()) { err = "não foi possível ler " + e.path().string(); return false; }
@@ -119,7 +114,7 @@ bool ZipAppendDir(mz_zip_archive& zip, const fs::path& base, const fs::path& dir
     return true;
 }
 
-} 
+}
 
 namespace kizuri {
 
@@ -143,7 +138,7 @@ AndroidExporter::Tools AndroidExporter::DetectTools() {
     if (!ndk || !DirExists(ndk)) {
         const char* sdk = getenv("ANDROID_HOME");
         if (sdk && DirExists(sdk)) {
-            
+
             fs::path ndkRoot = fs::path(sdk) / "ndk";
             std::error_code ec;
             for (auto& e : fs::directory_iterator(ndkRoot, ec)) {
@@ -229,7 +224,6 @@ bool AndroidExporter::Export(const Tools& tools,
     code = std::system(publish.c_str());
     if (code != 0) { outError = "dotnet publish falhou (código " + std::to_string(code) + ")."; return false; }
 
-    
     CopyDotnetRuntimePack(dotnetDir);
     if (!FileExists(dotnetDir / "libcoreclr.so")) {
         outError = "libcoreclr.so não copiado do runtime pack (rode 'dotnet publish' uma vez p/ baixar o pack).";
@@ -237,24 +231,20 @@ bool AndroidExporter::Export(const Tools& tools,
     }
     info("[3/6] runtime CoreCLR montado (libcoreclr.so + assemblies).");
 
-    
     fs::path gameDir = apkBuild / "assets" / "game";
     if (!gameContentDir.empty() && DirExists(gameContentDir)) {
         CopyRecursive(gameContentDir, gameDir);
     }
     if (!FileExists(gameDir / "Start.kzscene")) {
-        
-        
+
         info("AVISO: Start.kzscene não encontrada em '" + gameContentDir + "' — cena vazia no APK.");
     }
 
-    
     CopyRecursive(androidBin, apkBuild / "lib" / "arm64-v8a");
 
     info("[4/6] dotnet assemblies → assets/dotnet...");
     CopyRecursive(dotnetDir, apkBuild / "assets" / "dotnet");
 
-    
     info("[5/6] aapt2 + zip + assinatura...");
     fs::path res = work / "res";
     fs::create_directories(res / "values", ec);
@@ -266,10 +256,9 @@ bool AndroidExporter::Export(const Tools& tools,
     code = std::system(compileCmd.c_str());
     if (code != 0) { outError = "aapt2 compile falhou."; return false; }
 
-    
     fs::path manifestPath = fs::path(engineRoot) / "platform" / "android" / "AndroidManifest.xml";
     if (!FileExists(manifestPath)) {
-        
+
         manifestPath = work / "AndroidManifest.xml";
         std::ofstream mf(manifestPath);
         mf << R"(<?xml version="1.0" encoding="utf-8"?>
@@ -297,7 +286,6 @@ bool AndroidExporter::Export(const Tools& tools,
     code = std::system(linkCmd.c_str());
     if (code != 0) { outError = "aapt2 link falhou (código " + std::to_string(code) + ")."; return false; }
 
-    
     mz_zip_archive zip;
     memset(&zip, 0, sizeof(zip));
     if (!mz_zip_writer_init_file(&zip, (work / "unsigned.apk").string().c_str(), 0)) {
@@ -313,13 +301,11 @@ bool AndroidExporter::Export(const Tools& tools,
     mz_zip_writer_finalize_archive(&zip);
     mz_zip_writer_end(&zip);
 
-    
     fs::path aligned = work / "aligned.apk";
     std::string zipalignCmd = Quote(tools.Zipalign) + " -f 4 " + Quote((work / "unsigned.apk").string()) + " " + Quote(aligned.string());
     code = std::system(zipalignCmd.c_str());
     if (code != 0) { outError = "zipalign falhou."; return false; }
 
-    
     fs::path finalApk = fs::path(outputDir) / (gameName + "-android-arm64.apk");
     if (tools.Java) {
         fs::path key = fs::path(outputDir) / ("kizuri-debug.keystore");
@@ -345,4 +331,4 @@ bool AndroidExporter::Export(const Tools& tools,
     return true;
 }
 
-} 
+}

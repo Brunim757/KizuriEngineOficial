@@ -7,8 +7,6 @@
 
 namespace kizuri {
 
-
-
 class SceneSerializer {
 public:
     explicit SceneSerializer(const Ref<Scene>& scene) : m_Scene(scene) {}
@@ -16,37 +14,21 @@ public:
     void Serialize(const std::string& filepath);
     bool Deserialize(const std::string& filepath);
 
-    
-    
     nlohmann::json SerializeToJson();
     bool DeserializeFromJson(const nlohmann::json& root);
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     bool BeginDeserializeStepwiseFile(const std::string& filepath);
     bool BeginDeserializeStepwise(const nlohmann::json& root);
     bool StepDeserialize(int maxEntities, float& outProgress);
     bool StepDeserializeTime(float maxSeconds, float& outProgress);
 
 private:
-    void FinishStepwise(); 
+    void FinishStepwise();
 
     Ref<Scene> m_Scene;
-    nlohmann::json m_PendingEntities;             
-    std::size_t m_PendingIndex = 0;               
-    std::unordered_map<uint64_t, uint64_t> m_ParentOf; 
+    nlohmann::json m_PendingEntities;
+    std::size_t m_PendingIndex = 0;
+    std::unordered_map<uint64_t, uint64_t> m_ParentOf;
 };
 
-} 
+}

@@ -2,7 +2,7 @@
 
 #if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
-    #define INITGUID 
+    #define INITGUID
     #include <Windows.h>
     #include <shobjidl.h>
 #endif
@@ -22,20 +22,15 @@ static std::wstring Utf8ToWide(const std::string& utf8) {
 static std::string WideToUtf8(const wchar_t* wide) {
     if (!wide || !wide[0]) return {};
     int len = WideCharToMultiByte(CP_UTF8, 0, wide, -1, nullptr, 0, nullptr, nullptr);
-    std::string out(len > 0 ? len - 1 : 0, '\0'); 
+    std::string out(len > 0 ? len - 1 : 0, '\0');
     if (len > 0) WideCharToMultiByte(CP_UTF8, 0, wide, -1, out.data(), len, nullptr, nullptr);
     return out;
 }
-
 
 static std::string RunDialog(bool save, bool pickFolder, const std::wstring& filterName,
                               const std::wstring& filterPattern, const std::wstring& defaultExt) {
     std::string result;
 
-    
-    
-    
-    
     HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     bool weInitialized = (hr == S_OK || hr == S_FALSE);
 
@@ -87,7 +82,7 @@ std::string FileDialog::SelectFolder() {
     return RunDialog(false, true, L"", L"", L"");
 }
 
-#else 
+#else
 
 std::string FileDialog::OpenFile(const std::string&, const std::string&) { return {}; }
 std::string FileDialog::SaveFile(const std::string&, const std::string&, const std::string&) { return {}; }
@@ -95,4 +90,4 @@ std::string FileDialog::SelectFolder() { return {}; }
 
 #endif
 
-} 
+}

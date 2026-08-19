@@ -10,10 +10,6 @@ struct FramebufferSpec {
     uint32_t Samples = 1;
 };
 
-
-
-
-
 class Framebuffer {
 public:
     explicit Framebuffer(const FramebufferSpec& spec);
@@ -22,9 +18,6 @@ public:
     void Bind() const;
     void Unbind() const;
 
-    
-    
-    
     void Resize(uint32_t width, uint32_t height);
 
     uint32_t GetColorAttachmentRendererID() const { return m_ColorAttachment; }
@@ -41,4 +34,4 @@ private:
     FramebufferSpec m_Spec;
 };
 
-} 
+}

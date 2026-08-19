@@ -25,7 +25,6 @@ void Framebuffer::Invalidate() {
     glGenFramebuffers(1, &m_RendererID);
     glBindFramebuffer(GL_FRAMEBUFFER, m_RendererID);
 
-    
     glGenTextures(1, &m_ColorAttachment);
     glBindTexture(GL_TEXTURE_2D, m_ColorAttachment);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, (GLsizei)m_Spec.Width, (GLsizei)m_Spec.Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
@@ -33,7 +32,6 @@ void Framebuffer::Invalidate() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_ColorAttachment, 0);
 
-    
     glGenTextures(1, &m_DepthAttachment);
     glBindTexture(GL_TEXTURE_2D, m_DepthAttachment);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, (GLsizei)m_Spec.Width, (GLsizei)m_Spec.Height, 0,
@@ -73,4 +71,4 @@ Ref<Framebuffer> Framebuffer::Create(const FramebufferSpec& spec) {
     return CreateRef<Framebuffer>(spec);
 }
 
-} 
+}

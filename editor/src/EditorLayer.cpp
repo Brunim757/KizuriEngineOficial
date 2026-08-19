@@ -1,8 +1,4 @@
 
-
-
-
-
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "EditorLayer.hpp"
 #include <glad/gl.h>
@@ -38,10 +34,6 @@
 
 using namespace kizuri;
 
-
-
-
-
 static std::string FindContentFile(const std::string& relative) {
     std::string a = "content/" + relative;
     if (std::filesystem::exists(a)) return a;
@@ -50,21 +42,10 @@ static std::string FindContentFile(const std::string& relative) {
     return "";
 }
 
-
-
-
-
-
-
-
-
 static std::string PickDemoAsset(const char* kzresName, const char* contentRelative) {
     if (HasEmbeddedResource(kzresName)) return std::string("kzres://") + kzresName;
     return FindContentFile(contentRelative);
 }
-
-
-
 
 static bool DecomposeTransform(const glm::mat4& transform, glm::vec3& outTranslation, glm::vec3& outRotation, glm::vec3& outScale) {
     glm::vec3 skew;
@@ -76,12 +57,6 @@ static bool DecomposeTransform(const glm::mat4& transform, glm::vec3& outTransla
     return true;
 }
 
-
-
-
-
-
-
 static void BeginPanelNoMenuButton() {
     ImGuiWindowClass windowClass;
     windowClass.DockNodeFlagsOverrideSet |= ImGuiDockNodeFlags_NoWindowMenuButton;
@@ -91,20 +66,13 @@ static void BeginPanelNoMenuButton() {
 EditorLayer::EditorLayer() : Layer("EditorLayer") {}
 
 EditorLayer::~EditorLayer() {
-    
-    
+
     if (m_UpdateThread.joinable()) m_UpdateThread.join();
 }
 
 void EditorLayer::OnAttach() {
     KZ_TRACE_SCOPE("EditorLayer::OnAttach");
 
-    
-    
-    
-    
-    
-    
     ImGui::SetCurrentContext(kizuri::ImGuiLayer::GetContext());
 
     FramebufferSpec fbSpec;
@@ -115,16 +83,10 @@ void EditorLayer::OnAttach() {
     m_ActiveScene = CreateRef<Scene>("Nova Cena");
     CreateDefaultSceneContent();
 
-    
     LoadRecentProjects();
 
-    
-    
     LoadGraphicsSettingsFromDisk();
 
-    
-    
-    
     m_PanelContext = std::make_unique<EditorContext>();
     m_PanelContext->Graphics = &m_GraphicsSettings;
     m_PanelContext->EditorCamFlySpeed = &m_EditorCamFlySpeed;
@@ -145,15 +107,12 @@ void EditorLayer::OnAttach() {
     makePanel(std::make_unique<AnimatorPanel>(*m_PanelContext));
     makePanel(std::make_unique<ProjectSettingsPanel>(*m_PanelContext));
 
-    
-    m_Panels[0]->SetVisible(true);  
-    m_Panels[1]->SetVisible(true);  
+    m_Panels[0]->SetVisible(true);
+    m_Panels[1]->SetVisible(true);
 }
 
 void EditorLayer::AutoSwitchViewportMode() {
-    
-    
-    
+
     m_TilePainting = false;
     if (m_SceneState != SceneState::Edit || !m_SelectedEntity) return;
 
@@ -180,11 +139,6 @@ void EditorLayer::AutoSwitchViewportMode() {
 void EditorLayer::CreateDefaultSceneContent() {
     KZ_TRACE_SCOPE("EditorLayer::CreateDefaultSceneContent");
 
-    
-    
-    
-    
-    
     ProjectMode mode = ProjectMode::ThreeD;
     auto& project = Project::GetActive();
     if (project) mode = project->GetConfig().DefaultMode;
@@ -198,7 +152,6 @@ void EditorLayer::CreateDefaultSceneContent() {
         cc.OrthoSize = 10.0f;
         camera.GetComponent<TransformComponent>().Translation = { 0.0f, 0.0f, 0.0f };
 
-        
         Entity ground = m_ActiveScene->CreateEntity("Chão");
         auto& gs = ground.AddComponent<SpriteRendererComponent>();
         gs.Color = { 0.16f, 0.17f, 0.2f, 1.0f };
@@ -208,7 +161,6 @@ void EditorLayer::CreateDefaultSceneContent() {
         ground.AddComponent<Rigidbody2DComponent>().Type = Rigidbody2DComponent::BodyType::Static;
         ground.AddComponent<BoxCollider2DComponent>().Size = { 12.0f, 1.0f };
 
-        
         Entity box = m_ActiveScene->CreateEntity("Caixa");
         auto& bs = box.AddComponent<SpriteRendererComponent>();
         bs.Color = { 0.85f, 0.25f, 0.3f, 1.0f };
@@ -224,7 +176,7 @@ void EditorLayer::CreateDefaultSceneContent() {
         cc.Type = CameraComponent::ProjectionType::Perspective3D;
         auto& camTransform = camera.GetComponent<TransformComponent>();
         camTransform.Translation = { 0.0f, 2.0f, 6.0f };
-        camTransform.Rotation = { glm::radians(-15.0f), 0.0f, 0.0f }; 
+        camTransform.Rotation = { glm::radians(-15.0f), 0.0f, 0.0f };
 
         Entity cube = m_ActiveScene->CreateEntity("Cubo de Exemplo");
         auto& mr = cube.AddComponent<MeshRendererComponent>();
@@ -237,11 +189,6 @@ void EditorLayer::CreateDefaultSceneContent() {
         m_SelectedEntity = cube;
     }
 }
-
-
-
-
-
 
 void EditorLayer::CreateDemoScene3D() {
     if (m_SceneState != SceneState::Edit) return;
@@ -280,8 +227,6 @@ void EditorLayer::CreateDemoScene3D() {
     gm.MeshMaterial.Roughness = 0.9f;
     ground.GetComponent<TransformComponent>().Scale = { 12.0f, 1.0f, 12.0f };
 
-    
-    
     Entity mirrorFloor = m_ActiveScene->CreateEntity("Piso Espelhado");
     auto& mm = mirrorFloor.AddComponent<MeshRendererComponent>();
     mm.MeshSource = "builtin:plane";
@@ -293,10 +238,6 @@ void EditorLayer::CreateDemoScene3D() {
     mt.Translation = { 0.0f, 0.012f, 0.0f };
     mt.Scale = { 6.0f, 1.0f, 6.0f };
 
-    
-    
-    
-    
     Renderer3D::SetEnvironmentHDRIPath("");
     std::string hdri = FindContentFile("skies/qwantani_puresky_1k.hdr");
     if (!hdri.empty()) {
@@ -307,8 +248,6 @@ void EditorLayer::CreateDemoScene3D() {
         KZ_CORE_INFO("Demo 3D: céu EMBUTIDO (kzres://skies/sky_gradient.hdr).");
     }
 
-    
-    
     Entity embeddedCube = m_ActiveScene->CreateEntity("Cubo Embutido (kzres)");
     auto& ecm = embeddedCube.AddComponent<MeshRendererComponent>();
     ecm.MeshSource = "kzres://models/Cube.glb";
@@ -317,9 +256,6 @@ void EditorLayer::CreateDemoScene3D() {
     ecm.MeshMaterial.Roughness = 0.4f;
     embeddedCube.GetComponent<TransformComponent>().Translation = { -2.6f, 0.5f, 1.6f };
 
-    
-    
-    
     std::string foxPath = PickDemoAsset("models/Fox.glb", "models/Fox.glb");
     if (!foxPath.empty()) {
         Entity fox = m_ActiveScene->CreateEntity("Fox (animado)");
@@ -338,7 +274,6 @@ void EditorLayer::CreateDemoScene3D() {
                      foxPath, fa.Skin ? fa.Skin->Joints.size() : 0, fa.Skin ? fa.Skin->Clips.size() : 0);
     }
 
-    
     std::string helmetPath = PickDemoAsset("models/DamagedHelmet.glb", "models/DamagedHelmet.glb");
     if (!helmetPath.empty()) {
         Entity pedestal = m_ActiveScene->CreateEntity("Pedestal");
@@ -361,7 +296,6 @@ void EditorLayer::CreateDemoScene3D() {
         ht.Scale = { 1.4f, 1.4f, 1.4f };
     }
 
-    
     Entity torus = m_ActiveScene->CreateEntity("Torus Metálico");
     auto& tm = torus.AddComponent<MeshRendererComponent>();
     tm.MeshSource = "builtin:torus";
@@ -379,10 +313,9 @@ void EditorLayer::CreateDemoScene3D() {
     nm.MeshAsset = Mesh::FromSource(nm.MeshSource);
     nm.MeshMaterial.Albedo = { 0.02f, 0.02f, 0.05f };
     nm.MeshMaterial.Emissive = { 0.1f, 0.6f, 1.0f };
-    nm.MeshMaterial.EmissiveStrength = 6.0f; 
+    nm.MeshMaterial.EmissiveStrength = 6.0f;
     neon.GetComponent<TransformComponent>().Translation = { -2.6f, 0.8f, -1.5f };
 
-    
     auto settings = Renderer3D::GetGraphicsSettings();
     settings.FogEnabled = true;
     settings.FogDensity = 0.02f;
@@ -395,13 +328,6 @@ void EditorLayer::CreateDemoScene3D() {
     m_SelectedEntity = sun;
     KZ_CORE_INFO("Cena de demonstração 3D criada.");
 }
-
-
-
-
-
-
-
 
 class DemoPlayerMove : public NativeScript {
 public:
@@ -422,7 +348,6 @@ public:
     }
 };
 
-
 class DemoEnemyScript : public NativeScript {
 public:
     void OnEnemyAttack(float amount) override {
@@ -438,13 +363,11 @@ void EditorLayer::CreateDemoSceneAI() {
     m_SelectedEntity = {};
     m_ViewportMode = ViewportMode::Mode3D;
 
-    
     ScriptEngine::GetRegistry().Register<DemoPlayerMove>("DemoPlayerMove");
     ScriptEngine::GetRegistry().Register<DemoEnemyScript>("DemoEnemyScript");
 
     auto& scene = m_ActiveScene;
 
-    
     Entity camera = scene->CreateEntity("Câmera Principal");
     auto& cc = camera.AddComponent<CameraComponent>();
     cc.Type = CameraComponent::ProjectionType::Perspective3D;
@@ -466,7 +389,6 @@ void EditorLayer::CreateDemoSceneAI() {
     sl.Intensity = 1.8f;
     sun.GetComponent<TransformComponent>().Rotation = { glm::radians(55.0f), glm::radians(30.0f), 0.0f };
 
-    
     Entity ground = scene->CreateEntity("Chão");
     auto& gm = ground.AddComponent<MeshRendererComponent>();
     gm.MeshSource = "builtin:plane";
@@ -475,7 +397,6 @@ void EditorLayer::CreateDemoSceneAI() {
     gm.MeshMaterial.Roughness = 0.9f;
     ground.GetComponent<TransformComponent>().Scale = { 30.0f, 1.0f, 30.0f };
 
-    
     Entity navGrid = scene->CreateEntity("NavGrade");
     auto& ng = navGrid.AddComponent<NavGridComponent>();
     ng.Origin = { -25.0f, 0.0f, -25.0f };
@@ -483,7 +404,6 @@ void EditorLayer::CreateDemoSceneAI() {
     ng.Depth = 50;
     ng.CellSize = 1.0f;
 
-    
     const glm::vec3 obstaclePos[6] = {
         { -6.0f, 0.0f, -4.0f }, { 5.0f, 0.0f, -6.0f }, { 0.0f, 0.0f, 3.0f },
         { -8.0f, 0.0f, 6.0f },  { 7.0f, 0.0f, 5.0f },  { -2.0f, 0.0f, -9.0f },
@@ -498,10 +418,9 @@ void EditorLayer::CreateDemoSceneAI() {
         auto& ot = ob.GetComponent<TransformComponent>();
         ot.Translation = obstaclePos[i];
         ot.Scale = { 2.0f, 2.5f, 2.0f };
-        ob.AddComponent<NavObstacleComponent>(); 
+        ob.AddComponent<NavObstacleComponent>();
     }
 
-    
     Entity player = scene->CreateEntity("Jogador");
     auto& pm = player.AddComponent<MeshRendererComponent>();
     pm.MeshSource = "builtin:cube";
@@ -514,7 +433,6 @@ void EditorLayer::CreateDemoSceneAI() {
     auto& pns = player.AddComponent<NativeScriptComponent>();
     pns.BindByName("DemoPlayerMove");
 
-    
     const glm::vec3 enemyPos[3] = { { 8.0f, 0.5f, 8.0f }, { -9.0f, 0.5f, -8.0f }, { 9.0f, 0.5f, -8.0f } };
     const glm::vec3 patrolPoints[3][3] = {
         { { 10.0f, 0.5f, 8.0f }, { -6.0f, 0.5f, 8.0f }, { 10.0f, 0.5f, -6.0f } },
@@ -550,7 +468,6 @@ void EditorLayer::CreateDemoSceneAI() {
         ens.BindByName("DemoEnemyScript");
     }
 
-    
     Entity label = scene->CreateEntity("Instruções");
     auto& lt = label.AddComponent<TextComponent>();
     lt.Text = "Demo IA — WASD pra fugir dos inimigos (Eles patrulham, perseguem e atacam)";
@@ -564,15 +481,6 @@ void EditorLayer::CreateDemoSceneAI() {
     m_SelectedEntity = player;
     KZ_CORE_INFO("Cena de demonstração IA criada (NavGrid + NavAgent + EnemyAI).");
 }
-
-
-
-
-
-
-
-
-
 
 class DemoNetCube : public NativeScript {
 public:
@@ -589,21 +497,19 @@ public:
     void OnUpdate(Timestep ts) override {
         auto& tc = GetComponent<TransformComponent>();
 
-        
         kizuri::net::Event ev;
         while (kizuri::Network::PollEvent(ev)) {
             if (ev.Type == kizuri::net::EventType::Connect)
                 KZ_CORE_INFO("Rede: jogador {0} conectou!", ev.Peer);
             else if (ev.Type == kizuri::net::EventType::Data && ev.Data.size() >= kizuri::net::kNetTransformSize) {
                 kizuri::net::NetTransform t = kizuri::net::ReadNetTransform(ev.Data.data());
-                if (!m_Host) { 
+                if (!m_Host) {
                     tc.Translation = { t.X, t.Y, t.Z };
                     tc.Rotation.y = t.Yaw;
                 }
             }
         }
 
-        
         if (m_Host) {
             const float speed = 4.0f;
             glm::vec2 input{ 0.0f };
@@ -701,8 +607,6 @@ void EditorLayer::CreateDemoSceneNet() {
     KZ_CORE_INFO("Cena de demonstração Rede criada (host/cliente na porta 26000).");
 }
 
-
-
 class DemoCoinScript : public NativeScript {
 public:
     static int s_Score;
@@ -773,7 +677,6 @@ void EditorLayer::CreateDemoSceneGame() {
     gm.MeshMaterial.Roughness = 0.9f;
     ground.GetComponent<TransformComponent>().Scale = { 22.0f, 1.0f, 22.0f };
 
-    
     Entity player = scene->CreateEntity("Jogador");
     auto& pm = player.AddComponent<MeshRendererComponent>();
     pm.MeshSource = "builtin:cube";
@@ -783,7 +686,6 @@ void EditorLayer::CreateDemoSceneGame() {
     player.GetComponent<TransformComponent>().Translation = { 0.0f, 0.5f, 6.0f };
     player.AddComponent<NativeScriptComponent>().BindByName("DemoPlayerMove");
 
-    
     const glm::vec3 coinPos[8] = {
         { -6.0f, 0.5f, -6.0f }, { 6.0f, 0.5f, -6.0f }, { 6.0f, 0.5f, 6.0f }, { -6.0f, 0.5f, 6.0f },
         { 0.0f, 0.5f, -8.0f },  { 8.0f, 0.5f, 0.0f },  { 0.0f, 0.5f, 8.0f },  { -8.0f, 0.5f, 0.0f },
@@ -802,7 +704,6 @@ void EditorLayer::CreateDemoSceneGame() {
         coin.AddComponent<NativeScriptComponent>().BindByName("DemoCoinScript");
     }
 
-    
     const glm::vec3 enePos[2] = { { -4.0f, 0.5f, 4.0f }, { 4.0f, 0.5f, -4.0f } };
     const glm::vec3 patl[2][2] = {
         { { -6.0f, 0.5f, 6.0f }, { -2.0f, 0.5f, 2.0f } },
@@ -833,7 +734,6 @@ void EditorLayer::CreateDemoSceneGame() {
         enemy.AddComponent<NativeScriptComponent>().BindByName("DemoEnemyScript");
     }
 
-    
     Entity placar = scene->CreateEntity("Placar");
     auto& ptxt = placar.AddComponent<TextComponent>();
     ptxt.Text = "Pontos: 0 / 8  ·  WASD pra coletar as moedas";
@@ -855,17 +755,13 @@ void EditorLayer::CreateDemoSceneGame() {
     KZ_CORE_INFO("Demo completa criada — colete 8 moedas fugindo dos inimigos.");
 }
 
-
-
-
 void EditorLayer::CreateDemoScene2D() {
     if (m_SceneState != SceneState::Edit) return;
     m_ActiveScene = CreateRef<Scene>("Demonstração 2D");
     m_ScenePath.clear();
     m_SelectedEntity = {};
     m_ViewportMode = ViewportMode::Mode2D;
-    
-    
+
     m_Editor2DZoom = 10.0f;
     m_Editor2DCamPos = { 0.0f, 0.0f };
     m_Editor2DFirstMouseLook = true;
@@ -876,8 +772,6 @@ void EditorLayer::CreateDemoScene2D() {
     cc.Primary = true;
     cc.OrthoSize = 10.0f;
 
-    
-    
     Entity bg = m_ActiveScene->CreateEntity("Fundo");
     auto& bs = bg.AddComponent<SpriteRendererComponent>();
     bs.Color = { 0.10f, 0.11f, 0.14f, 1.0f };
@@ -896,7 +790,6 @@ void EditorLayer::CreateDemoScene2D() {
     auto& gcol = ground.AddComponent<BoxCollider2DComponent>();
     gcol.Size = { 20.0f, 1.0f };
 
-    
     for (int i = 0; i < 5; ++i) {
         Entity box = m_ActiveScene->CreateEntity("Caixa " + std::to_string(i + 1));
         auto& bxs = box.AddComponent<SpriteRendererComponent>();
@@ -910,7 +803,6 @@ void EditorLayer::CreateDemoScene2D() {
         bxc.Size = { 1.0f, 1.0f };
     }
 
-    
     for (int i = 0; i < 6; ++i) {
         Entity coin = m_ActiveScene->CreateEntity("Moeda " + std::to_string(i + 1));
         auto& cs = coin.AddComponent<CircleRendererComponent>();
@@ -927,7 +819,6 @@ void EditorLayer::CreateDemoScene2D() {
     tc.SortingLayer = 5;
     title.GetComponent<TransformComponent>().Translation = { -8.0f, 8.4f, 0.0f };
 
-    
     Entity canvas = m_ActiveScene->CreateEntity("Canvas");
     canvas.AddComponent<UICanvasComponent>();
     Entity button = m_ActiveScene->CreateEntity("Botão");
@@ -938,7 +829,7 @@ void EditorLayer::CreateDemoScene2D() {
     button.AddComponent<UIButtonComponent>();
     auto& btext = button.AddComponent<TextComponent>();
     btext.Text = "Kizuri 2D!";
-    btext.FontSize = 14.0f; 
+    btext.FontSize = 14.0f;
     btext.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
     button.SetParent(canvas);
 
@@ -946,8 +837,7 @@ void EditorLayer::CreateDemoScene2D() {
 }
 
 void EditorLayer::OnDetach() {
-    
-    
+
     if (m_PlayBuildActive || m_PlayBuildThread.joinable()) {
         m_PlayBuildCancelled = true;
         if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join();
@@ -957,20 +847,16 @@ void EditorLayer::OnDetach() {
 void EditorLayer::OnUpdate(Timestep ts) {
     KZ_CORE_TRACE("EditorLayer::OnUpdate — início (viewport {0}x{1})", m_ViewportSize.x, m_ViewportSize.y);
 
-    
-    
     if (m_UpdateCheckOnStartup && !m_UpdateStartupCheckDone) {
         m_UpdateStartupCheckDone = true;
         StartUpdateCheck();
     }
 
-    
     if ((float)ts > 0.0f) {
         float inst = 1.0f / (float)ts;
         m_FpsSmoothed = m_FpsSmoothed > 0.0f ? m_FpsSmoothed * 0.95f + inst * 0.05f : inst;
     }
 
-    
     if (m_PanelContext) {
         m_PanelContext->ActiveScene = m_ActiveScene;
         m_PanelContext->EditorScene = m_EditorScene;
@@ -983,9 +869,6 @@ void EditorLayer::OnUpdate(Timestep ts) {
         m_PanelContext->ViewportHovered = m_ViewportHovered;
     }
 
-    
-    
-    
     if (m_SceneLoading) {
         float progress = m_PendingLoadProgress;
         bool done = false;
@@ -1003,8 +886,7 @@ void EditorLayer::OnUpdate(Timestep ts) {
             m_PendingLoader.reset();
             m_PendingScene.reset();
             KZ_CORE_INFO("Cena carregada com sucesso: {0}", m_ScenePath);
-            
-            
+
             if (m_SceneState == SceneState::Play) {
                 m_ActiveScene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
                 m_ActiveScene->OnRuntimeStart();
@@ -1013,15 +895,10 @@ void EditorLayer::OnUpdate(Timestep ts) {
             m_PendingLoadProgress = progress;
         }
 
-        
-        
-        
         if (m_EditorState == EditorState::Loading) m_LoadingElapsed += (float)ts;
-        return; 
+        return;
     }
 
-    
-    
     if (m_PlayBuildActive) {
         if (m_PlayBuildDone && !m_PlayBuildCancelled) {
             if (m_PlayBuildOk) {
@@ -1031,31 +908,23 @@ void EditorLayer::OnUpdate(Timestep ts) {
             } else {
                 KZ_CORE_ERROR("Play cancelado — falha ao compilar o jogo:\n{0}", m_PlayBuildError);
             }
-            
-            
-            
-            
+
             if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join();
             m_PlayBuildActive = false;
             if (m_PlayBuildOk) StartPlayInternal();
         } else if (m_PlayBuildDone && m_PlayBuildCancelled) {
             m_PlayBuildActive = false;
-            if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join(); 
+            if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join();
         }
-        return; 
+        return;
     }
 
-    
-    
-    
     if (m_EditorState == EditorState::Loading) {
         m_LoadingElapsed += (float)ts;
         if (m_LoadingElapsed >= kHubLoadingMinSeconds)
             m_EditorState = EditorState::Editor;
     }
 
-    
-    
     if (m_EditorState != EditorState::Editor) {
         Application& app = Application::Get();
         auto& window = app.GetWindow();
@@ -1078,9 +947,7 @@ void EditorLayer::OnUpdate(Timestep ts) {
     RenderCommand::Clear();
 
     if (m_SceneState == SceneState::Play) {
-        
-        
-        
+
         glm::vec2 vpSize = m_ViewportBounds[1] - m_ViewportBounds[0];
         auto [mx, my] = Input::GetMousePosition();
         glm::vec2 ndc{ 0.0f, 0.0f };
@@ -1090,11 +957,6 @@ void EditorLayer::OnUpdate(Timestep ts) {
         }
         m_ActiveScene->SetUIMouseNDC(ndc, Input::IsMouseButtonPressed(Mouse::Left));
 
-        
-        
-        
-        
-        
         m_ActiveScene->OnUpdateRuntimeLogic(ts);
         if (m_PlayUsesGameCamera && m_ActiveScene->HasPrimaryCamera()) {
             m_ActiveScene->RenderRuntimeView();
@@ -1108,9 +970,7 @@ void EditorLayer::OnUpdate(Timestep ts) {
         if (m_ActiveScene->PollPendingLoad(nextScene)) {
             m_ActiveScene->OnRuntimeStop();
             AudioEngine::StopAll();
-            
-            
-            
+
             auto loaded = CreateRef<Scene>("Cena");
             auto loader = std::make_unique<SceneSerializer>(loaded);
             if (!loader->BeginDeserializeStepwiseFile(Project::ResolvePath(nextScene))) {
@@ -1129,14 +989,12 @@ void EditorLayer::OnUpdate(Timestep ts) {
         KZ_CORE_TRACE("EditorLayer::OnUpdate — chamando OnUpdateEditor3D");
         m_ActiveScene->OnUpdateEditor3D(ts, m_EditorCamera);
 
-        
-        
         if (m_TerrainSculpting && m_ViewportHovered && m_SelectedEntity &&
             m_SelectedEntity.HasComponent<TerrainComponent>() &&
             Input::IsMouseButtonPressed(Mouse::Left)) {
             auto& terr = m_SelectedEntity.GetComponent<TerrainComponent>();
             if (terr.Heightmap.size() < (size_t)(terr.Segments + 1) * (terr.Segments + 1)) {
-                
+
                 terr.Regenerate();
                 const auto& verts = terr.GeneratedMesh ? terr.GeneratedMesh->GetVertices() : std::vector<Vertex3D>{};
                 terr.Heightmap.resize((size_t)(terr.Segments + 1) * (terr.Segments + 1), 0.0f);
@@ -1144,7 +1002,6 @@ void EditorLayer::OnUpdate(Timestep ts) {
                     terr.Heightmap[k] = verts[k].Position.y;
             }
 
-            
             glm::vec2 mouse{ Input::GetMouseX(), Input::GetMouseY() };
             glm::vec2 local = mouse - m_ViewportBounds[0];
             glm::vec2 size = m_ViewportBounds[1] - m_ViewportBounds[0];
@@ -1157,7 +1014,6 @@ void EditorLayer::OnUpdate(Timestep ts) {
                 glm::vec3 rayOrigin = glm::vec3(nearP);
                 glm::vec3 rayDir = glm::normalize(glm::vec3(farP - nearP));
 
-                
                 glm::vec3 terrPos = glm::vec3(m_ActiveScene->GetWorldTransform(m_SelectedEntity)[3]);
                 float planeY = terrPos.y + terr.HeightScale * 0.5f;
                 if (std::abs(rayDir.y) > 1e-5f) {
@@ -1202,10 +1058,6 @@ void EditorLayer::OnUpdate(Timestep ts) {
     m_Framebuffer->Unbind();
     KZ_CORE_TRACE("EditorLayer::OnUpdate — framebuffer desvinculado, fim");
 
-    
-    
-    
-    
     KZ_CORE_TRACE("EditorLayer::OnUpdate — buscando Application::Get()");
     Application& app = Application::Get();
     KZ_CORE_TRACE("EditorLayer::OnUpdate — Application::Get() ok, buscando janela");
@@ -1217,16 +1069,11 @@ void EditorLayer::OnUpdate(Timestep ts) {
     RenderCommand::SetViewport(0, 0, w, h);
     KZ_CORE_TRACE("EditorLayer::OnUpdate — SetViewport ok, retornando");
 
-    
-    
     if (m_PanelContext) {
         for (auto& panel : m_Panels)
             if (panel->IsVisible()) panel->OnUpdate(ts);
     }
 
-    
-    
-    
     if (m_SceneState == SceneState::Edit) {
         auto& dropped = Application::Get().GetWindow().GetDroppedFiles();
         if (!dropped.empty()) {
@@ -1241,8 +1088,6 @@ void EditorLayer::OnUpdate(Timestep ts) {
         }
     }
 }
-
-
 
 glm::vec3 EditorLayer::MouseDropWorldPos() const {
     glm::vec2 mouse{ ImGui::GetMousePos().x, ImGui::GetMousePos().y };
@@ -1277,9 +1122,6 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
     auto [mx, my] = Input::GetMousePosition();
     glm::vec2 mousePos{ mx, my };
 
-    
-    
-    
     glm::vec3 forward{
         cos(glm::radians(m_EditorCamYaw)) * cos(glm::radians(m_EditorCamPitch)),
         sin(glm::radians(m_EditorCamPitch)),
@@ -1312,9 +1154,7 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
                (Input::IsMouseButtonPressed(Mouse::Left) ||
                 Input::IsMouseButtonPressed(Mouse::Right) ||
                 Input::IsMouseButtonPressed(Mouse::Middle))) {
-        
-        
-        
+
         if (m_FirstMouseLook) {
             m_LastMousePos = mousePos;
             m_FirstMouseLook = false;
@@ -1327,13 +1167,11 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
             target = glm::vec3(world[3]);
             m_EditorOrbitTarget = target;
         } else if (m_EditorOrbitDist < 0.0f) {
-            
+
             m_EditorOrbitTarget = m_EditorCamPos + forward * glm::length(m_EditorCamPos);
             m_EditorOrbitDist = glm::length(m_EditorCamPos - m_EditorOrbitTarget);
         }
 
-        
-        
         glm::vec3 toCam = m_EditorCamPos - m_EditorOrbitTarget;
         float dist = std::max(glm::length(toCam), 0.5f);
 
@@ -1349,23 +1187,18 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
         m_EditorCamPos = m_EditorOrbitTarget - fwd * dist;
         m_EditorOrbitDist = dist;
 
-        
         if (ImGui::GetIO().MouseWheel != 0.0f) {
             float k = 1.0f - ImGui::GetIO().MouseWheel * 0.12f;
             m_EditorOrbitDist = std::max(0.5f, m_EditorOrbitDist * k);
             m_EditorCamPos = m_EditorOrbitTarget - fwd * m_EditorOrbitDist;
         }
     } else {
-        
-        
+
         m_FirstMouseLook = true;
     }
 
     m_LastMousePos = mousePos;
 
-    
-    
-    
     if (m_ViewportHovered && !flying) {
         float scroll = ImGui::GetIO().MouseWheel;
         if (scroll != 0.0f) {
@@ -1375,17 +1208,16 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
     }
 
     m_EditorCamera.SetPosition(m_EditorCamPos);
-    
-    
+
     if (m_ViewportMode == ViewportMode::Mode3D && m_ViewportHovered &&
         !Input::IsMouseButtonPressed(Mouse::Right) &&
         !Input::IsKeyPressed(Key::LeftAlt) && !ImGui::GetIO().WantTextInput) {
         if (Input::IsKeyPressed(Key::D1)) {
-            m_EditorCamYaw = -90.0f; m_EditorCamPitch = -10.0f; 
+            m_EditorCamYaw = -90.0f; m_EditorCamPitch = -10.0f;
         } else if (Input::IsKeyPressed(Key::D3)) {
-            m_EditorCamYaw = 0.0f;   m_EditorCamPitch = 0.0f;   
+            m_EditorCamYaw = 0.0f;   m_EditorCamPitch = 0.0f;
         } else if (Input::IsKeyPressed(Key::D7)) {
-            m_EditorCamPitch = -89.5f;                          
+            m_EditorCamPitch = -89.5f;
         }
     }
 
@@ -1394,12 +1226,7 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
 
 void EditorLayer::UpdateEditor2DCamera(Timestep ts) {
     KZ_TRACE_SCOPE("EditorLayer::UpdateEditor2DCamera");
-    
-    
-    
-    
-    
-    
+
     bool erasingTilemap = m_SceneState == SceneState::Edit && m_ViewportMode == ViewportMode::Mode2D &&
         m_SelectedEntity && m_SelectedEntity.HasComponent<TilemapComponent>() &&
         Input::IsMouseButtonPressed(Mouse::Right);
@@ -1415,12 +1242,9 @@ void EditorLayer::UpdateEditor2DCamera(Timestep ts) {
         }
         glm::vec2 delta = mousePos - m_Editor2DLastMousePos;
 
-        
-        
-        
         float worldPerPixel = (m_Editor2DZoom * 2.0f) / std::max(m_ViewportSize.y, 1.0f);
         m_Editor2DCamPos.x -= delta.x * worldPerPixel;
-        m_Editor2DCamPos.y += delta.y * worldPerPixel; 
+        m_Editor2DCamPos.y += delta.y * worldPerPixel;
     } else {
         m_Editor2DFirstMouseLook = true;
     }
@@ -1442,7 +1266,6 @@ void EditorLayer::UpdateEditor2DCamera(Timestep ts) {
 
 namespace {
 
-
 bool ToolbarIconButton(kizuri::editor::icons::IconFn icon, const char* id,
                        const ImVec2& size, ImU32 color) {
     ImGui::PushID(id);
@@ -1455,7 +1278,7 @@ bool ToolbarIconButton(kizuri::editor::icons::IconFn icon, const char* id,
     ImGui::PopID();
     return pressed;
 }
-} 
+}
 
 void EditorLayer::DrawViewportToolbar() {
     KZ_TRACE_SCOPE("EditorLayer::DrawViewportToolbar");
@@ -1466,7 +1289,6 @@ void EditorLayer::DrawViewportToolbar() {
 
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
 
-    
     const kizuri::editor::icons::IconFn gizmoIcons[3] =
         { kizuri::editor::icons::Move, kizuri::editor::icons::Rotate, kizuri::editor::icons::Scale };
     const ImGuizmo::OPERATION gizmoOps[3] =
@@ -1486,8 +1308,6 @@ void EditorLayer::DrawViewportToolbar() {
 
     ImGui::SameLine(0.0f, 16.0f);
 
-    
-    
     bool is2D = m_ViewportMode == ViewportMode::Mode2D;
     bool is3D = m_ViewportMode == ViewportMode::Mode3D;
 
@@ -1501,9 +1321,6 @@ void EditorLayer::DrawViewportToolbar() {
     if (ImGui::Button("3D", ImVec2(36.0f, 30.0f))) m_ViewportMode = ViewportMode::Mode3D;
     ImGui::PopStyleColor(2);
 
-    
-    
-    
     bool isPlaying = m_SceneState == SceneState::Play;
     ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 84.0f);
     ImGui::PushStyleColor(ImGuiCol_Button, isPlaying ? accent : inactive);
@@ -1517,8 +1334,6 @@ void EditorLayer::DrawViewportToolbar() {
         ImGui::SetTooltip(isPlaying ? "Parar o Play e voltar pra cena de edição (Shift+F5)"
                                     : "Testar a cena — física, scripts, partículas e áudio (F5)");
 
-    
-    
     ImGui::SameLine(0.0f, 4.0f);
     ImGui::PushStyleColor(ImGuiCol_Button, m_ViewportMaximized ? accent : inactive);
     if (ToolbarIconButton(kizuri::editor::icons::Maximize, "##viewport_maximize", ImVec2(34.0f, 30.0f),
@@ -1529,7 +1344,6 @@ void EditorLayer::DrawViewportToolbar() {
         ImGui::SetTooltip(m_ViewportMaximized ? "Sair do fullscreen (mostra os painéis)"
                                               : "Fullscreen do viewport (F11)");
 
-    
     bool f11Down = kizuri::Input::IsKeyPressed(kizuri::Key::F11);
     bool f11JustPressed = f11Down && !m_PrevF11KeyDown;
     m_PrevF11KeyDown = f11Down;
@@ -1538,14 +1352,10 @@ void EditorLayer::DrawViewportToolbar() {
 
     ImGui::PopStyleVar();
 
-    
     ImGui::TextDisabled("%s", is2D
         ? "Botão direito arrasta para navegar; scroll aplica zoom"
         : "Navegue com botão direito + WASD; Q/E sobe e desce; W/E/R troca a ferramenta do gizmo");
 }
-
-
-
 
 static bool ProjectToViewport(const glm::mat4& viewProj, const glm::vec3& worldPos,
                                const glm::vec2& viewportPos, const glm::vec2& viewportSize, ImVec2& outScreen) {
@@ -1556,10 +1366,6 @@ static bool ProjectToViewport(const glm::mat4& viewProj, const glm::vec3& worldP
                         viewportPos.y + (1.0f - (ndc.y * 0.5f + 0.5f)) * viewportSize.y);
     return true;
 }
-
-
-
-
 
 static bool AcceptAssetDrop(std::string& outPath) {
     if (!ImGui::BeginDragDropTarget()) return false;
@@ -1575,10 +1381,6 @@ static bool AcceptAssetDrop(std::string& outPath) {
     return accepted;
 }
 
-
-
-
-
 static bool FileBrowseButton(const char* filterName, const char* filterPattern, std::string& outPath) {
     ImGui::SameLine();
     if (ImGui::Button("...")) {
@@ -1591,26 +1393,17 @@ static bool FileBrowseButton(const char* filterName, const char* filterPattern, 
     return false;
 }
 
-
-
-
-
-
 void EditorLayer::DrawCameraGizmo() {
     if (!m_SelectedEntity || !m_SelectedEntity.HasComponent<CameraComponent>()) return;
-    if (m_ViewportMode != ViewportMode::Mode3D) return; 
+    if (m_ViewportMode != ViewportMode::Mode3D) return;
 
     auto& cc = m_SelectedEntity.GetComponent<CameraComponent>();
     glm::mat4 world = m_ActiveScene->GetWorldTransform(m_SelectedEntity);
     glm::vec3 pos = glm::vec3(world[3]);
 
-    
-    
-    
-    
     glm::vec3 forward = glm::normalize(glm::mat3(world) * glm::vec3(0.0f, 0.0f, -1.0f));
     glm::vec3 worldUp = glm::normalize(glm::mat3(world) * glm::vec3(0.0f, 1.0f, 0.0f));
-    
+
     glm::vec3 right = glm::normalize(glm::cross(forward, worldUp));
     glm::vec3 up = glm::cross(right, forward);
 
@@ -1634,17 +1427,14 @@ void EditorLayer::DrawCameraGizmo() {
     bool ok = ProjectToViewport(viewProj, pos, vpPos, vpSize, screenApex);
     for (int i = 0; i < 4; ++i) ok &= ProjectToViewport(viewProj, corners[i], vpPos, vpSize, screenCorners[i]);
     ok &= ProjectToViewport(viewProj, pos + forward * (gizmoDist * 0.4f), vpPos, vpSize, screenForwardTip);
-    if (!ok) return; 
+    if (!ok) return;
 
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    const ImU32 color = IM_COL32(255, 205, 60, 255); 
+    const ImU32 color = IM_COL32(255, 205, 60, 255);
     for (int i = 0; i < 4; ++i) dl->AddLine(screenApex, screenCorners[i], color, 1.5f);
     for (int i = 0; i < 4; ++i) dl->AddLine(screenCorners[i], screenCorners[(i + 1) % 4], color, 1.5f);
     dl->AddLine(screenApex, screenForwardTip, IM_COL32(255, 255, 255, 220), 2.5f);
 }
-
-
-
 
 void EditorLayer::DrawLightGizmo() {
     if (!m_SelectedEntity || !m_SelectedEntity.HasComponent<LightComponent>()) return;
@@ -1659,7 +1449,6 @@ void EditorLayer::DrawLightGizmo() {
     ImVec2 screen;
     if (!ProjectToViewport(viewProj, pos, vpPos, vpSize, screen)) return;
 
-    
     glm::vec3 euler, t, s;
     DecomposeTransform(world, t, euler, s);
     glm::vec3 forward = glm::normalize(glm::vec3(
@@ -1674,7 +1463,7 @@ void EditorLayer::DrawLightGizmo() {
     bool hasTip = ProjectToViewport(viewProj, pos + forward * 1.2f, vpPos, vpSize, tip);
 
     if (lc.Type == LightType::Point) {
-        
+
         for (int i = 0; i < 4; ++i) {
             float a = glm::radians(45.0f + i * 90.0f);
             ImVec2 d(cosf(a), sinf(a));
@@ -1682,7 +1471,7 @@ void EditorLayer::DrawLightGizmo() {
                         ImVec2(screen.x + d.x * (r + 8.0f), screen.y + d.y * (r + 8.0f)), color, 2.0f);
         }
     } else {
-        
+
         if (hasTip) {
             dl->AddLine(screen, tip, color, 3.0f);
             glm::vec2 d(tip.x - screen.x, tip.y - screen.y);
@@ -1696,9 +1485,6 @@ void EditorLayer::DrawLightGizmo() {
         }
     }
 }
-
-
-
 
 void EditorLayer::DrawColliderGizmo() {
     if (!m_SelectedEntity || m_SceneState != SceneState::Edit) return;
@@ -1745,9 +1531,7 @@ void EditorLayer::DrawColliderGizmo() {
             for (int i = 0; i < 4; ++i) Line(corners[i], corners[(i + 1) % 4]);
         }
     } else {
-        
-        
-        
+
         glm::mat4 world = m_ActiveScene->GetWorldTransform(m_SelectedEntity);
         const glm::vec3 dbgColor(120.0f / 255.0f, 220.0f / 255.0f, 120.0f / 255.0f);
         auto SubmitLine = [&](const glm::vec3& a, const glm::vec3& b) {
@@ -1766,9 +1550,9 @@ void EditorLayer::DrawColliderGizmo() {
                     prev = p;
                 }
             };
-            ring({ 1,0,0 }, { 0,1,0 }); 
-            ring({ 1,0,0 }, { 0,0,1 }); 
-            ring({ 0,1,0 }, { 0,0,1 }); 
+            ring({ 1,0,0 }, { 0,1,0 });
+            ring({ 1,0,0 }, { 0,0,1 });
+            ring({ 0,1,0 }, { 0,0,1 });
         }
         if (m_SelectedEntity.HasComponent<BoxCollider3DComponent>()) {
             auto& col = m_SelectedEntity.GetComponent<BoxCollider3DComponent>();
@@ -1783,13 +1567,6 @@ void EditorLayer::DrawColliderGizmo() {
         }
     }
 }
-
-
-
-
-
-
-
 
 void EditorLayer::DrawNavDebug() {
     if (!m_ActiveScene) return;
@@ -1811,7 +1588,6 @@ void EditorLayer::DrawNavDebug() {
 
     auto& registry = m_ActiveScene->GetRegistry();
 
-    
     registry.view<kizuri::TransformComponent, kizuri::NavGridComponent>().each([&](auto, auto&, auto& ngc) {
         if (!ngc.Grid || ngc.Grid->GetWidth() <= 0) return;
         const kizuri::NavGrid& g = *ngc.Grid;
@@ -1819,7 +1595,7 @@ void EditorLayer::DrawNavDebug() {
         const ImU32 blockCol = IM_COL32(255, 90, 80, 110);
         int w = g.GetWidth(), d = g.GetDepth();
         float cs = g.GetCellSize();
-        
+
         int step = std::max(1, (int)(w / 20));
         for (int x = 0; x <= w; x += step) {
             Line({ g.GetOriginX() + x * cs, 0.02f, g.GetOriginZ() },
@@ -1829,7 +1605,7 @@ void EditorLayer::DrawNavDebug() {
             Line({ g.GetOriginX(), 0.02f, g.GetOriginZ() + z * cs },
                  { g.GetOriginX() + w * cs, 0.02f, g.GetOriginZ() + z * cs }, gridCol);
         }
-        
+
         ImVec2 a, b;
         if (Project({ g.GetOriginX(), 0.0f, g.GetOriginZ() }, a) &&
             Project({ g.GetOriginX() + cs, 0.0f, g.GetOriginZ() + cs }, b)) {
@@ -1845,7 +1621,6 @@ void EditorLayer::DrawNavDebug() {
         }
     });
 
-    
     registry.view<kizuri::TransformComponent, kizuri::NavAgentComponent>().each([&](auto, auto&, auto& na) {
         if (!na.HasDestination) return;
         const ImU32 pathCol = IM_COL32(255, 220, 90, 200);
@@ -1944,9 +1719,6 @@ kizuri::Ref<kizuri::Texture2D> EditorLayer::GetThumbnail(const std::string& path
     auto it = m_ThumbCache.find(path);
     if (it != m_ThumbCache.end()) return it->second;
 
-    
-    
-    
     if (m_ThumbBudget <= 0) return nullptr;
     --m_ThumbBudget;
 
@@ -2002,24 +1774,21 @@ void EditorLayer::DrawSettings() {
     ImGui::End();
 }
 
-
 void EditorLayer::DrawSettingsGraphics() {
-    
-    
-    
+
     const char* presets[] = { "Ultra", "High", "Medium", "Low", "Custom" };
     int presetIdx = (int)m_GraphicsSettings.Preset;
     bool presetApplied = false;
     if (ImGui::Combo("Qualidade", &presetIdx, presets, 5)) {
         if (presetIdx == 4) {
-            m_GraphicsSettings.Preset = kizuri::QualityPreset::Custom; 
+            m_GraphicsSettings.Preset = kizuri::QualityPreset::Custom;
         } else {
             m_GraphicsSettings.ApplyPreset((kizuri::QualityPreset)presetIdx);
             kizuri::Renderer3D::SetGraphicsSettings(m_GraphicsSettings);
         }
         presetApplied = true;
     } else if ((int)m_GraphicsSettings.Preset == 4) {
-        presetApplied = true; 
+        presetApplied = true;
     }
 
     bool customTweak = false;
@@ -2055,8 +1824,7 @@ void EditorLayer::DrawSettingsGraphics() {
         customTweak |= ImGui::DragFloat("Raio SSAO", &m_GraphicsSettings.SSAORadius, 0.01f, 0.05f, 2.0f);
     }
     ImGui::Separator();
-    
-    
+
     customTweak |= ImGui::Checkbox("Reflexos por raio (SSR)", &m_GraphicsSettings.SSREnabled);
     if (m_GraphicsSettings.SSREnabled) {
         customTweak |= ImGui::SliderInt("Passos do raio", &m_GraphicsSettings.SSRMaxSteps, 8, 48);
@@ -2141,8 +1909,6 @@ void EditorLayer::DrawSettingsGraphics() {
     if (customTweak && !presetApplied) m_GraphicsSettings.Preset = kizuri::QualityPreset::Custom;
     m_GraphicsSettings.Clamp();
 
-    
-    
     kizuri::Renderer3D::SetGraphicsSettings(m_GraphicsSettings);
     Application& app = Application::Get();
     if (app.GetWindow().IsVSync() != m_GraphicsSettings.VSync)
@@ -2150,14 +1916,12 @@ void EditorLayer::DrawSettingsGraphics() {
     if (applyHDRI) kizuri::Renderer3D::SetEnvironmentHDRIPath(m_EnvironmentHDRIPathBuffer);
 }
 
-
 void EditorLayer::DrawSettingsGeneral() {
     auto& project = Project::GetActive();
     ImGui::TextUnformatted("Projeto");
     ImGui::Separator();
     if (project) {
-        
-        
+
         static char s_nameBuf[128] = { 0 };
         static char s_startBuf[512] = { 0 };
         static char s_moduleBuf[512] = { 0 };
@@ -2209,8 +1973,7 @@ void EditorLayer::DrawSettingsGeneral() {
     static int winW = (int)app.GetWindow().GetWidth();
     static int winH = (int)app.GetWindow().GetHeight();
     static bool s_winEdited = false;
-    
-    
+
     if (!s_winEdited) {
         winW = (int)app.GetWindow().GetWidth();
         winH = (int)app.GetWindow().GetHeight();
@@ -2248,7 +2011,6 @@ void EditorLayer::DrawSettingsGeneral() {
     ImGui::Spacing();
     ImGui::TextDisabled("settings.json fica no diretório de trabalho (bin/).");
 }
-
 
 void EditorLayer::DrawSettingsEditor() {
     ImGui::TextUnformatted("Play");
@@ -2310,11 +2072,6 @@ void EditorLayer::DrawGizmo() {
     KZ_TRACE_SCOPE("EditorLayer::DrawGizmo");
     if (!m_SelectedEntity || !m_SelectedEntity.HasComponent<TransformComponent>()) return;
 
-    
-    
-    
-    
-    
     bool flying = Input::IsMouseButtonPressed(Mouse::Right);
     if (m_ViewportHovered && !flying && !ImGui::GetIO().WantTextInput) {
         if (Input::IsKeyPressed(Key::W)) m_GizmoOperation = ImGuizmo::TRANSLATE;
@@ -2336,12 +2093,6 @@ void EditorLayer::DrawGizmo() {
     float snapAmount = (m_GizmoOperation == ImGuizmo::OPERATION::ROTATE) ? m_GizmoSnapRotation : m_GizmoSnapTranslation;
     float snapValues[3] = { snapAmount, snapAmount, snapAmount };
 
-    
-    
-    
-    
-    
-    
     ImGuizmo::OPERATION op = m_GizmoOperation;
     if (m_ViewportMode == ViewportMode::Mode2D) {
         if (m_GizmoOperation == ImGuizmo::TRANSLATE)
@@ -2359,15 +2110,11 @@ void EditorLayer::DrawGizmo() {
 
     bool isUsing = ImGuizmo::IsUsing();
 
-    
-    
     if (!m_GizmoWasUsing && isUsing)
         m_GizmoEditBefore = EntitySnapshot::Capture(m_SelectedEntity);
 
     if (isUsing) {
-        
-        
-        
+
         glm::mat4 localTransform = worldTransform;
         Entity parent = m_SelectedEntity.GetParent();
         if (parent) localTransform = glm::inverse(m_ActiveScene->GetWorldTransform(parent)) * worldTransform;
@@ -2381,9 +2128,6 @@ void EditorLayer::DrawGizmo() {
         }
     }
 
-    
-    
-    
     if (m_GizmoWasUsing && !isUsing) {
         EntitySnapshot after = EntitySnapshot::Capture(m_SelectedEntity);
         if (after.DiffersFrom(m_GizmoEditBefore))
@@ -2396,17 +2140,11 @@ void EditorLayer::OnScenePlay() {
     KZ_TRACE_SCOPE("EditorLayer::OnScenePlay");
     if (m_SceneLoading || m_PlayBuildActive) return;
 
-    
-    
-    
-    
     if (m_AutoCompileOnPlay) {
         std::string csproj, engineRoot;
         GetGameBuildInfo(csproj, engineRoot);
         if (!csproj.empty()) {
-            
-            
-            
+
             if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join();
             m_PlayBuildError.clear();
             m_PlayBuildDll.clear();
@@ -2421,15 +2159,12 @@ void EditorLayer::OnScenePlay() {
                 m_PlayBuildError = err;
                 m_PlayBuildDone = true;
             });
-            return; 
+            return;
         }
     }
 
     StartPlayInternal();
 }
-
-
-
 
 void EditorLayer::StartPlayInternal() {
     if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join();
@@ -2437,9 +2172,8 @@ void EditorLayer::StartPlayInternal() {
     m_EditorScene = m_ActiveScene;
     m_ActiveScene = Scene::Copy(m_EditorScene);
     m_ActiveScene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
-    
-    
-    m_SelectedEntity = {}; 
+
+    m_SelectedEntity = {};
     ClearMultiSelection();
     m_SceneState = SceneState::Play;
     m_ActiveScene->OnRuntimeStart();
@@ -2448,17 +2182,14 @@ void EditorLayer::StartPlayInternal() {
 void EditorLayer::OnSceneStop() {
     KZ_TRACE_SCOPE("EditorLayer::OnSceneStop");
 
-    
     if (m_PlayBuildActive) {
         m_PlayBuildCancelled = true;
         return;
     }
 
     m_ActiveScene->OnRuntimeStop();
-    AudioEngine::StopAll(); 
+    AudioEngine::StopAll();
 
-    
-    
     if (m_ActiveScene && m_EditorScene) {
         auto& copyReg = m_ActiveScene->GetRegistry();
         auto camView = copyReg.view<kizuri::TransformComponent, kizuri::CameraComponent>();
@@ -2486,7 +2217,7 @@ void EditorLayer::OnSceneStop() {
     }
 
     m_SelectedEntity = {};
-    m_ActiveScene = m_EditorScene; 
+    m_ActiveScene = m_EditorScene;
     m_EditorScene = nullptr;
     m_SceneState = SceneState::Edit;
 }
@@ -2510,8 +2241,7 @@ void EditorLayer::SaveScene() {
         KZ_CORE_WARN("EditorLayer::SaveScene — ignorado durante o Play (salvaria a cópia efêmera, não a cena real).");
         return;
     }
-    
-    
+
     if (m_ScenePath.empty()) {
         SaveSceneAs();
         return;
@@ -2551,7 +2281,7 @@ Entity EditorLayer::CreateEntityFromAsset(const std::string& path, const glm::ve
         auto& mr = created.AddComponent<MeshRendererComponent>();
         mr.MeshSource = Project::MakeRelativePath(path);
         mr.MeshAsset = Mesh::FromSource(path);
-        mr.MeshMaterial = Mesh::ExtractMaterialFromGLTF(path); 
+        mr.MeshMaterial = Mesh::ExtractMaterialFromGLTF(path);
     } else {
         std::string ext = lower.size() >= 4 ? lower.substr(lower.size() - 4) : "";
         bool isImage = (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".tga" || ext == ".gif");
@@ -2581,10 +2311,6 @@ void EditorLayer::OpenScene(const std::string& path) {
         return;
     }
 
-    
-    
-    
-    
     auto newScene = CreateRef<Scene>("Carregando...");
     auto loader = std::make_unique<SceneSerializer>(newScene);
     if (!loader->BeginDeserializeStepwiseFile(path)) return;
@@ -2611,7 +2337,6 @@ void EditorLayer::DrawTitlebar() {
     dl->AddLine(ImVec2(barMin.x, barMax.y), ImVec2(barMax.x, barMax.y),
                 ImGui::GetColorU32(ImVec4(0.16f, 0.16f, 0.18f, 1.0f)), 1.0f);
 
-    
     float markSize = 20.0f;
     ImVec2 markPos(barMin.x + 14.0f, barMin.y + (kTitlebarHeight - markSize) * 0.5f);
     kizuri::editor::icons::Torii(dl, markPos, markSize, IM_COL32(217, 64, 77, 255));
@@ -2622,8 +2347,6 @@ void EditorLayer::DrawTitlebar() {
     ImVec2 wordmarkTextSize = titleFont->CalcTextSizeA(titleFont->FontSize, FLT_MAX, 0.0f, "KIZURI");
     float dragZoneStartX = wordmarkPos.x + wordmarkTextSize.x + 24.0f;
 
-    
-    
     {
         auto& project = Project::GetActive();
         std::string label = project ? project->GetConfig().Name : "Nenhum projeto aberto";
@@ -2634,7 +2357,6 @@ void EditorLayer::DrawTitlebar() {
         dragZoneStartX = labelPos.x + labelSize.x + 20.0f;
     }
 
-    
     const float btnW = 46.0f;
     float rightEdge = barMax.x;
     ImVec2 closeMin(rightEdge - btnW, barMin.y), closeMax(rightEdge, barMax.y);
@@ -2674,8 +2396,6 @@ void EditorLayer::DrawTitlebar() {
     ImVec2 nc = center(minMin, minMax);
     dl->AddLine(ImVec2(nc.x - 4.5f, nc.y), ImVec2(nc.x + 4.5f, nc.y), iconColor, 1.3f);
 
-    
-    
     float dragZoneEndX = minMin.x - 4.0f;
     ImGui::SetCursorScreenPos(ImVec2(dragZoneStartX, barMin.y));
     ImGui::InvisibleButton("##titlebar_drag", ImVec2(std::max(0.0f, dragZoneEndX - dragZoneStartX), kTitlebarHeight));
@@ -2718,9 +2438,6 @@ void EditorLayer::DrawResizeBorders() {
             m_ResizingEdge = edge;
     };
 
-    
-    
-    
     handle("##rs_l", ImVec2(left, top + kTitlebarHeight), ImVec2(kResizeBorder, bottom - top - kTitlebarHeight - kResizeBorder), ResizeEdge::Left, ImGuiMouseCursor_ResizeEW);
     handle("##rs_r", ImVec2(right - kResizeBorder, top + kTitlebarHeight), ImVec2(kResizeBorder, bottom - top - kTitlebarHeight - kResizeBorder), ResizeEdge::Right, ImGuiMouseCursor_ResizeEW);
     handle("##rs_b", ImVec2(left + kResizeBorder, bottom - kResizeBorder), ImVec2(std::max(0.0f, right - left - 2 * kResizeBorder), kResizeBorder), ResizeEdge::Bottom, ImGuiMouseCursor_ResizeNS);
@@ -2783,9 +2500,6 @@ void EditorLayer::DrawDockspace() {
     DrawTitlebar();
     KZ_CORE_TRACE("EditorLayer::DrawDockspace — DrawTitlebar ok");
 
-    
-    
-    
     ImVec2 winPos = ImGui::GetWindowPos();
     float width = ImGui::GetWindowSize().x;
     ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -2804,7 +2518,6 @@ void EditorLayer::DrawDockspace() {
         if (m < 5) ImGui::SameLine(0.0f, 2.0f);
     }
 
-    
     if (ImGui::BeginPopup("##menu_Arquivo")) {
         if (ImGui::MenuItem("Novo Projeto...")) {
             strncpy(m_NewProjectDirBuffer, "MeuJogo", sizeof(m_NewProjectDirBuffer));
@@ -2833,8 +2546,7 @@ void EditorLayer::DrawDockspace() {
         if (ImGui::MenuItem("Salvar Cena", nullptr, false, (bool)m_ActiveScene)) SaveScene();
         if (ImGui::MenuItem("Salvar Cena Como...")) SaveSceneAs();
         ImGui::Separator();
-        
-        
+
         if (ImGui::BeginMenu("Avançado")) {
             if (ImGui::MenuItem("Carregar GameModule...", nullptr, false, m_SceneState == SceneState::Edit)) {
                 m_RequestOpenGameModulePopup = true;
@@ -2846,7 +2558,6 @@ void EditorLayer::DrawDockspace() {
         ImGui::EndPopup();
     }
 
-    
     if (ImGui::BeginPopup("##menu_Editar")) {
         bool editing = m_SceneState == SceneState::Edit;
         if (ImGui::MenuItem("Desfazer", "Ctrl+Z", false, editing && m_History.CanUndo()))
@@ -2877,7 +2588,6 @@ void EditorLayer::DrawDockspace() {
         ImGui::EndPopup();
     }
 
-    
     if (ImGui::BeginPopup("##menu_Cena")) {
         if (ImGui::MenuItem("Nova Cena", nullptr, false, m_SceneState == SceneState::Edit)) NewScene();
         if (ImGui::MenuItem("Abrir Cena...", nullptr, false, m_SceneState == SceneState::Edit)) {
@@ -2899,7 +2609,6 @@ void EditorLayer::DrawDockspace() {
         ImGui::EndPopup();
     }
 
-    
     if (ImGui::BeginPopup("##menu_Exibir")) {
         if (ImGui::MenuItem("Viewport 2D", nullptr, m_ViewportMode == ViewportMode::Mode2D)) m_ViewportMode = ViewportMode::Mode2D;
         if (ImGui::MenuItem("Viewport 3D", nullptr, m_ViewportMode == ViewportMode::Mode3D)) m_ViewportMode = ViewportMode::Mode3D;
@@ -2911,7 +2620,6 @@ void EditorLayer::DrawDockspace() {
         ImGui::EndPopup();
     }
 
-    
     if (ImGui::BeginPopup("##menu_Janelas")) {
         ImGui::TextDisabled("Painéis (mostrar/ocultar)");
         ImGui::Separator();
@@ -2925,7 +2633,6 @@ void EditorLayer::DrawDockspace() {
         ImGui::EndPopup();
     }
 
-    
     if (ImGui::BeginPopup("##menu_Ajuda")) {
         ImGui::TextDisabled("Kizuri Engine v%s", KIZURI_VERSION);
         ImGui::TextDisabled("C++20 · OpenGL %s · GLSL %d core",
@@ -2970,37 +2677,16 @@ void EditorLayer::DrawDockspace() {
         ImGui::EndPopup();
     }
 
-    
-    
-    
     ImVec2 dockPos(winPos.x + kResizeBorder, menuMax.y);
     ImVec2 dockSize(width - kResizeBorder * 2.0f, winPos.y + ImGui::GetWindowSize().y - menuMax.y - kResizeBorder);
     ImGui::SetCursorScreenPos(dockPos);
 
     KZ_CORE_TRACE("EditorLayer::DrawDockspace — menu/faixa ok, montando dockspace");
     ImGuiID dockspaceID = ImGui::GetID("KizuriDockspace");
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
     ImGui::DockSpace(dockspaceID, dockSize, (ImGuiDockNodeFlags)((int)ImGuiDockNodeFlags_AutoHideTabBar | (int)ImGuiDockNodeFlags_NoWindowMenuButton));
     KZ_CORE_TRACE("EditorLayer::DrawDockspace — DockSpace ok");
 
-    
-    
-    
-    
-    
-    
-    
-    
     static bool shouldBuildDefaultLayout = true;
 
     if (shouldBuildDefaultLayout) {
@@ -3013,28 +2699,22 @@ void EditorLayer::DrawDockspace() {
         ImGuiID dockMainID = dockspaceID;
         ImGuiID dockLeftID  = ImGui::DockBuilderSplitNode(dockMainID, ImGuiDir_Left,  0.1417f, nullptr, &dockMainID);
         ImGuiID dockRightID = ImGui::DockBuilderSplitNode(dockMainID, ImGuiDir_Right, 0.1566f, nullptr, &dockMainID);
-        
-        
-        
+
         ImGuiID dockCenterBottomID = ImGui::DockBuilderSplitNode(dockMainID, ImGuiDir_Down, 0.28f, nullptr, &dockMainID);
-        
-        
+
         ImGuiID dockLeftBottomID = ImGui::DockBuilderSplitNode(dockLeftID, ImGuiDir_Down, 0.35f, nullptr, &dockLeftID);
-        
+
         ImGuiID dockRightBottomID = ImGui::DockBuilderSplitNode(dockRightID, ImGuiDir_Down, 0.35f, nullptr, &dockRightID);
-        
-        
+
         ImGuiID dockCenterTopID = dockMainID;
 
         ImGui::DockBuilderDockWindow("Hierarquia", dockLeftID);
         ImGui::DockBuilderDockWindow("Content Browser", dockLeftBottomID);
         ImGui::DockBuilderDockWindow("Viewport", dockCenterTopID);
-        ImGui::DockBuilderDockWindow("Game View", dockCenterTopID);   
+        ImGui::DockBuilderDockWindow("Game View", dockCenterTopID);
         ImGui::DockBuilderDockWindow("Console", dockCenterBottomID);
         ImGui::DockBuilderDockWindow("Inspetor", dockRightID);
         ImGui::DockBuilderDockWindow("Profiler", dockRightBottomID);
-        
-        
 
         ImGui::DockBuilderFinish(dockspaceID);
     }
@@ -3046,9 +2726,7 @@ void EditorLayer::DrawDockspace() {
 
 void EditorLayer::DrawSceneFileModals() {
     KZ_TRACE_SCOPE("EditorLayer::DrawSceneFileModals");
-    
-    
-    
+
     if (m_RequestOpenSaveAsPopup) {
         m_RequestOpenSaveAsPopup = false;
         ImGui::OpenPopup("Salvar Cena Como");
@@ -3171,15 +2849,11 @@ void EditorLayer::DrawProjectModals() {
                               : ProjectMode::Empty;
             Ref<Project> project = Project::New(m_NewProjectDirBuffer, m_NewProjectNameBuffer, mode);
             if (project) {
-                
-                
-                
+
                 std::string suggested = (std::filesystem::path(project->GetAssetDirectory()) / "cena.kzscene").string();
                 strncpy(m_ScenePathBuffer, suggested.c_str(), sizeof(m_ScenePathBuffer));
                 m_ScenePathBuffer[sizeof(m_ScenePathBuffer) - 1] = '\0';
 
-                
-                
                 OnProjectOpened(project);
             }
             ImGui::CloseCurrentPopup();
@@ -3213,8 +2887,7 @@ void EditorLayer::DrawProjectModals() {
         if (open && m_OpenProjectPathBuffer[0] != '\0') {
             Ref<Project> project = Project::Load(m_OpenProjectPathBuffer);
             if (project) {
-                
-                
+
                 OnProjectOpened(project);
             }
             ImGui::CloseCurrentPopup();
@@ -3282,7 +2955,6 @@ void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
     if (mode == ProjectMode::TwoD) m_ViewportMode = ViewportMode::Mode2D;
     else if (mode == ProjectMode::ThreeD) m_ViewportMode = ViewportMode::Mode3D;
 
-    
     auto& cfg = project->GetConfig();
     if (!cfg.GameName.empty())
         strncpy(m_ExportGameName, cfg.GameName.c_str(), sizeof(m_ExportGameName) - 1);
@@ -3291,14 +2963,9 @@ void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
     m_ExportWidth = cfg.WindowWidth > 0 ? cfg.WindowWidth : 1280;
     m_ExportHeight = cfg.WindowHeight > 0 ? cfg.WindowHeight : 720;
 
-    
-    
-    
     m_SelectedEntity = {};
     m_History.Clear();
 
-    
-    
     m_EditorCamPos = { 0.0f, 3.0f, 8.0f };
     m_EditorCamYaw = -90.0f;
     m_EditorCamPitch = -10.0f;
@@ -3308,9 +2975,6 @@ void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
     m_TilePainting = false;
     m_ShowColliders = false;
 
-    
-    
-    
     m_ActiveScene = CreateRef<Scene>("Nova Cena");
     m_ScenePath.clear();
     CreateDefaultSceneContent();
@@ -3319,18 +2983,11 @@ void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
     if (!startScene.empty()) {
         std::string resolved = Project::ResolvePath(startScene);
         m_ScenePath = resolved;
-        OpenScene(resolved); 
+        OpenScene(resolved);
     }
 
     RememberProject(project);
 
-    
-    
-    
-    
-    
-    
-    
     std::string csproj, engineRoot;
     GetGameBuildInfo(csproj, engineRoot);
     if (!csproj.empty()) {
@@ -3341,7 +2998,6 @@ void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
             KZ_CORE_INFO("Projeto sem assembly compilado ainda (o Play vai compilar).");
     }
 
-    
     m_LoadingProjectName = project->GetConfig().Name;
     m_LoadingElapsed = 0.0f;
     m_EditorState = EditorState::Loading;
@@ -3376,7 +3032,6 @@ void EditorLayer::DrawHub() {
     ImU32 textBright = IM_COL32(229, 229, 234, 255);
     ImU32 textDim = IM_COL32(130, 130, 140, 255);
 
-    
     const float leftCol = 420.0f;
     dl->AddLine(ImVec2(leftCol, 0.0f), ImVec2(leftCol, display.y), IM_COL32(45, 45, 52, 255), 1.0f);
 
@@ -3413,7 +3068,6 @@ void EditorLayer::DrawHub() {
 
     dl->AddText(ImGui::GetFont(), 12.0f, ImVec2(54.0f, display.y - 40.0f), IM_COL32(85, 85, 95, 255), "© 2026 Kizuri Engine");
 
-    
     float listX = leftCol + 44.0f;
     float listW = display.x - listX - 44.0f;
     ImGui::SetCursorPos(ImVec2(listX, 48.0f));
@@ -3444,7 +3098,6 @@ void EditorLayer::DrawHub() {
         if (itemY > display.y - 60.0f) break;
     }
 
-    
     ImGui::SetCursorPos(ImVec2(display.x - 52.0f, 16.0f));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.82f, 0.24f, 0.27f, 0.9f));
@@ -3485,8 +3138,6 @@ void EditorLayer::DrawLoadingScreen() {
     ImVec2 ns = boldFont->CalcTextSizeA(boldFont->FontSize, FLT_MAX, 0.0f, m_LoadingProjectName.c_str());
     dl->AddText(boldFont, boldFont->FontSize, ImVec2(center.x - ns.x * 0.5f, center.y - 22.0f), IM_COL32(150, 150, 160, 255), m_LoadingProjectName.c_str());
 
-    
-    
     float t = m_LoadingElapsed / kHubLoadingMinSeconds;
     if (m_SceneLoading) t = m_PendingLoadProgress;
     if (t > 1.0f) t = 1.0f;
@@ -3495,7 +3146,6 @@ void EditorLayer::DrawLoadingScreen() {
     dl->AddRectFilled(barMin, ImVec2(barMin.x + barW, barMin.y + barH), IM_COL32(45, 45, 52, 255), 3.0f);
     dl->AddRectFilled(barMin, ImVec2(barMin.x + barW * t, barMin.y + barH), accent, 3.0f);
 
-    
     float angle = m_LoadingElapsed * 3.0f;
     dl->PathArcTo(ImVec2(center.x + barW * 0.5f + 30.0f, barMin.y + barH * 0.5f), 10.0f, angle, angle + 4.4f, 20);
     dl->PathStroke(accent, false, 3.0f);
@@ -3538,7 +3188,6 @@ void EditorLayer::DrawGameModuleModal() {
 
         ImGui::Spacing();
 
-        
         bool loaded = ScriptEngine::IsModuleLoaded();
         const std::string& lastError = ScriptEngine::GetLastError();
         if (loaded) {
@@ -3569,11 +3218,6 @@ void EditorLayer::DrawGameModuleModal() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        
-        
-        
-        
-        
         ImGui::Checkbox("Compilar C# automaticamente no Play", &m_AutoCompileOnPlay);
         ImGui::Spacing();
 
@@ -3592,8 +3236,7 @@ void EditorLayer::DrawGameModuleModal() {
         bool cancel = ImGui::Button("Fechar", ImVec2(80.0f, 0.0f));
 
         if (load && m_GameModulePathBuffer[0] != '\0') {
-            
-            
+
             if (ScriptEngine::LoadModule(m_GameModulePathBuffer)) ImGui::CloseCurrentPopup();
         } else if (unload) {
             ScriptEngine::UnloadModule();
@@ -3623,8 +3266,6 @@ void EditorLayer::GetGameBuildInfo(std::string& outCsproj, std::string& outEngin
         }
     }
 
-    
-    
     std::string binDir = std::filesystem::current_path().string();
     const auto& args = GetCommandLineArgs();
     if (!args.empty()) {
@@ -3647,7 +3288,6 @@ void EditorLayer::ExportGame(const std::string& outputDir) {
     req.ScenePath = m_ScenePath;
     req.GameModulePath = ScriptEngine::IsModuleLoaded() ? ScriptEngine::GetLoadedPath() : std::string{};
 
-    
     req.EngineBinDirectory = std::filesystem::current_path().string();
     const auto& args = GetCommandLineArgs();
     if (!args.empty()) {
@@ -3656,8 +3296,6 @@ void EditorLayer::ExportGame(const std::string& outputDir) {
             req.EngineBinDirectory = std::filesystem::absolute(exePath.parent_path()).string();
     }
 
-    
-    
     if (m_ExportSelfContained) {
         GetGameBuildInfo(req.GameProjectPath, req.EngineRoot);
         if (req.GameProjectPath.empty())
@@ -3665,13 +3303,11 @@ void EditorLayer::ExportGame(const std::string& outputDir) {
                          "Caindo pra cópia do assembly compilado (o jogador vai precisar do .NET).");
     }
 
-    
     req.GameName = m_ExportGameName;
     req.Version = m_ExportVersion;
     req.WindowWidth = m_ExportWidth;
     req.WindowHeight = m_ExportHeight;
 
-    
     if (Project::GetActive()) {
         auto& cfg = Project::GetActive()->GetConfig();
         cfg.GameName = m_ExportGameName;
@@ -3897,18 +3533,13 @@ void EditorLayer::RevealFileInContentBrowser(const std::string& filePath) {
     m_ContentBrowserRevealRequested = true;
 }
 
-
 namespace {
-
-
-
 
 void CreateNewCSharpScript(const std::filesystem::path& dir, int templateKind) {
     namespace fs = std::filesystem;
     std::error_code ec;
     if (!fs::is_directory(dir, ec)) return;
 
-    
     const char* baseName = "NovoScript";
     if (templateKind == 1) baseName = "PlayerController";
     else if (templateKind == 2) baseName = "Movement2D";
@@ -3918,8 +3549,6 @@ void CreateNewCSharpScript(const std::filesystem::path& dir, int templateKind) {
     int n = 1;
     while (fs::exists(file, ec)) file = dir / (std::string(baseName) + std::to_string(++n) + ".cs");
 
-    
-    
     std::string view = R"CS(using Kizuri;
 using Kizuri.Math;
 )CS";
@@ -4011,14 +3640,12 @@ public sealed class NovoScript : Script
     KZ_CORE_INFO("Script C# criado: {0}", file.string());
 }
 
-} 
+}
 
 void EditorLayer::DrawContentBrowser() {
     KZ_TRACE_SCOPE("EditorLayer::DrawContentBrowser");
     BeginPanelNoMenuButton();
 
-    
-    
     if (m_ContentBrowserRevealRequested) {
         m_ContentBrowserRevealRequested = false;
         ImGui::SetNextWindowCollapsed(false, ImGuiCond_Always);
@@ -4027,7 +3654,7 @@ void EditorLayer::DrawContentBrowser() {
             std::filesystem::path p = kizuri::Project::ResolvePath(m_ContentBrowserRevealPath);
             if (p.has_parent_path())
                 p = p.parent_path();
-            
+
             auto rel = std::filesystem::relative(p, m_ContentBrowserRoot, ec);
             if (!ec && rel.string().find("..") == std::string::npos)
                 m_ContentBrowserCurrentDir = p;
@@ -4050,11 +3677,8 @@ void EditorLayer::DrawContentBrowser() {
         return;
     }
 
-    
-    
-    
     {
-        auto proj = Project::GetActive(); 
+        auto proj = Project::GetActive();
         ImGui::PushID("cb_shortcuts");
         std::string label = "📁 " + (m_ContentBrowserCurrentDir == m_ContentBrowserRoot
             ? std::string("Conteúdo (assets)") : std::string("Pasta atual"));
@@ -4083,8 +3707,6 @@ void EditorLayer::DrawContentBrowser() {
         ImGui::Separator();
     }
 
-    
-    
     std::error_code eqEc;
     bool atRoot = std::filesystem::equivalent(m_ContentBrowserCurrentDir, m_ContentBrowserRoot, eqEc) || eqEc;
     ImGui::BeginDisabled(atRoot);
@@ -4105,7 +3727,7 @@ void EditorLayer::DrawContentBrowser() {
         }
         if (ImGui::MenuItem("Criar Script C#...")) {
             CreateNewCSharpScript(m_ContentBrowserCurrentDir, 0);
-            CompileAndRegisterGame(); 
+            CompileAndRegisterGame();
         }
         ImGui::EndPopup();
     }
@@ -4125,9 +3747,6 @@ void EditorLayer::DrawContentBrowser() {
         return a.path().filename() < b.path().filename();
     });
 
-    
-    
-    
     m_ThumbBudget = 8;
 
     for (auto& entry : entries) {
@@ -4144,7 +3763,6 @@ void EditorLayer::DrawContentBrowser() {
         bool clicked = ImGui::IsItemClicked();
         bool doubleClicked = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered();
 
-        
         if (!isDir && ImGui::BeginDragDropSource()) {
             std::string filePath = entry.path().string();
             ImGui::SetDragDropPayload("KZ_CONTENT_FILE", filePath.c_str(), filePath.size() + 1);
@@ -4172,10 +3790,7 @@ void EditorLayer::DrawContentBrowser() {
             bool isImage = ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
                            ext == ".bmp" || ext == ".tga" || ext == ".hdr";
             if (isImage) {
-                
-                
-                
-                
+
                 auto thumb = GetThumbnail(entry.path().string());
                 if (thumb) {
                     ImGui::SetCursorScreenPos(cursor);
@@ -4194,11 +3809,6 @@ void EditorLayer::DrawContentBrowser() {
         ImGui::TextWrapped("%s", name.c_str());
         ImGui::EndGroup();
 
-        
-        
-        
-        
-        
         if (!isDir && ImGui::BeginDragDropSource()) {
             std::string fullPath = entry.path().string();
             ImGui::SetDragDropPayload("KZ_CONTENT_BROWSER_FILE", fullPath.c_str(), fullPath.size() + 1);
@@ -4234,7 +3844,6 @@ void EditorLayer::DrawContentBrowser() {
 
     ImGui::EndTable();
 
-    
     if (m_RequestRenamePopup) {
         m_RequestRenamePopup = false;
         ImGui::OpenPopup("Renomear");
@@ -4267,18 +3876,10 @@ void EditorLayer::DrawSceneHierarchy() {
     ImGui::Begin("Hierarquia");
     kizuri::editor::icons::PanelHeader("HIERARQUIA", kizuri::editor::icons::Hierarchy);
 
-    
-    
-    
-    
     bool editable = m_SceneState == SceneState::Edit;
 
-    
-    
-    
     Entity entityToDelete;
 
-    
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
     ImGui::SetNextItemWidth(-1.0f);
     ImGui::InputTextWithHint("##hierarchy_search", "Buscar entidade (nome)...",
@@ -4298,9 +3899,7 @@ void EditorLayer::DrawSceneHierarchy() {
                     m_SelectedEntity = entity;
             });
     } else {
-        
-        
-        
+
         m_ActiveScene->GetRegistry().view<TagComponent, RelationshipComponent>().each(
             [&](auto entityHandle, TagComponent&, RelationshipComponent& rel) {
                 if (rel.Parent.IsValid()) return;
@@ -4316,8 +3915,7 @@ void EditorLayer::DrawSceneHierarchy() {
     }
 
     if (editable) {
-        
-        
+
         ImGui::Dummy(ImGui::GetContentRegionAvail());
         if (ImGui::BeginDragDropTarget()) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("KZ_ENTITY_UUID")) {
@@ -4346,7 +3944,7 @@ void EditorLayer::Reparent(Entity child, Entity newParent) {
     if (!child) return;
     UUID oldParentId = child.GetParent() ? child.GetParent().GetUUID() : UUID::Invalid();
     UUID newParentId = newParent ? newParent.GetUUID() : UUID::Invalid();
-    if (oldParentId == newParentId) return; 
+    if (oldParentId == newParentId) return;
 
     child.SetParent(newParent);
     m_History.Push(CreateRef<ReparentCommand>(child.GetUUID(), oldParentId, newParentId));
@@ -4380,8 +3978,7 @@ void EditorLayer::DrawEntityNode(Entity entity, Entity& outEntityToDelete, bool 
     if (isLeaf) flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
     bool opened = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)entity, flags, "%s", tag.c_str());
-    
-    
+
     if (editable && ImGui::IsItemClicked()) {
         bool ctrl = ImGui::GetIO().KeyCtrl;
         if (ctrl) {
@@ -4392,11 +3989,11 @@ void EditorLayer::DrawEntityNode(Entity entity, Entity& outEntityToDelete, bool 
             m_MultiSelection.clear();
         }
         m_SelectedEntity = entity;
-        AutoSwitchViewportMode(); 
+        AutoSwitchViewportMode();
     }
 
     if (editable) {
-        
+
         if (ImGui::BeginDragDropSource()) {
             uint64_t id = (uint64_t)entity.GetUUID();
             ImGui::SetDragDropPayload("KZ_ENTITY_UUID", &id, sizeof(uint64_t));
@@ -4404,7 +4001,6 @@ void EditorLayer::DrawEntityNode(Entity entity, Entity& outEntityToDelete, bool 
             ImGui::EndDragDropSource();
         }
 
-        
         if (ImGui::BeginDragDropTarget()) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("KZ_ENTITY_UUID")) {
                 uint64_t draggedId;
@@ -4443,10 +4039,6 @@ void EditorLayer::DrawEntityNode(Entity entity, Entity& outEntityToDelete, bool 
     }
 }
 
-
-
-
-
 static bool DrawComponentHeader(const char* label, bool* removeRequested) {
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowItemOverlap;
     bool open = ImGui::TreeNodeEx(label, flags);
@@ -4461,10 +4053,6 @@ void EditorLayer::DrawInspector() {
     ImGui::Begin("Inspetor");
     kizuri::editor::icons::PanelHeader("INSPETOR", kizuri::editor::icons::Inspector);
 
-    
-    
-    
-    
     if (m_SelectedEntity && !m_InspectorWasActive) {
         m_InspectorEditEntity = m_SelectedEntity.GetUUID();
         m_InspectorEditBefore = EntitySnapshot::Capture(m_SelectedEntity);
@@ -4473,7 +4061,7 @@ void EditorLayer::DrawInspector() {
     if (m_SelectedEntity) {
         auto multi = GetMultiSelection();
         if (multi.size() > 1) {
-            
+
             ImGui::TextDisabled("%zu entidades selecionadas", multi.size());
             ImGui::SameLine();
             if (ImGui::SmallButton("Excluir seleção")) {
@@ -4496,12 +4084,9 @@ void EditorLayer::DrawInspector() {
         buffer[sizeof(buffer) - 1] = '\0';
         if (ImGui::InputText("Nome", buffer, sizeof(buffer))) tag = std::string(buffer);
 
-        
-        
         auto& idc = m_SelectedEntity.GetComponent<IDComponent>();
         ImGui::Checkbox("Ativo", &idc.Active);
 
-        
         ImGui::SetNextItemWidth(70.0f);
         ImGui::InputInt("Camada", &tagc.Layer);
         ImGui::SetNextItemWidth(150.0f);
@@ -4578,9 +4163,6 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<CameraComponent>();
         }
 
-        
-        
-        
         if (m_SelectedEntity.HasComponent<NativeScriptComponent>()) {
             auto& nsc = m_SelectedEntity.GetComponent<NativeScriptComponent>();
             if (DrawComponentHeader("Script C#", &removeThis)) {
@@ -4676,7 +4258,7 @@ void EditorLayer::DrawInspector() {
         if (m_SelectedEntity.HasComponent<MeshRendererComponent>()) {
             auto& mr = m_SelectedEntity.GetComponent<MeshRendererComponent>();
             if (DrawComponentHeader("Mesh Renderer", &removeThis)) {
-                
+
                 const char* builtins[] = { "builtin:cube", "builtin:plane", "builtin:sphere",
                                            "builtin:cylinder", "builtin:cone", "builtin:capsule", "builtin:torus" };
                 int currentBuiltin = -1;
@@ -4694,7 +4276,7 @@ void EditorLayer::DrawInspector() {
                     mr.MeshSource = meshBuf;
                     if (!mr.MeshSource.empty()) {
                         mr.MeshAsset = kizuri::Mesh::FromSource(mr.MeshSource);
-                        
+
                         if (mr.MeshSource.find(".glb") != std::string::npos || mr.MeshSource.find(".gltf") != std::string::npos)
                             mr.MeshMaterial = kizuri::Mesh::ExtractMaterialFromGLTF(Project::ResolvePath(mr.MeshSource));
                     }
@@ -4715,10 +4297,7 @@ void EditorLayer::DrawInspector() {
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Gerenciador")) RevealFileInContentBrowser(mr.MeshSource);
-                
-                
-                
-                
+
                 if (ImGui::Button("Abrir Material Editor")) {
                     for (auto& p : m_Panels)
                         if (std::string(p->GetTitle()) == "Material Editor") { p->SetVisible(true); break; }
@@ -4727,7 +4306,7 @@ void EditorLayer::DrawInspector() {
                 ImGui::TextDisabled("Preview + campos PBR na janela dedicada.");
                 if (ImGui::Button("Assar Lightmap (AO + ambience)")) {
                     m_ActiveScene->BakeLightmap(m_SelectedEntity);
-                    
+
                     if (mr.LightmapTexture) {
                         std::string path = kizuri::Project::GetActive()->GetAssetDirectory() + "/Lightmaps/" + m_SelectedEntity.GetName() + "_lightmap.png";
                         std::error_code ec;
@@ -4747,8 +4326,6 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<MeshRendererComponent>();
         }
 
-        
-        
         if (m_SelectedEntity.HasComponent<LODComponent>()) {
             auto& lod = m_SelectedEntity.GetComponent<LODComponent>();
             if (DrawComponentHeader("LOD (níveis de detalhe)", &removeThis)) {
@@ -4782,7 +4359,7 @@ void EditorLayer::DrawInspector() {
                 if (ImGui::Button("Gerar LOD automático (builtins)")) {
                     auto& mr = m_SelectedEntity.GetComponent<MeshRendererComponent>();
                     lod.Levels.clear();
-                    
+
                     lod.Levels.push_back({ mr.MeshSource, 30.0f, mr.MeshAsset });
                     for (int lvl = 1; lvl <= 2; ++lvl) {
                         auto m = kizuri::Mesh::CreateLODMesh(mr.MeshSource, lvl);
@@ -4806,8 +4383,7 @@ void EditorLayer::DrawInspector() {
                 float dur = tl.Duration();
                 if (dur > 0.0f)
                     ImGui::SliderFloat("Tempo", &tl.Time, 0.0f, dur);
-                
-                
+
                 int toRemove = -1;
                 if (!tl.Keyframes.empty()) {
                     float maxT = tl.Duration();
@@ -4820,7 +4396,7 @@ void EditorLayer::DrawInspector() {
                                               ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
                         }
                         ImGui::PopStyleVar();
-                        
+
                         ImGui::BeginChild(ImGui::GetID((void*)(uintptr_t)(i + 1000)), ImVec2(0, 26));
                         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.16f, 0.2f, 1.0f));
                         ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.82f, 0.24f, 0.27f, 1.0f));
@@ -4884,7 +4460,7 @@ void EditorLayer::DrawInspector() {
                 changed |= ImGui::DragFloat("Elevação", &t.HeightScale, 0.1f, 0.0f, 50.0f);
                 changed |= ImGui::DragInt("Semente", (int*)&t.Seed, 1);
                 if (changed || ImGui::Button("Regenerar terreno")) {
-                    if (changed) t.Heightmap.clear(); 
+                    if (changed) t.Heightmap.clear();
                     t.Regenerate();
                     if (m_SelectedEntity.HasComponent<MeshRendererComponent>())
                         m_SelectedEntity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;
@@ -4909,7 +4485,7 @@ void EditorLayer::DrawInspector() {
         if (m_SelectedEntity.HasComponent<AnimatorComponent>()) {
             auto& ac = m_SelectedEntity.GetComponent<AnimatorComponent>();
             if (DrawComponentHeader("Animador (skinning)", &removeThis)) {
-                
+
                 if (!ac.Skin && !ac.MeshPath.empty())
                     ac.Skin = kizuri::SkinData::CreateFromGLTF(Project::ResolvePath(ac.MeshPath));
 
@@ -4925,7 +4501,7 @@ void EditorLayer::DrawInspector() {
                 if (ImGui::Button("Gerenciador")) RevealFileInContentBrowser(ac.MeshPath);
 
                 if (ac.Skin && !ac.Skin->Clips.empty()) {
-                    
+
                     int currentClip = ac.Skin->GetClipIndex(ac.ClipName);
                     const char* preview = (currentClip >= 0) ? ac.Skin->Clips[(size_t)currentClip].Name.c_str() : "(pose de repouso)";
                     if (ImGui::BeginCombo("Animação", preview)) {
@@ -4939,7 +4515,6 @@ void EditorLayer::DrawInspector() {
                         ImGui::EndCombo();
                     }
 
-                    
                     ImGui::Checkbox("Tocando", &ac.Playing);
                     ImGui::SameLine();
                     ImGui::Checkbox("Em loop", &ac.Loop);
@@ -5072,7 +4647,6 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<TwoBoneIKComponent>();
         }
 
-        
         if (m_SelectedEntity.HasComponent<NavGridComponent>()) {
             auto& ng = m_SelectedEntity.GetComponent<NavGridComponent>();
             if (DrawComponentHeader("NavGrid (navegação)", &removeThis)) {
@@ -5139,7 +4713,7 @@ void EditorLayer::DrawInspector() {
                 if (ImGui::InputText("Tag do alvo", tagBuf, sizeof(tagBuf))) ai.TargetTag = tagBuf;
 
                 ImGui::Separator();
-                ImGui::TextDisabled("Pontos de patrulha (%.0f,%.0f,%.0f ...)", 
+                ImGui::TextDisabled("Pontos de patrulha (%.0f,%.0f,%.0f ...)",
                                     ai.PatrolPoints.empty() ? 0.0f : ai.PatrolPoints[0].x,
                                     ai.PatrolPoints.empty() ? 0.0f : ai.PatrolPoints[0].y,
                                     ai.PatrolPoints.empty() ? 0.0f : ai.PatrolPoints[0].z);
@@ -5305,7 +4879,6 @@ void EditorLayer::DrawInspector() {
                 ImGui::DragInt("Camada de ordenação", &tmc.SortingLayer, 1);
                 tmc.Tiles.resize((size_t)tmc.MapWidth * tmc.MapHeight);
 
-                
                 ImGui::DragInt("Pincel", &m_TilemapBrushValue, 1, 0, 4096);
                 ImGui::TextDisabled("Pinte no viewport 2D: o botão esquerdo aplica o pincel, o botão direito apaga.");
 
@@ -5320,7 +4893,6 @@ void EditorLayer::DrawInspector() {
                     }
                 }
 
-                
                 if (ImGui::CollapsingHeader("Colisão (tiles sólidos)")) {
                     ImGui::TextDisabled("Tiles com colisor estático. Ex.: chão=1, plataforma=2.");
                     static int s_AddSolid = 1;
@@ -5560,9 +5132,7 @@ void EditorLayer::DrawAddComponentButton() {
         if (!m_SelectedEntity.HasComponent<CircleRendererComponent>() && ImGui::MenuItem("Circle Renderer"))
             m_SelectedEntity.AddComponent<CircleRendererComponent>();
         if (!m_SelectedEntity.HasComponent<CameraComponent>() && ImGui::MenuItem("Camera")) {
-            
-            
-            
+
             auto& newCam = m_SelectedEntity.AddComponent<CameraComponent>();
             if (m_ViewportMode == ViewportMode::Mode3D) {
                 newCam.Type = CameraComponent::ProjectionType::Perspective3D;
@@ -5587,7 +5157,7 @@ void EditorLayer::DrawAddComponentButton() {
             if (!m_SelectedEntity.HasComponent<MeshRendererComponent>())
                 m_SelectedEntity.AddComponent<MeshRendererComponent>();
             if (!m_SelectedEntity.HasComponent<Rigidbody3DComponent>()) {
-                
+
                 auto& rb = m_SelectedEntity.AddComponent<Rigidbody3DComponent>();
                 rb.Type = Rigidbody3DComponent::BodyType::Static;
             }
@@ -5633,7 +5203,7 @@ void EditorLayer::DrawAddComponentButton() {
         if (!m_SelectedEntity.HasComponent<NativeScriptComponent>() && ImGui::MenuItem("Script C#"))
             m_SelectedEntity.AddComponent<NativeScriptComponent>();
         ImGui::Separator();
-        
+
         if (!m_SelectedEntity.HasComponent<Rigidbody3DComponent>() && ImGui::MenuItem("Rigidbody 3D"))
             m_SelectedEntity.AddComponent<Rigidbody3DComponent>();
         if (!m_SelectedEntity.HasComponent<BoxCollider3DComponent>() && ImGui::MenuItem("Box Collider 3D"))
@@ -5643,7 +5213,7 @@ void EditorLayer::DrawAddComponentButton() {
         if (!m_SelectedEntity.HasComponent<MeshColliderComponent>() && ImGui::MenuItem("Mesh Collider 3D (convexo)"))
             m_SelectedEntity.AddComponent<MeshColliderComponent>();
         ImGui::Separator();
-        
+
         if (!m_SelectedEntity.HasComponent<NavGridComponent>() && ImGui::MenuItem("NavGrid (grade de navegação)"))
             m_SelectedEntity.AddComponent<NavGridComponent>();
         if (!m_SelectedEntity.HasComponent<NavObstacleComponent>() && ImGui::MenuItem("Nav Obstáculo"))
@@ -5669,34 +5239,12 @@ void EditorLayer::DrawAddComponentButton() {
 void EditorLayer::OnImGuiRender() {
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — início");
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     ImGuiIO& io = ImGui::GetIO();
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — GetIO ok");
 
-    
-    
-    
-    
-    
-    
-    
-    
     ImGuizmo::SetImGuiContext(ImGui::GetCurrentContext());
     ImGuizmo::BeginFrame();
 
-    
-    
-    
     if (m_EditorState != EditorState::Editor) {
         if (m_EditorState == EditorState::Hub) DrawHub();
         else DrawLoadingScreen();
@@ -5704,26 +5252,6 @@ void EditorLayer::OnImGuiRender() {
         return;
     }
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     bool ctrlDown = io.KeyCtrl;
     bool zDown = kizuri::Input::IsKeyPressed(kizuri::Key::Z);
     bool yDown = kizuri::Input::IsKeyPressed(kizuri::Key::Y);
@@ -5747,10 +5275,6 @@ void EditorLayer::OnImGuiRender() {
         }
     }
 
-    
-    
-    
-    
     {
         bool f5Down = kizuri::Input::IsKeyPressed(kizuri::Key::F5);
         bool f5JustPressed = f5Down && !m_PrevF5KeyDown;
@@ -5761,10 +5285,6 @@ void EditorLayer::OnImGuiRender() {
         }
     }
 
-    
-    
-    
-    
     if (m_SceneState == SceneState::Edit && m_SelectedEntity && !io.WantTextInput) {
         bool delDown = kizuri::Input::IsKeyPressed(kizuri::Key::Delete);
         if (delDown) {
@@ -5787,13 +5307,6 @@ void EditorLayer::OnImGuiRender() {
     }
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — atalhos undo/redo + F5 ok");
 
-    
-    
-    
-    
-    
-    
-    
     if (m_SelectedEntity && m_ActiveScene && !m_ActiveScene->GetRegistry().valid(m_SelectedEntity.GetHandle()))
         m_SelectedEntity = {};
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — validação de seleção ok, chamando DrawDockspace");
@@ -5813,9 +5326,7 @@ void EditorLayer::OnImGuiRender() {
         DrawInspector();
         DrawConsole();
         DrawContentBrowser();
-        
-        
-        
+
         if (m_PanelContext) {
             for (auto& panel : m_Panels)
                 if (panel->IsVisible()) panel->OnImGuiRender();
@@ -5843,28 +5354,16 @@ void EditorLayer::OnImGuiRender() {
     ImVec2 panelSize = ImGui::GetContentRegionAvail();
     m_ViewportSize = { panelSize.x, panelSize.y };
 
-    
-    
-    
-    
-    
-    
-    
     ImVec2 viewportPos = ImGui::GetCursorScreenPos();
     m_ViewportBounds[0] = { viewportPos.x, viewportPos.y };
     m_ViewportBounds[1] = { viewportPos.x + panelSize.x, viewportPos.y + panelSize.y };
 
     uint32_t textureID = m_Framebuffer->GetColorAttachmentRendererID();
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — chamando ImGui::Image (textureID={0}, {1}x{2})", textureID, panelSize.x, panelSize.y);
-    
-    
-    
+
     ImGui::Image((ImTextureID)(uint64_t)textureID, panelSize, ImVec2(0, 1), ImVec2(1, 0));
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — ImGui::Image ok");
 
-    
-    
-    
     if (m_ShowStats) {
         ImDrawList* dl = ImGui::GetWindowDrawList();
         ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -5879,7 +5378,7 @@ void EditorLayer::OnImGuiRender() {
                  kizuri::RenderCommand::GetFrameTriangles(),
                  panelSize.x, panelSize.y,
                  kizuri::GetGLSLVersion());
-        
+
         ImVec2 textSize = ImGui::CalcTextSize(buf);
         float pad = 6.0f;
         dl->AddRectFilled(ImVec2(pos.x + pad, pos.y + pad),
@@ -5891,9 +5390,6 @@ void EditorLayer::OnImGuiRender() {
         (void)gs;
     }
 
-    
-    
-    
     if (m_ShowTextDiag) {
         ImGui::SetNextWindowSize(ImVec2(560, 380), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowPos(ImVec2(60, 60), ImGuiCond_FirstUseEver);
@@ -5916,9 +5412,6 @@ void EditorLayer::OnImGuiRender() {
         ImGui::End();
     }
 
-    
-    
-    
     const std::string& diag = kizuri::GetShaderDiagnostic();
     if (!diag.empty()) {
         ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -5933,37 +5426,21 @@ void EditorLayer::OnImGuiRender() {
                     IM_COL32(255, 235, 235, 255), diag.c_str());
     }
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     if (m_SceneState == SceneState::Edit) {
         KZ_CORE_TRACE("EditorLayer::OnImGuiRender — chamando DrawGizmo");
         DrawGizmo();
         KZ_CORE_TRACE("EditorLayer::OnImGuiRender — DrawGizmo ok");
         DrawCameraGizmo();
-        DrawCamera2DPreview(); 
+        DrawCamera2DPreview();
         DrawLightGizmo();
         DrawColliderGizmo();
-        if (m_ShowColliders) DrawAllColliders(); 
+        if (m_ShowColliders) DrawAllColliders();
         DrawNavDebug();
     } else {
         KZ_CORE_TRACE("EditorLayer::OnImGuiRender — gizmo pulado (Play)");
-        DrawNavDebug(); 
+        DrawNavDebug();
     }
 
-    
-    
     if (m_SceneState == SceneState::Edit && ImGui::BeginDragDropTarget()) {
         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("KZ_CONTENT_FILE")) {
             std::string path((const char*)payload->Data);
@@ -5980,7 +5457,7 @@ void EditorLayer::OnImGuiRender() {
                     glm::vec4 farP  = inv * glm::vec4(ndc.x, ndc.y, 1.0f, 1.0f);
                     glm::vec3 o = glm::vec3(nearP) / nearP.w;
                     glm::vec3 d = glm::normalize(glm::vec3(farP) / farP.w - o);
-                    float t = (0.0f - o.y) / glm::max(d.y, 0.0001f); 
+                    float t = (0.0f - o.y) / glm::max(d.y, 0.0001f);
                     spawn = (t > 0.0f) ? o + d * t : o;
                 } else {
                     glm::mat4 inv = glm::inverse(m_Editor2DCamera.GetProjectionMatrix() * m_Editor2DCamera.GetViewMatrix());
@@ -5997,10 +5474,6 @@ void EditorLayer::OnImGuiRender() {
         ImGui::EndDragDropTarget();
     }
 
-    
-    
-    
-    
     if (m_SceneState == SceneState::Edit &&
         ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
         !ImGuizmo::IsOver() && !ImGuizmo::IsUsing()) {
@@ -6022,23 +5495,17 @@ void EditorLayer::OnImGuiRender() {
                 glm::vec3 rayDir = glm::normalize(glm::vec3(farP - nearP));
                 m_SelectedEntity = m_ActiveScene->PickEntity(rayOrigin, rayDir);
             } else {
-                
-                
+
                 glm::mat4 invViewProj = glm::inverse(m_Editor2DCamera.GetProjectionMatrix() * m_Editor2DCamera.GetViewMatrix());
                 glm::vec4 worldP = invViewProj * glm::vec4(ndc.x, ndc.y, 0.0f, 1.0f);
                 worldP /= worldP.w;
                 m_SelectedEntity = m_ActiveScene->PickEntity2D({ worldP.x, worldP.y });
             }
-            AutoSwitchViewportMode(); 
+            AutoSwitchViewportMode();
             KZ_CORE_TRACE("EditorLayer::OnImGuiRender — picking por clique ok");
         }
     }
 
-    
-    
-    
-    
-    
     if (m_SceneState == SceneState::Edit && m_ViewportMode == ViewportMode::Mode2D &&
         m_SelectedEntity && m_SelectedEntity.HasComponent<TilemapComponent>() &&
         ImGui::IsItemHovered() && !ImGuizmo::IsOver() && !ImGuizmo::IsUsing()) {
@@ -6077,14 +5544,6 @@ void EditorLayer::OnImGuiRender() {
         }
     }
 
-    
-    
-    
-
-    
-    
-    
-    
     if (m_SceneLoading) {
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
@@ -6108,8 +5567,6 @@ void EditorLayer::OnImGuiRender() {
         ImGui::PopStyleVar();
     }
 
-    
-    
     if (m_PlayBuildActive && !m_PlayBuildDone) {
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
@@ -6130,9 +5587,6 @@ void EditorLayer::OnImGuiRender() {
         ImGui::PopStyleVar();
     }
 
-    
-    
-    
     if (!m_PlayBuildActive && !m_PlayBuildError.empty()) {
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
@@ -6149,8 +5603,7 @@ void EditorLayer::OnImGuiRender() {
             ImGui::Spacing();
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.85f, 0.8f, 1.0f));
             std::string display = m_PlayBuildError;
-            
-            
+
             std::string hints;
             std::error_code sec;
             if (Project::GetActive()) {
@@ -6183,10 +5636,6 @@ void EditorLayer::OnImGuiRender() {
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — fim");
 }
 
-
-
-
-
 void EditorLayer::StartUpdateCheck() {
     {
         std::lock_guard lock(m_UpdateMutex);
@@ -6207,10 +5656,9 @@ void EditorLayer::StartUpdateCheck() {
             if (info.Valid && kizuri::Updater::GetSkipVersion() != info.Version) {
                 m_UpdateVersion = info.Version;
                 m_UpdateUrl = info.DownloadUrl;
-                m_UpdateState = 2; 
+                m_UpdateState = 2;
             } else if (!err.empty() && !kizuri::Updater::GetApiUrl().empty()) {
-                
-                
+
                 m_UpdateState = 6;
             } else {
                 m_UpdateState = 0;
@@ -6222,8 +5670,6 @@ void EditorLayer::StartUpdateCheck() {
 void EditorLayer::DrawUpdateModals() {
     int state = m_UpdateState;
 
-    
-    
     if (state == 2 && !m_UpdatePopupOpened) {
         m_UpdatePopupOpened = true;
         ImGui::OpenPopup("Nova versão disponível");
@@ -6234,9 +5680,7 @@ void EditorLayer::DrawUpdateModals() {
     }
 
     if (state == 1) {
-        
-        
-        
+
         return;
     }
 
@@ -6252,7 +5696,7 @@ void EditorLayer::DrawUpdateModals() {
             if (ImGui::Button("Atualizar agora", ImVec2(140.0f, 0.0f))) {
                 if (m_UpdateSkipAsk) kizuri::Updater::SetSkipVersion(m_UpdateVersion);
                 m_UpdateSkipAsk = false;
-                
+
                 {
                     std::lock_guard lock(m_UpdateMutex);
                     m_UpdateState = 3;
@@ -6268,7 +5712,7 @@ void EditorLayer::DrawUpdateModals() {
                         std::lock_guard lock(m_UpdateMutex);
                         m_UpdateError = std::move(err);
                         m_UpdateBusy = false;
-                        m_UpdateState = ok ? 4 : 6; 
+                        m_UpdateState = ok ? 4 : 6;
                         m_UpdateZip = zip;
                     }
                 });
@@ -6295,8 +5739,7 @@ void EditorLayer::DrawUpdateModals() {
                 ImGui::Text("Baixando a nova versão...");
             else if (state == 4) {
                 ImGui::Text("Instalando a nova versão...");
-                
-                
+
                 std::lock_guard lock(m_UpdateMutex);
                 if (!m_UpdateBusy && !m_UpdateInstallStarted) {
                     m_UpdateInstallStarted = true;
@@ -6342,10 +5785,6 @@ void EditorLayer::DrawUpdateModals() {
     }
 }
 
-
-
-
-
 void EditorLayer::StartAndroidExport() {
     if (m_AndroidRunning) return;
     {
@@ -6356,7 +5795,6 @@ void EditorLayer::StartAndroidExport() {
     }
     if (m_AndroidThread.joinable()) m_AndroidThread.join();
 
-    
     std::string csproj, engineRoot;
     GetGameBuildInfo(csproj, engineRoot);
     std::string outputDir = m_ExportDirBuffer;
@@ -6367,7 +5805,7 @@ void EditorLayer::StartAndroidExport() {
     auto tools = m_AndroidTools;
 
     m_AndroidThread = std::thread([this, csproj, engineRoot, outputDir, gameName, projectDir, tools]() {
-        
+
         namespace fs = std::filesystem;
         std::string stageErr;
         std::string stage = (fs::path(outputDir) / "android_build" / "stage_game").string();
@@ -6386,7 +5824,7 @@ void EditorLayer::StartAndroidExport() {
                     fs::copy_file(e.path(), dst, fs::copy_options::overwrite_existing, ec);
                 }
             }
-            
+
             if (!m_ScenePath.empty()) {
                 fs::path startScene = fs::path(stage) / "Start.kzscene";
                 if (!fs::exists(startScene, ec))
@@ -6458,9 +5896,6 @@ void EditorLayer::DrawAndroidExportModals() {
     }
 }
 
-
-
-
 void EditorLayer::CompileAndRegisterGame() {
     if (m_SceneState != SceneState::Edit) return;
     if (m_CompileRegBusy) return;
@@ -6484,9 +5919,6 @@ void EditorLayer::CompileAndRegisterGame() {
     });
 }
 
-
-
-
 void EditorLayer::DrawCamera2DPreview() {
     if (!m_ActiveScene || m_SceneState != SceneState::Edit) return;
     auto& registry = m_ActiveScene->GetRegistry();
@@ -6504,8 +5936,6 @@ void EditorLayer::DrawCamera2DPreview() {
         float halfW = cc.OrthoSize * aspect * 0.5f;
         float halfH = cc.OrthoSize * 0.5f;
 
-        
-        
         glm::vec3 localCorners[4] = {
             { -halfW, -halfH, 0.0f }, {  halfW, -halfH, 0.0f },
             {  halfW,  halfH, 0.0f }, { -halfW,  halfH, 0.0f }
@@ -6522,7 +5952,7 @@ void EditorLayer::DrawCamera2DPreview() {
         if (!ok) return;
 
         ImDrawList* dl = ImGui::GetWindowDrawList();
-        const ImU32 color = IM_COL32(255, 190, 60, 255); 
+        const ImU32 color = IM_COL32(255, 190, 60, 255);
         for (int i = 0; i < 4; ++i)
             dl->AddLine(screen[i], screen[(i + 1) % 4], color, 2.0f);
         dl->AddRectFilled(screen[0], screen[2], IM_COL32(255, 190, 60, 10));

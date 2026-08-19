@@ -18,4 +18,3 @@ typedef int64_t khronos_stime_nanoseconds_t;
 #define KHRONOS_MAX_ENUM 0x7FFFFFFF
 typedef enum { KHRONOS_FALSE = 0, KHRONOS_TRUE = 1, KHRONOS_BOOLEAN_ENUM_FORCE_SIZE = KHRONOS_MAX_ENUM } khronos_boolean_enum_t;
 #endif
-

@@ -4,8 +4,6 @@
 
 namespace kizuri {
 
-
-
 namespace Key {
     enum : int {
         Space = 32, Apostrophe = 39, Comma = 44, Minus = 45, Period = 46, Slash = 47,
@@ -26,10 +24,7 @@ namespace Mouse {
 
 class Input {
 public:
-    
-    
-    
-    
+
     static void SetContext(void* nativeWindow);
 
     static bool IsKeyPressed(int keycode);
@@ -38,16 +33,12 @@ public:
     static float GetMouseX();
     static float GetMouseY();
 
-    
-    
-    
-    
     static bool IsActionPressed(const std::string& action);
     static void SetActionKey(const std::string& action, int keycode);
-    static int GetActionKey(const std::string& action); 
+    static int GetActionKey(const std::string& action);
 
 private:
     static void* s_Window;
 };
 
-} 
+}

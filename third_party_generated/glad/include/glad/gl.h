@@ -1,31 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 #ifndef GLAD_GL_H_
 #define GLAD_GL_H_
 
@@ -173,7 +146,7 @@ typedef GLADapiproc (*GLADuserptrloadfunc)(void *userptr, const char *name);
 typedef void (*GLADprecallback)(const char *name, GLADapiproc apiproc, int len_args, ...);
 typedef void (*GLADpostcallback)(void *ret, const char *name, GLADapiproc apiproc, int len_args, ...);
 
-#endif 
+#endif
 
 #define GL_1PASS_EXT 0x80A1
 #define GL_1PASS_SGIS 0x80A1
@@ -4775,7 +4748,6 @@ typedef void (*GLADpostcallback)(void *ret, const char *name, GLADapiproc apipro
 #define GL_ZERO_TO_ONE 0x935F
 #define GL_Z_EXT 0x87D7
 
-
 #include <KHR/khrplatform.h>
 typedef unsigned int GLenum;
 typedef unsigned char GLboolean;
@@ -4839,7 +4811,6 @@ typedef void (GLAD_API_PTR *GLDEBUGPROCAMD)(GLuint id,GLenum category,GLenum sev
 typedef unsigned short GLhalfNV;
 typedef GLintptr GLvdpauSurfaceNV;
 typedef void (GLAD_API_PTR *GLVULKANPROCNV)(void);
-
 
 #define GL_VERSION_1_0 1
 GLAD_API_CALL int GLAD_GL_VERSION_1_0;
@@ -6123,7 +6094,6 @@ GLAD_API_CALL int GLAD_GL_SUN_vertex;
 GLAD_API_CALL int GLAD_GL_WIN_phong_shading;
 #define GL_WIN_specular_fog 1
 GLAD_API_CALL int GLAD_GL_WIN_specular_fog;
-
 
 typedef void (GLAD_API_PTR *PFNGLACCUMXOESPROC)(GLenum op, GLfixed value);
 typedef GLboolean (GLAD_API_PTR *PFNGLACQUIREKEYEDMUTEXWIN32EXTPROC)(GLuint memory, GLuint64 key, GLuint timeout);
@@ -13747,14 +13717,8 @@ GLAD_API_CALL PFNGLWINDOWRECTANGLESEXTPROC glad_glWindowRectanglesEXT;
 GLAD_API_CALL PFNGLWRITEMASKEXTPROC glad_glWriteMaskEXT;
 #define glWriteMaskEXT glad_glWriteMaskEXT
 
-
-
-
-
 GLAD_API_CALL int gladLoadGLUserPtr( GLADuserptrloadfunc load, void *userptr);
 GLAD_API_CALL int gladLoadGL( GLADloadfunc load);
-
-
 
 #ifdef __cplusplus
 }

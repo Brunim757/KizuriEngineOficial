@@ -10,15 +10,10 @@
 
 namespace kizuri {
 
-
-
-
-
-
-static int s_ContextGLSL = 0; 
+static int s_ContextGLSL = 0;
 void SetContextGLSLVersion(int glsl) { s_ContextGLSL = glsl; }
 
-static std::string s_RenderDiagnostic; 
+static std::string s_RenderDiagnostic;
 void SetShaderDiagnostic(const std::string& msg) { s_RenderDiagnostic = msg; }
 const std::string& GetShaderDiagnostic() { return s_RenderDiagnostic; }
 
@@ -54,9 +49,6 @@ std::string GetOpenGLVersionString() {
 
 namespace {
 
-
-
-
 std::string RewriteVersionFor(const std::string& src, int glsl) {
     (void)glsl;
     std::string body = src;
@@ -67,21 +59,17 @@ std::string RewriteVersionFor(const std::string& src, int glsl) {
         else body.erase(pos);
     }
 #if defined(KZ_PLATFORM_ANDROID)
-    
-    
-    
-    
+
     return "#version 300 es\n"
            "precision highp float;\n"
            "precision highp int;\n" + body;
 #else
-    
-    
+
     return "#version 330 core\n" + body;
 #endif
 }
 
-} 
+}
 
 static uint32_t CompileStage(GLenum type, const std::string& source, const std::string& shaderName) {
     uint32_t shader = glCreateShader(type);
@@ -107,9 +95,6 @@ Shader::Shader(const std::string& name, const std::string& vertexSrc, const std:
     : m_Name(name) {
     KZ_TRACE_SCOPE("Shader::Shader");
 
-    
-    
-    
     uint32_t vs = CompileStage(GL_VERTEX_SHADER, RewriteVersionFor(vertexSrc, 330), name);
     uint32_t fs = CompileStage(GL_FRAGMENT_SHADER, RewriteVersionFor(fragmentSrc, 330), name);
 
@@ -172,7 +157,6 @@ Ref<Shader> Shader::CreateFromFiles(const std::string& vertexPath, const std::st
     return CreateRef<Shader>(vertexPath, readFile(vertexPath), readFile(fragmentPath));
 }
 
-
 void ShaderLibrary::Add(const Ref<Shader>& shader) { m_Shaders[shader->GetName()] = shader; }
 
 Ref<Shader> ShaderLibrary::Load(const std::string& name, const std::string& vertexSrc, const std::string& fragmentSrc) {
@@ -180,8 +164,6 @@ Ref<Shader> ShaderLibrary::Load(const std::string& name, const std::string& vert
     Add(shader);
     return shader;
 }
-
-
 
 Ref<Shader> ShaderLibrary::Get(const std::string& name) {
     auto it = m_Shaders.find(name);
@@ -195,4 +177,4 @@ Ref<Shader> ShaderLibrary::Get(const std::string& name) {
 }
 bool ShaderLibrary::Exists(const std::string& name) const { return m_Shaders.find(name) != m_Shaders.end(); }
 
-} 
+}

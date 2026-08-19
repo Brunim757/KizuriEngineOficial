@@ -1,11 +1,5 @@
 #pragma once
 
-
-
-
-
-
-
 #include "kizuri/Core.hpp"
 #include "kizuri/core/Log.hpp"
 #include "kizuri/core/LogHistory.hpp"
@@ -20,7 +14,6 @@
 #include "kizuri/core/UUID.hpp"
 #include "kizuri/core/EmbeddedContent.hpp"
 
-
 #include "kizuri/renderer/Renderer.hpp"
 #include "kizuri/renderer/Renderer2D.hpp"
 #include "kizuri/renderer/Renderer3D.hpp"
@@ -33,7 +26,6 @@
 #include "kizuri/renderer/Buffer.hpp"
 #include "kizuri/renderer/Framebuffer.hpp"
 
-
 #include "kizuri/ecs/Scene.hpp"
 #include "kizuri/ecs/Entity.hpp"
 #include "kizuri/ecs/Components.hpp"
@@ -42,18 +34,11 @@
 #include "kizuri/scene/EditorHistory.hpp"
 #include "kizuri/project/Project.hpp"
 
-
 #include "kizuri/scripting/NativeScript.hpp"
 #include "kizuri/scripting/ScriptRegistry.hpp"
 #include "kizuri/scripting/ScriptEngine.hpp"
 
-
-
-
-
-
 #include "kizuri/audio/AudioEngine.hpp"
-
 
 #include "kizuri/assets/AssetManager.hpp"
 #include "kizuri/project/GameExporter.hpp"

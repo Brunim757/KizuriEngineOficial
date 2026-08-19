@@ -4,7 +4,7 @@ namespace Kizuri;
 public struct Transform
 {
 	public Math.Vector3 Translation;
-	public Math.Vector3 Rotation; 
+	public Math.Vector3 Rotation;
 	public Math.Vector3 Scale;
 
 	public static Transform Identity => new()
@@ -25,16 +25,12 @@ public readonly struct Entity
 	public bool IsValid => Handle != 0;
 	public uint Id => Handle;
 
-	
-	
-	
 	public bool Active
 	{
 		get => Interop.KizuriNative.kz_entity_is_active(Handle) != 0;
 		set => Interop.KizuriNative.kz_entity_set_active(Handle, value ? 1 : 0);
 	}
 
-	
 	public string Name
 	{
 		get
@@ -62,7 +58,7 @@ public readonly struct Entity
 		var pos = default(Math.Vector3); var rot = default(Math.Vector3); var scale = default(Math.Vector3);
 		if (Interop.KizuriNative.kz_entity_get_transform(Handle, out pos, out rot, out scale) == 0) return false;
 		t.Translation = pos;
-		t.Rotation = new Math.Vector3(rot.X * K_RAD2DEG, rot.Y * K_RAD2DEG, rot.Z * K_RAD2DEG); 
+		t.Rotation = new Math.Vector3(rot.X * K_RAD2DEG, rot.Y * K_RAD2DEG, rot.Z * K_RAD2DEG);
 		t.Scale = scale;
 		return true;
 	}
@@ -75,25 +71,20 @@ public readonly struct Entity
 		return true;
 	}
 
-	
 	public Rigidbody2D GetRigidbody2D()
 	{
 		TryGetRigidbody2D(out var rb);
 		return rb;
 	}
 
-	
 	public Rigidbody2D Rigidbody2D => GetRigidbody2D();
 
 	public void SetPosition(Math.Vector3 position)
 		=> Interop.KizuriNative.kz_transform_set_position(Handle, position.X, position.Y, position.Z);
 
-	
-	
 	public void SetWorldPosition(Math.Vector3 position)
 		=> Interop.KizuriNative.kz_entity_set_world_position(Handle, position.X, position.Y, position.Z);
 
-	
 	public Math.Vector3 Position
 	{
 		get
@@ -103,9 +94,6 @@ public readonly struct Entity
 		}
 	}
 
-	
-
-	
 	public Entity Parent
 	{
 		get
@@ -115,17 +103,14 @@ public readonly struct Entity
 		}
 	}
 
-	
 	public int ChildCount => Interop.KizuriNative.kz_entity_get_child_count(Handle);
 
-	
 	public Entity GetChild(int index)
 	{
 		if (Interop.KizuriNative.kz_entity_get_child(Handle, index, out uint child) != 0) return new Entity(child);
 		return Entity.Invalid;
 	}
 
-	
 	public Entity GetChild(string name)
 	{
 		int count = ChildCount;
@@ -137,7 +122,6 @@ public readonly struct Entity
 		return Entity.Invalid;
 	}
 
-	
 	public Entity FindInChildren(string name)
 	{
 		int count = ChildCount;
@@ -152,9 +136,6 @@ public readonly struct Entity
 		return Entity.Invalid;
 	}
 
-	
-	
-	
 	const float K_DEG2RAD = (float)(System.Math.PI / 180.0);
 	const float K_RAD2DEG = (float)(180.0 / System.Math.PI);
 
@@ -162,14 +143,12 @@ public readonly struct Entity
 		=> Interop.KizuriNative.kz_transform_set_rotation(Handle,
 			degrees.X * K_DEG2RAD, degrees.Y * K_DEG2RAD, degrees.Z * K_DEG2RAD);
 
-	
 	public void Rotate(Math.Vector3 degrees)
 	{
 		var r = Rotation;
 		SetRotation(r + degrees);
 	}
 
-	
 	public void Translate(Math.Vector3 delta)
 	{
 		var p = Position;
@@ -179,8 +158,6 @@ public readonly struct Entity
 	public void SetScale(Math.Vector3 scale)
 		=> Interop.KizuriNative.kz_transform_set_scale(Handle, scale.X, scale.Y, scale.Z);
 
-	
-	
 	public Math.Vector3 Rotation
 	{
 		get
@@ -200,7 +177,6 @@ public readonly struct Entity
 		}
 	}
 
-	
 	public bool TryGetWorldPosition(out Math.Vector3 position)
 	{
 		position = Math.Vector3.Zero;
@@ -210,8 +186,6 @@ public readonly struct Entity
 	public void LookAt(Math.Vector3 target)
 		=> Interop.KizuriNative.kz_entity_look_at(Handle, target.X, target.Y, target.Z);
 
-	
-	
 	public Math.Vector3 GetForward()
 	{
 		return GetForwardFromDeg(Rotation);
@@ -224,7 +198,6 @@ public readonly struct Entity
 		return new Math.Vector3(cy * cp, sp, sy * cp);
 	}
 
-	
 	public Math.Vector3 GetRight()
 	{
 		var r = Rotation;
@@ -232,7 +205,6 @@ public readonly struct Entity
 		return new Math.Vector3(-sy, 0f, cy);
 	}
 
-	
 	public void MoveForward(float distance)
 	{
 		var f = GetForward();
@@ -245,7 +217,6 @@ public readonly struct Entity
 		SetPosition(Position + new Math.Vector3(r.X * distance, 0f, r.Z * distance));
 	}
 
-	
 	public void SetParent(Entity parent)
 		=> Interop.KizuriNative.kz_entity_set_parent(Handle, parent.Handle);
 
@@ -254,9 +225,6 @@ public readonly struct Entity
 
 	public void Destroy() => Interop.KizuriNative.kz_scene_destroy_entity(Handle);
 
-	
-
-	
 	public bool AddSprite(string? texturePath = null)
 		=> Interop.KizuriNative.kz_entity_add_sprite(Handle, texturePath ?? string.Empty) != 0;
 
@@ -269,13 +237,9 @@ public readonly struct Entity
 	public bool AddCamera(bool perspective3D = false)
 		=> Interop.KizuriNative.kz_entity_add_camera(Handle, perspective3D ? 1 : 0) != 0;
 
-	
 	public void SetCamera(float fovDeg, float nearClip = 0.01f, float farClip = 1000f)
 		=> Interop.KizuriNative.kz_camera_set_params(Handle, fovDeg, nearClip, farClip);
 
-	
-	
-	
 	public bool AddCameraFollow(string targetName, Math.Vector3 offset = default, float smoothness = 8f)
 	{
 		bool ok = Interop.KizuriNative.kz_entity_add_camera_follow(Handle, targetName) != 0;
@@ -294,26 +258,18 @@ public readonly struct Entity
 	public void SetCameraFollowSmoothness(float smoothness)
 		=> Interop.KizuriNative.kz_camera_follow_set_smoothness(Handle, smoothness);
 
-	
-	
-	
 	public bool AddLight(LightType type, float r = 1f, float g = 1f, float b = 1f,
 	                     float intensity = 1f, float range = 10f,
 	                     float innerConeDeg = 20f, float outerConeDeg = 30f,
 	                     bool castsShadow = false)
 		=> Interop.KizuriNative.kz_entity_add_light(Handle, (int)type, r, g, b, intensity, range, innerConeDeg, outerConeDeg, castsShadow ? 1 : 0) != 0;
 
-	
-	
 	public bool AddMeshRenderer(string meshSource = "builtin:cube")
 		=> Interop.KizuriNative.kz_entity_add_mesh_renderer(Handle, meshSource) != 0;
 
-	
-	
 	public bool AddTerrain(uint segments = 64, float size = 100f, float heightScale = 5f, uint seed = 1)
 		=> Interop.KizuriNative.kz_entity_add_terrain(Handle, segments, size, heightScale, seed) != 0;
 
-	
 	public bool RegenerateTerrain(uint segments, float size, float heightScale, uint seed)
 		=> Interop.KizuriNative.kz_terrain_regenerate(Handle, segments, size, heightScale, seed) != 0;
 
@@ -340,16 +296,11 @@ public readonly struct Entity
 	public void SetMaterialHeightScale(float scale)
 		=> Interop.KizuriNative.kz_material_set_height_scale(Handle, scale);
 
-	
-	
-	
 	public void AddCharacterController(float speed = 6f, float gravity = -20f)
 		=> Interop.KizuriNative.kz_entity_add_character_controller(Handle, speed, gravity);
 	public void MoveCharacter(float fwdX, float fwdZ)
 		=> Interop.KizuriNative.kz_entity_move_character(Handle, fwdX, fwdZ);
 
-	
-	
 	public bool AddAnimationBlend(string clipA, string clipB, float weight = 0f)
 		=> Interop.KizuriNative.kz_entity_add_animation_blend(Handle, clipA, clipB, weight) != 0;
 	public void SetAnimationBlend(float weight)
@@ -374,7 +325,6 @@ public readonly struct Entity
 	public float NavAgentRemainingDistance()
 		=> Interop.KizuriNative.kz_navagent_remaining_distance(Handle);
 
-	
 	public void AddTimeline() => Interop.KizuriNative.kz_entity_add_timeline(Handle);
 	public void PlayTimeline(bool play = true) => Interop.KizuriNative.kz_timeline_play(Handle, play ? 1 : 0);
 	public void StopTimeline() => Interop.KizuriNative.kz_timeline_play(Handle, 0);
@@ -382,7 +332,6 @@ public readonly struct Entity
 	public void AddTimelineKeyframe(float time, Math.Vector3 position)
 		=> Interop.KizuriNative.kz_timeline_add_keyframe(Handle, time, position.X, position.Y, position.Z);
 
-	
 	public int Layer
 	{
 		get => Interop.KizuriNative.kz_entity_get_layer(Handle);
@@ -393,7 +342,7 @@ public readonly struct Entity
 		get => Interop.KizuriNative.kz_entity_get_collision_mask(Handle);
 		set => Interop.KizuriNative.kz_entity_set_collision_mask(Handle, value);
 	}
-	
+
 	public void SetCollideWithLayers(params int[] layers)
 	{
 		uint mask = 0;
@@ -403,13 +352,9 @@ public readonly struct Entity
 	public void SetMaterialEmissive(float r, float g, float b, float strength = 1f)
 		=> Interop.KizuriNative.kz_material_set_emissive(Handle, r, g, b, strength);
 
-	
-
-	
 	public bool AddAnimator(string meshPath)
 		=> Interop.KizuriNative.kz_entity_add_animator(Handle, meshPath) != 0;
 
-	
 	public bool PlayAnimation(string clipName)
 		=> Interop.KizuriNative.kz_animator_play(Handle, clipName) != 0;
 
@@ -419,15 +364,11 @@ public readonly struct Entity
 	public void SetAnimationLoop(bool loop) => Interop.KizuriNative.kz_animator_set_loop(Handle, loop ? 1 : 0);
 	public void SetAnimationPlaying(bool playing) => Interop.KizuriNative.kz_animator_set_playing(Handle, playing ? 1 : 0);
 
-	
 	public bool PlayAnimationState(string stateName, float crossfadeSeconds = 0.3f)
 		=> Interop.KizuriNative.kz_animator_set_state(Handle, stateName, crossfadeSeconds) != 0;
 
 	public string AnimationState => Interop.KizuriNative.kz_animator_get_state(Handle);
 
-	
-
-	
 	public bool AddRigidbody3D(BodyType3D bodyType = BodyType3D.Dynamic, float mass = 1f)
 		=> Interop.KizuriNative.kz_entity_add_rigidbody3d(Handle, (int)bodyType, mass) != 0;
 
@@ -464,7 +405,6 @@ public readonly struct Entity
 	public void SetAngularVelocity(Math.Vector3 angular)
 		=> Interop.KizuriNative.kz_rigidbody3d_set_angular_velocity(Handle, angular.X, angular.Y, angular.Z);
 
-	
 	public void SetGravityScale3D(float scale)
 		=> Interop.KizuriNative.kz_rigidbody3d_set_gravity_scale(Handle, scale);
 
@@ -474,11 +414,9 @@ public readonly struct Entity
 	public bool AddCircleCollider2D(float radius = 0.5f, float density = 1f, float friction = 0.5f, float restitution = 0f)
 		=> Interop.KizuriNative.kz_entity_add_circle_collider2d(Handle, radius, density, friction, restitution) != 0;
 
-	
 	public bool SetParticleTexture(string path)
 		=> Interop.KizuriNative.kz_particle_set_texture(Handle, path) != 0;
 
-	
 	public bool SetParticleRate(float rate) => Interop.KizuriNative.kz_particle_set_rate(Handle, rate) != 0;
 	public bool SetParticleLifetime(float min, float max) => Interop.KizuriNative.kz_particle_set_lifetime(Handle, min, max) != 0;
 	public bool SetParticleVelocity(Math.Vector3 min, Math.Vector3 max)
@@ -488,34 +426,27 @@ public readonly struct Entity
 	public bool SetParticleColors(Math.Vector4 start, Math.Vector4 end)
 		=> Interop.KizuriNative.kz_particle_set_colors(Handle, start.X, start.Y, start.Z, start.W, end.X, end.Y, end.Z, end.W) != 0;
 	public bool SetParticleSize(float start, float end) => Interop.KizuriNative.kz_particle_set_size(Handle, start, end) != 0;
-	
+
 	public bool SetParticleAdditive(bool additive) => Interop.KizuriNative.kz_particle_set_additive(Handle, additive ? 1 : 0) != 0;
 
-	
 	public bool AddSpriteAnimation(string sheetPath, float fps = 12f, int totalFrames = 1,
 	                               int framesPerRow = 1, bool loop = true)
 		=> Interop.KizuriNative.kz_entity_add_sprite_animation(Handle, sheetPath, (int)fps, totalFrames, framesPerRow, loop ? 1 : 0) != 0;
 	public void PlaySpriteAnimation(bool play = true) => Interop.KizuriNative.kz_sprite_animation_play(Handle, play ? 1 : 0);
 	public void SetSpriteAnimationFPS(float fps) => Interop.KizuriNative.kz_sprite_animation_set_fps(Handle, fps);
 
-	
-	
 	public bool AddTilemap(string atlasPath, int atlasCols, int atlasRows, int mapW, int mapH,
 	                       float tileW = 1f, float tileH = 1f)
 		=> Interop.KizuriNative.kz_entity_add_tilemap(Handle, atlasPath, atlasCols, atlasRows, mapW, mapH, tileW, tileH) != 0;
-	
+
 	public bool SetTile(int x, int y, int tileValue)
 		=> Interop.KizuriNative.kz_tilemap_set_tile(Handle, x, y, tileValue) != 0;
-	
+
 	public bool AddSolidTile(int tileValue)
 		=> Interop.KizuriNative.kz_tilemap_add_solid_tile(Handle, tileValue) != 0;
 
-	
-	
 	public void SetSortingLayer(int layer)
 		=> Interop.KizuriNative.kz_entity_set_sorting_layer(Handle, layer);
-
-	
 
 	public bool SetSpriteTexture(string path)
 		=> Interop.KizuriNative.kz_sprite_set_texture(Handle, path) != 0;
@@ -523,11 +454,9 @@ public readonly struct Entity
 	public void SetSpriteColor(float r, float g, float b, float a = 1f)
 		=> Interop.KizuriNative.kz_sprite_set_color(Handle, r, g, b, a);
 
-	
 	public void SetSpriteFlip(bool flipX, bool flipY)
 		=> Interop.KizuriNative.kz_sprite_set_flip(Handle, flipX ? 1 : 0, flipY ? 1 : 0);
 
-	
 	public void SetGravityScale(float scale)
 		=> Interop.KizuriNative.kz_rigidbody2d_set_gravity_scale(Handle, scale);
 
@@ -539,7 +468,6 @@ public readonly struct Entity
 	public bool PlayAudio() => Interop.KizuriNative.kz_audio_play(Handle) != 0;
 	public bool StopAudio() => Interop.KizuriNative.kz_audio_stop(Handle) != 0;
 
-	
 	public void SetAudioVolume(float volume) => Interop.KizuriNative.kz_audio_set_volume(Handle, volume);
 	public void SetSoundReverb(bool enabled)
 		=> Interop.KizuriNative.kz_audio_set_reverb(Handle, enabled ? 1 : 0);
@@ -547,10 +475,6 @@ public readonly struct Entity
 	public void SetAudioSpatial(bool spatial, float minDistance = 1f, float maxDistance = 50f)
 		=> Interop.KizuriNative.kz_audio_set_spatial(Handle, spatial ? 1 : 0, minDistance, maxDistance);
 
-	
-
-	
-	
 	public bool AddUICanvas(float orthoSize = 10f)
 		=> Interop.KizuriNative.kz_entity_add_ui_canvas(Handle, orthoSize) != 0;
 
@@ -594,14 +518,12 @@ public enum ComponentType
 	SphereCollider3D = 16,
 }
 
-
 public enum BodyType3D
 {
 	Static = 0,
 	Dynamic = 1,
 	Kinematic = 2,
 }
-
 
 public enum LightType
 {

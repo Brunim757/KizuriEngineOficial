@@ -4,7 +4,6 @@
 #include <mutex>
 #include <cstring>
 
-
 #include <stb_image.h>
 
 namespace kizuri {
@@ -33,14 +32,13 @@ void AssetManager::Clear() {
     s_Meshes.clear();
 }
 
-
 namespace {
 
 struct CompletedTexture {
     std::string Path;
     AssetManager::TextureCallback Callback;
     int Width = 0, Height = 0, Channels = 0;
-    std::vector<unsigned char> Pixels; 
+    std::vector<unsigned char> Pixels;
 };
 
 std::mutex s_CompletedMutex;
@@ -48,21 +46,19 @@ std::vector<CompletedTexture> s_Completed;
 std::vector<std::thread> s_Workers;
 std::mutex s_WorkersMutex;
 
-} 
+}
 
 bool AssetManager::LoadTextureAsync(const std::string& path, TextureCallback callback) {
     if (path.empty()) return false;
 
-    
     auto it = s_Textures.find(path);
     if (it != s_Textures.end()) {
         if (callback) callback(it->second);
         return true;
     }
 
-    
     std::thread worker([path, callback]() {
-        
+
         stbi_set_flip_vertically_on_load(1);
         int w = 0, h = 0, ch = 0;
         stbi_uc* data = stbi_load(path.c_str(), &w, &h, &ch, 4);
@@ -89,7 +85,7 @@ bool AssetManager::LoadTextureAsync(const std::string& path, TextureCallback cal
 }
 
 void AssetManager::TickAsyncLoads() {
-    
+
     std::vector<CompletedTexture> ready;
     {
         std::lock_guard<std::mutex> lock(s_CompletedMutex);
@@ -100,7 +96,7 @@ void AssetManager::TickAsyncLoads() {
         if (!done.Pixels.empty()) {
             tex = Texture2D::Create(done.Width, done.Height);
             tex->SetData(done.Pixels.data(), (uint32_t)done.Pixels.size());
-            s_Textures[done.Path] = tex; 
+            s_Textures[done.Path] = tex;
         } else {
             KZ_CORE_WARN("AssetManager: falha ao decodificar '{}' (async).", done.Path);
         }
@@ -122,4 +118,4 @@ void AssetManager::Shutdown() {
     }
 }
 
-} 
+}

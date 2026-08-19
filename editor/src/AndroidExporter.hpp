@@ -1,9 +1,5 @@
 #pragma once
 
-
-
-
-
 #include <functional>
 #include <string>
 
@@ -13,24 +9,20 @@ class AndroidExporter {
 public:
     struct Tools {
         bool Ok = false;
-        std::string Missing;              
-        std::string NdKToolchain;         
-        std::string Aapt2, Zipalign;      
-        std::string Apksigner;            
+        std::string Missing;
+        std::string NdKToolchain;
+        std::string Aapt2, Zipalign;
+        std::string Apksigner;
         bool Java = false;
-        std::string Cmake, Ninja, Dotnet; 
+        std::string Cmake, Ninja, Dotnet;
         bool HaveNinja = true;
     };
 
-    
     static Tools DetectTools();
 
-    
-    
-    
     static bool Export(const Tools& tools,
-                       const std::string& engineRoot,   
-                       const std::string& gameCsproj,    
+                       const std::string& engineRoot,
+                       const std::string& gameCsproj,
                        const std::string& gameContentDir,
                        const std::string& gameName,
                        const std::string& outputDir,
@@ -39,4 +31,4 @@ public:
                        const std::function<void(const std::string&)>& log = nullptr);
 };
 
-} 
+}

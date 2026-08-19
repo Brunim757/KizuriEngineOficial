@@ -1,10 +1,6 @@
 using Kizuri;
 using Kizuri.Math;
 
-
-
-
-
 	public sealed class Demo3D : Script
 {
 	private Entity _cube;
@@ -16,23 +12,20 @@ using Kizuri.Math;
 
 	public override void OnCreate()
 	{
-		
+
 		var sun = Scene.CreateEntity("Sol");
 		sun.AddLight(LightType.Directional, 1f, 0.95f, 0.85f, intensity: 2f);
 		sun.SetRotation(new Vector3(46f, 23f, 0f));
 
-		
 		var point = Scene.CreateEntity("LuzPonto");
 		point.AddLight(LightType.Point, 1f, 0.3f, 0.1f, intensity: 5f, range: 8f, castsShadow: true);
 		point.SetPosition(new Vector3(2f, 1.5f, 0f));
 
-		
 		_cube = Scene.CreateEntity("Cubo");
 		_cube.AddMeshRenderer("builtin:cube");
 		_cube.SetMaterial(0.9f, 0.4f, 0.1f, metallic: 0.1f, roughness: 0.35f);
 		_cube.SetPosition(new Vector3(0f, 1f, 0f));
 
-		
 		_physicsBox = Scene.CreateEntity("CaixaFisica");
 		_physicsBox.AddMeshRenderer("builtin:cube");
 		_physicsBox.SetMaterial(0.3f, 0.6f, 0.9f, metallic: 0.8f, roughness: 0.2f);
@@ -40,7 +33,6 @@ using Kizuri.Math;
 		_physicsBox.AddRigidbody3D(BodyType3D.Dynamic, 1f);
 		_physicsBox.AddBoxCollider3D(0.5f, 0.5f, 0.5f);
 
-		
 		_spinningBall = Scene.CreateEntity("BolaGirando");
 		_spinningBall.AddMeshRenderer("builtin:sphere");
 		_spinningBall.SetMaterial(0.2f, 0.9f, 0.4f, metallic: 0.3f, roughness: 0.4f);
@@ -48,11 +40,9 @@ using Kizuri.Math;
 		_spinningBall.AddRigidbody3D(BodyType3D.Dynamic, 1f);
 		_spinningBall.AddSphereCollider3D(0.5f);
 
-		
 		var cam = Scene.GetPrimaryCamera();
 		if (cam.IsValid) cam.SetCamera(60f, 0.05f, 500f);
 
-		
 		var found = Scene.Find("Cubo");
 		if (found.IsValid) found.Name = "Cubo Renomeado";
 		_spinningBall.TryGetWorldPosition(out var ballPos);
@@ -72,11 +62,10 @@ using Kizuri.Math;
 			_cube.SetScale(new Vector3(1f + (float)System.Math.Sin(_t) * 0.2f, 1f, 1f));
 		}
 
-		
 		_impulseTimer -= deltaSeconds;
 		if (Input.IsKeyDown(Key.Space))
 		{
-			_impulseTimer = 3f; 
+			_impulseTimer = 3f;
 			if (_physicsBox.IsValid) _physicsBox.ApplyImpulse(new Vector3(0f, 8f, 0f));
 		}
 		if (_impulseTimer <= 0f && _physicsBox.IsValid)
@@ -89,7 +78,6 @@ using Kizuri.Math;
 			}
 		}
 
-		
 		if (_spinningBall.IsValid)
 		{
 			_spinningBall.ApplyTorque(new Vector3(2f, 4f, 1f) * deltaSeconds);
@@ -97,7 +85,6 @@ using Kizuri.Math;
 				_spinningBall.SetMaterial(0.2f, 0.9f, 0.4f, metallic: 0.3f, roughness: 0.4f);
 		}
 
-		
 		_rayTimer -= deltaSeconds;
 		if (_rayTimer <= 0f)
 		{

@@ -41,4 +41,4 @@ void ManagedScript::OnCollisionEnd(Entity other) {
         scripting::CoreCLRHost::CollisionScript(m_ManagedHandle, scripting::RegisterEntityHandle(other), false);
 }
 
-} 
+}

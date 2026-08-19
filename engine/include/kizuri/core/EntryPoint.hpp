@@ -10,9 +10,6 @@
     #include <Windows.h>
 #endif
 
-
-
-
 extern kizuri::Application* kizuri::CreateApplication();
 
 static void KzShowUnhandledExceptionPopup(const char* what) {
@@ -20,8 +17,7 @@ static void KzShowUnhandledExceptionPopup(const char* what) {
     std::string msg = std::string("A Kizuri Engine encerrou por um erro inesperado:\n\n") + what +
         "\n\nSe estiver rodando em um emulador (ex: Winlator) ou máquina virtual, "
         "verifique se o dispositivo suporta OpenGL 3.3+ com aceleração de GPU.";
-    
-    
+
     auto toWide = [](const std::string& utf8) -> std::wstring {
         if (utf8.empty()) return std::wstring();
         int len = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), (int)utf8.size(), nullptr, 0);

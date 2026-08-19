@@ -1,16 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
-
-
 #include <android_native_app_glue.h>
 #include <android/asset_manager.h>
 #include <android/log.h>
@@ -30,8 +18,6 @@
 #include "kizuri/core/AndroidPlatform.hpp"
 #include "kizuri/core/Log.hpp"
 
-
-
 namespace kizuri { Application* CreateApplication(); }
 
 namespace kizuri {
@@ -39,9 +25,6 @@ namespace android {
 
 static android_app* s_App = nullptr;
 static Application* s_GameApp = nullptr;
-
-
-
 
 static bool MkDirs(const std::string& path) {
     std::string cur;
@@ -87,8 +70,6 @@ static void ExtractDir(AAssetManager* mgr, const std::string& assetDir,
     AAssetDir_close(dir);
 }
 
-
-
 static std::string FindGameDll(const std::string& dotnetDir) {
     struct stat st;
     DIR* dir = opendir(dotnetDir.c_str());
@@ -102,13 +83,11 @@ static std::string FindGameDll(const std::string& dotnetDir) {
     }
     closedir(dir);
     if (found.empty()) {
-        
+
         found = dotnetDir + "/SampleGame.dll";
     }
     return found;
 }
-
-
 
 static void ExtractAppAssets(AAssetManager* mgr, const std::string& filesDir) {
     const std::string dotnetDir = filesDir + "/dotnet";
@@ -121,12 +100,9 @@ static void ExtractAppAssets(AAssetManager* mgr, const std::string& filesDir) {
     MkDirs(dotnetDir);
     MkDirs(gameDir);
 
-    
-    
     ExtractDir(mgr, "dotnet", dotnetDir);
     ExtractDir(mgr, "game", gameDir);
 
-    
     chdir(filesDir.c_str());
     setenv("KIZURI_FILES_DIR", filesDir.c_str(), 1);
 
@@ -135,12 +111,9 @@ static void ExtractAppAssets(AAssetManager* mgr, const std::string& filesDir) {
     KZ_CORE_INFO("Extração dos assets concluída em {0}.", filesDir);
 }
 
-
-
 static void PumpGlue() {
     if (!s_App) return;
-    
-    
+
     int fd = 0, events = 0;
     android_poll_source* source = nullptr;
     while (ALooper_pollOnce(0, &fd, &events, (void**)&source) >= 0) {
@@ -153,17 +126,13 @@ static bool ShouldExit() {
     return s_App ? s_App->destroyRequested != 0 : false;
 }
 
-
-
 static void HandleAppCmd(android_app* app, int32_t cmd) {
     switch (cmd) {
         case APP_CMD_INIT_WINDOW: {
-            
-            
+
             AndroidPlatform::SetNativeWindow(app->window);
             if (!s_GameApp) {
-                
-                
+
                 auto& args = GetCommandLineArgs();
                 if (args.empty()) {
                     const std::string& files = AndroidPlatform::GetFilesDir();
@@ -175,8 +144,7 @@ static void HandleAppCmd(android_app* app, int32_t cmd) {
             break;
         }
         case APP_CMD_TERM_WINDOW:
-            
-            
+
             AndroidPlatform::SetNativeWindow(nullptr);
             break;
         case APP_CMD_PAUSE:
@@ -195,8 +163,6 @@ static void HandleAppCmd(android_app* app, int32_t cmd) {
     }
 }
 
-
-
 static int32_t HandleInputEvent(android_app* app, AInputEvent* event) {
     (void)app;
     if (AInputEvent_getType(event) != AINPUT_EVENT_TYPE_MOTION) return 0;
@@ -206,7 +172,7 @@ static int32_t HandleInputEvent(android_app* app, AInputEvent* event) {
     size_t count = AMotionEvent_getPointerCount(event);
 
     if (masked == AMOTION_EVENT_ACTION_UP || masked == AMOTION_EVENT_ACTION_CANCEL) {
-        
+
         int id = AMotionEvent_getPointerId(event, 0);
         AndroidPlatform::HandleTouch(AMotionEvent_getX(event, 0),
                                      AMotionEvent_getY(event, 0), false, id);
@@ -241,15 +207,14 @@ static int32_t HandleInputEvent(android_app* app, AInputEvent* event) {
     return 1;
 }
 
-} 
-} 
+}
+}
 
 void android_main(android_app* app) {
-    
-    
+
     setenv("DOTNET_SYSTEM_GLOBALIZATION_INVARIANT", "1", 1);
     setenv("DOTNET_EnableWriteXorExecute", "0", 1);
-    
+
     setenv("DOTNET_LogLevel", "3", 0);
 
     kizuri::android::s_App = app;
@@ -264,21 +229,12 @@ void android_main(android_app* app) {
     kizuri::android::ExtractAppAssets(app->activity->assetManager,
                                       app->activity->internalDataPath);
 
-    
-    
     kizuri::AndroidPlatform::SetGlueHooks(kizuri::android::PumpGlue,
                                           kizuri::android::ShouldExit);
-
-    
-    
-    
-    
-
 
     ANativeActivity_setWindowFlags(app->activity,
                                    (uint32_t)0x00000001, (uint32_t)0x00000001);
 
-    
     while (!kizuri::android::s_GameApp && !app->destroyRequested) {
         int fd = 0, events = 0;
         android_poll_source* source = nullptr;

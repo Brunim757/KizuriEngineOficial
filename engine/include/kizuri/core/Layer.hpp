@@ -6,8 +6,6 @@
 
 namespace kizuri {
 
-
-
 class Layer {
 public:
     explicit Layer(std::string name = "Layer") : m_DebugName(std::move(name)) {}
@@ -42,4 +40,4 @@ private:
     unsigned int m_LayerInsertIndex = 0;
 };
 
-} 
+}

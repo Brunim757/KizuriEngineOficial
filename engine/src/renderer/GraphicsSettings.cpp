@@ -9,9 +9,7 @@
 namespace kizuri {
 
 void GraphicsSettings::TuneToHardware() {
-    
-    
-    
+
     MSAA = 2; ShadowMapSize = 1024; ShadowPCFRadius = 1; SSAOSamples = 16;
     BloomIterations = 3;
     ShadowSoftness = 0.5f;
@@ -31,15 +29,10 @@ void GraphicsSettings::TuneToHardware() {
     SSRMarchDistance = 20.0f;
     TAAEnabled = true;
 
-    
-    
-    
-    
-    
     const char* rend = (const char*)glGetString(GL_RENDERER);
     const char* glv  = (const char*)glGetString(GL_VERSION);
     int gmaj = 0, gmin = 0;
-    if (glv) { 
+    if (glv) {
         const char* p = glv;
         while (*p && !(*p >= '0' && *p <= '9')) ++p;
         if (*p) { gmaj = *p - '0'; p++; if (*p == '.') p++; if (*p >= '0' && *p <= '9') gmin = *p - '0'; }
@@ -194,7 +187,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             BloomIterations = 2;
             break;
         default:
-            break; 
+            break;
     }
     Preset = preset;
     Clamp();
@@ -319,4 +312,4 @@ bool LoadGraphicsSettings(const std::string& path, GraphicsSettings& out) {
     }
 }
 
-} 
+}

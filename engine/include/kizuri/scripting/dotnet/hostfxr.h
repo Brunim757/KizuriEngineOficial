@@ -1,6 +1,4 @@
 
-
-
 #ifndef HAVE_HOSTFXR_H
 #define HAVE_HOSTFXR_H
 
@@ -10,7 +8,7 @@
 #ifdef __cplusplus
 extern "C"
 {
-#endif 
+#endif
 
 #if defined(_WIN32)
     #define HOSTFXR_CALLTYPE __cdecl
@@ -54,29 +52,6 @@ typedef int32_t(HOSTFXR_CALLTYPE* hostfxr_main_bundle_startupinfo_fn)(
 
 typedef void(HOSTFXR_CALLTYPE *hostfxr_error_writer_fn)(const char_t *message);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 typedef hostfxr_error_writer_fn(HOSTFXR_CALLTYPE *hostfxr_set_error_writer_fn)(hostfxr_error_writer_fn error_writer);
 
 typedef void* hostfxr_handle;
@@ -87,152 +62,26 @@ struct hostfxr_initialize_parameters
     const char_t *dotnet_root;
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 typedef int32_t(HOSTFXR_CALLTYPE *hostfxr_initialize_for_dotnet_command_line_fn)(
     int argc,
     const char_t **argv,
     const struct hostfxr_initialize_parameters *parameters,
      hostfxr_handle *host_context_handle);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 typedef int32_t(HOSTFXR_CALLTYPE *hostfxr_initialize_for_runtime_config_fn)(
     const char_t *runtime_config_path,
     const struct hostfxr_initialize_parameters *parameters,
      hostfxr_handle *host_context_handle);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 typedef int32_t(HOSTFXR_CALLTYPE *hostfxr_get_runtime_property_value_fn)(
     const hostfxr_handle host_context_handle,
     const char_t *name,
      const char_t **value);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 typedef int32_t(HOSTFXR_CALLTYPE *hostfxr_set_runtime_property_value_fn)(
     const hostfxr_handle host_context_handle,
     const char_t *name,
     const char_t *value);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 typedef int32_t(HOSTFXR_CALLTYPE *hostfxr_get_runtime_properties_fn)(
     const hostfxr_handle host_context_handle,
@@ -240,57 +89,12 @@ typedef int32_t(HOSTFXR_CALLTYPE *hostfxr_get_runtime_properties_fn)(
      const char_t **keys,
      const char_t **values);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 typedef int32_t(HOSTFXR_CALLTYPE *hostfxr_run_app_fn)(const hostfxr_handle host_context_handle);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 typedef int32_t(HOSTFXR_CALLTYPE *hostfxr_get_runtime_delegate_fn)(
     const hostfxr_handle host_context_handle,
     enum hostfxr_delegate_type type,
      void **delegate);
-
-
-
-
-
-
-
-
-
-
 
 typedef int32_t(HOSTFXR_CALLTYPE *hostfxr_close_fn)(const hostfxr_handle host_context_handle);
 
@@ -327,41 +131,6 @@ typedef void(HOSTFXR_CALLTYPE* hostfxr_get_dotnet_environment_info_result_fn)(
     const struct hostfxr_dotnet_environment_info* info,
     void* result_context);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 typedef int32_t(HOSTFXR_CALLTYPE* hostfxr_get_dotnet_environment_info_fn)(
     const char_t* dotnet_root,
     void* reserved,
@@ -392,28 +161,6 @@ typedef void (HOSTFXR_CALLTYPE* hostfxr_resolve_frameworks_result_fn)(
     const struct hostfxr_resolve_frameworks_result* result,
     void* result_context);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 typedef int32_t(HOSTFXR_CALLTYPE* hostfxr_resolve_frameworks_for_runtime_config_fn)(
     const char_t* runtime_config_path,
      const struct hostfxr_initialize_parameters* parameters,
@@ -422,6 +169,6 @@ typedef int32_t(HOSTFXR_CALLTYPE* hostfxr_resolve_frameworks_for_runtime_config_
 
 #ifdef __cplusplus
 }
-#endif 
+#endif
 
-#endif 
+#endif

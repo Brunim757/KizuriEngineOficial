@@ -9,10 +9,6 @@
 
 using namespace kizuri;
 
-
-
-
-
 class GameLayer : public Layer {
 public:
     GameLayer(const std::string& scenePath, const std::string& modulePath)
@@ -52,7 +48,6 @@ public:
         RenderCommand::SetClearColor({ 0.08f, 0.09f, 0.11f, 1.0f });
         RenderCommand::Clear();
 
-        
         auto [mx, my] = Input::GetMousePosition();
         glm::vec2 ndc{ 0.0f, 0.0f };
         if (m_ViewportWidth > 0 && m_ViewportHeight > 0) {
@@ -63,7 +58,6 @@ public:
 
         m_Scene->OnUpdateRuntime(ts);
 
-        
         if (!m_SceneSwitching) {
             std::string nextScene;
             if (m_Scene->PollPendingLoad(nextScene)) {
@@ -98,7 +92,6 @@ public:
             }
         }
 
-        
         if (m_FadeAlpha > 0.001f) {
             float hw = (float)m_ViewportWidth * 0.5f, hh = (float)m_ViewportHeight * 0.5f;
             kizuri::OrthographicCamera cam(-hw, hw, -hh, hh);
@@ -131,7 +124,7 @@ private:
     std::string m_ModulePath;
     uint32_t m_ViewportWidth = 1600;
     uint32_t m_ViewportHeight = 900;
-    
+
     bool m_SceneSwitching = false;
     bool m_FadingOut = false;
     float m_FadeAlpha = 0.0f;
@@ -145,7 +138,6 @@ public:
         std::string scenePath = "Start.kzscene";
         std::string modulePath;
 
-        
         if (auto project = TryLoadProjectFromCwd()) {
             if (!project->GetConfig().StartScenePath.empty())
                 scenePath = Project::ResolvePath(project->GetConfig().StartScenePath);
@@ -154,9 +146,6 @@ public:
         if (args.size() > 1) scenePath = args[1];
         if (args.size() > 2) modulePath = args[2];
 
-        
-        
-        
         for (size_t i = 1; i < args.size(); ++i) {
             if (args[i] == "--net-host") {
                 if (kizuri::Network::Host(26000))
@@ -188,7 +177,6 @@ public:
         spec.Height = 900;
         spec.VSync = true;
 
-        
         namespace fs = std::filesystem;
         std::error_code ec;
         std::ifstream f("game.json");

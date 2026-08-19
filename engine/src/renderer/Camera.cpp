@@ -2,7 +2,6 @@
 
 namespace kizuri {
 
-
 OrthographicCamera::OrthographicCamera(float left, float right, float bottom, float top)
     : m_ProjectionMatrix(glm::ortho(left, right, bottom, top, -1.0f, 1.0f)), m_ViewMatrix(1.0f) {
     m_ViewProjectionMatrix = m_ProjectionMatrix * m_ViewMatrix;
@@ -19,7 +18,6 @@ void OrthographicCamera::RecalculateViewMatrix() {
     m_ViewMatrix = glm::inverse(transform);
     m_ViewProjectionMatrix = m_ProjectionMatrix * m_ViewMatrix;
 }
-
 
 PerspectiveCamera::PerspectiveCamera(float fovDeg, float aspectRatio, float nearClip, float farClip) {
     SetPerspective(fovDeg, aspectRatio, nearClip, farClip);
@@ -41,9 +39,7 @@ void PerspectiveCamera::RecalculateViewMatrix() {
 }
 
 void PerspectiveCamera::SetWorldTransform(const glm::mat4& world) {
-    
-    
-    
+
     m_Position = glm::vec3(world[3]);
     glm::vec3 forward = glm::normalize(glm::mat3(world) * glm::vec3(0.0f, 0.0f, -1.0f));
     glm::vec3 up = glm::normalize(glm::mat3(world) * glm::vec3(0.0f, 1.0f, 0.0f));
@@ -51,4 +47,4 @@ void PerspectiveCamera::SetWorldTransform(const glm::mat4& world) {
     m_ViewMatrix = glm::lookAt(m_Position, m_Position + forward, up);
 }
 
-} 
+}

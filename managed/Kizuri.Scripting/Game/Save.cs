@@ -1,7 +1,4 @@
 
-
-
-
 using System.Text.Json;
 
 namespace Kizuri;
@@ -14,7 +11,6 @@ public static class SaveSystem
 
 	public static string FilePath => s_Path;
 
-	
 	public static void SetPath(string path)
 	{
 		s_Path = string.IsNullOrWhiteSpace(path) ? "save.json" : path;
@@ -80,7 +76,6 @@ public static class SaveSystem
 			? new Math.Vector3(x, y, z) : fallback;
 	}
 
-	
 	public static void Save()
 	{
 		try { File.WriteAllText(s_Path, JsonSerializer.Serialize(s_Data)); }

@@ -28,9 +28,6 @@ static LogLevel ToLogLevel(spdlog::level::level_enum lvl) {
     }
 }
 
-
-
-
 #if defined(KZ_PLATFORM_ANDROID)
 
 class LogcatSink : public spdlog::sinks::base_sink<std::mutex> {
@@ -50,9 +47,7 @@ protected:
     void sink_it_(const spdlog::details::log_msg& msg) override {
         spdlog::memory_buf_t formatted;
         formatter_->format(msg, formatted);
-        
-        
-        
+
         LogHistory::Push(ToLogLevel(msg.level),
                          std::string(formatted.data(), formatted.size()));
     }
@@ -62,16 +57,12 @@ protected:
 void Log::Init() {
     std::vector<spdlog::sink_ptr> sinks;
 #if defined(KZ_PLATFORM_ANDROID)
-    
-    
-    
+
     sinks.push_back(std::make_shared<LogcatSink>());
     sinks.push_back(std::make_shared<MemorySink>());
 #else
     sinks.push_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
-    
-    
-    
+
 #if defined(KZ_RELEASE)
     sinks.push_back(std::make_shared<MemorySink>());
 #else
@@ -83,8 +74,7 @@ void Log::Init() {
     sinks[0]->set_pattern("%^[%T] %n: %v%$");
 #if !defined(KZ_PLATFORM_ANDROID)
 #if defined(KZ_RELEASE)
-    
-    
+
     sinks[1]->set_pattern("[%T] [%l] %n: %v");
 #else
     sinks[1]->set_pattern("[%T] [%l] %n: %v");
@@ -94,7 +84,6 @@ void Log::Init() {
     sinks[1]->set_pattern("[%T] %n: %v");
 #endif
 
-    
     auto level = spdlog::level::info;
 #if !defined(KZ_RELEASE)
     level = spdlog::level::trace;
@@ -111,4 +100,4 @@ void Log::Init() {
     s_AppLogger->flush_on(level);
 }
 
-} 
+}

@@ -1,6 +1,4 @@
 
-
-
 #ifndef HAVE_CORECLR_DELEGATES_H
 #define HAVE_CORECLR_DELEGATES_H
 
@@ -26,24 +24,22 @@ extern "C"
 
 #define UNMANAGEDCALLERSONLY_METHOD ((const char_t*)-1)
 
-
 typedef int (CORECLR_DELEGATE_CALLTYPE *load_assembly_and_get_function_pointer_fn)(
     const char_t *assembly_path      ,
     const char_t *type_name          ,
     const char_t *method_name        ,
-    const char_t *delegate_type_name 
+    const char_t *delegate_type_name
 
 ,
     void         *reserved           ,
      void **delegate          );
-
 
 typedef int (CORECLR_DELEGATE_CALLTYPE *component_entry_point_fn)(void *arg, int32_t arg_size_in_bytes);
 
 typedef int (CORECLR_DELEGATE_CALLTYPE *get_function_pointer_fn)(
     const char_t *type_name          ,
     const char_t *method_name        ,
-    const char_t *delegate_type_name 
+    const char_t *delegate_type_name
 
 ,
     void         *load_context       ,
@@ -65,6 +61,6 @@ typedef int (CORECLR_DELEGATE_CALLTYPE *load_assembly_bytes_fn)(
 
 #ifdef __cplusplus
 }
-#endif 
+#endif
 
-#endif 
+#endif

@@ -1,13 +1,6 @@
 #pragma once
 #include "EditorPanel.hpp"
 
-
-
-
-
-
-
-
 class GameViewPanel : public EditorPanel {
 public:
     explicit GameViewPanel(const EditorContext& ctx) : m_Ctx(ctx) {}

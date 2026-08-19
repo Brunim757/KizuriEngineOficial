@@ -10,14 +10,10 @@ public:
     static void Shutdown();
     static void OnWindowResize(uint32_t width, uint32_t height);
 
-    
-    
-    
-    
     static ShaderLibrary& GetShaderLibrary();
 
 private:
     static ShaderLibrary s_ShaderLibrary;
 };
 
-} 
+}

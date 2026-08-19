@@ -6,24 +6,11 @@
 
 namespace kizuri {
 
-
-
-
-
-
-
 int GetGLSLVersion();
-
-
-
-
 
 void SetContextGLSLVersion(int glsl);
 
 std::string GetOpenGLVersionString();
-
-
-
 
 void SetShaderDiagnostic(const std::string& msg);
 const std::string& GetShaderDiagnostic();
@@ -47,10 +34,6 @@ public:
 
     const std::string& GetName() const { return m_Name; }
 
-    
-    
-    
-    
     bool IsValid() const { return m_IsValid; }
 
     static Ref<Shader> CreateFromFiles(const std::string& vertexPath, const std::string& fragmentPath);
@@ -64,7 +47,6 @@ private:
     std::unordered_map<std::string, int> m_UniformLocationCache;
 };
 
-
 class ShaderLibrary {
 public:
     void Add(const Ref<Shader>& shader);
@@ -76,4 +58,4 @@ private:
     std::unordered_map<std::string, Ref<Shader>> m_Shaders;
 };
 
-} 
+}

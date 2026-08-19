@@ -17,8 +17,6 @@ struct QuadVertex {
     float TilingFactor;
 };
 
-
-
 struct CircleVertex {
     glm::vec3 WorldPosition;
     glm::vec3 LocalPosition;
@@ -41,9 +39,6 @@ struct Renderer2DData {
     Ref<Shader> QuadShader;
     Ref<Texture2D> WhiteTexture;
 
-    
-    
-    
     Ref<Texture2D> CurrentTexture;
 
     uint32_t QuadIndexCount = 0;
@@ -54,7 +49,6 @@ struct Renderer2DData {
 
     glm::mat4 ViewProjection{ 1.0f };
 
-    
     Ref<VertexArray> CircleVertexArray;
     Ref<VertexBuffer> CircleVertexBuffer;
     Ref<Shader> CircleShader;
@@ -70,13 +64,6 @@ struct Renderer2DData {
 };
 
 static Renderer2DData s_Data;
-
-
-
-
-
-
-
 
 static const char* s_QuadVertexSrc = R"(
 #version 330 core
@@ -143,9 +130,6 @@ void main() {
     o_Color = vec4(v_Color, 1.0);
 }
 )";
-
-
-
 
 static const char* s_CircleVertexSrc = R"(
 #version 330 core
@@ -231,9 +215,6 @@ void Renderer2D::Init() {
     s_Data.QuadVertexPositions[2] = {  0.5f,  0.5f, 0.0f, 1.0f };
     s_Data.QuadVertexPositions[3] = { -0.5f,  0.5f, 0.0f, 1.0f };
 
-    
-    
-    
     s_Data.GridShader = CreateRef<Shader>("Renderer2D_Line", s_LineVertexSrc, s_LineFragmentSrc);
 
     const float halfSize = 50.0f;
@@ -247,13 +228,13 @@ void Renderer2D::Init() {
 
     for (int i = -(int)halfSize; i <= (int)halfSize; ++i) {
         float x = (float)i;
-        glm::vec3 c = (i == 0) ? yAxisColor : gridColor; 
+        glm::vec3 c = (i == 0) ? yAxisColor : gridColor;
         gridVerts.push_back({ { x, -halfSize, 0.0f }, c });
         gridVerts.push_back({ { x,  halfSize, 0.0f }, c });
     }
     for (int i = -(int)halfSize; i <= (int)halfSize; ++i) {
         float y = (float)i;
-        glm::vec3 c = (i == 0) ? xAxisColor : gridColor; 
+        glm::vec3 c = (i == 0) ? xAxisColor : gridColor;
         gridVerts.push_back({ { -halfSize, y, 0.0f }, c });
         gridVerts.push_back({ {  halfSize, y, 0.0f }, c });
     }
@@ -267,7 +248,6 @@ void Renderer2D::Init() {
     });
     s_Data.GridVertexArray->AddVertexBuffer(gridVB);
 
-    
     s_Data.CircleVertexArray = CreateRef<VertexArray>();
     s_Data.CircleVertexBufferBase.resize(Renderer2DData::MaxCircleVertices);
 
@@ -304,11 +284,7 @@ void Renderer2D::BeginScene(const OrthographicCamera& camera) { BeginScene(camer
 
 void Renderer2D::BeginScene(const glm::mat4& viewProjection) {
     KZ_TRACE_SCOPE("Renderer2D::BeginScene");
-    
-    
-    
-    
-    
+
     RenderCommand::SetBlending(true);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -320,14 +296,11 @@ void Renderer2D::BeginScene(const glm::mat4& viewProjection) {
 
 void Renderer2D::DrawGrid() {
     KZ_TRACE_SCOPE("Renderer2D::DrawGrid");
-    
-    
+
     s_Data.GridShader->Bind();
     s_Data.GridShader->SetMat4("u_ViewProjection", s_Data.ViewProjection);
     RenderCommand::DrawLines(s_Data.GridVertexArray, s_Data.GridVertexCount);
-    
-    
-    
+
     s_Data.QuadShader->Bind();
     s_Data.QuadShader->SetMat4("u_ViewProjection", s_Data.ViewProjection);
 }
@@ -360,17 +333,12 @@ void Renderer2D::Flush() {
     KZ_TRACE_SCOPE("Renderer2D::Flush");
     if (s_Data.QuadIndexCount == 0) return;
 
-    
-    
-    
     s_Data.QuadShader->Bind();
     s_Data.QuadShader->SetMat4("u_ViewProjection", s_Data.ViewProjection);
 
     uint32_t dataSize = s_Data.QuadVertexBufferPtr * sizeof(QuadVertex);
     s_Data.QuadVertexBuffer->SetData(s_Data.QuadVertexBufferBase.data(), dataSize);
 
-    
-    
     if (s_Data.CurrentTexture) {
         s_Data.CurrentTexture->Bind(0);
         s_Data.QuadShader->SetInt("u_Texture", 0);
@@ -379,12 +347,6 @@ void Renderer2D::Flush() {
     RenderCommand::DrawIndexed(s_Data.QuadVertexArray, s_Data.QuadIndexCount);
     ++s_Data.Stats.DrawCalls;
 
-    
-    
-    
-    
-    
-    
     s_Data.QuadIndexCount = 0;
     s_Data.QuadVertexBufferPtr = 0;
 }
@@ -407,11 +369,7 @@ static void PushQuadVertices(const glm::mat4& transform, const glm::vec4& color,
 
 void Renderer2D::DrawTransformedQuad(const glm::mat4& transform, const glm::vec4& color, int) {
     static const glm::vec2 texCoords[4] = { {0,0}, {1,0}, {1,1}, {0,1} };
-    
-    
-    
-    
-    
+
     if (*s_Data.CurrentTexture != *s_Data.WhiteTexture) {
         Renderer2D::Flush();
         s_Data.CurrentTexture = s_Data.WhiteTexture;
@@ -430,9 +388,6 @@ void Renderer2D::DrawTransformedQuadUV(const glm::mat4& transform, const Ref<Tex
         { uvMin.x, uvMin.y }, { uvMax.x, uvMin.y }, { uvMax.x, uvMax.y }, { uvMin.x, uvMax.y },
     };
 
-    
-    
-    
     if (*s_Data.CurrentTexture != *texture) {
         Renderer2D::Flush();
         s_Data.CurrentTexture = texture;
@@ -443,8 +398,7 @@ void Renderer2D::DrawTransformedQuadUV(const glm::mat4& transform, const Ref<Tex
 void Renderer2D::DrawRectOutline(const glm::vec2& center, const glm::vec2& size, float thickness, const glm::vec4& color) {
     const float t = glm::max(thickness, 0.001f);
     const glm::vec2 half = size * 0.5f;
-    
-    
+
     DrawQuad({ center.x, center.y + half.y - t * 0.5f, 0.0f }, { size.x, t }, color);
     DrawQuad({ center.x, center.y - half.y + t * 0.5f, 0.0f }, { size.x, t }, color);
     DrawQuad({ center.x - half.x + t * 0.5f, center.y, 0.0f }, { t, size.y }, color);
@@ -453,7 +407,7 @@ void Renderer2D::DrawRectOutline(const glm::vec2& center, const glm::vec2& size,
 
 void Renderer2D::DrawCircle(const glm::mat4& transform, const glm::vec4& color, float thickness, float fade, int) {
     if (s_Data.CircleIndexCount >= Renderer2DData::MaxCircleIndices) {
-        
+
         EndScene();
         StartBatch();
     }
@@ -497,4 +451,4 @@ void Renderer2D::ResetStats() { s_Data.Stats = {}; }
 Renderer2DStats Renderer2D::GetStats() { return s_Data.Stats; }
 glm::mat4 Renderer2D::GetViewProjection() { return s_Data.ViewProjection; }
 
-} 
+}

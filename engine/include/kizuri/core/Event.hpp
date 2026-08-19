@@ -62,7 +62,6 @@ private:
 
 using EventCallbackFn = std::function<void(Event&)>;
 
-
 class WindowResizeEvent : public Event {
 public:
     WindowResizeEvent(unsigned w, unsigned h) : m_Width(w), m_Height(h) {}
@@ -80,7 +79,6 @@ public:
     EVENT_CLASS_TYPE(WindowClose)
     EVENT_CLASS_CATEGORY(EventCategoryApplication)
 };
-
 
 class KeyPressedEvent : public Event {
 public:
@@ -102,7 +100,6 @@ public:
 private:
     int m_KeyCode;
 };
-
 
 class MouseMovedEvent : public Event {
 public:
@@ -146,4 +143,4 @@ private:
     int m_Button;
 };
 
-} 
+}

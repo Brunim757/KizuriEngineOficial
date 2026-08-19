@@ -8,12 +8,6 @@ namespace kizuri {
 
 class Scene;
 
-
-
-
-
-
-
 class Prefab {
 public:
     static void CreateFromEntity(Entity root, const std::string& filepath);
@@ -21,4 +15,4 @@ public:
                                const glm::vec3& position = { 0.0f, 0.0f, 0.0f });
 };
 
-} 
+}

@@ -7,9 +7,9 @@ struct ImGuiContext;
 namespace kizuri {
 
 enum class KizuriFont {
-    Regular,  
-    Bold,     
-    Titlebar  
+    Regular,
+    Bold,
+    Titlebar
 };
 
 class ImGuiLayer : public Layer {
@@ -27,27 +27,8 @@ public:
     void SetBlockEvents(bool block) { m_BlockEvents = block; }
     void SetDarkThemeKizuri();
 
-    
-    
     ImFont* GetFont(KizuriFont font) const;
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     static ImGuiContext* GetContext();
 
 private:
@@ -59,4 +40,4 @@ private:
     ImFont* m_FontTitlebar = nullptr;
 };
 
-} 
+}

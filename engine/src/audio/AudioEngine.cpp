@@ -12,9 +12,7 @@ namespace kizuri {
 
 struct LoadedSound {
     ma_sound Sound;
-    
-    
-    
+
     ~LoadedSound() { ma_sound_uninit(&Sound); }
 };
 
@@ -24,14 +22,7 @@ static std::unordered_map<SoundHandle, std::unique_ptr<LoadedSound>> s_Sounds;
 static std::unordered_map<std::string, SoundHandle> s_NameToHandle;
 static SoundHandle s_NextHandle = 1;
 
-
 static float s_GroupVolumes[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-
-
-
-
-
 
 struct ReverbChannelState {
     std::vector<float> CombBuf[4];
@@ -41,7 +32,7 @@ struct ReverbChannelState {
     float LowpassState = 0.0f;
 
     void Init(uint32_t sampleRate) {
-        
+
         const float combMs[4] = { 29.7f, 37.1f, 41.1f, 43.7f };
         const float apMs[2] = { 5.0f, 1.7f };
         for (int i = 0; i < 4; ++i) CombBuf[i].assign((size_t)(combMs[i] * sampleRate / 1000.0f), 0.0f);
@@ -54,7 +45,7 @@ struct ReverbChannelState {
             size_t len = CombBuf[i].size();
             if (len == 0) continue;
             float delayed = CombBuf[i][CombPos[i]];
-            
+
             LowpassState = delayed * (1.0f - damp) + LowpassState * damp;
             CombBuf[i][CombPos[i]] = input + LowpassState * feedback;
             CombPos[i] = (CombPos[i] + 1) % len;
@@ -75,9 +66,9 @@ struct ReverbChannelState {
 };
 
 struct ReverbNode {
-    ma_node_base base; 
-    ma_node* pNode = nullptr; 
-    std::vector<ReverbChannelState> Channels; 
+    ma_node_base base;
+    ma_node* pNode = nullptr;
+    std::vector<ReverbChannelState> Channels;
     float Wet = 0.0f;
     float Room = 0.5f;
     float Damp = 0.3f;
@@ -105,16 +96,16 @@ static void ReverbProcess(ma_node* pNode, const float** ppFramesIn, ma_uint32* p
 }
 
 static ma_node_vtable s_ReverbVTable = {
-    ReverbProcess, 
-    NULL,          
-    1,             
-    1,             
-    MA_NODE_FLAG_CONTINUOUS_PROCESSING | MA_NODE_FLAG_ALLOW_NULL_INPUT, 
+    ReverbProcess,
+    NULL,
+    1,
+    1,
+    MA_NODE_FLAG_CONTINUOUS_PROCESSING | MA_NODE_FLAG_ALLOW_NULL_INPUT,
 };
 
 static ReverbNode* s_Reverb = nullptr;
 static bool s_ReverbNodeReady = false;
-static std::unordered_map<SoundHandle, float> s_ReverbWet; 
+static std::unordered_map<SoundHandle, float> s_ReverbWet;
 
 static void EnsureReverbNode() {
     if (s_ReverbNodeReady || !s_Initialized) return;
@@ -130,20 +121,19 @@ static void EnsureReverbNode() {
     ma_uint32 inChs[1] = { chs };
     ma_uint32 outChs[1] = { chs };
     ma_node_config cfg = ma_node_config_init();
-    cfg.vtable = &s_ReverbVTable;      
+    cfg.vtable = &s_ReverbVTable;
     cfg.pInputChannels = inChs;
     cfg.pOutputChannels = outChs;
 
     ma_node_graph* graph = ma_engine_get_node_graph(&s_Engine);
-    
+
     ma_node* node = (ma_node*)data;
     if (ma_node_init(graph, &cfg, nullptr, node) != MA_SUCCESS) {
         delete data;
         return;
     }
     data->pNode = node;
-    
-    
+
     ma_node_attach_output_bus(node, 0, ma_node_graph_get_endpoint(graph), 0);
     s_Reverb = data;
     s_ReverbNodeReady = true;
@@ -156,15 +146,12 @@ static void RouteSoundThroughReverb(ma_sound* sound, bool enabled, float wet) {
         ma_node_detach_output_bus((ma_node*)sound, 0);
         ma_node_attach_output_bus((ma_node*)sound, 0, s_Reverb->pNode, 0);
     } else {
-        
+
         ma_node_detach_output_bus((ma_node*)sound, 0);
         ma_node_attach_output_bus((ma_node*)sound, 0, ma_node_graph_get_endpoint(ma_engine_get_node_graph(&s_Engine)), 0);
     }
     (void)wet;
 }
-
-
-
 
 struct OneShotSound {
     ma_sound Sound;
@@ -228,7 +215,7 @@ void AudioEngine::Play(SoundHandle handle, bool loop, float volume, int group) {
 void AudioEngine::PlayOneShot(const std::string& path, float volume, int group) {
     if (!s_Initialized) return;
     ma_engine_play_sound(&s_Engine, path.c_str(), nullptr);
-    (void)volume; (void)group; 
+    (void)volume; (void)group;
 }
 
 void AudioEngine::PlayOneShotAt(const std::string& path, float volume, const glm::vec3& position, int group) {
@@ -238,7 +225,7 @@ void AudioEngine::PlayOneShotAt(const std::string& path, float volume, const glm
     for (auto& s : s_OneShots) {
         if (!s.InUse) {
             slot = &s;
-            ma_sound_uninit(&slot->Sound); 
+            ma_sound_uninit(&slot->Sound);
             break;
         }
     }
@@ -268,14 +255,11 @@ void AudioEngine::Stop(SoundHandle handle) {
 
 void AudioEngine::StopAll() {
     if (!s_Initialized) return;
-    
-    
+
     for (auto& os : s_OneShots) {
         if (os.InUse) { ma_sound_stop(&os.Sound); os.InUse = false; }
     }
-    
-    
-    
+
     s_Sounds.clear();
 }
 
@@ -329,7 +313,7 @@ void AudioEngine::SetGlobalReverb(float wet, float roomSize, float damp) {
     if (!s_Initialized) return;
     wet = glm::clamp(wet, 0.0f, 1.0f);
     if (wet <= 0.001f) {
-        
+
         for (auto& [handle, w] : s_ReverbWet) {
             auto it = s_Sounds.find(handle);
             if (it != s_Sounds.end()) RouteSoundThroughReverb(&it->second->Sound, false, 0.0f);
@@ -364,4 +348,4 @@ bool AudioEngine::IsSoundReverbing(SoundHandle handle) {
     return s_ReverbWet.find(handle) != s_ReverbWet.end();
 }
 
-} 
+}

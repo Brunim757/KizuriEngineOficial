@@ -8,8 +8,6 @@
 
 namespace kizuri {
 
-
-
 class Entity {
 public:
     Entity() = default;
@@ -54,8 +52,6 @@ public:
     const std::string& GetName() { return GetComponent<TagComponent>().Tag; }
     Scene* GetScene() { return m_Scene; }
 
-    
-    
     void SetParent(Entity parent) { m_Scene->SetParent(*this, parent); }
 
     Entity GetParent() {
@@ -75,8 +71,6 @@ public:
         return result;
     }
 
-    
-    
     glm::mat4 GetLocalTransform() { return GetComponent<TransformComponent>().GetTransform(); }
     glm::mat4 GetWorldTransform() { return m_Scene->GetWorldTransform(*this); }
 
@@ -85,4 +79,4 @@ private:
     Scene* m_Scene = nullptr;
 };
 
-} 
+}

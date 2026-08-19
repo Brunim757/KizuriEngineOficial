@@ -1,6 +1,4 @@
 
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,13 +13,11 @@
 #define GLAD_IMPL_UTIL_SSCANF sscanf
 #endif
 
-#endif 
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
 
 int GLAD_GL_VERSION_1_0 = 0;
 int GLAD_GL_VERSION_1_1 = 0;
@@ -664,8 +660,6 @@ int GLAD_GL_SUN_triangle_list = 0;
 int GLAD_GL_SUN_vertex = 0;
 int GLAD_GL_WIN_phong_shading = 0;
 int GLAD_GL_WIN_specular_fog = 0;
-
-
 
 PFNGLACCUMXOESPROC glad_glAccumxOES = NULL;
 PFNGLACQUIREKEYEDMUTEXWIN32EXTPROC glad_glAcquireKeyedMutexWin32EXT = NULL;
@@ -3207,7 +3201,6 @@ PFNGLWINDOWPOS4SMESAPROC glad_glWindowPos4sMESA = NULL;
 PFNGLWINDOWPOS4SVMESAPROC glad_glWindowPos4svMESA = NULL;
 PFNGLWINDOWRECTANGLESEXTPROC glad_glWindowRectanglesEXT = NULL;
 PFNGLWRITEMASKEXTPROC glad_glWriteMaskEXT = NULL;
-
 
 static void glad_gl_load_GL_VERSION_1_0( GLADuserptrloadfunc load, void* userptr) {
     if(!GLAD_GL_VERSION_1_0) return;
@@ -7275,8 +7268,6 @@ static void glad_gl_load_GL_SUN_vertex( GLADuserptrloadfunc load, void* userptr)
     glad_glTexCoord4fVertex4fvSUN = (PFNGLTEXCOORD4FVERTEX4FVSUNPROC) load(userptr, "glTexCoord4fVertex4fvSUN");
 }
 
-
-
 static void glad_gl_free_extensions(char **exts_i) {
     if (exts_i != NULL) {
         unsigned int index;
@@ -8383,20 +8374,12 @@ int gladLoadGLUserPtr( GLADuserptrloadfunc load, void *userptr) {
     glad_gl_load_GL_SUN_triangle_list(load, userptr);
     glad_gl_load_GL_SUN_vertex(load, userptr);
 
-
-
     return version;
 }
-
 
 int gladLoadGL( GLADloadfunc load) {
     return gladLoadGLUserPtr( glad_gl_get_proc_from_userptr, GLAD_GNUC_EXTENSION (void*) load);
 }
-
-
-
- 
-
 
 #ifdef __cplusplus
 }

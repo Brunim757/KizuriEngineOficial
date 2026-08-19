@@ -1,8 +1,4 @@
 
-
-
-
-
 namespace Kizuri;
 
 public sealed class Coroutine
@@ -13,7 +9,6 @@ public sealed class Coroutine
 
 	public Coroutine(System.Collections.IEnumerator enumerator) => m_Enumerator = enumerator;
 
-	
 	public bool Tick(float deltaSeconds)
 	{
 		if (m_WaitSeconds > 0f) { m_WaitSeconds -= deltaSeconds; return false; }

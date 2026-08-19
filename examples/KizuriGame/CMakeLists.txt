@@ -1,19 +1,6 @@
 
-
-
-
-
-
-
-
-
-
-
-
-
 if(ANDROID)
-    
-    
+
     if(NOT DEFINED CMAKE_ANDROID_NDK)
         set(CMAKE_ANDROID_NDK "$ENV{ANDROID_NDK_HOME}")
     endif()
@@ -27,8 +14,7 @@ if(ANDROID)
         src/AndroidEntry.cpp
     )
     target_include_directories(KizuriGame PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-    
-    
+
     target_include_directories(KizuriGame PRIVATE ${imgui_SOURCE_DIR})
     target_link_libraries(KizuriGame PRIVATE KizuriEngine native_app_glue EGL android log)
     set_target_properties(KizuriGame PROPERTIES
@@ -53,8 +39,6 @@ else()
         set_target_properties(KizuriGame PROPERTIES WIN32_EXECUTABLE $<CONFIG:Release>)
     endif()
 endif()
-
-
 
 if(NOT MSVC)
     target_compile_options(KizuriGame PRIVATE -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unknown-warning-option)

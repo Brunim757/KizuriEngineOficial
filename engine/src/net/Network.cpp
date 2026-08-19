@@ -25,16 +25,12 @@
 namespace kizuri {
 namespace net {
 
-
 enum : uint8_t {
     FLAG_HELLO     = 1,
     FLAG_HELLO_ACK = 2,
     FLAG_DATA      = 4,
     FLAG_ACK       = 8,
 };
-
-
-
 
 bool NetSocket::Create() {
 #if defined(_WIN32)
@@ -94,7 +90,7 @@ bool NetSocket::SendTo(const std::string& addr, uint16_t port, const void* data,
     to.sin_family = AF_INET;
     to.sin_port = htons(port);
     if (inet_pton(AF_INET, addr.c_str(), &to.sin_addr) != 1) {
-        
+
         addrinfo hints{};
         hints.ai_family = AF_INET;
         hints.ai_socktype = SOCK_DGRAM;
@@ -125,9 +121,6 @@ bool NetSocket::Receive(void* buf, size_t cap, size_t& outSize, std::string& out
     return true;
 }
 
-
-
-
 bool NetworkSession::Host(uint16_t port) {
     Stop();
     if (!m_Socket.Create() || !m_Socket.Bind(port)) return false;
@@ -146,7 +139,6 @@ bool NetworkSession::Connect(const std::string& address, uint16_t port) {
     m_ServerAddr = address;
     m_ServerPort = port;
 
-    
     Peer p;
     p.Addr = address;
     p.Port = port;
@@ -221,7 +213,6 @@ void NetworkSession::HandlePacket(const uint8_t* buf, size_t size, const std::st
     size_t payloadSize;
     if (!ParsePacket(buf, size, flags, seq, ack, payload, payloadSize)) return;
 
-    
     size_t peerIdx = SIZE_MAX;
     for (size_t i = 0; i < m_Peers.size(); ++i) {
         if (m_Peers[i].Addr == addr && m_Peers[i].Port == port) { peerIdx = i; break; }
@@ -234,19 +225,16 @@ void NetworkSession::HandlePacket(const uint8_t* buf, size_t size, const std::st
         m_Peers.push_back(p);
         peerIdx = m_Peers.size() - 1;
     } else if (!m_IsHost) {
-        peerIdx = 0; 
+        peerIdx = 0;
     }
     if (peerIdx == SIZE_MAX) return;
 
     Peer& peer = m_Peers[peerIdx];
     uint32_t peerId = (uint32_t)peerIdx + 1;
 
-    
-    
     if (peer.Pending.size() > 0)
         peer.Pending.clear();
 
-    
     if (flags & FLAG_HELLO) {
         if (m_IsHost) {
             peer.Connected = true;
@@ -278,7 +266,6 @@ void NetworkSession::HandlePacket(const uint8_t* buf, size_t size, const std::st
 void NetworkSession::Update(float dt, const std::function<void(const Event&)>& handler) {
     if (!m_Running) return;
 
-    
     uint8_t buf[2048];
     size_t n;
     std::string addr;
@@ -286,7 +273,6 @@ void NetworkSession::Update(float dt, const std::function<void(const Event&)>& h
     while (m_Socket.Receive(buf, sizeof(buf), n, addr, port))
         HandlePacket(buf, n, addr, port, handler);
 
-    
     if (!m_IsHost && !m_Peers.empty() && !m_Peers[0].Connected) {
         static float helloTimer = 0.0f;
         helloTimer += dt;
@@ -296,7 +282,6 @@ void NetworkSession::Update(float dt, const std::function<void(const Event&)>& h
         }
     }
 
-    
     for (auto& peer : m_Peers) {
         if (!peer.Connected && m_IsHost) continue;
         if (peer.Pending.size() > 0) {
@@ -309,5 +294,5 @@ void NetworkSession::Update(float dt, const std::function<void(const Event&)>& h
     }
 }
 
-} 
-} 
+}
+}

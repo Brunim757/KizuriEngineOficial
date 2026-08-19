@@ -20,16 +20,13 @@ public struct Rigidbody2D
 	public void ApplyLinearImpulse(Math.Vector2 impulse, bool wake = true)
 		=> Interop.KizuriNative.kz_rigidbody2d_apply_linear_impulse(Handle, impulse.X, impulse.Y, wake ? 1 : 0);
 
-	
 	public void ApplyForce(Math.Vector2 force, bool wake = true)
 		=> Interop.KizuriNative.kz_rigidbody2d_apply_force(Handle, force.X, force.Y, wake ? 1 : 0);
 
-	
 	public float GetAngularVelocity() => Interop.KizuriNative.kz_rigidbody2d_get_angular_velocity(Handle);
 	public void SetAngularVelocity(float radiansPerSecond)
 		=> Interop.KizuriNative.kz_rigidbody2d_set_angular_velocity(Handle, radiansPerSecond);
 
-	
 	public void SetFixedRotation(bool fixedRotation)
 		=> Interop.KizuriNative.kz_rigidbody2d_set_fixed_rotation(Handle, fixedRotation ? 1 : 0);
 

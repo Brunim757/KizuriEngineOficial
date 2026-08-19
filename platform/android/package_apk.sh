@@ -1,14 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
 set -euo pipefail
 
 BIN_DIR="${1:?bin dir}"; DOTNET_DIR="${2:?dotnet dir}"; GAME_ASSETS="${3:?game assets}"
@@ -22,7 +12,6 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
 WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
 
-
 set -x
 
 echo "==> (1/6) recursos + assets"
@@ -33,8 +22,6 @@ cp -r "$GAME_ASSETS" "$WORK/game_src"
 
 echo "==> (2/6) aapt2 compile/link"
 "$AAPT2" compile --dir "$RES" -o "$WORK/resources.zip"
-
-
 
 PLATFORM_JAR=""
 for cand in \
@@ -66,7 +53,6 @@ cp "$BIN_DIR/libKizuriEngine.so" "$WORK/apk/lib/arm64-v8a/"
 
 echo "==> (4/6) runtime .NET (CoreCLR) + assemblies + cena"
 
-
 mkdir -p "$WORK/apk/assets/dotnet" "$WORK/apk/assets/game"
 cp -r "$DOTNET_DIR"/. "$WORK/apk/assets/dotnet/"
 cp -r "$GAME_ASSETS"/. "$WORK/apk/assets/game/"
@@ -75,7 +61,6 @@ test -f "$WORK/apk/assets/dotnet/SampleGame.runtimeconfig.json" \
     || { echo "ERRO: publish sem runtimeconfig (SampleGame.runtimeconfig.json)"; exit 1; }
 
 echo "==> (5/6) libs+assets direto no APK + zipalign"
-
 
 ( cd "$WORK/apk" && zip -qr "$WORK/unsigned.apk" lib assets )
 "$ZIPALIGN" -f 4 "$WORK/unsigned.apk" "$WORK/aligned.apk"

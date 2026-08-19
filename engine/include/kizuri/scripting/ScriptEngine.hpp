@@ -4,25 +4,15 @@
 
 namespace kizuri {
 
-
-
-
-
-
-
 class ScriptEngine {
 public:
-    
-    
-    
+
     static bool LoadModule(const std::string& path);
     static void UnloadModule();
     static bool IsModuleLoaded();
 
-    
-    
     static const std::string& GetLastError();
-    static const std::string& GetLoadedPath(); 
+    static const std::string& GetLoadedPath();
 
     static ScriptRegistry& GetRegistry();
 
@@ -32,4 +22,4 @@ private:
     static std::string s_LoadedPath;
 };
 
-} 
+}

@@ -23,8 +23,6 @@ bool ScriptEngine::LoadModule(const std::string& path) {
         return false;
     }
 
-    
-    
     fs::path runtimeConfig = assemblyPath.parent_path() /
                              (assemblyPath.stem().string() + ".runtimeconfig.json");
 
@@ -38,9 +36,7 @@ bool ScriptEngine::LoadModule(const std::string& path) {
     s_Registry.Clear();
     int count = scripting::CoreCLRHost::GetScriptCount();
     if (count <= 0) {
-        
-        
-        
+
         std::string initError = scripting::CoreCLRHost::GetLastInitError();
         s_LastError = "Assembly carregado mas nenhum script foi registrado.";
         if (!initError.empty()) s_LastError += " Erro do host: " + initError;
@@ -51,8 +47,7 @@ bool ScriptEngine::LoadModule(const std::string& path) {
     }
     for (int i = 0; i < count; ++i) {
         std::string className = scripting::CoreCLRHost::GetScriptName(i);
-        
-        
+
         s_Registry.Register(className, [className]() -> NativeScript* {
             return new ManagedScript(className);
         });
@@ -66,9 +61,7 @@ bool ScriptEngine::LoadModule(const std::string& path) {
 
 void ScriptEngine::UnloadModule() {
     if (!scripting::CoreCLRHost::IsInitialized()) return;
-    
-    
-    
+
     s_Registry.Clear();
     scripting::CoreCLRHost::Shutdown();
     s_LoadedPath.clear();
@@ -81,4 +74,4 @@ const std::string& ScriptEngine::GetLoadedPath() { return s_LoadedPath; }
 
 ScriptRegistry& ScriptEngine::GetRegistry() { return s_Registry; }
 
-} 
+}

@@ -1,8 +1,4 @@
 
-
-
-
-
 #include "kizuri/scripting/CoreCLRHost.hpp"
 #include "kizuri/scripting/dotnet/hostfxr.h"
 #include "kizuri/scripting/dotnet/coreclr_delegates.h"
@@ -26,9 +22,6 @@ namespace kizuri {
 namespace scripting {
 
 namespace {
-
-
-
 
 #if defined(_WIN32)
     using NativeChar = wchar_t;
@@ -58,8 +51,7 @@ namespace {
             WideCharToMultiByte(CP_UTF8, 0, s.c_str(), (int)s.size(), &out[0], len, nullptr, nullptr);
         return out;
     }
-    
-    
+
     static std::wstring ToNativePath(const fs::path& p) { return p.native(); }
 #else
     using NativeChar = char;
@@ -73,9 +65,6 @@ namespace {
     static std::string ToUtf8(const std::string& s) { return s; }
     static std::string ToNativePath(const fs::path& p) { return p.string(); }
 #endif
-
-
-
 
 using LoadAssemblyAndGetFunctionPointerFn =
     int (CORECLR_DELEGATE_CALLTYPE*)(const NativeChar* assemblyPath,
@@ -96,7 +85,6 @@ using HostfxrCloseFn = int32_t (HOSTFXR_CALLTYPE*)(hostfxr_handle hostContextHan
 using HostfxrSetErrorWriterFn =
     hostfxr_error_writer_fn (HOSTFXR_CALLTYPE*)(hostfxr_error_writer_fn errorWriter);
 
-
 using InitializeGameModuleFn = void (*)(const char* gameAssemblyPath);
 using GetScriptCountFn = int (*)();
 using GetScriptNameFn = int (*)(int index, char* buffer, int bufferSize);
@@ -113,9 +101,6 @@ std::string s_HostfxrError;
 void HostfxrErrorWriter(const NativeChar* message) {
     s_HostfxrError = ToUtf8(message);
 }
-
-
-
 
 static bool FileExists(const fs::path& p) {
     std::error_code ec;
@@ -143,7 +128,6 @@ static bool IsNewerVersion(const std::string& a, const std::string& b) {
     return false;
 }
 
-
 static fs::path FindHostfxrInFxrRoot(const fs::path& fxrRoot) {
     std::error_code ec;
     if (!fs::is_directory(fxrRoot, ec)) return {};
@@ -167,7 +151,7 @@ static fs::path FindHostfxrInFxrRoot(const fs::path& fxrRoot) {
 }
 
 static fs::path FindHostfxr(const fs::path& appBase) {
-    
+
 #if defined(_WIN32)
     fs::path local = appBase / L"hostfxr.dll";
 #else
@@ -175,13 +159,11 @@ static fs::path FindHostfxr(const fs::path& appBase) {
 #endif
     if (FileExists(local)) return local;
 
-    
     if (const char* root = std::getenv("DOTNET_ROOT")) {
         fs::path p = FindHostfxrInFxrRoot(fs::path(root) / "host" / "fxr");
         if (!p.empty()) return p;
     }
 
-    
     std::vector<fs::path> installRoots;
 #if defined(_WIN32)
     installRoots.emplace_back("C:\\Program Files\\dotnet");
@@ -199,10 +181,7 @@ static fs::path FindHostfxr(const fs::path& appBase) {
     return {};
 }
 
-} 
-
-
-
+}
 
 struct CoreCLRHost::Impl {
     void* HostfxrLib = nullptr;
@@ -270,8 +249,6 @@ bool CoreCLRHost::Initialize(const std::string& runtimeConfigPath,
         impl->SetErrorWriter(HostfxrErrorWriter);
     }
 
-    
-    
     fs::path dotnetRoot = hostfxrPath.parent_path().parent_path().parent_path().parent_path();
     if (hostfxrPath.parent_path() == rcPath.parent_path())
         dotnetRoot = hostfxrPath.parent_path();
@@ -300,9 +277,6 @@ bool CoreCLRHost::Initialize(const std::string& runtimeConfigPath,
         return false;
     }
 
-    
-    
-    
     auto bind = [&](const char* method, const char* delegateType, void** out) -> bool {
         auto asmNative = ToNative(assemblyPath);
         auto typeNative = ToNative(kHostTypeName);
@@ -337,8 +311,6 @@ bool CoreCLRHost::Initialize(const std::string& runtimeConfigPath,
         return false;
     }
 
-    
-    
     s_HostfxrError.clear();
     impl->InitializeGameModule(assemblyPath.c_str());
 
@@ -405,5 +377,5 @@ void CoreCLRHost::CollisionScript(void* handle, uint32_t otherHandle, bool begin
     s_Impl->CollisionScript(handle, otherHandle, begin ? 1 : 0);
 }
 
-} 
-} 
+}
+}

@@ -14,9 +14,6 @@ struct ApplicationSpec {
     bool CustomTitlebar = false;
 };
 
-
-
-
 class Application {
 public:
     explicit Application(const ApplicationSpec& spec = ApplicationSpec());
@@ -33,8 +30,6 @@ public:
     Window& GetWindow() { return *m_Window; }
     class ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
 
-    
-    
     static Application& Get();
 
 private:
@@ -52,7 +47,6 @@ private:
     static Application* s_Instance;
 };
 
-
 Application* CreateApplication();
 
-} 
+}

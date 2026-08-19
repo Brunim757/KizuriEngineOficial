@@ -1,10 +1,6 @@
 #pragma once
 #include <Kizuri.hpp>
 
-
-
-
-
 class PlayerController : public kizuri::NativeScript {
 protected:
     void OnCreate() override;

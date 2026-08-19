@@ -1,5 +1,4 @@
 
-
 (function(){
   var input = document.getElementById('filter');
   if (!input) return;
@@ -11,7 +10,6 @@
     });
   });
 })();
-
 
 (function(){
   var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
@@ -31,7 +29,6 @@
   onScroll();
 })();
 
-
 (function(){
   var btn = document.getElementById('themeToggle');
   if (!btn) return;
@@ -49,7 +46,6 @@
   });
 })();
 
-
 (function(){
   var burger = document.getElementById('burger');
   var overlay = document.getElementById('overlay');
@@ -58,12 +54,10 @@
   if (overlay) overlay.addEventListener('click', function(){ document.body.classList.remove('menu-open'); });
 })();
 
-
 (function(){
   var b = document.getElementById('printBtn');
   if (b) b.addEventListener('click', function(){ window.print(); });
 })();
-
 
 (function(){
   document.querySelectorAll('.codeblock').forEach(function(blk){
@@ -79,7 +73,6 @@
     });
   });
 })();
-
 
 (function(){
   var RULES = {

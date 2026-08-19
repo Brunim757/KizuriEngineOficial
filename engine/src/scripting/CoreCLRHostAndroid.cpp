@@ -1,15 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
-
 #include "kizuri/scripting/CoreCLRHost.hpp"
 #include "kizuri/scripting/dotnet/coreclr_delegates.h"
 #include "kizuri/core/Log.hpp"
@@ -29,17 +18,11 @@ namespace scripting {
 
 namespace {
 
-
-
-
 static void* LoadLibraryNative(const std::string& path) {
     return dlopen(path.c_str(), RTLD_LAZY | RTLD_GLOBAL);
 }
 static void FreeLibraryNative(void* handle) { dlclose(handle); }
 static void* GetProcNative(void* handle, const char* name) { return dlsym(handle, name); }
-
-
-
 
 using LoadAssemblyAndGetFunctionPointerFn =
     int (CORECLR_DELEGATE_CALLTYPE*)(const char* assemblyPath,
@@ -60,7 +43,6 @@ using CoreclrCreateDelegateFn =
 using CoreclrShutdownFn =
     int32_t (*)(void* hostHandle, unsigned int domainId);
 
-
 using InitializeGameModuleFn = void (*)(const char* gameAssemblyPath);
 using GetScriptCountFn = int (*)();
 using GetScriptNameFn = int (*)(int index, char* buffer, int bufferSize);
@@ -77,10 +59,7 @@ static bool FileExists(const fs::path& p) {
     return fs::is_regular_file(p, ec);
 }
 
-} 
-
-
-
+}
 
 struct CoreCLRHost::Impl {
     void* CoreclrLib = nullptr;
@@ -109,8 +88,6 @@ bool CoreCLRHost::Initialize(const std::string& runtimeConfigPath,
         return false;
     }
 
-    
-    
     fs::path appBase = fs::path(runtimeConfigPath).parent_path();
     fs::path coreclrPath = appBase / "libcoreclr.so";
     if (!FileExists(coreclrPath)) {
@@ -137,9 +114,6 @@ bool CoreCLRHost::Initialize(const std::string& runtimeConfigPath,
         return false;
     }
 
-    
-    
-    
     std::string tpa;
     {
         std::error_code ec;
@@ -188,8 +162,6 @@ bool CoreCLRHost::Initialize(const std::string& runtimeConfigPath,
         return false;
     }
 
-    
-    
     auto bind = [&](const char* method, const char* delegateType, void** out) -> bool {
         return impl->LoadAssemblyAndGetFunctionPointer(
             assemblyPath.c_str(), kHostTypeName, method, delegateType, nullptr, out) == 0;
@@ -220,7 +192,6 @@ bool CoreCLRHost::Initialize(const std::string& runtimeConfigPath,
         return false;
     }
 
-    
     impl->InitializeGameModule(assemblyPath.c_str());
 
     s_Impl = impl.release();
@@ -284,5 +255,5 @@ void CoreCLRHost::CollisionScript(void* handle, uint32_t otherHandle, bool begin
     s_Impl->CollisionScript(handle, otherHandle, begin ? 1 : 0);
 }
 
-} 
-} 
+}
+}

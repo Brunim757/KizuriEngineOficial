@@ -39,9 +39,6 @@ Entity Prefab::Instantiate(Scene& scene, const std::string& filepath, const glm:
     json root;
     in >> root;
 
-    
-    
-    
     std::unordered_map<uint64_t, uint64_t> remap;
     std::vector<Entity> created;
     created.reserve(root["Prefab"].size());
@@ -53,7 +50,6 @@ Entity Prefab::Instantiate(Scene& scene, const std::string& filepath, const glm:
         created.push_back(entity);
     }
 
-    
     size_t i = 0;
     for (auto& je : root["Prefab"]) {
         uint64_t oldParentId = je.value("Parent", (uint64_t)0);
@@ -67,8 +63,6 @@ Entity Prefab::Instantiate(Scene& scene, const std::string& filepath, const glm:
 
     if (created.empty()) return {};
 
-    
-    
     Entity rootEntity = created.front();
     rootEntity.GetComponent<TransformComponent>().Translation = position;
 
@@ -76,4 +70,4 @@ Entity Prefab::Instantiate(Scene& scene, const std::string& filepath, const glm:
     return rootEntity;
 }
 
-} 
+}

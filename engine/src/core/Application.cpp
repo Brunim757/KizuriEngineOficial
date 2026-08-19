@@ -18,18 +18,6 @@
 
 namespace kizuri {
 
-
-
-
-
-
-
-
-
-
-
-
-
 Application* Application::s_Instance = nullptr;
 
 Application& Application::Get() { return *s_Instance; }
@@ -53,7 +41,7 @@ Application::Application(const ApplicationSpec& spec) {
     AudioEngine::Init();
 
 #if !defined(KZ_PLATFORM_ANDROID)
-    
+
     m_ImGuiLayer = new ImGuiLayer();
     PushOverlay(m_ImGuiLayer);
 #endif
@@ -99,13 +87,11 @@ bool Application::OnWindowResize(WindowResizeEvent& e) {
 void Application::Run() {
     KZ_CORE_INFO("Kizuri Engine: iniciando o loop principal.");
 #if defined(KZ_PLATFORM_ANDROID)
-    
-    
+
     using Clock = std::chrono::steady_clock;
     auto lastTick = Clock::now();
     while (m_Running && !AndroidPlatform::ShouldExit()) {
-        
-        
+
         AndroidPlatform::PumpGlue();
         auto now = Clock::now();
         float time = (float)std::chrono::duration<double>(now - lastTick).count();
@@ -129,7 +115,7 @@ void Application::Run() {
         m_LastFrameTime = time;
 
         if (!m_Minimized) {
-            RenderCommand::ResetFrameStats(); 
+            RenderCommand::ResetFrameStats();
             for (Layer* layer : m_LayerStack) {
                 KZ_CORE_TRACE("Application::Run — layer->OnUpdate ('{0}')", layer->GetName());
                 layer->OnUpdate(timestep);
@@ -152,4 +138,4 @@ void Application::Run() {
 #endif
 }
 
-} 
+}

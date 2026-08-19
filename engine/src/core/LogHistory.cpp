@@ -14,4 +14,4 @@ const std::vector<LogEntry>& LogHistory::GetEntries() { return s_Entries; }
 
 void LogHistory::Clear() { s_Entries.clear(); }
 
-} 
+}

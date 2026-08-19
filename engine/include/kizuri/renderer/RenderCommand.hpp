@@ -5,8 +5,6 @@
 
 namespace kizuri {
 
-
-
 class RenderCommand {
 public:
     static void Init();
@@ -18,14 +16,10 @@ public:
     static void SetDepthTest(bool enabled);
     static void SetBlending(bool enabled);
 
-    
-    
-    
     static void ResetFrameStats();
     static uint32_t GetFrameDrawCalls();
     static uint32_t GetFrameTriangles();
-    
-    
+
     static void AddInstancedStats(uint32_t instances);
 
 private:
@@ -33,4 +27,4 @@ private:
     static uint32_t s_FrameTriangles;
 };
 
-} 
+}

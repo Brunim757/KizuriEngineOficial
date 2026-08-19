@@ -4,7 +4,6 @@
 
 namespace kizuri {
 
-
 class Log {
 public:
     static void Init();
@@ -16,7 +15,7 @@ private:
     static std::shared_ptr<spdlog::logger> s_AppLogger;
 };
 
-} 
+}
 
 #define KZ_CORE_TRACE(...)    ::kizuri::Log::Core()->trace(__VA_ARGS__)
 #define KZ_CORE_INFO(...)     ::kizuri::Log::Core()->info(__VA_ARGS__)
@@ -32,14 +31,6 @@ private:
 
 namespace kizuri {
 
-
-
-
-
-
-
-
-
 class ScopeTracer {
 public:
     explicit ScopeTracer(const char* name) : m_Name(name) {
@@ -53,9 +44,6 @@ private:
     const char* m_Name;
 };
 
-} 
-
-
-
+}
 
 #define KZ_TRACE_SCOPE(name) ::kizuri::ScopeTracer kz_scope_tracer_##__LINE__(name)

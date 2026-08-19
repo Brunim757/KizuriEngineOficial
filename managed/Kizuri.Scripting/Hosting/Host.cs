@@ -1,7 +1,4 @@
 
-
-
-
 using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -36,25 +33,15 @@ public delegate void CollisionScriptFn(IntPtr handle, uint otherHandle, int begi
 
 public static class Host
 {
-	
-	
-	
+
 	internal static string s_LastInitError = string.Empty;
 
-	
-	
-	
 	public static void InitializeGameModule([MarshalAs(UnmanagedType.LPUTF8Str)] string gameAssemblyPath)
 	{
 		s_LastInitError = string.Empty;
 		try
 		{
-			
-			
-			
-			
-			
-			
+
 			var alc = AssemblyLoadContext.GetLoadContext(typeof(Host).Assembly);
 			var asm = alc.LoadFromAssemblyPath(gameAssemblyPath);
 			foreach (var type in asm.GetTypes())
@@ -66,11 +53,6 @@ public static class Host
 				}
 			}
 
-			
-			
-			
-			
-			
 			foreach (var type in asm.GetTypes())
 			{
 				if (!type.IsClass || type.IsAbstract) continue;
@@ -83,9 +65,7 @@ public static class Host
 		}
 		catch (Exception ex)
 		{
-			
-			
-			
+
 			s_LastInitError = ex is ReflectionTypeLoadException rtl
 				? rtl.ToString() + "\n  -> " + string.Join("\n  -> ", rtl.LoaderExceptions.Select(e => e?.ToString()))
 				: ex.ToString();

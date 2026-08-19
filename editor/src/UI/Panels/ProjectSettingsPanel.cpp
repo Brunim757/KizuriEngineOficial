@@ -116,7 +116,6 @@ void ProjectSettingsPanel::DrawGraphicsSection() {
     }
     ImGui::Separator();
 
-    
     ImGui::Text("Ambiente (céu):");
     ImGui::TextDisabled(".hdr equirect = ambiente. Vazio = gradiente procedural.");
     changed |= ImGui::Checkbox("Céu atmosférico Rayleigh/Mie", &g.AtmosphereSky);

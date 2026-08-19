@@ -7,8 +7,6 @@
 #include <unistd.h>
 #endif
 
-
-
 static double ProcessRAMMB() {
 #ifdef _WIN32
     return -1.0;
@@ -54,27 +52,24 @@ void ProfilerPanel::OnImGuiRender() {
     ImGui::TextDisabled("Tempo de frame (últimos %d frames)", kHistory);
 
     if (!m_FrameTimes.empty()) {
-        
+
         ImVec2 avail = ImGui::GetContentRegionAvail();
         float w = avail.x, h = 60.0f;
         ImVec2 p0 = ImGui::GetCursorScreenPos();
         ImVec2 p1 = { p0.x + w, p0.y + h };
         ImDrawList* dl = ImGui::GetWindowDrawList();
 
-        
         dl->AddRectFilled(p0, p1, IM_COL32(18, 18, 22, 255));
         dl->AddRect(p0, p1, IM_COL32(70, 70, 90, 255));
 
-        float maxMs = 16.6f; 
+        float maxMs = 16.6f;
         for (float v : m_FrameTimes) maxMs = std::max(maxMs, v);
         maxMs *= 1.1f;
 
-        
         auto yAt = [&](float ms) { return p1.y - (ms / maxMs) * (p1.y - p0.y); };
         dl->AddLine({ p0.x, yAt(16.6f) }, { p1.x, yAt(16.6f) }, IM_COL32(60, 140, 70, 80));
         dl->AddLine({ p0.x, yAt(33.3f) }, { p1.x, yAt(33.3f) }, IM_COL32(140, 100, 50, 80));
 
-        
         int n = (int)m_FrameTimes.size();
         float dx = n > 1 ? w / (float)(n - 1) : 0.0f;
         for (int i = 1; i < n; ++i) {

@@ -22,10 +22,9 @@ namespace {
 
 constexpr const char* kSettingsFile = "update_settings.json";
 
-
 constexpr const char* kDefaultApiUrl = "https://kizuri-studio.vercel.app/api/version";
 
-std::string s_ApiUrl;         
+std::string s_ApiUrl;
 std::string s_SkipVersion;
 bool s_SettingsLoaded = false;
 
@@ -51,7 +50,6 @@ void SaveSettings() {
     std::ofstream out(kSettingsFile);
     if (out.is_open()) out << j.dump(2);
 }
-
 
 size_t WriteStringCb(char* ptr, size_t size, size_t nmemb, void* userdata) {
     auto* out = static_cast<std::string*>(userdata);
@@ -106,7 +104,7 @@ std::string GetExecutablePath() {
     return ".";
 }
 
-} 
+}
 
 std::string Updater::GetLocalVersion() { return KIZURI_VERSION; }
 
@@ -149,7 +147,6 @@ UpdateInfo Updater::CheckForUpdate(std::string& outError) {
         return info;
     }
 
-    
     auto parts = [](const std::string& v) {
         int a = 0, b = 0, c = 0;
         sscanf(v.c_str(), "%d.%d.%d", &a, &b, &c);
@@ -211,9 +208,7 @@ bool Updater::Download(const std::string& url, const std::string& destPath,
 }
 
 bool Updater::Install(const std::string& zipPath, std::string& outError) {
-    
-    
-    
+
     std::error_code ec;
     std::string exe = GetExecutablePath();
     if (fs::exists(exe, ec)) {
@@ -226,9 +221,6 @@ bool Updater::Install(const std::string& zipPath, std::string& outError) {
         }
     }
 
-    
-    
-    
     {
         std::ifstream zipHead(zipPath, std::ios::binary);
         char magic[2] = { 0, 0 };
@@ -247,9 +239,6 @@ bool Updater::Install(const std::string& zipPath, std::string& outError) {
         return false;
     }
 
-    
-    
-    
 #if defined(_WIN32)
     const char* kEditorEntry = "bin/KizuriEditor.exe";
     const char* kEngineEntry = "bin/KizuriEngine.dll";
@@ -272,9 +261,6 @@ bool Updater::Install(const std::string& zipPath, std::string& outError) {
         if (!mz_zip_reader_file_stat(&zip, i, &st)) continue;
         if (mz_zip_reader_is_file_a_directory(&zip, i)) continue;
 
-        
-        
-        
         std::string rel = st.m_filename;
         for (char& c : rel) if (c == '\\') c = '/';
         while (rel.size() >= 4 && rel[0] == 'b' && rel[1] == 'i' && rel[2] == 'n' && rel[3] == '/')
@@ -312,12 +298,11 @@ void Updater::Relaunch(std::string& outError) {
     int rc = std::system(cmd.c_str());
     if (rc != 0) outError = "Falha ao relançar (start).";
 #else
-    
-    
+
     std::string cmd = "sh -c '(sleep 1; exec \"" + exe + "\") >/dev/null 2>&1 &'";
     int rc = std::system(cmd.c_str());
     if (rc != 0) outError = "Falha ao relançar (sh).";
 #endif
 }
 
-} 
+}

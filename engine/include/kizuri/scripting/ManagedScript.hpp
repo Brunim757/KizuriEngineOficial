@@ -1,7 +1,5 @@
 #pragma once
 
-
-
 #include "kizuri/scripting/NativeScript.hpp"
 #include <string>
 
@@ -24,4 +22,4 @@ private:
     void* m_ManagedHandle = nullptr;
 };
 
-} 
+}

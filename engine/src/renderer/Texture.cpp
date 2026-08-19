@@ -8,14 +8,11 @@
 
 #define STB_IMAGE_IMPLEMENTATION_GUARD
 #ifdef STB_IMAGE_IMPLEMENTATION_GUARD
-    
+
 #endif
 #include <stb_image.h>
 
 namespace kizuri {
-
-
-
 
 static bool SupportsAnisotropy() {
     static bool s_checked = false, s_supported = false;
@@ -30,7 +27,7 @@ static bool SupportsAnisotropy() {
                 while (*v && !(*v >= '0' && *v <= '9')) ++v;
                 if (*v >= '0' && *v <= '9') major = *v - '0';
             }
-            if (major >= 4) s_supported = true; 
+            if (major >= 4) s_supported = true;
         }
     }
     return s_supported;
@@ -96,7 +93,7 @@ void Texture2D::Bind(uint32_t slot) const {
 Ref<Texture2D> Texture2D::Create(uint32_t width, uint32_t height) { return CreateRef<Texture2D>(width, height); }
 bool Texture2D::SaveToFile(const Ref<Texture2D>& texture, const std::string& path) {
 #if defined(KZ_PLATFORM_ANDROID)
-    
+
     (void)texture; (void)path;
     return false;
 #else
@@ -106,7 +103,7 @@ bool Texture2D::SaveToFile(const Ref<Texture2D>& texture, const std::string& pat
     std::vector<uint8_t> pixels((size_t)w * h * 4);
     glBindTexture(GL_TEXTURE_2D, texture->GetRendererID());
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-    
+
     std::vector<uint8_t> flipped((size_t)w * h * 4);
     for (uint32_t y = 0; y < h; ++y)
         std::memcpy(flipped.data() + (size_t)(h - 1 - y) * w * 4, pixels.data() + (size_t)y * w * 4, (size_t)w * 4);
@@ -127,7 +124,7 @@ Ref<Texture2D> Texture2D::Create(const std::string& path) {
 
 Ref<Texture2D> Texture2D::CreateFromMemory(const void* data, size_t size, const std::string& debugName) {
     int width, height, channels;
-    stbi_set_flip_vertically_on_load(0); 
+    stbi_set_flip_vertically_on_load(0);
     stbi_uc* pixels = stbi_load_from_memory((const stbi_uc*)data, (int)size, &width, &height, &channels, 0);
     if (!pixels) {
         KZ_CORE_ERROR("Falha ao carregar textura em memória: {0}", debugName.empty() ? "(sem nome)" : debugName);
@@ -149,4 +146,4 @@ Ref<Texture2D> Texture2D::CreateFromMemory(const void* data, size_t size, const 
     return tex;
 }
 
-} 
+}

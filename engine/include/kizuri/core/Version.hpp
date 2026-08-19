@@ -1,10 +1,5 @@
 #pragma once
 
-
-
-
-
-
 #define KIZURI_VERSION       "0.38.2"
 #define KIZURI_VERSION_MAJOR 0
 #define KIZURI_VERSION_MINOR 37

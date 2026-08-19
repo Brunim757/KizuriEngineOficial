@@ -17,7 +17,6 @@ static GLenum ToGLBaseType(ShaderDataType type) {
     }
 }
 
-
 VertexBuffer::VertexBuffer(uint32_t size) {
     glGenBuffers(1, &m_RendererID);
     glBindBuffer(GL_ARRAY_BUFFER, m_RendererID);
@@ -38,7 +37,6 @@ void VertexBuffer::SetData(const void* data, uint32_t size) {
     glBufferSubData(GL_ARRAY_BUFFER, 0, size, data);
 }
 
-
 IndexBuffer::IndexBuffer(uint32_t* indices, uint32_t count) : m_Count(count) {
     glGenBuffers(1, &m_RendererID);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_RendererID);
@@ -47,7 +45,6 @@ IndexBuffer::IndexBuffer(uint32_t* indices, uint32_t count) : m_Count(count) {
 IndexBuffer::~IndexBuffer() { glDeleteBuffers(1, &m_RendererID); }
 void IndexBuffer::Bind() const   { glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_RendererID); }
 void IndexBuffer::Unbind() const { glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); }
-
 
 VertexArray::VertexArray() { glGenVertexArrays(1, &m_RendererID); }
 VertexArray::~VertexArray() { glDeleteVertexArrays(1, &m_RendererID); }
@@ -80,4 +77,4 @@ void VertexArray::SetIndexBuffer(const Ref<IndexBuffer>& ib) {
     m_IndexBuffer = ib;
 }
 
-} 
+}

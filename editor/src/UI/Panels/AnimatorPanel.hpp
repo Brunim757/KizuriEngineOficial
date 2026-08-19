@@ -1,9 +1,6 @@
 #pragma once
 #include "EditorPanel.hpp"
 
-
-
-
 class AnimatorPanel : public EditorPanel {
 public:
     explicit AnimatorPanel(const EditorContext& ctx) : m_Ctx(ctx) {}

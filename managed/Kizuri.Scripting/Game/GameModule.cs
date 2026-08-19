@@ -1,13 +1,11 @@
 
-
-
 namespace Kizuri;
 
 public delegate Script ScriptFactory();
 
 public static class GameModule
 {
-	
+
 	private static readonly Dictionary<string, ScriptFactory> s_Factories = new();
 
 	public static void Register<T>(string name) where T : Script, new()

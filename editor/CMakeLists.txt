@@ -17,15 +17,11 @@ add_executable(KizuriEditor
     $<$<BOOL:${WIN32}>:resources/kizuri-editor.rc>
 )
 
-
 target_link_libraries(KizuriEditor PRIVATE KizuriEngine libcurl_static miniz)
 if(WIN32)
     target_compile_definitions(KizuriEditor PRIVATE CURL_STATICLIB)
 endif()
 target_include_directories(KizuriEditor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-
-
-
 
 add_library(imguizmo STATIC ${imguizmo_SOURCE_DIR}/src/ImGuizmo.cpp)
 target_include_directories(imguizmo PUBLIC ${imguizmo_SOURCE_DIR}/src)
@@ -38,10 +34,6 @@ set_target_properties(KizuriEditor PROPERTIES
 if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND COMMAND kz_copy_mingw_runtime)
     kz_copy_mingw_runtime(KizuriEditor)
 endif()
-
-
-
-
 
 if(NOT MSVC)
     target_compile_options(KizuriEditor PRIVATE -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unknown-warning-option)

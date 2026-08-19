@@ -8,13 +8,11 @@
 
 namespace kizuri {
 
-
-
 bool AnimatorStateMachineComponent::SetState(const std::string& name, float defaultBlend) {
     for (int i = 0; i < (int)States.size(); ++i) {
         if (States[i].Name != name) continue;
-        if (i == CurrentState) return true; 
-        
+        if (i == CurrentState) return true;
+
         float blend = defaultBlend;
         for (const auto& tr : Transitions) {
             if (tr.To == i && (tr.From == -1 || tr.From == CurrentState)) { blend = tr.BlendTime; break; }
@@ -32,9 +30,6 @@ bool AnimatorStateMachineComponent::IsInState(const std::string& name) const {
     return CurrentState >= 0 && CurrentState < (int)States.size() && States[CurrentState].Name == name;
 }
 
-
-
-
 void FoliageComponent::Regenerate() {
     Instances.clear();
     if (Count == 0) return;
@@ -42,7 +37,7 @@ void FoliageComponent::Regenerate() {
     uint32_t state = Seed * 747796405u + 2891336453u;
     auto rnd = [&state]() {
         state ^= state << 13; state ^= state >> 17; state ^= state << 5;
-        return state * 1.0f / 4294967296.0f; 
+        return state * 1.0f / 4294967296.0f;
     };
     const float halfX = AreaSize.x * 0.5f, halfZ = AreaSize.y * 0.5f;
     const float avoidR = 1.5f;
@@ -62,11 +57,9 @@ void FoliageComponent::Regenerate() {
     }
 }
 
-
-
 void AudioSourceComponent::Play() {
     if (ClipPath.empty()) return;
-    
+
     if (Handle == kInvalidSound) {
         Handle = AudioEngine::LoadSound(Project::ResolvePath(ClipPath), ClipPath, false);
         if (Handle == kInvalidSound) return;
@@ -86,7 +79,7 @@ bool AudioSourceComponent::IsPlaying() const {
 }
 
 void Rigidbody2DComponent::ApplyLinearImpulse(const glm::vec2& impulse, bool wake) {
-    if (!RuntimeBody) return; 
+    if (!RuntimeBody) return;
     static_cast<b2Body*>(RuntimeBody)->ApplyLinearImpulseToCenter({ impulse.x, impulse.y }, wake);
 }
 
@@ -130,10 +123,6 @@ void Rigidbody2DComponent::SetFixedRotation(bool fixed) {
 void NativeScriptComponent::BindByName(const std::string& className) {
     ClassName = className;
 
-    
-    
-    
-    
     InstantiateScript = [className]() -> NativeScript* {
         NativeScript* instance = ScriptEngine::GetRegistry().Create(className);
         if (!instance)
@@ -144,11 +133,10 @@ void NativeScriptComponent::BindByName(const std::string& className) {
 }
 
 void NativeScriptComponent::DestroyInstance() {
-    
-    
+
     NativeScript* ptr = Instance;
     Instance = nullptr;
     delete ptr;
 }
 
-} 
+}

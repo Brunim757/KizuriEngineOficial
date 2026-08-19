@@ -10,13 +10,11 @@ namespace kizuri {
 
 void* Input::s_Window = nullptr;
 
-
-
 static std::unordered_map<std::string, int> s_Actions;
 
 void Input::SetContext(void* nativeWindow) {
     s_Window = nativeWindow;
-    
+
     s_Actions.try_emplace("Pular", Key::Space);
     s_Actions.try_emplace("Esquerda", Key::A);
     s_Actions.try_emplace("Direita", Key::D);
@@ -29,8 +27,7 @@ void Input::SetContext(void* nativeWindow) {
 
 bool Input::IsKeyPressed(int keycode) {
 #if defined(KZ_PLATFORM_ANDROID)
-    
-    
+
     return AndroidPlatform::IsVirtualKeyDown(keycode);
 #else
     auto* window = static_cast<GLFWwindow*>(s_Window);
@@ -42,7 +39,7 @@ bool Input::IsKeyPressed(int keycode) {
 
 bool Input::IsMouseButtonPressed(int button) {
 #if defined(KZ_PLATFORM_ANDROID)
-    
+
     if (button != 0) return false;
     return AndroidPlatform::IsAnyTouchDown();
 #else
@@ -81,4 +78,4 @@ int Input::GetActionKey(const std::string& action) {
     return it->second;
 }
 
-} 
+}

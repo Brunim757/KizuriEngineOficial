@@ -28,7 +28,7 @@ namespace kizuri {
 
 static bool LooksLikeAssetPath(const std::string& s) {
     if (s.empty() || s.rfind("builtin:", 0) == 0) return false;
-    
+
     static const char* exts[] = {
         ".png", ".jpg", ".jpeg", ".bmp", ".tga", ".gif",
         ".obj", ".wav", ".mp3", ".ogg", ".flac", ".kzprefab"
@@ -87,8 +87,6 @@ static bool CopyFileTo(const fs::path& src, const fs::path& dst, std::string& er
     return true;
 }
 
-
-
 static bool CopyDirectoryRecursive(const fs::path& srcDir, const fs::path& dstDir, std::string& err) {
     std::error_code ec;
     fs::create_directories(dstDir, ec);
@@ -111,7 +109,6 @@ static bool CopyDirectoryRecursive(const fs::path& srcDir, const fs::path& dstDi
     return true;
 }
 
-
 #if defined(_WIN32)
 static std::wstring ToWide(const std::string& s) {
     if (s.empty()) return L"";
@@ -122,9 +119,6 @@ static std::wstring ToWide(const std::string& s) {
     return out;
 }
 #endif
-
-
-
 
 static int RunAndCapture(const std::string& command, const fs::path& logFile, std::string& outError) {
 #if defined(_WIN32)
@@ -152,8 +146,6 @@ static int RunAndCapture(const std::string& command, const fs::path& logFile, st
 #endif
 }
 
-
-
 static std::string DetectRid() {
 #if defined(_WIN32)
     return "win-x64";
@@ -164,17 +156,12 @@ static std::string DetectRid() {
 #endif
 }
 
-
-
 static std::string Tail(const std::string& text, size_t maxChars) {
     if (text.size() <= maxChars) return text;
     size_t start = text.size() - maxChars;
     size_t nl = text.find('\n', start);
     return (nl == std::string::npos) ? text.substr(start) : text.substr(nl + 1);
 }
-
-
-
 
 static std::string FindGameAssembly(const fs::path& gameDir, std::string& err) {
     std::error_code ec;
@@ -215,7 +202,6 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
         return false;
     }
 
-    
     const char* required[] = {
 #ifdef _WIN32
         "KizuriGame.exe", "KizuriEngine.dll"
@@ -233,7 +219,6 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
         if (!CopyFileTo(src, outDir / name, outError)) return false;
     }
 
-    
     for (auto& entry : fs::directory_iterator(binDir, ec)) {
         if (!entry.is_regular_file()) continue;
         auto ext = entry.path().extension().string();
@@ -245,7 +230,6 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
         if (!CopyFileTo(entry.path(), outDir / name, outError)) return false;
     }
 
-    
     std::ifstream in(sceneSrc);
     if (!in.is_open()) {
         outError = "Não foi possível abrir a cena: " + sceneSrc.string();
@@ -270,7 +254,7 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
     for (const auto& original : assets) {
         fs::path srcPath(original);
         if (!srcPath.is_absolute()) {
-            
+
             fs::path cand = sceneDir / srcPath;
             if (fs::exists(cand)) srcPath = cand;
             else srcPath = fs::absolute(srcPath);
@@ -282,7 +266,7 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
 
         std::string fileName = srcPath.filename().string();
         fs::path dst = assetsOut / fileName;
-        
+
         if (fs::exists(dst) && fs::equivalent(dst, srcPath) == false) {
             static int counter = 0;
             dst = assetsOut / (srcPath.stem().string() + "_" + std::to_string(++counter) + srcPath.extension().string());
@@ -301,12 +285,6 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
     }
     sceneFile << root.dump(4);
 
-    
-    
-    
-    
-    
-    
     fs::path moduleOutPath;
     if (!request.GameProjectPath.empty()) {
         fs::path gameDir = outDir / "Game";
@@ -342,14 +320,10 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
         std::string asmName = FindGameAssembly(gameDir, gameAsm);
         if (asmName.empty()) { outError = gameAsm; return false; }
 
-        
-        
         fs::path stem = fs::path(asmName).replace_extension().filename();
         fs::remove(gameDir / stem, pec);
         fs::remove(gameDir / (stem.string() + ".exe"), pec);
 
-        
-        
 #ifdef _WIN32
         fs::path engineDll = binDir / "KizuriEngine.dll";
 #else
@@ -407,8 +381,6 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
                << "No Windows: dê dois cliques em Jogar.bat\n";
     }
 
-    
-    
     std::ofstream gjson(outDir / "game.json");
     if (gjson.is_open()) {
         gjson << "{\n"
@@ -454,8 +426,6 @@ bool GameExporter::BuildGameModule(const std::string& csprojPath,
         return false;
     }
 
-    
-    
     if (!FindGameModuleDll(csprojPath, outDllPath)) {
         outError = "O build terminou mas não achou a .dll do jogo em "
             + (csproj.parent_path() / "bin").string();
@@ -465,10 +435,6 @@ bool GameExporter::BuildGameModule(const std::string& csprojPath,
     KZ_CORE_INFO("Assembly do jogo compilado: {0}", outDllPath);
     return true;
 }
-
-
-
-
 
 bool GameExporter::FindGameModuleDll(const std::string& csprojPath,
                                      std::string& outDllPath) {
@@ -494,4 +460,4 @@ bool GameExporter::FindGameModuleDll(const std::string& csprojPath,
     return true;
 }
 
-} 
+}

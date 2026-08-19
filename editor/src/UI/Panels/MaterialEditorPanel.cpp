@@ -2,7 +2,7 @@
 #include <imgui.h>
 
 kizuri::Material* MaterialEditorPanel::TargetMaterial() {
-    
+
     kizuri::Entity sel = m_Ctx.SelectedEntity;
     if (!sel || !m_Ctx.ActiveScene) return nullptr;
     if (!sel.HasComponent<kizuri::MeshRendererComponent>()) return nullptr;
@@ -18,8 +18,6 @@ void MaterialEditorPanel::RenderPreview(uint32_t w, uint32_t h) {
     kizuri::Material* mat = TargetMaterial();
     if (!mat) return;
 
-    
-    
     ScopedTemporalOff temporal;
     m_PreviewFramebuffer->Bind();
     kizuri::RenderCommand::SetClearColor({ 0.10f, 0.11f, 0.13f, 1.0f });
@@ -93,9 +91,6 @@ void MaterialEditorPanel::OnImGuiRender() {
     ImGui::Checkbox("Reflexão planar (espelho)", &mat->PlanarReflect);
     ImGui::Separator();
 
-    
-    
-    
     auto mapSlot = [&](const char* label, std::string& path, kizuri::Ref<kizuri::Texture2D>& tex) {
         char buf[512];
         strncpy(buf, path.c_str(), sizeof(buf) - 1);

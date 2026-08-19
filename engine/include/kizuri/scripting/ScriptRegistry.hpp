@@ -7,12 +7,6 @@
 
 namespace kizuri {
 
-
-
-
-
-
-
 class ScriptRegistry {
 public:
     using FactoryFn = std::function<NativeScript*()>;
@@ -30,10 +24,6 @@ public:
         return m_Factories.find(className) != m_Factories.end();
     }
 
-    
-    
-    
-    
     NativeScript* Create(const std::string& className) const {
         auto it = m_Factories.find(className);
         return it != m_Factories.end() ? it->second() : nullptr;
@@ -52,4 +42,4 @@ private:
     std::unordered_map<std::string, FactoryFn> m_Factories;
 };
 
-} 
+}

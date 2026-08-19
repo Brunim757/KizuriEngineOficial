@@ -1,8 +1,6 @@
 using Kizuri;
 using Kizuri.Math;
 
-
-
 public sealed class PlayerController : Script
 {
 	private const float Speed = 5.0f;
@@ -24,12 +22,10 @@ public sealed class PlayerController : Script
 	{
 		Log.Info($"PlayerController entidade '{Entity.Id}' pronta.");
 
-		
 		_hud = Scene.CreateEntity("HUD");
 		_hud.AddText("Pontos: 0", 32f);
 		_hud.SetPosition(new Vector3(-8f, 5f, 0f));
 
-		
 		_score = SaveSystem.GetFloat("score", 0f);
 	}
 
@@ -59,15 +55,13 @@ public sealed class PlayerController : Script
 			Entity.SetPosition(t.Translation);
 		}
 
-		
-		
 		if (Input.IsMouseButtonPressed(MouseButton.Left) && !_mouseDown)
 		{
 			_mouseDown = true;
 			if (Entity.TryGetTransform(out var tp))
 			{
 				var bullet = Scene.CreateEntity("Bullet");
-				bullet.AddSprite(); 
+				bullet.AddSprite();
 				bullet.SetSpriteColor(1f, 0.85f, 0.2f);
 				bullet.SetPosition(tp.Translation);
 				_bullets.Add(new Bullet { Entity = bullet, Velocity = new Vector3(8f, 0f, 0f), Life = 1.5f });
@@ -93,7 +87,6 @@ public sealed class PlayerController : Script
 			_bullets[i] = b;
 		}
 
-		
 		_score += deltaSeconds * 10f;
 		_hud.SetText($"Pontos: {(int)_score} | Projéteis: {_bullets.Count}");
 		if (Input.IsKeyPressed(Key.F5))
@@ -103,7 +96,6 @@ public sealed class PlayerController : Script
 			Log.Info("Jogo salvo.");
 		}
 
-		
 		_raycastTimer -= deltaSeconds;
 		if (_raycastTimer <= 0f)
 		{
@@ -122,7 +114,6 @@ public sealed class PlayerController : Script
 	public override void OnCollisionEnd(Entity other) { }
 	public override void OnDestroy() { }
 }
-
 
 public static class SampleGameModule
 {

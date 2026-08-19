@@ -29,12 +29,6 @@ static ProjectMode ModeFromString(const std::string& s) {
     return ProjectMode::Empty;
 }
 
-
-
-
-
-
-
 static void WriteSourceTemplate(const fs::path& sourceDir) {
     std::ofstream csproj(sourceDir / "Game.csproj");
     csproj <<
@@ -67,8 +61,6 @@ static void WriteSourceTemplate(const fs::path& sourceDir) {
         "</Project>\n";
     csproj.close();
 
-    
-    
     std::ofstream program(sourceDir / "Program.cs");
     program <<
         "// Main de aplicação exigida pelo OutputType Exe (o que gera o\n"
@@ -132,11 +124,6 @@ Ref<Project> Project::New(const std::string& directory, const std::string& name,
     fs::create_directories(fs::path(directory) / project->m_Config.AssetDirectory, ec);
     if (ec) KZ_CORE_ERROR("Falha ao criar o diretório de assets do projeto: {0}", ec.message());
 
-    
-    
-    
-    
-    
     fs::path sourceDir = fs::path(directory) / "Source";
     fs::create_directories(sourceDir, ec);
     if (!ec) WriteSourceTemplate(sourceDir);
@@ -227,7 +214,7 @@ std::string Project::MakeRelativePath(const std::string& path) {
 std::string Project::ResolvePath(const std::string& path) {
     if (path.empty()) return path;
     if (path.rfind("builtin:", 0) == 0) return path;
-    if (path.rfind("kzres://", 0) == 0) return path; 
+    if (path.rfind("kzres://", 0) == 0) return path;
 
     fs::path p(path);
     if (p.is_absolute()) return path;
@@ -241,4 +228,4 @@ std::string Project::ResolvePath(const std::string& path) {
     return path;
 }
 
-} 
+}

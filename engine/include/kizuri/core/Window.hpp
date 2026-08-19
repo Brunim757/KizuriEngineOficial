@@ -17,17 +17,9 @@ struct WindowProps {
     uint32_t Height = 900;
     bool VSync = true;
     bool Maximized = false;
-    
-    
-    
-    
-    
-    
+
     bool CustomTitlebar = false;
 };
-
-
-
 
 class Window {
 public:
@@ -43,26 +35,13 @@ public:
     void SetVSync(bool enabled);
     bool IsVSync() const { return m_Data.VSync; }
 
-    
     std::vector<std::string>& GetDroppedFiles() { return m_Data.DroppedFiles; }
 
     GLFWwindow* GetNativeWindow() const { return m_Window; }
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
     int GetGLVersionMajor() const { return m_GLVersionMajor; }
     int GetGLVersionMinor() const { return m_GLVersionMinor; }
 
-    
-    
-    
     void GetPosition(int& x, int& y) const;
     void SetPosition(int x, int y);
     void SetSize(int width, int height);
@@ -92,11 +71,10 @@ private:
         uint32_t Width = 0, Height = 0;
         bool VSync = true;
         EventCallbackFn EventCallback;
-        
-        
+
         std::vector<std::string> DroppedFiles;
     };
     WindowData m_Data;
 };
 
-} 
+}

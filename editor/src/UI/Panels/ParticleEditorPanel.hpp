@@ -1,10 +1,6 @@
 #pragma once
 #include "EditorPanel.hpp"
 
-
-
-
-
 class ParticleEditorPanel : public EditorPanel {
 public:
     explicit ParticleEditorPanel(EditorContext& ctx) : m_Ctx(ctx) {}
@@ -17,7 +13,7 @@ private:
     EditorContext& m_Ctx;
     kizuri::Ref<kizuri::Framebuffer> m_PreviewFramebuffer;
     float m_PreviewTime = 0.0f;
-    std::vector<kizuri::Particle> m_PreviewParticles; 
+    std::vector<kizuri::Particle> m_PreviewParticles;
     float m_PreviewAccumulator = 0.0f;
-    bool m_PreviewDirty = true; 
+    bool m_PreviewDirty = true;
 };

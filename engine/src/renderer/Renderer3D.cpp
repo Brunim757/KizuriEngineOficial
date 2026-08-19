@@ -13,9 +13,6 @@
 #include <cmath>
 #include <utility>
 
-
-
-
 #if defined(KZ_PLATFORM_ANDROID)
     #define KZ_HDR_INTERNAL_FORMAT GL_RGBA16F
 #else
@@ -49,7 +46,6 @@ uint32_t Renderer3D::s_ShadowMap[kCascadeCount] = {};
 Ref<Shader> Renderer3D::s_ShadowShader;
 glm::mat4 Renderer3D::s_LightSpaceMatrix[kCascadeCount];
 float Renderer3D::s_CascadeSplits[kCascadeCount] = {};
-
 
 uint32_t Renderer3D::s_EquirectTexture = 0;
 Ref<Shader> Renderer3D::s_EquirectShader;
@@ -110,7 +106,7 @@ uint32_t Renderer3D::s_SSGIFBO = 0, Renderer3D::s_SSGIColor = 0;
 Ref<Shader> Renderer3D::s_LensFlareShader;
 uint32_t Renderer3D::s_LensFBO = 0, Renderer3D::s_LensColor = 0;
 Ref<Shader> Renderer3D::s_FXAAShader;
-static float s_PostTime = 0.0f; 
+static float s_PostTime = 0.0f;
 
 std::vector<Renderer3D::ParticleBatch> Renderer3D::s_ParticleBatches;
 uint32_t Renderer3D::s_ParticleVAO = 0, Renderer3D::s_ParticleQuadVBO = 0;
@@ -550,7 +546,6 @@ void main() {
 }
 )";
 
-
 static const char* s_DecalVertexSrc = R"(
 #version 330 core
 layout(location = 0) in vec3 a_Position;
@@ -589,12 +584,6 @@ void main() {
 }
 )";
 
-
-
-
-
-
-
 static const char* s_CaptureVertexSrc = R"(
 #version 330 core
 layout(location = 0) in vec3 a_Position;
@@ -610,10 +599,6 @@ void main() {
     gl_Position = u_ViewProjection * vec4(a_Position, 1.0);
 }
 )";
-
-
-
-
 
 static const char* s_SkyFragmentSrc = R"(
 #version 330 core
@@ -666,11 +651,6 @@ void main() {
 }
 )";
 
-
-
-
-
-
 static const char* s_IrradianceFragmentSrc = R"(
 #version 330 core
 in vec3 v_LocalPos;
@@ -701,14 +681,6 @@ void main() {
     o_Color = vec4(irradiance, 1.0);
 }
 )";
-
-
-
-
-
-
-
-
 
 static const char* s_PrefilterFragmentSrc = R"(
 #version 330 core
@@ -783,11 +755,6 @@ void main() {
     o_Color = vec4(prefilteredColor, 1.0);
 }
 )";
-
-
-
-
-
 
 static const char* s_SkyboxVertexSrc = R"(
 #version 330 core
@@ -991,9 +958,6 @@ void main() {
 }
 )";
 
-
-
-
 static const char* s_FullscreenVertexSrc = R"(
 #version 330 core
 layout(location = 0) in vec2 a_Position;
@@ -1004,8 +968,6 @@ void main() {
     gl_Position = vec4(a_Position, 0.0, 1.0);
 }
 )";
-
-
 
 static const char* s_BrightPassFragmentSrc = R"(
 #version 330 core
@@ -1025,8 +987,6 @@ void main() {
     o_Color = vec4(color * contribution, 1.0);
 }
 )";
-
-
 
 static const char* s_BlurFragmentSrc = R"(
 #version 330 core
@@ -1052,9 +1012,6 @@ void main() {
     o_Color = vec4(result, 1.0);
 }
 )";
-
-
-
 
 static const char* s_CompositeFragmentSrc = R"(
 #version 330 core
@@ -1161,14 +1118,6 @@ void main() {
 }
 )";
 
-
-
-
-
-
-
-
-
 static const char* s_GodRaysFragmentSrc = R"(
 #version 330 core
 #define GODRAY_MAX_STEPS 28
@@ -1204,13 +1153,6 @@ void main() {
     o_Color = vec4(sum * u_Weight * u_Intensity, 1.0);
 }
 )";
-
-
-
-
-
-
-
 
 static const char* s_DOFFragmentSrc = R"(
 #version 330 core
@@ -1272,11 +1214,6 @@ void main() {
 }
 )";
 
-
-
-
-
-
 static const char* s_MotionBlurFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
@@ -1316,10 +1253,6 @@ void main() {
     o_Color = vec4(sum / float(TAPS), 1.0);
 }
 )";
-
-
-
-
 
 static const char* s_FXAAFragmentSrc = R"(
 #version 330 core
@@ -1364,10 +1297,6 @@ void main() {
 }
 )";
 
-
-
-
-
 static const char* s_LensFlareFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
@@ -1407,11 +1336,6 @@ void main() {
     o_Color = vec4(flare * u_Intensity, 1.0);
 }
 )";
-
-
-
-
-
 
 static const char* s_SSGIFragmentSrc = R"(
 #version 330 core
@@ -1483,13 +1407,6 @@ void main() {
 }
 )";
 
-
-
-
-
-
-
-
 static const char* s_SSAOFragmentSrc = R"(
 #version 330 core
 // Teto FIXO de amostras (mesmo padrão do SSR): GLSL 330 core exige loops de
@@ -1556,20 +1473,6 @@ void main() {
     o_AO = clamp(pow(occlusion, u_Power), 0.35, 1.0);
 }
 )";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 static const char* s_SSRFragmentSrc = R"(
 #version 330 core
@@ -1661,14 +1564,6 @@ void main() {
 }
 )";
 
-
-
-
-
-
-
-
-
 static const char* s_TAAFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
@@ -1716,8 +1611,6 @@ void main() {
 }
 )";
 
-
-
 static const char* s_EquirectFragmentSrc = R"(
 #version 330 core
 in vec3 v_LocalPos;
@@ -1738,11 +1631,6 @@ void main() {
     o_Color = vec4(texture(u_Equirect, uv).rgb, 1.0);
 }
 )";
-
-
-
-
-
 
 static const char* s_ParticleVertexSrc = R"(
 #version 330 core
@@ -1767,10 +1655,6 @@ void main() {
 }
 )";
 
-
-
-
-
 static const char* s_ParticleFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
@@ -1789,9 +1673,6 @@ void main() {
     o_Color = vec4(v_Color.rgb * tex.rgb, v_Color.a * tex.a * falloff);
 }
 )";
-
-
-
 
 static const char* s_ShadowVertexSrc = R"(
 #version 330 core
@@ -1851,18 +1732,11 @@ void main() {
 void Renderer3D::Init() {
     KZ_TRACE_SCOPE("Renderer3D::Init");
 
-    
-    
-    
     s_Settings.TuneToHardware();
 
     s_MeshShader = CreateRef<Shader>("Renderer3D_Mesh", s_MeshVertexSrc, s_MeshFragmentSrc);
     s_LineShader = CreateRef<Shader>("Renderer3D_Line", s_LineVertexSrc, s_LineFragmentSrc);
 
-    
-    
-    
-    
     const float halfSize = 50.0f;
     const glm::vec3 gridColor(0.32f, 0.32f, 0.35f);
     const glm::vec3 xAxisColor(0.75f, 0.25f, 0.25f);
@@ -1874,13 +1748,13 @@ void Renderer3D::Init() {
 
     for (int i = -(int)halfSize; i <= (int)halfSize; ++i) {
         float x = (float)i;
-        glm::vec3 c = (i == 0) ? zAxisColor : gridColor; 
+        glm::vec3 c = (i == 0) ? zAxisColor : gridColor;
         verts.push_back({ { x, 0.0f, -halfSize }, c });
         verts.push_back({ { x, 0.0f,  halfSize }, c });
     }
     for (int i = -(int)halfSize; i <= (int)halfSize; ++i) {
         float z = (float)i;
-        glm::vec3 c = (i == 0) ? xAxisColor : gridColor; 
+        glm::vec3 c = (i == 0) ? xAxisColor : gridColor;
         verts.push_back({ { -halfSize, 0.0f, z }, c });
         verts.push_back({ {  halfSize, 0.0f, z }, c });
     }
@@ -1894,19 +1768,15 @@ void Renderer3D::Init() {
     });
     s_GridVAO->AddVertexBuffer(vb);
 
-    
-    
     s_ShadowShader = CreateRef<Shader>("Renderer3D_Shadow", s_ShadowVertexSrc, s_ShadowFragmentSrc);
     EnsureShadowMaps((uint32_t)s_Settings.ShadowMapSize);
 
-    
     s_EquirectShader = CreateRef<Shader>("Renderer3D_Equirect", s_CaptureVertexSrc, s_EquirectFragmentSrc);
     s_DecalShader = CreateRef<Shader>("Renderer3D_Decal", s_DecalVertexSrc, s_DecalFragmentSrc);
     s_DecalCube = Mesh::CreateCube();
 
     GenerateEnvironment();
 
-    
     float quadVertices[] = {
         -1.0f,  1.0f,  0.0f, 1.0f,
         -1.0f, -1.0f,  0.0f, 0.0f,
@@ -1924,18 +1794,14 @@ void Renderer3D::Init() {
     s_BlurShader = CreateRef<Shader>("Renderer3D_Blur", s_FullscreenVertexSrc, s_BlurFragmentSrc);
     s_CompositeShader = CreateRef<Shader>("Renderer3D_Composite", s_FullscreenVertexSrc, s_CompositeFragmentSrc);
 
-    
-    
     s_SSAOShader = CreateRef<Shader>("Renderer3D_SSAO", s_FullscreenVertexSrc, s_SSAOFragmentSrc);
-    
-    
-    
+
     s_SSRShader = CreateRef<Shader>("Renderer3D_SSR", s_FullscreenVertexSrc, s_SSRFragmentSrc);
-    
+
     s_TAAShader = CreateRef<Shader>("Renderer3D_TAA", s_FullscreenVertexSrc, s_TAAFragmentSrc);
-    
+
     s_GodRaysShader = CreateRef<Shader>("Renderer3D_GodRays", s_FullscreenVertexSrc, s_GodRaysFragmentSrc);
-    
+
     s_DOFShader = CreateRef<Shader>("Renderer3D_DOF", s_FullscreenVertexSrc, s_DOFFragmentSrc);
     s_MotionBlurShader = CreateRef<Shader>("Renderer3D_MotionBlur", s_FullscreenVertexSrc, s_MotionBlurFragmentSrc);
     s_SSGIShader = CreateRef<Shader>("Renderer3D_SSGI", s_FullscreenVertexSrc, s_SSGIFragmentSrc);
@@ -1949,7 +1815,7 @@ void Renderer3D::Init() {
                     (float)std::rand() / (float)RAND_MAX);
         s = glm::normalize(s);
         float scale = (float)i / 64.0f;
-        scale = 0.1f + 0.9f * scale * scale; 
+        scale = 0.1f + 0.9f * scale * scale;
         s_SSAOKernel[i] = s * scale;
     }
 
@@ -1966,8 +1832,6 @@ void Renderer3D::Init() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    
-    
     float particleQuad[] = {
         -0.5f, -0.5f,  0.0f, 0.0f,
          0.5f, -0.5f,  1.0f, 0.0f,
@@ -2008,14 +1872,8 @@ void Renderer3D::Init() {
     s_ParticleShader = CreateRef<Shader>("Renderer3D_Particle", s_ParticleVertexSrc, s_ParticleFragmentSrc);
 }
 
-
-
-
-
-
 void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
-    
-    
+
     static int s_MSAARejected = 0;
     if (s_MSAARejected > 0 && msaa >= s_MSAARejected) msaa = 1;
     msaa = (msaa > 1) ? msaa : 1;
@@ -2052,7 +1910,6 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         glDeleteTextures(1, &s_LensColor);
     }
 
-    
     glGenTextures(1, &s_HDRColorBuffer);
     glBindTexture(GL_TEXTURE_2D, s_HDRColorBuffer);
     glTexImage2D(GL_TEXTURE_2D, 0, KZ_HDR_INTERNAL_FORMAT, (GLsizei)width, (GLsizei)height, 0, GL_RGB, GL_FLOAT, nullptr);
@@ -2078,10 +1935,6 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         SetShaderDiagnostic("Framebuffer HDR INCOMPLETO");
     }
 
-    
-    
-    
-    
     int requestedMsaa = msaa;
     if (msaa > 1) {
         GLint maxSamples = 1;
@@ -2095,9 +1948,7 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         glGenTextures(1, &s_MSAAHDRColor);
         glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, s_MSAAHDRColor);
 #if defined(KZ_PLATFORM_ANDROID)
-        
-        
-        
+
         if (GLAD_GL_ES_VERSION_3_1)
             glTexStorage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, (GLsizei)msaa, KZ_HDR_INTERNAL_FORMAT,
                                       (GLsizei)width, (GLsizei)height, GL_TRUE);
@@ -2114,8 +1965,7 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, s_MSAAHDRColor, 0);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, s_MSAAHDRDepthRBO);
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            
-            
+
             KZ_CORE_ERROR("Framebuffer HDR MSAA incompleto — desabilitando MSAA (fallback).");
             SetShaderDiagnostic("Framebuffer HDR MSAA INCOMPLETO — MSAA desligado");
             s_MSAARejected = requestedMsaa;
@@ -2125,7 +1975,7 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
             msaa = 1;
         }
     }
-    s_CurrentMSAA = msaa; 
+    s_CurrentMSAA = msaa;
 
     glGenFramebuffers(2, s_BloomFBO);
     glGenTextures(2, s_BloomColorBuffer);
@@ -2144,8 +1994,6 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         }
     }
 
-    
-    
     glGenFramebuffers(1, &s_SSRFBO);
     glGenTextures(1, &s_SSRColorBuffer);
     glBindTexture(GL_TEXTURE_2D, s_SSRColorBuffer);
@@ -2162,8 +2010,6 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    
-    
     auto makeTex = [](uint32_t& tex, uint32_t w, uint32_t h) {
         glGenTextures(1, &tex);
         glBindTexture(GL_TEXTURE_2D, tex);
@@ -2188,10 +2034,9 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
             SetShaderDiagnostic("Framebuffer TAA histórico INCOMPLETO");
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    s_TAAHistoryValid = false; 
+    s_TAAHistoryValid = false;
     s_TAACounter = 0;
 
-    
     uint32_t grW = glm::max(1u, width / 2), grH = glm::max(1u, height / 2);
     glGenFramebuffers(1, &s_GodRaysFBO);
     glGenTextures(1, &s_GodRaysColorBuffer);
@@ -2207,7 +2052,6 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         SetShaderDiagnostic("Framebuffer God rays INCOMPLETO");
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    
     auto makeColorTex = [](uint32_t& tex, uint32_t w, uint32_t h) {
         glGenTextures(1, &tex);
         glBindTexture(GL_TEXTURE_2D, tex);
@@ -2231,7 +2075,6 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         SetShaderDiagnostic("Framebuffer Motion blur INCOMPLETO");
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    
     uint32_t ssgiW = glm::max(1u, width / 2), ssgiH = glm::max(1u, height / 2);
     glGenFramebuffers(1, &s_SSGIFBO);
     makeColorTex(s_SSGIColor, ssgiW, ssgiH);
@@ -2247,9 +2090,6 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         SetShaderDiagnostic("Framebuffer Lens flare INCOMPLETO");
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
-
-
-
 
 void Renderer3D::EnsurePlanarBuffers(uint32_t width, uint32_t height) {
     if (s_PlanarFBO != 0 && width == s_PlanarWidth && height == s_PlanarHeight) return;
@@ -2282,10 +2122,6 @@ void Renderer3D::EnsurePlanarBuffers(uint32_t width, uint32_t height) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-
-
-
-
 void Renderer3D::RenderPlanarReflection([[maybe_unused]] const glm::vec3& planePoint,
                                         [[maybe_unused]] const glm::vec3& planeNormal,
                                         int mirrorIndex, uint32_t width, uint32_t height,
@@ -2299,7 +2135,6 @@ void Renderer3D::RenderPlanarReflection([[maybe_unused]] const glm::vec3& planeP
     glViewport(0, 0, (GLsizei)width, (GLsizei)height);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    
     glDepthFunc(GL_LEQUAL);
     glDepthMask(GL_FALSE);
     s_SkyboxShader->Bind();
@@ -2312,9 +2147,7 @@ void Renderer3D::RenderPlanarReflection([[maybe_unused]] const glm::vec3& planeP
         ? glm::normalize(-s_ShadowCaster.Direction)
         : glm::normalize(glm::vec3(0.3f, 1.0f, 0.2f));
     s_SkyboxShader->SetFloat3("u_SunDirection", sunDir);
-    
-    
-    
+
     bool atmosphere = s_EnvironmentHDRIPath.empty() && s_Settings.AtmosphereSky;
     s_SkyboxShader->SetInt("u_AtmosphereSky", atmosphere ? 1 : 0);
     s_SkyboxShader->SetInt("u_CloudsEnabled", (atmosphere && s_Settings.CloudsEnabled) ? 1 : 0);
@@ -2323,7 +2156,6 @@ void Renderer3D::RenderPlanarReflection([[maybe_unused]] const glm::vec3& planeP
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);
 
-    
     if (!s_DrawList.empty()) {
         s_MeshShader->Bind();
         s_MeshShader->SetMat4("u_ViewProjection", reflectVP);
@@ -2374,7 +2206,6 @@ void Renderer3D::RenderPlanarReflection([[maybe_unused]] const glm::vec3& planeP
             s_MeshShader->SetFloat("u_LightOuterCos" + idx, glm::cos(glm::radians(l.OuterConeDeg)));
         }
 
-        
         s_MeshShader->SetInt("u_IsPlanarMirror", 0);
         for (int i = 0; i < (int)s_DrawList.size(); ++i) {
             if (i == mirrorIndex) continue;
@@ -2424,9 +2255,6 @@ void Renderer3D::RenderPlanarReflection([[maybe_unused]] const glm::vec3& planeP
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-
-
-
 void Renderer3D::EnsureShadowMaps(uint32_t size) {
     size = glm::max(512u, size);
     static uint32_t s_CurrentShadowSize = 0;
@@ -2442,21 +2270,18 @@ void Renderer3D::EnsureShadowMaps(uint32_t size) {
         }
     }
 
-    float borderColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f }; 
+    float borderColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
     for (int i = 0; i < kCascadeCount; ++i) {
         glGenFramebuffers(1, &s_ShadowFBO[i]);
         glGenTextures(1, &s_ShadowMap[i]);
         glBindTexture(GL_TEXTURE_2D, s_ShadowMap[i]);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, (GLsizei)size, (GLsizei)size,
                      0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-        
-        
-        
+
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 #if defined(KZ_PLATFORM_ANDROID)
-        
-        
+
         if (GLAD_GL_ES_VERSION_3_2) {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
@@ -2474,8 +2299,7 @@ void Renderer3D::EnsureShadowMaps(uint32_t size) {
         glBindFramebuffer(GL_FRAMEBUFFER, s_ShadowFBO[i]);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, s_ShadowMap[i], 0);
 #if !defined(KZ_PLATFORM_ANDROID)
-        
-        
+
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
 #endif
@@ -2484,8 +2308,6 @@ void Renderer3D::EnsureShadowMaps(uint32_t size) {
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
-
-
 
 void Renderer3D::EnsureSSAOBuffers(uint32_t width, uint32_t height) {
     uint32_t w = glm::max(1u, width / 2), h = glm::max(1u, height / 2);
@@ -2521,18 +2343,9 @@ void Renderer3D::EnsureSSAOBuffers(uint32_t width, uint32_t height) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-
-
-
-
-
-
-
-
 void Renderer3D::GenerateEnvironment() {
     KZ_TRACE_SCOPE("Renderer3D::GenerateEnvironment");
 
-    
     if (s_EnvironmentCubemap) glDeleteTextures(1, &s_EnvironmentCubemap);
     if (s_IrradianceCubemap) glDeleteTextures(1, &s_IrradianceCubemap);
     if (s_PrefilterCubemap) glDeleteTextures(1, &s_PrefilterCubemap);
@@ -2544,10 +2357,6 @@ void Renderer3D::GenerateEnvironment() {
     auto captureShaderIrradiance = CreateRef<Shader>("Renderer3D_CaptureIrradiance", s_CaptureVertexSrc, s_IrradianceFragmentSrc);
     auto captureShaderPrefilter  = CreateRef<Shader>("Renderer3D_CapturePrefilter", s_CaptureVertexSrc, s_PrefilterFragmentSrc);
 
-    
-    
-    
-    
     glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
     glm::mat4 captureViews[6] = {
         glm::lookAt(glm::vec3(0.0f), glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
@@ -2569,17 +2378,11 @@ void Renderer3D::GenerateEnvironment() {
     glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
     glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
 
-    
-    
-    
     DirectionalLight defaultSun;
     glm::vec3 sunDirToLight = glm::normalize(-defaultSun.Direction);
 
-    
-    
     bool useHDRI = (!s_EnvironmentHDRIPath.empty() && LoadHDRI(s_EnvironmentHDRIPath));
 
-    
     glGenTextures(1, &s_EnvironmentCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, s_EnvironmentCubemap);
     for (uint32_t i = 0; i < 6; ++i) {
@@ -2597,8 +2400,6 @@ void Renderer3D::GenerateEnvironment() {
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
     glViewport(0, 0, (GLsizei)kEnvironmentSize, (GLsizei)kEnvironmentSize);
 
-    
-    
     glDisable(GL_CULL_FACE);
     if (useHDRI) {
         glActiveTexture(GL_TEXTURE0);
@@ -2625,7 +2426,6 @@ void Renderer3D::GenerateEnvironment() {
         }
     }
 
-    
     glGenTextures(1, &s_IrradianceCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, s_IrradianceCubemap);
     for (uint32_t i = 0; i < 6; ++i) {
@@ -2654,7 +2454,6 @@ void Renderer3D::GenerateEnvironment() {
         RenderCommand::DrawIndexed(s_CaptureCube->GetVertexArray(), s_CaptureCube->GetIndexCount());
     }
 
-    
     glGenTextures(1, &s_PrefilterCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, s_PrefilterCubemap);
     for (uint32_t i = 0; i < 6; ++i) {
@@ -2666,14 +2465,14 @@ void Renderer3D::GenerateEnvironment() {
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glGenerateMipmap(GL_TEXTURE_CUBE_MAP); 
+    glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
     captureShaderPrefilter->Bind();
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, s_EnvironmentCubemap);
     captureShaderPrefilter->SetInt("u_EnvironmentMap", 0);
     for (uint32_t mip = 0; mip < kPrefilterMipLevels; ++mip) {
-        uint32_t mipSize = kPrefilterBaseSize >> mip; 
+        uint32_t mipSize = kPrefilterBaseSize >> mip;
         glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)mipSize, (GLsizei)mipSize);
         glViewport(0, 0, (GLsizei)mipSize, (GLsizei)mipSize);
@@ -2689,13 +2488,6 @@ void Renderer3D::GenerateEnvironment() {
         }
     }
 
-    
-    
-    
-    
-    
-    
-    
     glDisable(GL_CULL_FACE);
     glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prevFBO);
     glViewport(prevViewport[0], prevViewport[1], (GLsizei)prevViewport[2], (GLsizei)prevViewport[3]);
@@ -2707,17 +2499,10 @@ void Renderer3D::GenerateEnvironment() {
                  useHDRI ? " — fonte HDRI" : " — céu procedural");
 }
 
-
-
 bool Renderer3D::LoadHDRI(const std::string& path) {
     int w = 0, h = 0, comp = 0;
     float* data = nullptr;
 
-    
-    
-    
-    
-    
     stbi_set_flip_vertically_on_load(1);
 
     if (IsEmbeddedPath(path)) {
@@ -2757,21 +2542,12 @@ void Renderer3D::SetGraphicsSettings(const GraphicsSettings& settings) {
 void Renderer3D::SetEnvironmentHDRIPath(const std::string& path) {
     if (path == s_EnvironmentHDRIPath) return;
     s_EnvironmentHDRIPath = path;
-    if (s_EnvironmentCubemap != 0) GenerateEnvironment(); 
+    if (s_EnvironmentCubemap != 0) GenerateEnvironment();
 }
 
 const std::string& Renderer3D::GetEnvironmentHDRIPath() { return s_EnvironmentHDRIPath; }
 
-
-
-
-
-
-
 void Renderer3D::Shutdown() { KZ_TRACE_SCOPE("Renderer3D::Shutdown"); }
-
-
-
 
 void Renderer3D::ComputeCascades(const glm::vec3& lightDir) {
     constexpr float kLambda = 0.5f;
@@ -2789,8 +2565,7 @@ void Renderer3D::ComputeCascades(const glm::vec3& lightDir) {
 
     float prevSplit = near;
     for (int i = 0; i < kCascadeCount; ++i) {
-        
-        
+
         glm::mat4 subProj = glm::perspective(glm::radians(s_CamFOV), s_CamAspect, prevSplit, splits[i]);
         glm::mat4 subInv = glm::inverse(subProj * s_View);
 
@@ -2807,8 +2582,6 @@ void Renderer3D::ComputeCascades(const glm::vec3& lightDir) {
         for (auto& corn : corners) center += corn;
         center /= 8.0f;
 
-        
-        
         float radius = 0.0f;
         for (auto& corn : corners) radius = glm::max(radius, glm::length(corn - center));
         radius = glm::ceil(radius * 16.0f) / 16.0f;
@@ -2818,8 +2591,6 @@ void Renderer3D::ComputeCascades(const glm::vec3& lightDir) {
         glm::mat4 lightProj = glm::ortho(-radius, radius, -radius, radius, 0.01f, radius * 4.0f);
         s_LightSpaceMatrix[i] = lightProj * lightView;
 
-        
-        
         s_CascadeSplits[i] = splits[i];
         prevSplit = splits[i];
     }
@@ -2830,7 +2601,7 @@ void Renderer3D::BeginScene(const PerspectiveCamera& camera) {
     s_View = camera.GetViewMatrix();
     s_Projection = camera.GetProjectionMatrix();
     s_CameraPos = camera.GetPosition();
-    
+
     s_MotionCurrVP = camera.GetViewProjectionMatrix();
     s_CamFOV = camera.GetFOV();
     s_CamAspect = camera.GetAspect();
@@ -2859,7 +2630,7 @@ void Renderer3D::SubmitLight(const Light& light) {
     if (light.Type == LightType::Directional && !s_HasShadowCaster) {
         s_ShadowCaster = light;
         s_HasShadowCaster = true;
-        s_LightList.insert(s_LightList.begin(), light); 
+        s_LightList.insert(s_LightList.begin(), light);
         return;
     }
     s_LightList.push_back(light);
@@ -2871,20 +2642,13 @@ void Renderer3D::EndScene() {
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFBO);
     glGetIntegerv(GL_VIEWPORT, prevViewport);
     uint32_t targetW = (uint32_t)prevViewport[2], targetH = (uint32_t)prevViewport[3];
-    if (targetW == 0 || targetH == 0) { s_DrawList.clear(); return; } 
+    if (targetW == 0 || targetH == 0) { s_DrawList.clear(); return; }
 
-    
-    
     uint32_t internalW = glm::max(1u, (uint32_t)glm::round((float)targetW * s_Settings.RenderScale));
     uint32_t internalH = glm::max(1u, (uint32_t)glm::round((float)targetH * s_Settings.RenderScale));
     EnsurePostBuffers(internalW, internalH, s_Settings.MSAA);
     EnsureShadowMaps((uint32_t)s_Settings.ShadowMapSize);
 
-    
-    
-    
-    
-    
     bool taaEnabled = s_Settings.TAAEnabled;
     if (taaEnabled) {
         ++s_TAACounter;
@@ -2901,9 +2665,6 @@ void Renderer3D::EndScene() {
         s_ViewProjection = s_Projection * s_View;
     }
 
-    
-    
-    
     s_HasPlanarReflection = false;
     int mirrorIndex = -1;
     glm::vec3 mirrorPoint(0.0f), mirrorNormal(0.0f, 1.0f, 0.0f);
@@ -2916,7 +2677,7 @@ void Renderer3D::EndScene() {
         mirrorNormal = glm::normalize(glm::mat3(mirror.Transform) * glm::vec3(0.0f, 1.0f, 0.0f));
         float side = glm::dot(mirrorNormal, s_CameraPos - mirrorPoint);
         if (side > 0.001f) {
-            
+
             glm::vec3 reflectCam = glm::reflect(s_CameraPos - mirrorPoint, mirrorNormal) + mirrorPoint;
             glm::mat4 R(1.0f);
             R[0] = { 1.0f - 2.0f*mirrorNormal.x*mirrorNormal.x, -2.0f*mirrorNormal.x*mirrorNormal.y, -2.0f*mirrorNormal.x*mirrorNormal.z, 0.0f };
@@ -2926,8 +2687,6 @@ void Renderer3D::EndScene() {
             R[3] = { -2.0f*mirrorNormal.x*d, -2.0f*mirrorNormal.y*d, -2.0f*mirrorNormal.z*d, 1.0f };
             glm::mat4 reflectView = s_View * R;
 
-            
-            
             glm::vec4 planeWorld(mirrorNormal, -d);
             glm::vec4 cp = glm::transpose(glm::inverse(s_View)) * planeWorld;
             glm::mat4 reflectProj = s_Projection;
@@ -2946,10 +2705,9 @@ void Renderer3D::EndScene() {
         }
     }
 
-    
     if (!s_DrawList.empty() && s_HasShadowCaster) {
         ComputeCascades(s_ShadowCaster.Direction);
-        glCullFace(GL_FRONT); 
+        glCullFace(GL_FRONT);
         s_ShadowShader->Bind();
         uint32_t shadowSize = (uint32_t)s_Settings.ShadowMapSize;
         for (int c = 0; c < kCascadeCount; ++c) {
@@ -2959,8 +2717,7 @@ void Renderer3D::EndScene() {
             s_ShadowShader->SetMat4("u_LightSpaceMatrix", s_LightSpaceMatrix[c]);
             for (auto& cmd : s_DrawList) {
                 s_ShadowShader->SetMat4("u_Model", cmd.Transform);
-                
-                
+
                 if (cmd.Joints.empty()) {
                     s_ShadowShader->SetInt("u_Animated", 0);
                 } else {
@@ -2976,15 +2733,13 @@ void Renderer3D::EndScene() {
         glCullFace(GL_BACK);
     }
 
-    
     uint32_t sceneFBO = (s_CurrentMSAA > 1) ? s_MSAAHDRFBO : s_HDRFBO;
     glBindFramebuffer(GL_FRAMEBUFFER, sceneFBO);
     glViewport(0, 0, (GLsizei)internalW, (GLsizei)internalH);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (s_DrawGridFlag) {
-        
-        
+
         s_LineShader->Bind();
         s_LineShader->SetMat4("u_ViewProjection", s_MotionCurrVP);
         RenderCommand::DrawLines(s_GridVAO, s_GridVertexCount);
@@ -3007,7 +2762,6 @@ void Renderer3D::EndScene() {
             }
         }
 
-        
         for (int c = 0; c < kCascadeCount; ++c) {
             glActiveTexture(GL_TEXTURE1 + c);
             glBindTexture(GL_TEXTURE_2D, s_ShadowMap[c]);
@@ -3050,8 +2804,6 @@ void Renderer3D::EndScene() {
             s_MeshShader->SetFloat("u_Roughness", cmd.Mat.Roughness);
             s_MeshShader->SetFloat("u_AO", cmd.Mat.AO);
 
-            
-            
             if (cmd.Joints.empty()) {
                 s_MeshShader->SetInt("u_Animated", 0);
             } else {
@@ -3102,8 +2854,6 @@ void Renderer3D::EndScene() {
             s_MeshShader->SetFloat3("u_Emissive", cmd.Mat.Emissive);
             s_MeshShader->SetFloat("u_EmissiveStrength", cmd.Mat.EmissiveStrength);
 
-            
-            
             bool isMirror = cmd.Mat.PlanarReflect && s_HasPlanarReflection;
             s_MeshShader->SetInt("u_IsPlanarMirror", isMirror ? 1 : 0);
             if (isMirror) {
@@ -3117,8 +2867,6 @@ void Renderer3D::EndScene() {
         }
     }
 
-    
-    
     if (!s_InstanceBatches.empty()) {
         s_MeshShader->SetInt("u_Instanced", 1);
         for (auto& batch : s_InstanceBatches) {
@@ -3146,12 +2894,11 @@ void Renderer3D::EndScene() {
             s_MeshShader->SetInt("u_HasHeightMap", hasHeight ? 1 : 0);
             s_MeshShader->SetFloat("u_HeightScale", mat.HeightScale);
             if (hasHeight) { mat.HeightMap->Bind(9); s_MeshShader->SetInt("u_HeightMap", 9); }
-            s_MeshShader->SetInt("u_HasLightmap", 0); 
+            s_MeshShader->SetInt("u_HasLightmap", 0);
             s_MeshShader->SetFloat3("u_Emissive", mat.Emissive);
             s_MeshShader->SetFloat("u_EmissiveStrength", mat.EmissiveStrength);
             s_MeshShader->SetInt("u_IsPlanarMirror", 0);
 
-            
             const std::vector<glm::mat4>& T = batch.Transforms;
             uint32_t done = 0;
             while (done < (uint32_t)T.size()) {
@@ -3168,7 +2915,6 @@ void Renderer3D::EndScene() {
         s_MeshShader->SetInt("u_Instanced", 0);
     }
 
-    
     glDepthFunc(GL_LEQUAL);
     glDepthMask(GL_FALSE);
     s_SkyboxShader->Bind();
@@ -3177,16 +2923,12 @@ void Renderer3D::EndScene() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, s_EnvironmentCubemap);
     s_SkyboxShader->SetInt("u_EnvironmentMap", 0);
-    
-    
+
     glm::vec3 sunDir = s_HasShadowCaster
         ? glm::normalize(-s_ShadowCaster.Direction)
         : glm::normalize(glm::vec3(0.3f, 1.0f, 0.2f));
     s_SkyboxShader->SetFloat3("u_SunDirection", sunDir);
-    
-    
-    
-    
+
     bool atmosphere = s_EnvironmentHDRIPath.empty() && s_Settings.AtmosphereSky;
     s_SkyboxShader->SetInt("u_AtmosphereSky", atmosphere ? 1 : 0);
     s_SkyboxShader->SetInt("u_CloudsEnabled", (atmosphere && s_Settings.CloudsEnabled) ? 1 : 0);
@@ -3195,7 +2937,6 @@ void Renderer3D::EndScene() {
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);
 
-    
     if (!s_DecalList.empty()) {
         s_DecalShader->Bind();
         s_DecalShader->SetMat4("u_ViewProjection", s_ViewProjection);
@@ -3210,16 +2951,12 @@ void Renderer3D::EndScene() {
             s_DecalShader->SetInt("u_DecalTexture", 0);
             RenderCommand::DrawIndexed(s_DecalCube->GetVertexArray(), s_DecalCube->GetIndexCount());
         }
-        
-        
-        
+
         RenderCommand::SetBlending(true);
         glDepthMask(GL_TRUE);
         s_DecalList.clear();
     }
 
-    
-    
     if (!s_ParticleBatches.empty()) {
         glm::vec3 cameraRight(s_View[0][0], s_View[1][0], s_View[2][0]);
         glm::vec3 cameraUp(s_View[0][1], s_View[1][1], s_View[2][1]);
@@ -3240,20 +2977,15 @@ void Renderer3D::EndScene() {
             glBindBuffer(GL_ARRAY_BUFFER, s_ParticleInstanceVBO);
             glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)(batch.Instances.size() * sizeof(ParticleInstance)), batch.Instances.data());
             glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, (GLsizei)batch.Instances.size());
-            RenderCommand::AddInstancedStats((uint32_t)batch.Instances.size()); 
+            RenderCommand::AddInstancedStats((uint32_t)batch.Instances.size());
         }
         glBindVertexArray(0);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); 
-        
-        
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
         RenderCommand::SetBlending(true);
         glDepthMask(GL_TRUE);
     }
 
-    
-    
-    
-    
     if (!s_DebugLines.empty()) {
         struct LineVertex { glm::vec3 Position; glm::vec3 Color; };
         std::vector<LineVertex> verts;
@@ -3263,7 +2995,7 @@ void Renderer3D::EndScene() {
             verts.push_back({ l.To, l.Color });
         }
         if (!s_DebugVAO) {
-            const uint32_t kMaxDebugVerts = 8192u * 2u; 
+            const uint32_t kMaxDebugVerts = 8192u * 2u;
             s_DebugVAO = CreateRef<VertexArray>();
             s_DebugVBO = CreateRef<VertexBuffer>(kMaxDebugVerts * (uint32_t)sizeof(LineVertex));
             s_DebugVBO->SetLayout({
@@ -3276,15 +3008,13 @@ void Renderer3D::EndScene() {
         glDepthFunc(GL_LEQUAL);
         glDepthMask(GL_TRUE);
         s_LineShader->Bind();
-        
+
         s_LineShader->SetMat4("u_ViewProjection", s_MotionCurrVP);
         RenderCommand::DrawLines(s_DebugVAO, (uint32_t)verts.size());
         glDepthFunc(GL_LESS);
         s_DebugLines.clear();
     }
 
-    
-    
     if (s_CurrentMSAA > 1) {
         glBindFramebuffer(GL_READ_FRAMEBUFFER, s_MSAAHDRFBO);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, s_HDRFBO);
@@ -3293,12 +3023,8 @@ void Renderer3D::EndScene() {
                           GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
     }
 
-    
-    
-    
     RenderCommand::SetDepthTest(false);
 
-    
     bool hasAO = false;
     if (s_Settings.SSAOEnabled && s_SSAOShader && s_SSAOShader->IsValid()) {
         EnsureSSAOBuffers(internalW, internalH);
@@ -3315,14 +3041,13 @@ void Renderer3D::EndScene() {
         s_SSAOShader->SetMat4("u_Projection", s_Projection);
         s_SSAOShader->SetMat4("u_InverseProjection", glm::inverse(s_Projection));
         s_SSAOShader->SetFloat("u_Radius", s_Settings.SSAORadius);
-        s_SSAOShader->SetFloat("u_Power", 1.2f); 
+        s_SSAOShader->SetFloat("u_Power", 1.2f);
         s_SSAOShader->SetInt("u_SampleCount", s_Settings.SSAOSamples);
         for (size_t i = 0; i < s_SSAOKernel.size(); ++i)
             s_SSAOShader->SetFloat3("u_Samples[" + std::to_string(i) + "]", s_SSAOKernel[i]);
         s_SSAOShader->SetFloat2("u_NoiseScale", glm::vec2((float)s_SSAOWidth / 4.0f, (float)s_SSAOHeight / 4.0f));
         RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
 
-        
         int aoRead = 0, aoWrite = 1;
         s_BlurShader->Bind();
         for (int i = 0; i < 2; ++i) {
@@ -3333,15 +3058,13 @@ void Renderer3D::EndScene() {
             glBindTexture(GL_TEXTURE_2D, readTex);
             s_BlurShader->SetInt("u_Image", 0);
             s_BlurShader->SetInt("u_Horizontal", (i == 0) ? 1 : 0);
-            s_BlurShader->SetFloat("u_Anamorphic", 0.0f); 
+            s_BlurShader->SetFloat("u_Anamorphic", 0.0f);
             RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
             std::swap(aoRead, aoWrite);
         }
         hasAO = true;
     }
 
-    
-    
     bool hasSSR = false;
     if (s_Settings.SSREnabled) {
         glBindFramebuffer(GL_FRAMEBUFFER, s_SSRFBO);
@@ -3364,8 +3087,6 @@ void Renderer3D::EndScene() {
         hasSSR = true;
     }
 
-    
-    
     bool hasSSGI = false;
     if (s_Settings.SSGIEnabled && s_Settings.SSGIIntensity > 0.001f) {
         uint32_t ssgiW = glm::max(1u, internalW / 2), ssgiH = glm::max(1u, internalH / 2);
@@ -3385,8 +3106,6 @@ void Renderer3D::EndScene() {
         hasSSGI = true;
     }
 
-    
-    
     bool hasGodRays = false;
     if (s_Settings.GodRaysEnabled && s_Settings.GodRaysIntensity > 0.001f) {
         glm::vec3 sunDir = s_HasShadowCaster
@@ -3396,7 +3115,7 @@ void Renderer3D::EndScene() {
         if (sunClip.w > 0.0f) {
             glm::vec2 sunNDC = glm::vec2(sunClip) / sunClip.w;
             glm::vec2 sunUV = sunNDC * 0.5f + 0.5f;
-            
+
             if (sunUV.x >= -0.6f && sunUV.x <= 1.6f && sunUV.y >= -0.6f && sunUV.y <= 1.6f) {
                 uint32_t grW = glm::max(1u, internalW / 2), grH = glm::max(1u, internalH / 2);
                 glBindFramebuffer(GL_FRAMEBUFFER, s_GodRaysFBO);
@@ -3412,7 +3131,6 @@ void Renderer3D::EndScene() {
                 s_GodRaysShader->SetFloat("u_Intensity", s_Settings.GodRaysIntensity);
                 RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
 
-                
                 s_BlurShader->Bind();
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, s_GodRaysColorBuffer);
@@ -3425,9 +3143,6 @@ void Renderer3D::EndScene() {
         }
     }
 
-    
-    
-    
     uint32_t sceneTex = s_HDRColorBuffer;
     if (s_Settings.DOFEnabled && s_Settings.DOFStrength > 0.001f) {
         glBindFramebuffer(GL_FRAMEBUFFER, s_DOFFBO);
@@ -3464,7 +3179,6 @@ void Renderer3D::EndScene() {
         sceneTex = s_MotionTex;
     }
 
-    
     uint32_t bloomW = glm::max(1u, internalW / 2), bloomH = glm::max(1u, internalH / 2);
     int bloomReadIdx = 0;
     if (s_Settings.BloomEnabled) {
@@ -3477,7 +3191,6 @@ void Renderer3D::EndScene() {
         s_BrightPassShader->SetFloat("u_Threshold", s_Settings.BloomThreshold);
         RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
 
-        
         bool horizontal = true;
         uint32_t blurIterations = glm::max(1u, (uint32_t)s_Settings.BloomIterations);
         s_BlurShader->Bind();
@@ -3495,8 +3208,6 @@ void Renderer3D::EndScene() {
         }
     }
 
-    
-    
     bool hasLensFlare = false;
     if (s_Settings.LensFlareEnabled && s_Settings.LensFlareIntensity > 0.001f) {
         glm::vec3 sunDir = s_HasShadowCaster
@@ -3519,9 +3230,6 @@ void Renderer3D::EndScene() {
         }
     }
 
-    
-    
-    
     bool fxaaEnabled = s_Settings.FXAAEnabled;
     GLuint compositeTarget = (GLuint)prevFBO;
     int compositeW = prevViewport[2], compositeH = prevViewport[3];
@@ -3534,7 +3242,7 @@ void Renderer3D::EndScene() {
     glViewport(0, 0, (GLsizei)compositeW, (GLsizei)compositeH);
     s_CompositeShader->Bind();
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, sceneTex); 
+    glBindTexture(GL_TEXTURE_2D, sceneTex);
     s_CompositeShader->SetInt("u_SceneColor", 0);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, s_Settings.BloomEnabled ? s_BloomColorBuffer[bloomReadIdx] : s_HDRColorBuffer);
@@ -3547,12 +3255,12 @@ void Renderer3D::EndScene() {
     s_CompositeShader->SetInt("u_ToneMapping", s_Settings.ToneMapping);
     s_CompositeShader->SetFloat("u_Saturation", s_Settings.Saturation);
     s_CompositeShader->SetFloat("u_Contrast", s_Settings.Contrast);
-    s_PostTime += 0.016f; 
+    s_PostTime += 0.016f;
     s_CompositeShader->SetFloat("u_Time", s_PostTime);
     s_CompositeShader->SetInt("u_HasAO", hasAO ? 1 : 0);
     if (hasAO) {
         glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, s_SSAOColorBuffer); 
+        glBindTexture(GL_TEXTURE_2D, s_SSAOColorBuffer);
         s_CompositeShader->SetInt("u_AOTexture", 2);
     }
     s_CompositeShader->SetInt("u_HasSSR", hasSSR ? 1 : 0);
@@ -3581,8 +3289,6 @@ void Renderer3D::EndScene() {
     }
     RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
 
-    
-    
     uint32_t finalInput = s_TAACompositeTex;
     if (taaEnabled) {
         int histRead = (int)(s_TAACounter % 2u);
@@ -3604,8 +3310,6 @@ void Renderer3D::EndScene() {
         s_TAAHistoryValid = true;
     }
 
-    
-    
     if (fxaaEnabled) {
         glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prevFBO);
         glViewport(prevViewport[0], prevViewport[1], (GLsizei)prevViewport[2], (GLsizei)prevViewport[3]);
@@ -3616,7 +3320,7 @@ void Renderer3D::EndScene() {
         s_FXAAShader->SetFloat2("u_InvResolution", glm::vec2(1.0f / (float)internalW, 1.0f / (float)internalH));
         RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
     } else if (taaEnabled) {
-        
+
         glBindFramebuffer(GL_READ_FRAMEBUFFER, finalInput);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)prevFBO);
         glBlitFramebuffer(0, 0, (GLint)internalW, (GLint)internalH,
@@ -3627,8 +3331,6 @@ void Renderer3D::EndScene() {
 
     RenderCommand::SetDepthTest(true);
 
-    
-    
     if (GLenum err = glGetError(); err != GL_NO_ERROR) {
         KZ_CORE_ERROR("OpenGL erro 0x{0:x} no frame (pós).", (unsigned)err);
         char buf[64];
@@ -3636,24 +3338,20 @@ void Renderer3D::EndScene() {
         SetShaderDiagnostic(buf);
     }
 
-    
-    
-    
-    
     static int s_BlackFrames = 0;
     if (s_BlackFrames < 3) {
         ++s_BlackFrames;
         glBindFramebuffer(GL_READ_FRAMEBUFFER, s_HDRFBO);
         float px[3] = { 1.0f, 1.0f, 1.0f };
         glReadPixels((GLint)(internalW / 2), (GLint)(internalH / 2),
-                     1, 1, GL_RGB, GL_FLOAT, px); 
+                     1, 1, GL_RGB, GL_FLOAT, px);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         float lum = px[0] + px[1] + px[2];
         KZ_CORE_INFO("Verificação de frame {0}: centro do HDR = ({1:.3f}, {2:.3f}, {3:.3f}).",
                      s_BlackFrames, px[0], px[1], px[2]);
 
         if (s_BlackFrames == 1) {
-            
+
             std::ofstream dump("render_info.txt");
             dump << "Kizuri Engine — diagnostico de render\n";
             dump << "OpenGL: " << GetOpenGLVersionString() << "\n";
@@ -3702,7 +3400,7 @@ void Renderer3D::EndScene() {
         }
     }
 
-    s_MotionPrevVP = s_MotionCurrVP; 
+    s_MotionPrevVP = s_MotionCurrVP;
     s_DrawList.clear();
 }
 
@@ -3711,7 +3409,7 @@ void Renderer3D::DrawGrid() {
 }
 
 void Renderer3D::SubmitDebugLine(const glm::vec3& from, const glm::vec3& to, const glm::vec3& color) {
-    if (s_DebugLines.size() >= 8192) return; 
+    if (s_DebugLines.size() >= 8192) return;
     s_DebugLines.push_back({ from, to, color });
 }
 
@@ -3755,4 +3453,4 @@ void Renderer3D::SubmitSkinned(const Ref<Mesh>& mesh, const Material& material, 
     s_DrawList.push_back(std::move(cmd));
 }
 
-} 
+}

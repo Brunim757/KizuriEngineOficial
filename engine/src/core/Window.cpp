@@ -22,11 +22,9 @@ namespace kizuri {
 
 #if defined(KZ_PLATFORM_ANDROID)
 
-
 void Window::Init(const WindowProps& props) {
     m_Data.Title = props.Title;
 
-    
     AndroidPlatform::SetEventHandler([](void* userData, uint32_t type, int keyCode, int action,
                                         float x, float y) {
         auto& data = *(WindowData*)userData;
@@ -85,8 +83,6 @@ void Window::Init(const WindowProps& props) {
         std::exit(1);
     }
 
-    
-    
     EGLint configAttribs[] = {
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
         EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
@@ -99,7 +95,7 @@ void Window::Init(const WindowProps& props) {
     EGLConfig config = nullptr;
     eglChooseConfig(display, configAttribs, &config, 1, &configCount);
     if (configCount == 0) {
-        
+
         EGLint fallbackAttribs[] = {
             EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
             EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
@@ -149,8 +145,6 @@ void Window::Init(const WindowProps& props) {
     m_GLVersionMajor = 3;
     m_GLVersionMinor = 0;
 
-    
-    
     kizuri::SetContextGLSLVersion(300);
 
     int gladOk = gladLoadGL((GLADloadfunc)eglGetProcAddress);
@@ -181,16 +175,15 @@ void Window::DestroyAndroidEGLSurface() {
 void Window::HandleAndroidSurfaceChanged(void* nativeWindow) {
     ANativeWindow* window = (ANativeWindow*)nativeWindow;
     if (!window) {
-        
+
         DestroyAndroidEGLSurface();
         return;
     }
     if (!m_EGLDisplay || !m_EGLContext) {
-        
-        
+
         return;
     }
-    
+
     DestroyAndroidEGLSurface();
     EGLSurface surface = eglCreateWindowSurface((EGLDisplay)m_EGLDisplay, (EGLConfig)m_EGLConfig,
                                                 window, nullptr);
@@ -256,17 +249,10 @@ bool Window::IsMaximized() const { return false; }
 #else
 #endif
 
-
-
-
-
 #if !defined(KZ_PLATFORM_ANDROID)
 static void ShowFatalErrorPopup(const std::string& title, const std::string& message) {
 #if defined(_WIN32)
-    
-    
-    
-    
+
     auto toWide = [](const std::string& utf8) -> std::wstring {
         if (utf8.empty()) return std::wstring();
         int len = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), (int)utf8.size(), nullptr, 0);
@@ -285,7 +271,7 @@ static uint8_t s_GLFWWindowCount = 0;
 static void GLFWErrorCallback(int error, const char* description) {
     KZ_CORE_ERROR("Erro do GLFW ({0}): {1}", error, description);
 }
-#endif 
+#endif
 
 Window::Window(const WindowProps& props) {
     Init(props);
@@ -294,10 +280,6 @@ Window::Window(const WindowProps& props) {
 Window::~Window() {
     Shutdown();
 }
-
-
-
-
 
 #if !defined(KZ_PLATFORM_ANDROID)
 void Window::Init(const WindowProps& props) {
@@ -322,9 +304,6 @@ void Window::Init(const WindowProps& props) {
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 #endif
 
-    
-    
-    
     int winW = (int)props.Width, winH = (int)props.Height;
     {
         GLFWmonitor* monitor = glfwGetPrimaryMonitor();
@@ -346,12 +325,6 @@ void Window::Init(const WindowProps& props) {
     m_Data.Width = (uint32_t)winW;
     m_Data.Height = (uint32_t)winH;
 
-    
-    
-    
-    
-    
-    
     const int contextVersions[][2] = {
         {3, 3}
     };
@@ -362,9 +335,7 @@ void Window::Init(const WindowProps& props) {
         if (m_Window) {
             m_GLVersionMajor = version[0];
             m_GLVersionMinor = version[1];
-            
-            
-            
+
             kizuri::SetContextGLSLVersion(version[0] == 3 ? 330 : version[0] * 100 + version[1] * 10);
             KZ_CORE_INFO("Contexto OpenGL {0}.{1} core criado com sucesso.", version[0], version[1]);
             break;
@@ -373,8 +344,7 @@ void Window::Init(const WindowProps& props) {
     }
 
     if (m_Window) {
-        
-        
+
         GLFWimage icon;
         icon.width = kizuri::windowicon::kWidth;
         icon.height = kizuri::windowicon::kHeight;
@@ -426,7 +396,6 @@ void Window::Init(const WindowProps& props) {
     glfwSetWindowUserPointer(m_Window, &m_Data);
     SetVSync(props.VSync);
 
-    
     glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* w, int width, int height) {
         auto& data = *(WindowData*)glfwGetWindowUserPointer(w);
         data.Width = width; data.Height = height;
@@ -469,15 +438,10 @@ void Window::Init(const WindowProps& props) {
         if (data.EventCallback) data.EventCallback(e);
     });
 
-    
-    
-    
-    
     glfwSetDropCallback(m_Window, [](GLFWwindow* w, int count, const char** paths) {
         auto& data = *(WindowData*)glfwGetWindowUserPointer(w);
         if (!paths || count <= 0) return;
-        
-        
+
         constexpr size_t kMaxPendingDrops = 64;
         for (int i = 0; i < count; ++i) {
             if (!paths[i]) continue;
@@ -542,6 +506,6 @@ bool Window::IsMaximized() const {
     return glfwGetWindowAttrib(m_Window, GLFW_MAXIMIZED) != 0;
 }
 
-#endif 
+#endif
 
-} 
+}

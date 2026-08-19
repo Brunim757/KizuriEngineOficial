@@ -1,5 +1,4 @@
 
-
 namespace Kizuri.Math;
 
 public struct Vector2

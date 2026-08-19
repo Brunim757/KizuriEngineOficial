@@ -2,8 +2,6 @@ using Kizuri;
 using Kizuri.Math;
 using System.Collections;
 
-
-
 public sealed class UISample : Script
 {
 	private Entity _canvas;
@@ -14,7 +12,7 @@ public sealed class UISample : Script
 
 	public override void OnCreate()
 	{
-		
+
 		_canvas = Scene.CreateEntity("UI Canvas");
 		_canvas.AddUICanvas(10f);
 
@@ -23,13 +21,11 @@ public sealed class UISample : Script
 		title.AddUIText("KIZURI ENGINE", 24f, 1f, 1f, 1f);
 		title.SetUIRect(0f, 7.5f, 0f, 0f);
 
-		
 		_button = Scene.CreateEntity("Botao");
 		_button.SetParent(_canvas);
 		_button.AddUIButton(0f, 1f, 6f, 2f, 0.22f, 0.42f, 0.9f);
 		_button.AddUIText("Clique em mim", 16f, 1f, 1f, 1f);
 
-		
 		_counterText = Scene.CreateEntity("Contador");
 		_counterText.SetParent(_canvas);
 		_counterText.AddUIText("Cliques: 0", 14f, 1f, 0.95f, 0.5f);
@@ -38,7 +34,7 @@ public sealed class UISample : Script
 
 	public override void OnUpdate(float deltaSeconds)
 	{
-		
+
 		if (_button.UIButtonWasClicked())
 		{
 			_clicks++;
@@ -48,11 +44,9 @@ public sealed class UISample : Script
 
 		_counterText.SetText($"Cliques: {_clicks}");
 
-		
 		if (Input.IsKeyPressed(Key.F)) Time.TimeScale = 0.3f;
 		else if (Input.IsKeyPressed(Key.G)) Time.TimeScale = 1f;
 
-		
 		_announceTimer -= deltaSeconds;
 		if (_announceTimer <= 0f)
 		{

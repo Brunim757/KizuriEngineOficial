@@ -12,4 +12,4 @@ private:
     float m_Time;
 };
 
-} 
+}

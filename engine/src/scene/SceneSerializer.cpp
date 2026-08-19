@@ -49,8 +49,6 @@ bool SceneSerializer::Deserialize(const std::string& filepath) {
     return true;
 }
 
-
-
 bool SceneSerializer::BeginDeserializeStepwiseFile(const std::string& filepath) {
     std::ifstream in(filepath);
     if (!in.is_open()) {
@@ -74,7 +72,7 @@ bool SceneSerializer::BeginDeserializeStepwise(const json& root) {
 }
 
 void SceneSerializer::FinishStepwise() {
-    
+
     for (auto& [childUUID, parentUUID] : m_ParentOf) {
         Entity child = m_Scene->GetEntityByUUID(UUID(childUUID));
         Entity parent = m_Scene->GetEntityByUUID(UUID(parentUUID));
@@ -84,7 +82,6 @@ void SceneSerializer::FinishStepwise() {
     m_PendingIndex = 0;
     m_PendingEntities = json();
 }
-
 
 bool SceneSerializer::StepDeserialize(int maxEntities, float& outProgress) {
     int done = 0;
@@ -109,9 +106,6 @@ bool SceneSerializer::StepDeserialize(int maxEntities, float& outProgress) {
     return false;
 }
 
-
-
-
 bool SceneSerializer::StepDeserializeTime(float maxSeconds, float& outProgress) {
     auto start = std::chrono::steady_clock::now();
     const float budgetSeconds = maxSeconds > 0.0f ? maxSeconds : 0.004f;
@@ -126,9 +120,6 @@ bool SceneSerializer::StepDeserializeTime(float maxSeconds, float& outProgress) 
 
         ++m_PendingIndex;
 
-        
-        
-        
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::steady_clock::now() - start).count() / 1'000'000.0;
         if (elapsed >= budgetSeconds) break;
@@ -144,12 +135,11 @@ bool SceneSerializer::StepDeserializeTime(float maxSeconds, float& outProgress) 
 }
 
 bool SceneSerializer::DeserializeFromJson(const json& root) {
-    
-    
+
     if (!BeginDeserializeStepwise(root)) return false;
     float progress = 0.0f;
     while (!StepDeserialize(INT_MAX, progress)) {  }
     return true;
 }
 
-} 
+}

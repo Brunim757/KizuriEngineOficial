@@ -1,8 +1,5 @@
 #pragma once
 
-
-
-
 #include <memory>
 #include <string>
 #include <cstdint>
@@ -32,7 +29,7 @@ constexpr Ref<T> CreateRef(Args&&... args) { return std::make_shared<T>(std::for
 using EntityHandle = std::uint32_t;
 constexpr EntityHandle kInvalidEntity = 0;
 
-} 
+}
 
 #include "kizuri/core/Log.hpp"
 

@@ -5,11 +5,6 @@
 
 namespace kizuri {
 
-
-
-
-
-
 class UUID {
 public:
     UUID() : m_UUID(Generate()) {}
@@ -22,7 +17,6 @@ public:
     bool operator==(const UUID& other) const { return m_UUID == other.m_UUID; }
     bool operator!=(const UUID& other) const { return m_UUID != other.m_UUID; }
 
-    
     bool IsValid() const { return m_UUID != 0; }
     static UUID Invalid() { return UUID(uint64_t(0)); }
 
@@ -37,7 +31,7 @@ private:
     uint64_t m_UUID;
 };
 
-} 
+}
 
 namespace std {
 template<>
@@ -46,4 +40,4 @@ struct hash<kizuri::UUID> {
         return std::hash<uint64_t>()(static_cast<uint64_t>(uuid));
     }
 };
-} 
+}

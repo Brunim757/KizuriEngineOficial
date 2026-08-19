@@ -1,8 +1,4 @@
 
-
-
-
-
 namespace SampleGame;
 
 internal static class Program

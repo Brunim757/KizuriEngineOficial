@@ -12,7 +12,6 @@
 #include "kizuri/renderer/RenderCommand.hpp"
 #include <glad/gl.h>
 
-
 #include "../scene/ComponentSerialization.hpp"
 #include "kizuri/renderer/Renderer3D.hpp"
 #include "kizuri/renderer/TextRenderer.hpp"
@@ -35,15 +34,13 @@ namespace kizuri {
 
 namespace {
 
-
-
 bool AABBInFrustum(const glm::mat4& vp, const glm::vec3& min, const glm::vec3& max) {
     auto row = [&](int r) { return glm::vec4(vp[0][r], vp[1][r], vp[2][r], vp[3][r]); };
     glm::vec4 row1 = row(0), row2 = row(1), row3 = row(2), row4 = row(3);
     glm::vec4 planes[6] = {
-        row4 + row1, row4 - row1, 
-        row4 + row2, row4 - row2, 
-        row4 + row3, row4 - row3  
+        row4 + row1, row4 - row1,
+        row4 + row2, row4 - row2,
+        row4 + row3, row4 - row3
     };
     for (int i = 0; i < 6; ++i) {
         const glm::vec4& p = planes[i];
@@ -89,7 +86,7 @@ static uint64_t PackEntityPair(entt::entity a, entt::entity b) {
     return (uint64_t(x) << 32) | uint64_t(y);
 }
 
-} 
+}
 
 static b2BodyType ToBox2DBody(Rigidbody2DComponent::BodyType type) {
     switch (type) {
@@ -147,9 +144,7 @@ void Scene::FlushPendingDestroys() {
 
 void Scene::DestroyEntity(Entity entity) {
     if (!entity) return;
-    
-    
-    
+
     if (m_InScriptUpdate) {
         m_PendingDestroy.push_back(entity.GetHandle());
         return;
@@ -170,7 +165,6 @@ void Scene::DestroyEntityNow(Entity entity) {
 
     SetParent(entity, {});
 
-    
     if (entity.HasComponent<NativeScriptComponent>()) {
         auto& nsc = entity.GetComponent<NativeScriptComponent>();
         if (nsc.Instance && nsc.DestroyScript) {
@@ -192,7 +186,6 @@ Entity Scene::Instantiate(const std::string& prefabPath, const glm::vec3& positi
     Entity root = Prefab::Instantiate(*this, prefabPath, position);
     if (!root) return {};
 
-    
     std::vector<Entity> stack{ root };
     while (!stack.empty()) {
         Entity e = stack.back();
@@ -221,7 +214,6 @@ bool Scene::PollPendingLoad(std::string& outPath) {
 
 namespace {
 
-
 class KizuriRayCastCallback2D : public b2RayCastCallback {
 public:
     float BestFraction = 1.0f;
@@ -235,13 +227,9 @@ public:
             HitFixture = fixture;
             HitPoint = point;
         }
-        return BestFraction; 
+        return BestFraction;
     }
 };
-
-
-
-
 
 class OverlapCircleCallback : public b2QueryCallback {
 public:
@@ -257,7 +245,6 @@ public:
         return b2Distance(p, a + t * ab);
     }
 
-    
     static float GapToFixture(const b2Fixture* fixture, const b2Vec2& p) {
         const b2Shape* shape = fixture->GetShape();
         const b2Transform& xf = fixture->GetBody()->GetTransform();
@@ -267,7 +254,7 @@ public:
         }
         if (shape->GetType() == b2Shape::e_polygon) {
             const auto* poly = static_cast<const b2PolygonShape*>(shape);
-            if (poly->TestPoint(xf, p)) return 0.0f; 
+            if (poly->TestPoint(xf, p)) return 0.0f;
             float best = std::numeric_limits<float>::max();
             for (int32 i = 0; i < poly->m_count; ++i) {
                 b2Vec2 a = b2Mul(xf, poly->m_vertices[i]);
@@ -287,7 +274,7 @@ public:
     }
 };
 
-} 
+}
 
 bool Scene::Raycast2D(const glm::vec2& from, const glm::vec2& to,
                       Entity& outEntity, glm::vec2& outPoint, float& outFraction) {
@@ -296,8 +283,6 @@ bool Scene::Raycast2D(const glm::vec2& from, const glm::vec2& to,
     m_PhysicsWorld2D->RayCast(&cb, { from.x, from.y }, { to.x, to.y });
     if (cb.HitFixture == nullptr) return false;
 
-    
-    
     uintptr_t ptr = cb.HitFixture->GetBody()->GetUserData().pointer;
     outEntity = Entity{ static_cast<entt::entity>(ptr), this };
     outPoint = { cb.HitPoint.x, cb.HitPoint.y };
@@ -308,8 +293,6 @@ bool Scene::Raycast2D(const glm::vec2& from, const glm::vec2& to,
 bool Scene::OverlapCircle2D(const glm::vec2& center, float radius, Entity& outEntity) {
     if (m_PhysicsWorld2D == nullptr) return false;
 
-    
-    
     b2AABB aabb;
     aabb.lowerBound = { center.x - radius, center.y - radius };
     aabb.upperBound = { center.x + radius, center.y + radius };
@@ -342,7 +325,6 @@ bool Scene::Raycast3D(const glm::vec3& from, const glm::vec3& to,
     return true;
 }
 
-
 struct OverlapSphereCallback : public btCollisionWorld::ContactResultCallback {
     entt::entity Best = entt::null;
 
@@ -350,17 +332,13 @@ struct OverlapSphereCallback : public btCollisionWorld::ContactResultCallback {
                              int, int, const btCollisionObjectWrapper* otherWrap, int, int) override {
         void* up = otherWrap->getCollisionObject()->getUserPointer();
         if (up) Best = static_cast<entt::entity>(reinterpret_cast<uintptr_t>(up));
-        return 0.0f; 
+        return 0.0f;
     }
 };
 
 bool Scene::OverlapSphere3D(const glm::vec3& center, float radius, Entity& outEntity) {
     if (m_PhysicsWorld3D == nullptr) return false;
 
-    
-    
-    
-    
     btSphereShape sphere(radius);
     btCollisionObject obj;
     obj.setCollisionShape(&sphere);
@@ -402,7 +380,6 @@ bool Scene::OverlapBox3D(const glm::vec3& center, const glm::vec3& halfExtents, 
     return true;
 }
 
-
 struct OverlapCollectCallback : public btCollisionWorld::ContactResultCallback {
     std::vector<entt::entity> Hits;
 
@@ -440,7 +417,6 @@ bool Scene::OverlapSphereAll3D(const glm::vec3& center, float radius, std::vecto
 Entity Scene::DuplicateEntity(Entity source) {
     if (!source) return {};
 
-    
     std::vector<Entity> tree;
     std::vector<Entity> stack{ source };
     while (!stack.empty()) {
@@ -451,8 +427,6 @@ Entity Scene::DuplicateEntity(Entity source) {
         for (auto it = kids.rbegin(); it != kids.rend(); ++it) stack.push_back(*it);
     }
 
-    
-    
     std::unordered_map<UUID, UUID> remap;
     Entity newRoot;
     for (Entity e : tree) {
@@ -464,7 +438,6 @@ Entity Scene::DuplicateEntity(Entity source) {
         if (e == source) newRoot = ne;
     }
 
-    
     for (Entity e : tree) {
         Entity parent = e.GetParent();
         if (!parent) continue;
@@ -476,7 +449,6 @@ Entity Scene::DuplicateEntity(Entity source) {
         if (newChild && newParent) newChild.SetParent(newParent);
     }
 
-    
     if (newRoot && newRoot.HasComponent<TransformComponent>())
         newRoot.GetComponent<TransformComponent>().Translation += glm::vec3(0.5f, 0.5f, 0.0f);
     return newRoot;
@@ -499,7 +471,7 @@ void Scene::CollectUIChildren(entt::entity parent, std::vector<entt::entity>& ou
 }
 
 void Scene::UpdateUIPointer() {
-    
+
     m_Registry.view<UIButtonComponent>().each([](auto& b) {
         b.Hovered = false; b.Pressed = false; b.WasClicked = false;
     });
@@ -511,7 +483,7 @@ void Scene::UpdateUIPointer() {
 
     auto canvases = m_Registry.view<TransformComponent, UICanvasComponent>();
     for (auto ce : canvases) {
-        if (!IsEntityActive(Entity{ ce, this })) continue; 
+        if (!IsEntityActive(Entity{ ce, this })) continue;
         auto& cv = canvases.get<UICanvasComponent>(ce);
         glm::vec2 uiPoint{ m_UIMouseNDC.x * cv.OrthoSize * aspect, m_UIMouseNDC.y * cv.OrthoSize };
 
@@ -520,7 +492,7 @@ void Scene::UpdateUIPointer() {
         while (!stack.empty()) {
             entt::entity e = stack.back();
             stack.pop_back();
-            if (!IsEntityActive(Entity{ e, this })) continue; 
+            if (!IsEntityActive(Entity{ e, this })) continue;
             CollectUIChildren(e, stack);
 
             auto* btn = m_Registry.try_get<UIButtonComponent>(e);
@@ -543,7 +515,7 @@ void Scene::RenderUI() {
     float aspect = m_ViewportHeight ? (float)m_ViewportWidth / (float)m_ViewportHeight : 16.0f / 9.0f;
 
     for (auto ce : canvases) {
-        if (!IsEntityActive(Entity{ ce, this })) continue; 
+        if (!IsEntityActive(Entity{ ce, this })) continue;
         auto& cv = canvases.get<UICanvasComponent>(ce);
         OrthographicCamera uiCam(-cv.OrthoSize * aspect, cv.OrthoSize * aspect, -cv.OrthoSize, cv.OrthoSize);
         Renderer2D::BeginScene(uiCam);
@@ -553,7 +525,7 @@ void Scene::RenderUI() {
         while (!stack.empty()) {
             entt::entity e = stack.back();
             stack.pop_back();
-            if (!IsEntityActive(Entity{ e, this })) continue; 
+            if (!IsEntityActive(Entity{ e, this })) continue;
             CollectUIChildren(e, stack);
 
             auto* rect = m_Registry.try_get<UIRectComponent>(e);
@@ -646,7 +618,6 @@ void Scene::SetParent(Entity child, Entity newParent) {
     newParent.GetComponent<RelationshipComponent>().Children.push_back(child.GetUUID());
 }
 
-
 glm::mat4 Scene::GetWorldTransform(Entity entity) {
     if (!entity || !entity.HasComponent<TransformComponent>()) return glm::mat4(1.0f);
 
@@ -655,8 +626,6 @@ glm::mat4 Scene::GetWorldTransform(Entity entity) {
     if (parent) return GetWorldTransform(parent) * local;
     return local;
 }
-
-
 
 static bool RayIntersectsAABB(const glm::vec3& origin, const glm::vec3& dir,
                                const glm::vec3& bmin, const glm::vec3& bmax, float& outT) {
@@ -682,7 +651,6 @@ Entity Scene::PickEntity2D(const glm::vec2& worldPoint) {
     Entity closest;
     float closestArea = std::numeric_limits<float>::max();
 
-    
     auto sprites = m_Registry.view<TransformComponent, SpriteRendererComponent>();
     for (auto e : sprites) {
         Entity entity{ e, this };
@@ -694,7 +662,6 @@ Entity Scene::PickEntity2D(const glm::vec2& worldPoint) {
         if (area < closestArea) { closestArea = area; closest = entity; }
     }
 
-    
     auto circles = m_Registry.view<TransformComponent, CircleRendererComponent>();
     for (auto e : circles) {
         Entity entity{ e, this };
@@ -704,8 +671,6 @@ Entity Scene::PickEntity2D(const glm::vec2& worldPoint) {
         if (1.0f < closestArea) { closestArea = 1.0f; closest = entity; }
     }
 
-    
-    
     auto texts = m_Registry.view<TransformComponent, TextComponent>();
     for (auto e : texts) {
         Entity entity{ e, this };
@@ -720,9 +685,6 @@ Entity Scene::PickEntity2D(const glm::vec2& worldPoint) {
         if (w * h < closestArea) { closestArea = w * h; closest = entity; }
     }
 
-    
-    
-    
     auto tilemaps = m_Registry.view<TransformComponent, TilemapComponent>();
     for (auto e : tilemaps) {
         Entity entity{ e, this };
@@ -752,9 +714,6 @@ Entity Scene::PickEntity(const glm::vec3& rayOrigin, const glm::vec3& rayDir) {
         glm::mat4 world = GetWorldTransform(entity);
         glm::mat4 invWorld = glm::inverse(world);
 
-        
-        
-        
         glm::vec3 localOrigin = glm::vec3(invWorld * glm::vec4(rayOrigin, 1.0f));
         glm::vec3 localDir = glm::vec3(invWorld * glm::vec4(rayDir, 0.0f));
 
@@ -763,9 +722,6 @@ Entity Scene::PickEntity(const glm::vec3& rayOrigin, const glm::vec3& rayDir) {
             continue;
         if (t < 0.0f) continue;
 
-        
-        
-        
         glm::vec3 worldHit = glm::vec3(world * glm::vec4(localOrigin + localDir * t, 1.0f));
         float dist = glm::length(worldHit - rayOrigin);
         if (dist < closestDist) {
@@ -789,7 +745,7 @@ void Scene::RegisterPhysics2DEntity(Entity entity) {
     bodyDef.angle = transform.Rotation.z;
 
     b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
-    body->SetGravityScale(rb2d.GravityScale); 
+    body->SetGravityScale(rb2d.GravityScale);
     body->GetUserData().pointer = static_cast<uintptr_t>(static_cast<uint32_t>(entity.GetHandle()));
     body->SetFixedRotation(rb2d.FixedRotation);
     rb2d.RuntimeBody = body;
@@ -821,8 +777,6 @@ void Scene::RegisterPhysics2DEntity(Entity entity) {
         body->CreateFixture(&fixtureDef);
     }
 
-    
-    
     if (entity.HasComponent<TagComponent>()) {
         auto& tag = entity.GetComponent<TagComponent>();
         b2Filter filter;
@@ -877,7 +831,7 @@ void Scene::BuildTilemapColliders() {
                 bodyDef.type = b2_staticBody;
                 bodyDef.position.Set(cx, cy);
                 b2Body* body = m_PhysicsWorld2D->CreateBody(&bodyDef);
-                
+
                 body->GetUserData().pointer = 0;
                 b2PolygonShape shape;
                 shape.SetAsBox(hw, hh);
@@ -887,8 +841,6 @@ void Scene::BuildTilemapColliders() {
         }
     }
 }
-
-
 
 void Scene::RebuildDirtyTilemapColliders() {
     if (!m_PhysicsWorld2D) return;
@@ -945,7 +897,7 @@ void Scene::UpdatePhysics2D(Timestep ts) {
     if (!m_PhysicsWorld2D) return;
 
     constexpr int32_t velocityIterations = 8, positionIterations = 3;
-    RebuildDirtyTilemapColliders(); 
+    RebuildDirtyTilemapColliders();
     m_PhysicsWorld2D->Step(ts, velocityIterations, positionIterations);
 
     auto view = m_Registry.view<Rigidbody2DComponent>();
@@ -955,23 +907,18 @@ void Scene::UpdatePhysics2D(Timestep ts) {
         auto& rb2d = entity.GetComponent<Rigidbody2DComponent>();
         auto* body = static_cast<b2Body*>(rb2d.RuntimeBody);
         if (!body) {
-            
-            
+
             RegisterPhysics2DEntity(entity);
             body = static_cast<b2Body*>(rb2d.RuntimeBody);
             if (!body) continue;
         }
 
-        
-        
         if (!IsEntityActive(entity)) {
             if (body->IsEnabled()) body->SetEnabled(false);
             continue;
         }
         if (!body->IsEnabled()) body->SetEnabled(true);
 
-        
-        
         if (rb2d.Type == Rigidbody2DComponent::BodyType::Dynamic) {
             const auto& pos = body->GetPosition();
             transform.Translation.x = pos.x;
@@ -990,9 +937,6 @@ void Scene::RegisterPhysics3DEntity(Entity entity) {
 
     auto& transform = entity.GetComponent<TransformComponent>();
 
-    
-    
-    
     bool isTerrain = entity.HasComponent<TerrainComponent>();
 
     btCollisionShape* shape = nullptr;
@@ -1023,8 +967,7 @@ void Scene::RegisterPhysics3DEntity(Entity entity) {
         auto& sc3d = entity.GetComponent<SphereCollider3DComponent>();
         shape = new btSphereShape(sc3d.Radius * transform.Scale.x);
     } else if (entity.HasComponent<MeshColliderComponent>()) {
-        
-        
+
         auto& mc = entity.GetComponent<MeshColliderComponent>();
         Ref<Mesh> mesh = nullptr;
         if (!mc.MeshPath.empty()) mesh = Mesh::FromSource(mc.MeshPath);
@@ -1069,13 +1012,11 @@ void Scene::RegisterPhysics3DEntity(Entity entity) {
         body->setCollisionFlags(body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
         body->setActivationState(DISABLE_DEACTIVATION);
     }
-    
+
     body->setGravity(m_PhysicsWorld3D->getGravity() * rb3d.GravityScale);
     body->setDamping(rb3d.LinearDamping, rb3d.AngularDamping);
     body->setUserPointer(reinterpret_cast<void*>(static_cast<uintptr_t>(static_cast<uint32_t>(entity.GetHandle()))));
 
-    
-    
     if (entity.HasComponent<TagComponent>()) {
         auto& tag = entity.GetComponent<TagComponent>();
         short group = (short)(1 << std::min(std::max(tag.Layer, 0), 30));
@@ -1087,7 +1028,6 @@ void Scene::RegisterPhysics3DEntity(Entity entity) {
     rb3d.RuntimeBody = body;
 }
 
-
 void Scene::SetRigidbody3DGravityScale(Entity entity, float scale) {
     if (!entity.HasComponent<Rigidbody3DComponent>()) return;
     auto& rb3d = entity.GetComponent<Rigidbody3DComponent>();
@@ -1097,7 +1037,6 @@ void Scene::SetRigidbody3DGravityScale(Entity entity, float scale) {
             body->setGravity(m_PhysicsWorld3D->getGravity() * scale);
     }
 }
-
 
 void Scene::SetRigidbody3DDamping(Entity entity, float linear, float angular) {
     if (!entity.HasComponent<Rigidbody3DComponent>()) return;
@@ -1145,9 +1084,6 @@ void Scene::OnPhysics3DStart() {
     for (auto e : view)
         RegisterPhysics3DEntity(Entity{ e, this });
 
-    
-    
-    
     auto ccView = m_Registry.view<TransformComponent, CharacterControllerComponent>();
     for (auto e : ccView) {
         Entity entity{ e, this };
@@ -1204,8 +1140,6 @@ void Scene::OnPhysics3DStop() {
     m_PhysicsMeshes3D.clear();
     m_ActiveContacts3D.clear();
 
-    
-    
     if (m_PhysicsWorld3D) {
         for (auto& [handle, controller] : m_CharacterControllers3D) {
             if (controller) m_PhysicsWorld3D->removeAction(controller);
@@ -1239,12 +1173,12 @@ void Scene::UpdatePhysics3D(Timestep ts) {
         auto& rb3d = entity.GetComponent<Rigidbody3DComponent>();
         auto* body = static_cast<btRigidBody*>(rb3d.RuntimeBody);
         if (!body) {
-            RegisterPhysics3DEntity(entity); 
+            RegisterPhysics3DEntity(entity);
             body = static_cast<btRigidBody*>(rb3d.RuntimeBody);
             if (!body) continue;
         }
         if (rb3d.Type == Rigidbody3DComponent::BodyType::Static) continue;
-        if (!IsEntityActive(entity)) continue; 
+        if (!IsEntityActive(entity)) continue;
 
         btTransform bt;
         body->getMotionState()->getWorldTransform(bt);
@@ -1256,7 +1190,6 @@ void Scene::UpdatePhysics3D(Timestep ts) {
         transform.Rotation = { roll, pitch, yaw };
     }
 
-    
     std::unordered_set<uint64_t> current;
     int numManifolds = m_Dispatcher->getNumManifolds();
     for (int i = 0; i < numManifolds; ++i) {
@@ -1332,11 +1265,8 @@ void Scene::OnRuntimeStart() {
     m_Running = true;
     OnPhysics2DStart();
     OnPhysics3DStart();
-    BuildNavGrids(); 
+    BuildNavGrids();
 
-    
-    
-    
     kz_set_active_scene(this);
 
     m_Registry.view<NativeScriptComponent>().each([this](auto entityHandle, auto& nsc) {
@@ -1368,11 +1298,6 @@ void Scene::OnUpdateRuntime(Timestep ts) {
     KZ_TRACE_SCOPE("Scene::OnUpdateRuntime");
     OnUpdateRuntimeLogic(ts);
 
-    
-    
-    
-    
-    
     RenderScene3D(nullptr);
     RenderScene2D(nullptr);
     RenderUI();
@@ -1380,21 +1305,21 @@ void Scene::OnUpdateRuntime(Timestep ts) {
 
 void Scene::OnUpdateRuntimeLogic(Timestep ts) {
     KZ_TRACE_SCOPE("Scene::OnUpdateRuntimeLogic");
-    UpdateUIPointer(); 
+    UpdateUIPointer();
 
     m_InScriptUpdate = true;
     m_Registry.view<NativeScriptComponent>().each([this, ts](auto entityHandle, auto& nsc) {
-        if (!IsEntityActive(Entity{ entityHandle, this })) return; 
+        if (!IsEntityActive(Entity{ entityHandle, this })) return;
         if (nsc.Instance) nsc.Instance->OnUpdate(ts);
     });
     m_InScriptUpdate = false;
-    FlushPendingDestroys(); 
+    FlushPendingDestroys();
 
     UpdatePhysics2D(ts);
     UpdatePhysics3D(ts);
     FlushCollisionEvents();
 
-    kizuri::Network::Update((float)ts); 
+    kizuri::Network::Update((float)ts);
     UpdateTimelines(ts);
     UpdateCameraFollowers(ts);
     UpdateCharacterControllers(ts);
@@ -1408,9 +1333,7 @@ void Scene::OnUpdateRuntimeLogic(Timestep ts) {
 
 void Scene::RenderRuntimeView() {
     KZ_TRACE_SCOPE("Scene::RenderRuntimeView");
-    
-    
-    
+
     RenderScene3D(nullptr);
     RenderScene2D(nullptr);
     RenderUI();
@@ -1427,9 +1350,7 @@ bool Scene::HasPrimaryCamera() {
 
 void Scene::RenderRuntimeWithEditorCamera(PerspectiveCamera& editorCamera) {
     KZ_TRACE_SCOPE("Scene::RenderRuntimeWithEditorCamera");
-    
-    
-    
+
     RenderScene3D(&editorCamera);
     RenderScene2D(nullptr);
     RenderUI();
@@ -1437,12 +1358,10 @@ void Scene::RenderRuntimeWithEditorCamera(PerspectiveCamera& editorCamera) {
 
 void Scene::OnUpdateEditor3D(Timestep ts, PerspectiveCamera& editorCamera) {
     KZ_TRACE_SCOPE("Scene::OnUpdateEditor3D");
-    UpdateTimelines(ts);        
-    UpdateSpriteAnimations(ts); 
-    UpdateAnimators(ts);        
-    
-    
-    
+    UpdateTimelines(ts);
+    UpdateSpriteAnimations(ts);
+    UpdateAnimators(ts);
+
     RenderScene3D(&editorCamera);
     RenderScene2D(nullptr);
     RenderUI();
@@ -1450,13 +1369,9 @@ void Scene::OnUpdateEditor3D(Timestep ts, PerspectiveCamera& editorCamera) {
 
 void Scene::OnUpdateEditor2D(Timestep ts, OrthographicCamera& editorCamera) {
     KZ_TRACE_SCOPE("Scene::OnUpdateEditor2D");
-    UpdateSpriteAnimations(ts); 
+    UpdateSpriteAnimations(ts);
     UpdateAnimators(ts);
-    
-    
-    
-    
-    
+
     RenderScene2D(&editorCamera);
     RenderUI();
 }
@@ -1465,9 +1380,6 @@ void Scene::OnViewportResize(uint32_t width, uint32_t height) {
     m_ViewportWidth = width; m_ViewportHeight = height;
 }
 
-
-
-
 static void DecomposeTransform(const glm::mat4& m, glm::vec3& outPos, glm::vec3& outEuler) {
     outPos = glm::vec3(m[3]);
     glm::vec3 col0 = glm::vec3(m[0]), col1 = glm::vec3(m[1]), col2 = glm::vec3(m[2]);
@@ -1475,18 +1387,13 @@ static void DecomposeTransform(const glm::mat4& m, glm::vec3& outPos, glm::vec3&
     outEuler = glm::eulerAngles(glm::quat_cast(rotScale));
 }
 
-
-
-
 void Scene::RenderScene2D(OrthographicCamera* overrideCamera) {
     KZ_TRACE_SCOPE("Scene::RenderScene2D");
     if (overrideCamera) {
         Renderer2D::BeginScene(*overrideCamera);
         Renderer2D::DrawGrid();
         Render2DEntities();
-        
-        
-        
+
         const glm::mat4 proj = overrideCamera->GetProjectionMatrix();
         float halfW = 1.0f / glm::max(glm::abs(proj[0][0]), 1e-6f);
         float halfH = 1.0f / glm::max(glm::abs(proj[1][1]), 1e-6f);
@@ -1503,7 +1410,7 @@ void Scene::RenderScene2D(OrthographicCamera* overrideCamera) {
     for (auto e : camView) {
         auto& camera = camView.get<CameraComponent>(e);
         if (!camera.Primary || camera.Type != CameraComponent::ProjectionType::Orthographic2D) continue;
-        if (!IsEntityActive(Entity{ e, this })) continue; 
+        if (!IsEntityActive(Entity{ e, this })) continue;
 
         glm::vec3 pos, euler;
         DecomposeTransform(GetWorldTransform(Entity{ e, this }), pos, euler);
@@ -1521,16 +1428,10 @@ void Scene::RenderScene2D(OrthographicCamera* overrideCamera) {
 }
 
 void Scene::Render2DEntities() {
-    
-    
-    
-    
+
     RenderCommand::SetBlending(true);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    
-    
-    
     struct Item { int layer; int priority; entt::entity entity; };
     std::vector<Item> items;
 
@@ -1561,7 +1462,7 @@ void Scene::Render2DEntities() {
 
     for (const Item& it : items) {
         Entity e{ it.entity, this };
-        if (!IsEntityActive(e)) continue; 
+        if (!IsEntityActive(e)) continue;
         switch (it.priority) {
         case 0: {
             auto& sprite = m_Registry.get<SpriteRendererComponent>(it.entity);
@@ -1585,7 +1486,7 @@ void Scene::Render2DEntities() {
         case 2: {
             auto& anim = m_Registry.get<SpriteAnimationComponent>(it.entity);
             if (!anim.SheetTexture && !anim.SheetPath.empty())
-                anim.SheetTexture = Texture2D::Create(anim.SheetPath); 
+                anim.SheetTexture = Texture2D::Create(anim.SheetPath);
             if (!anim.SheetTexture || anim.FramesPerRow == 0) break;
             uint32_t cols = anim.FramesPerRow;
             uint32_t row = anim.CurrentFrame / cols;
@@ -1633,7 +1534,7 @@ void Scene::Render2DEntities() {
 void Scene::UpdateSpriteAnimations(Timestep ts) {
     auto view = m_Registry.view<SpriteAnimationComponent>();
     for (auto e : view) {
-        if (!IsEntityActive(Entity{ e, this })) continue; 
+        if (!IsEntityActive(Entity{ e, this })) continue;
         auto& anim = view.get<SpriteAnimationComponent>(e);
         if (!anim.Playing || anim.TotalFrames <= 1) continue;
         anim.FrameTimer += (float)ts;
@@ -1649,24 +1550,22 @@ void Scene::UpdateSpriteAnimations(Timestep ts) {
     }
 }
 
-
-
 void Scene::UpdateAnimators(Timestep ts) {
     m_Registry.view<AnimatorComponent>().each([&](auto e, auto& ac) {
-        if (!IsEntityActive(Entity{ e, this })) return; 
-        
+        if (!IsEntityActive(Entity{ e, this })) return;
+
         if (!ac.Skin) {
             if (ac.MeshPath.empty()) return;
             ac.Skin = SkinData::CreateFromGLTF(Project::ResolvePath(ac.MeshPath));
             if (!ac.Skin) return;
         }
-        if (ac.Skin->Joints.empty()) return; 
-        
+        if (ac.Skin->Joints.empty()) return;
+
         if (auto* sm = m_Registry.try_get<AnimatorStateMachineComponent>((entt::entity)e)) {
             if (sm->m_TransitionTime < sm->m_TransitionDuration)
                 sm->m_TransitionTime += (float)ts;
             else
-                sm->m_TransitionFrom = -1; 
+                sm->m_TransitionFrom = -1;
             if (sm->CurrentState >= 0 && sm->CurrentState < (int)sm->States.size()) {
                 const auto& st = sm->States[sm->CurrentState];
                 ac.ClipName = st.Clip;
@@ -1685,11 +1584,6 @@ void Scene::UpdateAnimators(Timestep ts) {
     });
 }
 
-
-
-
-
-
 static glm::quat RotationBetweenVectors(const glm::vec3& a, const glm::vec3& b) {
     glm::vec3 na = glm::normalize(a);
     glm::vec3 nb = glm::normalize(b);
@@ -1703,8 +1597,6 @@ static glm::quat RotationBetweenVectors(const glm::vec3& a, const glm::vec3& b) 
     glm::vec3 axis = glm::cross(na, nb);
     return glm::angleAxis(std::acos(d), glm::normalize(axis));
 }
-
-
 
 static void ApplyTwoBoneIK(const SkinData* skin, glm::mat4* global, const TwoBoneIKComponent& ik, int jointCount) {
     int ri = -1, mi = -1, ti = -1;
@@ -1736,7 +1628,6 @@ static void ApplyTwoBoneIK(const SkinData* skin, glm::mat4* global, const TwoBon
     if (glm::dot(bendAxis, bendAxis) < 1e-6f) bendAxis = glm::vec3(0.0f, 1.0f, 0.0f);
     bendAxis = glm::normalize(bendAxis);
 
-    
     const float alpha = std::asin(glm::clamp(b * std::sin(midAngle) / c, -1.0f, 1.0f));
     glm::quat rootRotFull = glm::angleAxis(alpha, bendAxis);
     glm::vec3 dirRootMidNew = glm::normalize(rootRotFull * dirRootTarget);
@@ -1747,7 +1638,6 @@ static void ApplyTwoBoneIK(const SkinData* skin, glm::mat4* global, const TwoBon
     const float w = glm::clamp(ik.Weight, 0.0f, 1.0f);
     if (w <= 0.001f) return;
 
-    
     auto weighted = [w](const glm::quat& q) {
         float ang = 2.0f * std::acos(glm::clamp(q.w, -1.0f, 1.0f));
         if (ang < 1e-5f) return glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
@@ -1760,13 +1650,10 @@ static void ApplyTwoBoneIK(const SkinData* skin, glm::mat4* global, const TwoBon
     glm::mat4 corrRoot = glm::translate(glm::mat4(1.0f), root) * glm::mat4_cast(qRootW) * glm::translate(glm::mat4(1.0f), -root);
     glm::mat4 corrMid = glm::translate(glm::mat4(1.0f), mid) * glm::mat4_cast(qMidW) * glm::translate(glm::mat4(1.0f), -mid);
 
-    
     global[ri] = corrRoot * global[ri];
     global[mi] = corrMid * (corrRoot * global[mi]);
     global[ti] = corrMid * (corrRoot * global[ti]);
 }
-
-
 
 static bool ComputeSkinnedPose(const SkinData* skin, const AnimatorComponent& ac,
                                const AnimationBlendComponent* blend, const TwoBoneIKComponent* ik,
@@ -1774,8 +1661,6 @@ static bool ComputeSkinnedPose(const SkinData* skin, const AnimatorComponent& ac
                                glm::mat4* outJoints, int count) {
     if (!skin || skin->Joints.empty()) return false;
 
-    
-    
     std::string clipA = ac.ClipName;
     std::string clipB;
     float w = 0.0f;
@@ -1803,7 +1688,7 @@ static bool ComputeSkinnedPose(const SkinData* skin, const AnimatorComponent& ac
     glm::mat4 global[kMaxSkinJoints];
     for (int i = 0; i < count; ++i) {
         if (haveB && w > 0.0001f) {
-            
+
             glm::vec3 tA = glm::vec3(gA[i][3]);
             glm::vec3 tB = glm::vec3(gB[i][3]);
             glm::vec3 sA(glm::length(glm::vec3(gA[i][0])), glm::length(glm::vec3(gA[i][1])), glm::length(glm::vec3(gA[i][2])));
@@ -1833,14 +1718,13 @@ static bool ComputeSkinnedPose(const SkinData* skin, const AnimatorComponent& ac
 void Scene::SubmitLights() {
     auto lights = m_Registry.view<TransformComponent, LightComponent>();
     if (lights.begin() == lights.end()) {
-        Renderer3D::SubmitLight(Light{}); 
+        Renderer3D::SubmitLight(Light{});
         return;
     }
-    
-    
+
     glm::mat4 cullVP = Renderer3D::GetLastViewProjection();
     for (auto e : lights) {
-        if (!IsEntityActive(Entity{ e, this })) continue; 
+        if (!IsEntityActive(Entity{ e, this })) continue;
         auto& lc = lights.get<LightComponent>(e);
         glm::mat4 world = GetWorldTransform(Entity{ e, this });
         Light l;
@@ -1855,7 +1739,7 @@ void Scene::SubmitLights() {
         l.CastsShadow = lc.CastsShadow;
 
         if (l.Type != LightType::Directional) {
-            
+
             glm::vec3 r = glm::vec3(l.Range);
             if (!AABBInFrustum(cullVP, l.Position - r, l.Position + r)) continue;
         }
@@ -1866,7 +1750,7 @@ void Scene::SubmitLights() {
 void Scene::UpdateParticleSystems(Timestep ts) {
     auto view = m_Registry.view<TransformComponent, ParticleSystemComponent>();
     for (auto e : view) {
-        if (!IsEntityActive(Entity{ e, this })) continue; 
+        if (!IsEntityActive(Entity{ e, this })) continue;
         auto& pc = view.get<ParticleSystemComponent>(e);
         if (!pc.Playing) continue;
         glm::vec3 emitterPos = glm::vec3(GetWorldTransform(Entity{ e, this })[3]);
@@ -1886,7 +1770,7 @@ void Scene::UpdateParticleSystems(Timestep ts) {
             auto& p = pc.ActiveParticles[i];
             p.Age += (float)ts;
             if (p.Age >= p.Lifetime) {
-                p = pc.ActiveParticles.back(); 
+                p = pc.ActiveParticles.back();
                 pc.ActiveParticles.pop_back();
                 continue;
             }
@@ -1900,7 +1784,7 @@ void Scene::UpdateParticleSystems(Timestep ts) {
 void Scene::SubmitParticleSystems() {
     auto view = m_Registry.view<ParticleSystemComponent>();
     for (auto e : view) {
-        if (!IsEntityActive(Entity{ e, this })) continue; 
+        if (!IsEntityActive(Entity{ e, this })) continue;
         auto& pc = view.get<ParticleSystemComponent>(e);
         if (pc.ActiveParticles.empty()) continue;
         std::vector<ParticleInstance> instances;
@@ -1914,12 +1798,12 @@ void Scene::SubmitParticleSystems() {
 }
 
 void Scene::UpdateAudio(Timestep) {
-    
+
     auto camView = m_Registry.view<TransformComponent, CameraComponent>();
     for (auto e : camView) {
         auto& camera = camView.get<CameraComponent>(e);
         if (!camera.Primary || camera.Type != CameraComponent::ProjectionType::Perspective3D) continue;
-        if (!IsEntityActive(Entity{ e, this })) continue; 
+        if (!IsEntityActive(Entity{ e, this })) continue;
         glm::mat4 world = GetWorldTransform(Entity{ e, this });
         glm::vec3 pos = glm::vec3(world[3]);
         glm::vec3 forward = glm::normalize(glm::mat3(world) * glm::vec3(0.0f, 0.0f, -1.0f));
@@ -1934,13 +1818,13 @@ void Scene::UpdateAudio(Timestep) {
         auto& ac = view.get<AudioSourceComponent>(e);
         if (ac.ClipPath.empty()) continue;
         if (!IsEntityActive(Entity{ e, this })) {
-            if (ac.Handle != kInvalidSound && ac.HasStarted) AudioEngine::Stop(ac.Handle); 
+            if (ac.Handle != kInvalidSound && ac.HasStarted) AudioEngine::Stop(ac.Handle);
             continue;
         }
 
         if (ac.Handle == kInvalidSound) {
             ac.Handle = AudioEngine::LoadSound(Project::ResolvePath(ac.ClipPath), ac.ClipPath, false);
-            if (ac.Handle == kInvalidSound) continue; 
+            if (ac.Handle == kInvalidSound) continue;
             AudioEngine::SetSoundAttenuation(ac.Handle, ac.MinDistance, ac.MaxDistance);
         }
 
@@ -1952,21 +1836,18 @@ void Scene::UpdateAudio(Timestep) {
             ac.HasStarted = true;
         }
 
-        
         if (ac.HasStarted && ac.Handle != kInvalidSound) {
             bool revOn = AudioEngine::IsSoundReverbing(ac.Handle);
             if (ac.Reverb != revOn)
                 AudioEngine::SetSoundReverb(ac.Handle, ac.Reverb, 1.0f);
         }
 
-        
-        
         if (ac.Spatial && ac.HasStarted && ac.Handle != kInvalidSound) {
             float occlusion = 1.0f;
             glm::vec3 src = glm::vec3(GetWorldTransform(Entity{ e, this })[3]);
             Entity hit; glm::vec3 hp; float frac = 0.0f;
             if (Raycast3D(src, m_LastListenerPos, hit, hp, frac)) {
-                
+
                 if ((uint32_t)e != (uint32_t)hit.GetHandle()) occlusion = 0.3f;
             }
             AudioEngine::SetVolume(ac.Handle, ac.Volume * occlusion);
@@ -1978,7 +1859,7 @@ void Scene::UpdateTimelines(Timestep ts) {
     KZ_TRACE_SCOPE("Scene::UpdateTimelines");
     auto view = m_Registry.view<TransformComponent, TimelineComponent>();
     for (auto e : view) {
-        if (!IsEntityActive(Entity{ e, this })) continue; 
+        if (!IsEntityActive(Entity{ e, this })) continue;
         auto& tc = view.get<TransformComponent>(e);
         auto& tl = view.get<TimelineComponent>(e);
         if (tl.Playing && !tl.Keyframes.empty()) {
@@ -1988,7 +1869,6 @@ void Scene::UpdateTimelines(Timestep ts) {
         }
         if (tl.Keyframes.empty()) continue;
 
-        
         glm::vec3 pos = tl.Keyframes[0].Position;
         glm::vec3 rot = tl.Keyframes[0].Rotation;
         glm::vec3 scl = tl.Keyframes[0].Scale;
@@ -2014,16 +1894,14 @@ void Scene::UpdateCharacterControllers(Timestep ts) {
     KZ_TRACE_SCOPE("Scene::UpdateCharacterControllers");
     auto view = m_Registry.view<TransformComponent, CharacterControllerComponent>();
     for (auto e : view) {
-        if (!IsEntityActive(Entity{ e, this })) continue; 
+        if (!IsEntityActive(Entity{ e, this })) continue;
         auto& tc = view.get<TransformComponent>(e);
         auto& cc = view.get<CharacterControllerComponent>(e);
 
-        
         auto it = m_CharacterControllers3D.find((uint32_t)e);
         if (it != m_CharacterControllers3D.end() && it->second && m_PhysicsWorld3D) {
             auto* controller = it->second;
-            
-            
+
             btVector3 entPos(tc.Translation.x, tc.Translation.y, tc.Translation.z);
             if (entPos.distance2(controller->getGhostObject()->getWorldTransform().getOrigin()) > 1e-6) {
                 btTransform gt;
@@ -2041,8 +1919,6 @@ void Scene::UpdateCharacterControllers(Timestep ts) {
             continue;
         }
 
-        
-        
         cc.Velocity.x = cc.Input.x * cc.Speed;
         cc.Velocity.z = cc.Input.y * cc.Speed;
         cc.Velocity.y += cc.Gravity * (float)ts;
@@ -2050,7 +1926,6 @@ void Scene::UpdateCharacterControllers(Timestep ts) {
 
         glm::vec3 newPos = tc.Translation + cc.Velocity * (float)ts;
 
-        
         Entity hit; glm::vec3 hitPoint; float frac = 0.0f;
         glm::vec3 start = tc.Translation + glm::vec3(0.0f, cc.Height * 0.5f + 0.1f, 0.0f);
         glm::vec3 end   = tc.Translation + glm::vec3(0.0f, -cc.Height * 0.5f - 0.15f, 0.0f);
@@ -2066,11 +1941,6 @@ void Scene::UpdateCharacterControllers(Timestep ts) {
         tc.Translation = newPos;
     }
 }
-
-
-
-
-
 
 static bool RayTriangleMT(const glm::vec3& origin, const glm::vec3& dir,
                           const glm::vec3& a, const glm::vec3& b, const glm::vec3& c,
@@ -2099,7 +1969,6 @@ void Scene::BakeLightmap(Entity entity) {
     const auto& idxs = mr.MeshAsset->GetIndices();
     if (verts.empty() || idxs.size() < 3) return;
 
-    
     struct TraceMesh { glm::mat4 InvWorld; glm::vec3 Min, Max; const std::vector<Vertex3D>* Pos; const std::vector<uint32_t>* Idx; };
     std::vector<TraceMesh> statics;
 
@@ -2118,7 +1987,6 @@ void Scene::BakeLightmap(Entity entity) {
         statics.push_back(tm);
     }
 
-    
     auto trace = [&](const glm::vec3& origin, const glm::vec3& dir) -> float {
         float best = -1.0f;
         for (const auto& sm : statics) {
@@ -2129,7 +1997,6 @@ void Scene::BakeLightmap(Entity entity) {
             if (len < 1e-9f) continue;
             glm::vec3 dirN = localD / len;
 
-            
             glm::vec3 o = localO, d = dirN, mn = sm.Min, mx = sm.Max;
             float t0 = -FLT_MAX, t1 = FLT_MAX;
             bool inside = true;
@@ -2159,7 +2026,6 @@ void Scene::BakeLightmap(Entity entity) {
         return best;
     };
 
-    
     glm::vec3 sunDir{ 0.3f, -0.9f, -0.25f };
     glm::vec3 sunColor{ 1.0f, 0.95f, 0.85f };
     auto lights = m_Registry.view<TransformComponent, LightComponent>();
@@ -2172,7 +2038,6 @@ void Scene::BakeLightmap(Entity entity) {
         break;
     }
 
-    
     struct BakeGeom { std::vector<glm::vec3> Pos, Nrm; std::vector<glm::vec2> UV; };
     BakeGeom geom;
     geom.Pos.reserve(verts.size());
@@ -2195,10 +2060,6 @@ void Scene::BakeLightmap(Entity entity) {
     }
 }
 
-
-
-
-
 NavGrid* Scene::FindGridNear(const glm::vec3& pos) const {
     NavGrid* best = nullptr;
     float bestArea = FLT_MAX;
@@ -2208,7 +2069,7 @@ NavGrid* Scene::FindGridNear(const glm::vec3& pos) const {
         if (!ngc.Grid || ngc.Grid->GetWidth() <= 0 || ngc.Grid->GetDepth() <= 0) continue;
         const NavGrid& g = *ngc.Grid;
         int x, z;
-        if (!g.WorldToCell(pos, x, z)) continue; 
+        if (!g.WorldToCell(pos, x, z)) continue;
         float area = (float)g.GetWidth() * (float)g.GetDepth();
         if (area < bestArea) { bestArea = area; best = ngc.Grid.get(); }
     }
@@ -2222,7 +2083,6 @@ void Scene::RebuildNavGrid(Entity gridEntity) {
     NavGrid& g = *ngc.Grid;
     g.Build(ngc.Origin.x, ngc.Origin.z, ngc.CellSize, (int)ngc.Width, (int)ngc.Depth);
 
-    
     if (ngc.AutoBuild) {
         auto obsv = m_Registry.view<TransformComponent, NavObstacleComponent>();
         for (auto oe : obsv) {
@@ -2232,7 +2092,7 @@ void Scene::RebuildNavGrid(Entity gridEntity) {
             auto& ob = obsv.get<NavObstacleComponent>(oe);
             glm::vec3 half = ob.HalfExtents;
             if (half.x <= 0.0f && half.y <= 0.0f && half.z <= 0.0f)
-                half = tc.Scale * 0.5f; 
+                half = tc.Scale * 0.5f;
             g.RasterizeBox(tc.Translation, half);
         }
     }
@@ -2290,8 +2150,6 @@ bool Scene::NavAgentReached(Entity agent) const {
     return !na || !na->HasDestination;
 }
 
-
-
 void Scene::UpdateEnemyAI(Timestep ts) {
     float dt = (float)ts;
     auto view = m_Registry.view<TransformComponent, EnemyAIComponent>();
@@ -2301,7 +2159,6 @@ void Scene::UpdateEnemyAI(Timestep ts) {
         auto& ai = view.get<EnemyAIComponent>(e);
         ai.m_StateTimer += dt;
 
-        
         ai.m_HasTarget = false;
         if (!ai.TargetTag.empty()) {
             auto tags = m_Registry.view<TransformComponent, TagComponent>();
@@ -2314,7 +2171,6 @@ void Scene::UpdateEnemyAI(Timestep ts) {
             }
         }
 
-        
         Entity navEntity = entity.HasComponent<NavAgentComponent>() ? entity : Entity{};
         if (!navEntity) {
             for (Entity child : entity.GetChildren())
@@ -2336,7 +2192,7 @@ void Scene::UpdateEnemyAI(Timestep ts) {
         switch (ai.m_State) {
         case EnemyAIComponent::State::Patrol: {
             if (!ai.PatrolPoints.empty()) {
-                
+
                 if (!NavAgentHasPath(navEntity)) {
                     ai.m_PatrolTimer += dt;
                     if (ai.m_PatrolTimer >= ai.PatrolWait) {
@@ -2366,7 +2222,7 @@ void Scene::UpdateEnemyAI(Timestep ts) {
                 ai.m_StateTimer = 0.0f;
                 break;
             }
-            if (ai.m_StateTimer >= 0.25f) { 
+            if (ai.m_StateTimer >= 0.25f) {
                 ai.m_StateTimer = 0.0f;
                 entt::entity te = entt::entity(ai.m_TargetHandle);
                 if (m_Registry.valid(te)) {
@@ -2390,8 +2246,6 @@ void Scene::UpdateEnemyAI(Timestep ts) {
         }
     }
 }
-
-
 
 void Scene::UpdateNavAgents(Timestep ts) {
     float dt = (float)ts;
@@ -2432,10 +2286,10 @@ void Scene::UpdateNavAgents(Timestep ts) {
         glm::vec2 dir{ to.x / d, to.z / d };
         glm::vec2 step = dir * na.Speed * dt;
         glm::vec3 ahead = tc.Translation + glm::vec3(step.x, 0.0f, step.y);
-        
+
         int ax, az;
         if (!grid->WorldToCell(ahead, ax, az) || grid->IsBlocked(ax, az)) {
-            
+
             na.Path.clear(); na.PathIndex = 0; na.PathTimer = 0.0f;
             continue;
         }
@@ -2455,13 +2309,10 @@ void Scene::UpdateNavAgents(Timestep ts) {
     }
 }
 
-
-
 void Scene::UpdateCameraFollowers(Timestep ts) {
     auto view = m_Registry.view<TransformComponent, CameraComponent, CameraFollowComponent>();
     if (view.begin() == view.end()) return;
 
-    
     std::unordered_map<std::string, entt::entity> byName;
     auto tags = m_Registry.view<TagComponent>();
     for (auto te : tags) {
@@ -2471,14 +2322,14 @@ void Scene::UpdateCameraFollowers(Timestep ts) {
 
     float dt = (float)ts;
     for (auto e : view) {
-        if (!IsEntityActive(Entity{ e, this })) continue; 
+        if (!IsEntityActive(Entity{ e, this })) continue;
         auto& tc = view.get<TransformComponent>(e);
         auto& cc = view.get<CameraFollowComponent>(e);
 
         auto it = byName.find(cc.TargetName);
         if (it == byName.end() || it->second == e) {
             cc.m_HasStart = false;
-            continue; 
+            continue;
         }
 
         Entity target{ it->second, this };
@@ -2496,7 +2347,7 @@ void Scene::UpdateCameraFollowers(Timestep ts) {
         if (cc.UseWorldOffset || !cc.FollowRotation) {
             desired = targetPos + cc.Offset;
         } else {
-            
+
             float cy = glm::cos(targetYaw), sy = glm::sin(targetYaw);
             glm::vec3 local = { cc.Offset.x, cc.Offset.y, cc.Offset.z };
             desired = targetPos + glm::vec3(cy * local.x + sy * local.z, local.y, -sy * local.x + cy * local.z);
@@ -2514,9 +2365,6 @@ void Scene::UpdateCameraFollowers(Timestep ts) {
 void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
     KZ_TRACE_SCOPE("Scene::RenderScene3D");
 
-    
-    
-    
     glm::mat4 cullVP = glm::mat4(0.0f);
     glm::vec3 camPos(0.0f);
     bool cullCam = false;
@@ -2533,8 +2381,7 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
             glm::vec3 pos = glm::vec3(GetWorldTransform(Entity{ e, this })[3]);
             float aspect = m_ViewportHeight ? (float)m_ViewportWidth / (float)m_ViewportHeight : 16.0f / 9.0f;
             PerspectiveCamera cam(camera.PerspectiveFOV, aspect, camera.NearClip, camera.FarClip);
-            
-            
+
             cam.SetWorldTransform(GetWorldTransform(Entity{ e, this }));
             cullVP = cam.GetViewProjectionMatrix();
             camPos = pos;
@@ -2543,10 +2390,6 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
         }
     }
 
-    
-    
-    
-    
     struct OccluderProj { float MinX, MinY, MaxX, MaxY; float NearZ; };
     std::vector<OccluderProj> occluders;
     if (cullCam) {
@@ -2598,7 +2441,7 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
                 farZ = std::max(farZ, ndc.z);
             }
             if (!ok) continue;
-            const float margin = 0.02f; 
+            const float margin = 0.02f;
             if (oMinX >= op.MinX + margin && oMaxX <= op.MaxX - margin &&
                 oMinY >= op.MinY + margin && oMaxY <= op.MaxY - margin &&
                 farZ >= op.NearZ + 0.001f)
@@ -2610,7 +2453,6 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
     auto SubmitMeshes = [&]() {
         auto meshes = m_Registry.view<TransformComponent, MeshRendererComponent>();
 
-        
         auto foliage = m_Registry.view<TransformComponent, FoliageComponent>();
         for (auto fe : foliage) {
             Entity ent{ fe, this };
@@ -2623,7 +2465,7 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
             Material mat;
             mat.Albedo = { fc.Color.r, fc.Color.g, fc.Color.b };
             mat.Roughness = 0.85f;
-            
+
             glm::mat4 base = GetWorldTransform(ent);
             std::vector<glm::mat4> worldInsts;
             worldInsts.reserve(fc.Instances.size());
@@ -2631,7 +2473,6 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
             Renderer3D::SubmitMeshInstances(fc.MeshAsset, mat, worldInsts.data(), (uint32_t)worldInsts.size());
         }
 
-        
         auto decals = m_Registry.view<TransformComponent, DecalComponent>();
         for (auto de : decals) {
             Entity ent{ de, this };
@@ -2643,7 +2484,7 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
             Renderer3D::SubmitDecal(GetWorldTransform(ent), dc.Texture, dc.Color);
         }
         for (auto me : meshes) {
-            if (!IsEntityActive(Entity{ me, this })) continue; 
+            if (!IsEntityActive(Entity{ me, this })) continue;
             auto& mr = meshes.get<MeshRendererComponent>(me);
             if (!mr.MeshAsset) continue;
             glm::mat4 world = GetWorldTransform(Entity{ me, this });
@@ -2662,7 +2503,6 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
                 continue;
             }
 
-            
             glm::vec3 wmin(1e30f), wmax(-1e30f);
             if (cullCam) {
                 glm::vec3 mn = mr.MeshAsset->GetBoundsMin(), mx = mr.MeshAsset->GetBoundsMax();
@@ -2677,15 +2517,11 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
                 }
             }
 
-            
             if (cullCam && IsOccluded(wmin, wmax)) continue;
 
-            
             if (cullCam) {
                 if (!AABBInFrustum(cullVP, wmin, wmax)) continue;
 
-                
-                
                 glm::vec4 cmin = cullVP * glm::vec4(wmin, 1.0f);
                 glm::vec4 cmax = cullVP * glm::vec4(wmax, 1.0f);
                 if (cmin.w > 0.0f && cmax.w > 0.0f) {
@@ -2693,11 +2529,10 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
                     glm::vec2 p1 = glm::vec2(cmax) / cmax.w;
                     glm::vec2 screenPx = (p1 - p0) * 0.5f *
                         glm::vec2((float)m_ViewportWidth, (float)m_ViewportHeight);
-                    if (glm::dot(screenPx, screenPx) < 1.0f) continue; 
+                    if (glm::dot(screenPx, screenPx) < 1.0f) continue;
                 }
             }
 
-            
             Ref<Mesh> mesh = mr.MeshAsset;
             if (auto* lod = m_Registry.try_get<LODComponent>(me); lod && !lod->Levels.empty()) {
                 float dist = glm::distance(glm::vec3(world[3]), camPos) * lod->DistanceMultiplier;
@@ -2710,7 +2545,6 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
                     mesh = lod->Levels[idx].MeshAsset;
             }
 
-            
             if (auto* terr = m_Registry.try_get<TerrainComponent>(me); terr) {
                 if (!terr->GeneratedMesh) terr->Regenerate();
                 if (terr->GeneratedMesh) mesh = terr->GeneratedMesh;
@@ -2733,13 +2567,11 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
     for (auto e : camView) {
         auto& camera = camView.get<CameraComponent>(e);
         if (!camera.Primary || camera.Type != CameraComponent::ProjectionType::Perspective3D) continue;
-        if (!IsEntityActive(Entity{ e, this })) continue; 
+        if (!IsEntityActive(Entity{ e, this })) continue;
 
-        
-        
         float aspect = m_ViewportHeight ? (float)m_ViewportWidth / (float)m_ViewportHeight : 16.0f / 9.0f;
         PerspectiveCamera cam(camera.PerspectiveFOV, aspect, camera.NearClip, camera.FarClip);
-        
+
         cam.SetWorldTransform(GetWorldTransform(Entity{ e, this }));
 
         Renderer3D::BeginScene(cam);
@@ -2749,9 +2581,7 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
         Renderer3D::EndScene();
         return;
     }
-    
-    
-    
+
     if (m_Registry.view<MeshRendererComponent>().begin() != m_Registry.view<MeshRendererComponent>().end()) {
         static Scene* s_WarnedFor = nullptr;
         if (s_WarnedFor != this) {
@@ -2761,4 +2591,4 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
     }
 }
 
-} 
+}

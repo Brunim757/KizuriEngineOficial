@@ -2,9 +2,6 @@
 #include <imgui.h>
 #include <glm/gtc/random.hpp>
 
-
-
-
 void ParticleEditorPanel::OnUpdate(kizuri::Timestep ts) {
     if (!m_Visible) return;
     kizuri::Entity sel = m_Ctx.SelectedEntity;
@@ -44,7 +41,6 @@ void ParticleEditorPanel::OnUpdate(kizuri::Timestep ts) {
         ++i;
     }
 
-    
     if (!m_PreviewFramebuffer)
         m_PreviewFramebuffer = kizuri::Framebuffer::Create({ 320, 240, 1 });
     m_PreviewFramebuffer->Resize(320, 240);

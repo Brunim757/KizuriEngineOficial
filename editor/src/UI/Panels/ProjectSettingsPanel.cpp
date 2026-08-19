@@ -116,7 +116,7 @@ void ProjectSettingsPanel::DrawGraphicsSection() {
     }
     ImGui::Separator();
 
-    // Céu: HDRI, ou gradiente procedural (limpo), ou raymarch atmosférico.
+    
     ImGui::Text("Ambiente (céu):");
     ImGui::TextDisabled(".hdr equirect = ambiente. Vazio = gradiente procedural.");
     changed |= ImGui::Checkbox("Céu atmosférico Rayleigh/Mie", &g.AtmosphereSky);

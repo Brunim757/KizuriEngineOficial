@@ -2,9 +2,9 @@
 #include <imgui.h>
 #include <glm/gtc/random.hpp>
 
-// Preview: simula as partículas localmente (mesma física do Scene: spawn na
-// origem, velocidade/gravidade/idade) e renderiza num FBO próprio — sem
-// precisar apertar Play pra ver o efeito.
+
+
+
 void ParticleEditorPanel::OnUpdate(kizuri::Timestep ts) {
     if (!m_Visible) return;
     kizuri::Entity sel = m_Ctx.SelectedEntity;
@@ -44,7 +44,7 @@ void ParticleEditorPanel::OnUpdate(kizuri::Timestep ts) {
         ++i;
     }
 
-    // Renderiza o preview.
+    
     if (!m_PreviewFramebuffer)
         m_PreviewFramebuffer = kizuri::Framebuffer::Create({ 320, 240, 1 });
     m_PreviewFramebuffer->Resize(320, 240);

@@ -9,10 +9,10 @@
 
 using namespace kizuri;
 
-// KizuriGame — o executável final de jogo. Diferente do editor, não tem
-// nenhuma UI de edição: carrega a cena .kzscene inicial, carrega o
-// GameModule (scripts C++) se existir, e roda o loop de runtime puro
-// (física + scripts + render). É o que se entrega pro jogador.
+
+
+
+
 class GameLayer : public Layer {
 public:
     GameLayer(const std::string& scenePath, const std::string& modulePath)
@@ -52,7 +52,7 @@ public:
         RenderCommand::SetClearColor({ 0.08f, 0.09f, 0.11f, 1.0f });
         RenderCommand::Clear();
 
-        // Mouse em NDC de tela cheia (pro hit-test dos UIButton).
+        
         auto [mx, my] = Input::GetMousePosition();
         glm::vec2 ndc{ 0.0f, 0.0f };
         if (m_ViewportWidth > 0 && m_ViewportHeight > 0) {
@@ -63,7 +63,7 @@ public:
 
         m_Scene->OnUpdateRuntime(ts);
 
-        // Troca de cena com FADE: escurece, troca, clareia.
+        
         if (!m_SceneSwitching) {
             std::string nextScene;
             if (m_Scene->PollPendingLoad(nextScene)) {
@@ -98,7 +98,7 @@ public:
             }
         }
 
-        // Overlay de fade (preto, cobre a tela).
+        
         if (m_FadeAlpha > 0.001f) {
             float hw = (float)m_ViewportWidth * 0.5f, hh = (float)m_ViewportHeight * 0.5f;
             kizuri::OrthographicCamera cam(-hw, hw, -hh, hh);
@@ -131,7 +131,7 @@ private:
     std::string m_ModulePath;
     uint32_t m_ViewportWidth = 1600;
     uint32_t m_ViewportHeight = 900;
-    // Fade de troca de cena.
+    
     bool m_SceneSwitching = false;
     bool m_FadingOut = false;
     float m_FadeAlpha = 0.0f;
@@ -145,7 +145,7 @@ public:
         std::string scenePath = "Start.kzscene";
         std::string modulePath;
 
-        // Se existir .kzproj no CWD com StartScenePath, usa como padrão.
+        
         if (auto project = TryLoadProjectFromCwd()) {
             if (!project->GetConfig().StartScenePath.empty())
                 scenePath = Project::ResolvePath(project->GetConfig().StartScenePath);
@@ -154,9 +154,9 @@ public:
         if (args.size() > 1) scenePath = args[1];
         if (args.size() > 2) modulePath = args[2];
 
-        // Rede multiplayer (pilar AAA v0.34):
-        //   KizuriGame cena.kzscene --net-host            -> abre a partida
-        //   KizuriGame cena.kzscene --net-connect 1.2.3.4 -> entra na partida
+        
+        
+        
         for (size_t i = 1; i < args.size(); ++i) {
             if (args[i] == "--net-host") {
                 if (kizuri::Network::Host(26000))
@@ -188,7 +188,7 @@ public:
         spec.Height = 900;
         spec.VSync = true;
 
-        // Build settings (game.json) do export: nome + resolução da janela.
+        
         namespace fs = std::filesystem;
         std::error_code ec;
         std::ifstream f("game.json");

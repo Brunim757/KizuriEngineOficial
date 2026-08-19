@@ -1,5 +1,5 @@
 
-// sidebar: filtrar páginas
+
 (function(){
   var input = document.getElementById('filter');
   if (!input) return;
@@ -12,7 +12,7 @@
   });
 })();
 
-// sidebar: destaque por scroll
+
 (function(){
   var links = Array.prototype.slice.call(document.querySelectorAll('#toc a'));
   var heads = Array.prototype.slice.call(document.querySelectorAll('article h2,article h3'));
@@ -31,7 +31,7 @@
   onScroll();
 })();
 
-// tema claro/escuro
+
 (function(){
   var btn = document.getElementById('themeToggle');
   if (!btn) return;
@@ -49,7 +49,7 @@
   });
 })();
 
-// menu mobile
+
 (function(){
   var burger = document.getElementById('burger');
   var overlay = document.getElementById('overlay');
@@ -58,13 +58,13 @@
   if (overlay) overlay.addEventListener('click', function(){ document.body.classList.remove('menu-open'); });
 })();
 
-// impressão
+
 (function(){
   var b = document.getElementById('printBtn');
   if (b) b.addEventListener('click', function(){ window.print(); });
 })();
 
-// copiar código
+
 (function(){
   document.querySelectorAll('.codeblock').forEach(function(blk){
     var btn = blk.querySelector('.copy');
@@ -80,11 +80,11 @@
   });
 })();
 
-// destaque de sintaxe
+
 (function(){
   var RULES = {
     csharp: [
-      [/\/\/.*|\/\*[\s\S]*?\*\//g, 'tok-com'],
+      [/\/\/.*|\/\*[\s\S]*?\*\
       [/"(?:[^"\\]|\\.)*"/g, 'tok-str'],
       [/\b(?:public|private|protected|internal|static|sealed|abstract|class|struct|interface|enum|namespace|using|new|return|if|else|for|foreach|while|do|var|out|ref|in|override|virtual|readonly|const|this|base|void|int|float|double|bool|string|uint|yield|true|false|null|get|set)\b/g, 'tok-kw'],
       [/\b[A-Z][A-Za-z0-9_]*\b/g, 'tok-cls'],

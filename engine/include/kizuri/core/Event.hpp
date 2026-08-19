@@ -62,7 +62,7 @@ private:
 
 using EventCallbackFn = std::function<void(Event&)>;
 
-// ---- Window ----
+
 class WindowResizeEvent : public Event {
 public:
     WindowResizeEvent(unsigned w, unsigned h) : m_Width(w), m_Height(h) {}
@@ -81,7 +81,7 @@ public:
     EVENT_CLASS_CATEGORY(EventCategoryApplication)
 };
 
-// ---- Keyboard ----
+
 class KeyPressedEvent : public Event {
 public:
     KeyPressedEvent(int keycode, bool repeat) : m_KeyCode(keycode), m_Repeat(repeat) {}
@@ -103,7 +103,7 @@ private:
     int m_KeyCode;
 };
 
-// ---- Mouse ----
+
 class MouseMovedEvent : public Event {
 public:
     MouseMovedEvent(float x, float y) : m_X(x), m_Y(y) {}
@@ -146,4 +146,4 @@ private:
     int m_Button;
 };
 
-} // namespace kizuri
+} 

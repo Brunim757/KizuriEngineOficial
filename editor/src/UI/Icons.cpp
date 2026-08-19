@@ -6,9 +6,9 @@
 namespace kizuri::editor::icons {
 
 void Torii(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
-    // Duas colunas (hashira) levemente inclinadas pra fora na base, e dois
-    // travessões horizontais (kasagi em cima, nuki logo abaixo) — silhueta
-    // clássica de torii, simplificada pra caber num ícone pequeno.
+    
+    
+    
     float postW = s * 0.10f;
     float topY = p.y + s * 0.12f;
     float botY = p.y + s * 0.92f;
@@ -20,15 +20,15 @@ void Torii(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
     dl->AddLine(ImVec2(leftTopX, topY), ImVec2(leftBotX, botY), color, postW);
     dl->AddLine(ImVec2(rightTopX, topY), ImVec2(rightBotX, botY), color, postW);
 
-    // Kasagi (travessão superior, mais largo que as colunas)
+    
     dl->AddLine(ImVec2(p.x + s * 0.04f, topY - s * 0.02f), ImVec2(p.x + s * 0.96f, topY - s * 0.02f), color, s * 0.14f);
-    // Nuki (travessão secundário, mais fino, logo abaixo do kasagi)
+    
     dl->AddLine(ImVec2(leftTopX, topY + s * 0.22f), ImVec2(rightTopX, topY + s * 0.22f), color, s * 0.08f);
 }
 
 void Hierarchy(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
-    // Tronco vertical com três "galhos" horizontais — remete a uma árvore
-    // de hierarquia/cena (o mesmo padrão visual da lista de entidades).
+    
+    
     float trunkX = p.x + s * 0.18f;
     dl->AddLine(ImVec2(trunkX, p.y + s * 0.1f), ImVec2(trunkX, p.y + s * 0.9f), color, s * 0.09f);
 
@@ -41,7 +41,7 @@ void Hierarchy(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
 }
 
 void Viewport(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
-    // Corpo de câmera simplificado: retângulo + visor saliente + lente.
+    
     ImVec2 bodyMin(p.x + s * 0.08f, p.y + s * 0.30f);
     ImVec2 bodyMax(p.x + s * 0.92f, p.y + s * 0.82f);
     dl->AddRect(bodyMin, bodyMax, color, s * 0.08f, 0, s * 0.07f);
@@ -55,8 +55,8 @@ void Viewport(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
 }
 
 void Inspector(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
-    // Três sliders de propriedades em alturas diferentes — linguagem
-    // visual comum pra "painel de propriedades" em ferramentas de dev.
+    
+    
     float xs[3]     = { s * 0.62f, s * 0.30f, s * 0.74f };
     float ys[3]     = { p.y + s * 0.20f, p.y + s * 0.5f, p.y + s * 0.80f };
     for (int i = 0; i < 3; ++i) {
@@ -66,8 +66,8 @@ void Inspector(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
 }
 
 void Console(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
-    // Moldura de terminal + prompt ">" + cursor — linguagem visual
-    // universal de "isso é um log/console".
+    
+    
     ImVec2 bodyMin(p.x + s * 0.06f, p.y + s * 0.12f);
     ImVec2 bodyMax(p.x + s * 0.94f, p.y + s * 0.88f);
     dl->AddRect(bodyMin, bodyMax, color, s * 0.06f, 0, s * 0.07f);
@@ -79,7 +79,7 @@ void Console(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
 }
 
 void Folder(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
-    // Pasta com abinha — silhueta clássica, reconhecível em tamanho pequeno.
+    
     float tabW = s * 0.34f;
     float tabH = s * 0.12f;
     float bodyTop = p.y + s * 0.28f;
@@ -94,28 +94,28 @@ void Folder(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
 }
 
 void Play(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
-    // Triângulo apontando pra direita — linguagem universal de "reproduzir".
+    
     dl->AddTriangleFilled(ImVec2(p.x + s * 0.32f, p.y + s * 0.14f),
                           ImVec2(p.x + s * 0.32f, p.y + s * 0.86f),
                           ImVec2(p.x + s * 0.90f, p.y + s * 0.50f), color);
 }
 
 void Stop(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
-    // Quadrado cheio — linguagem universal de "parar".
+    
     dl->AddRectFilled(ImVec2(p.x + s * 0.26f, p.y + s * 0.26f),
                       ImVec2(p.x + s * 0.74f, p.y + s * 0.74f), color, s * 0.06f);
 }
 
 void Move(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
-    // Cruz com seta nas 4 pontas — "mover/arrastar" em qualquer eixo.
+    
     float cx = p.x + s * 0.5f;
     float cy = p.y + s * 0.5f;
     float lw = s * 0.10f;
     dl->AddLine(ImVec2(p.x + s * 0.18f, cy), ImVec2(p.x + s * 0.82f, cy), color, lw);
     dl->AddLine(ImVec2(cx, p.y + s * 0.18f), ImVec2(cx, p.y + s * 0.82f), color, lw);
 
-    float ah = s * 0.09f; // meia-base da seta
-    float al = s * 0.15f; // comprimento da seta
+    float ah = s * 0.09f; 
+    float al = s * 0.15f; 
     dl->AddTriangleFilled(ImVec2(p.x + s * 0.92f, cy),
                           ImVec2(p.x + s * 0.92f - al, cy - ah),
                           ImVec2(p.x + s * 0.92f - al, cy + ah), color);
@@ -131,17 +131,17 @@ void Move(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
 }
 
 void Rotate(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
-    // Círculo (trajetória) com uma ponta indicando o sentido da rotação.
+    
     float cx = p.x + s * 0.5f;
     float cy = p.y + s * 0.52f;
     float r = s * 0.28f;
     dl->AddCircle(ImVec2(cx, cy), r, color, 24, s * 0.10f);
 
-    float ang = -0.85f; // ~315°: canto superior direito
+    float ang = -0.85f; 
     float ax = cx + r * std::cos(ang);
     float ay = cy + r * std::sin(ang);
-    ImVec2 dir(std::cos(ang), std::sin(ang));  // radial (pra fora)
-    ImVec2 tan(-std::sin(ang), std::cos(ang)); // tangente
+    ImVec2 dir(std::cos(ang), std::sin(ang));  
+    ImVec2 tan(-std::sin(ang), std::cos(ang)); 
     ImVec2 apex(ax + dir.x * s * 0.16f, ay + dir.y * s * 0.16f);
     ImVec2 b1(ax + dir.x * s * 0.04f - tan.x * s * 0.12f, ay + dir.y * s * 0.04f - tan.y * s * 0.12f);
     ImVec2 b2(ax + dir.x * s * 0.04f + tan.x * s * 0.12f, ay + dir.y * s * 0.04f + tan.y * s * 0.12f);
@@ -149,7 +149,7 @@ void Rotate(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
 }
 
 void Scale(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
-    // Quadrado com uma diagonal de "redimensionar" e seta no canto.
+    
     float lw = s * 0.10f;
     dl->AddRect(ImVec2(p.x + s * 0.18f, p.y + s * 0.18f),
                 ImVec2(p.x + s * 0.82f, p.y + s * 0.82f), color, s * 0.05f, 0, lw);
@@ -181,10 +181,10 @@ void PanelHeader(const char* label, IconFn icon) {
 }
 
 void Maximize(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
-    // Retângulo de fullscreen com 4 setas apontando pros cantos.
+    
     dl->AddRect(ImVec2(p.x + s * 0.16f, p.y + s * 0.16f), ImVec2(p.x + s * 0.84f, p.y + s * 0.84f), color, 0, 0, s * 0.09f);
     const ImU32 c = color;
-    // cantos: cima-esq, cima-dir, baixo-esq, baixo-dir
+    
     dl->AddLine(ImVec2(p.x + s * 0.30f, p.y + s * 0.16f), ImVec2(p.x + s * 0.16f, p.y + s * 0.30f), c, s * 0.09f);
     dl->AddLine(ImVec2(p.x + s * 0.16f, p.y + s * 0.16f), ImVec2(p.x + s * 0.30f, p.y + s * 0.16f), c, s * 0.06f);
     dl->AddLine(ImVec2(p.x + s * 0.16f, p.y + s * 0.16f), ImVec2(p.x + s * 0.16f, p.y + s * 0.30f), c, s * 0.06f);
@@ -200,7 +200,7 @@ void Maximize(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
 }
 
 void Settings(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
-    // Engrenagem: anel com 8 dentes.
+    
     ImVec2 c(p.x + s * 0.5f, p.y + s * 0.5f);
     const float r = s * 0.22f;
     const int teeth = 8;
@@ -217,4 +217,4 @@ void Settings(ImDrawList* dl, ImVec2 p, float s, ImU32 color) {
     dl->AddCircleFilled(c, s * 0.10f, color);
 }
 
-} // namespace kizuri::editor::icons
+} 

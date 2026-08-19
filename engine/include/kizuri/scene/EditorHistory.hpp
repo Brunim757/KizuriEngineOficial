@@ -9,31 +9,31 @@ namespace kizuri {
 
 class Scene;
 
-// ---------------------------------------------------------------------
-// Snapshots opacos: guardam estado serializado sem expor nlohmann::json
-// na API pública da engine (mesma decisão de SceneSerializer/Prefab — ver
-// src/scene/ComponentSerialization.hpp, que é quem faz o trabalho real).
-// ---------------------------------------------------------------------
 
-// Estado dos componentes de UMA entidade (sem filhos, sem ID/Parent — só
-// os dados editáveis: transform, sprite, câmera, colisores etc).
+
+
+
+
+
+
+
 class EntitySnapshot {
 public:
     static EntitySnapshot Capture(Entity entity);
     void Restore(Entity entity) const;
 
-    // Usado pra evitar empilhar um comando de undo quando um widget ficou
-    // ativo (ex: cliquei e soltei sem arrastar) mas nada mudou de fato.
+    
+    
     bool DiffersFrom(const EntitySnapshot& other) const { return m_Data != other.m_Data; }
 
 private:
     std::string m_Data;
 };
 
-// Estado de uma entidade E de toda a subárvore de filhos dela, preservando
-// os UUIDs originais — diferente de uma Prefab (que gera UUIDs novos a
-// cada instanciação), aqui o objetivo é trazer de volta exatamente o mesmo
-// objeto que existia antes, pra desfazer um "Deletar Entidade".
+
+
+
+
 class SubtreeSnapshot {
 public:
     static SubtreeSnapshot Capture(Entity root);
@@ -43,9 +43,9 @@ private:
     std::string m_Data;
 };
 
-// ---------------------------------------------------------------------
-// Comandos
-// ---------------------------------------------------------------------
+
+
+
 
 class EditorCommand {
 public:
@@ -54,10 +54,10 @@ public:
     virtual void Redo(Scene& scene) = 0;
 };
 
-// Cobre qualquer edição de propriedade de uma entidade que já existe:
-// mover no gizmo, arrastar uma cor, marcar um checkbox, adicionar ou
-// remover componente. Não precisa de uma classe de comando por tipo de
-// edição — o "antes" e "depois" já são o snapshot inteiro dos componentes.
+
+
+
+
 class EntityEditCommand : public EditorCommand {
 public:
     EntityEditCommand(UUID entity, EntitySnapshot before, EntitySnapshot after);
@@ -101,11 +101,11 @@ private:
     UUID m_Child, m_OldParent, m_NewParent;
 };
 
-// ---------------------------------------------------------------------
-// Histórico: pilha de undo + pilha de redo. Empilhar um comando novo
-// sempre limpa o redo — comportamento padrão de qualquer editor, não dá
-// pra "refazer" uma ramificação que deixou de existir.
-// ---------------------------------------------------------------------
+
+
+
+
+
 class CommandHistory {
 public:
     void Push(Ref<EditorCommand> command);
@@ -121,4 +121,4 @@ private:
     std::vector<Ref<EditorCommand>> m_RedoStack;
 };
 
-} // namespace kizuri
+} 

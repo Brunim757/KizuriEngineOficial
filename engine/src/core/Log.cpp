@@ -28,11 +28,11 @@ static LogLevel ToLogLevel(spdlog::level::level_enum lvl) {
     }
 }
 
-// Sink que só existe pra alimentar o LogHistory (consumido pela aba
-// Console do editor) — não escreve em disco nem em terminal, quem faz
-// isso são os outros dois sinks já registrados abaixo.
+
+
+
 #if defined(KZ_PLATFORM_ANDROID)
-// Android: stdout não aparece em lugar nenhum — logcat é o console real.
+
 class LogcatSink : public spdlog::sinks::base_sink<std::mutex> {
 protected:
     void sink_it_(const spdlog::details::log_msg& msg) override {
@@ -50,9 +50,9 @@ protected:
     void sink_it_(const spdlog::details::log_msg& msg) override {
         spdlog::memory_buf_t formatted;
         formatter_->format(msg, formatted);
-        // memory_buf_t é fmt::memory_buffer (build com fmt bundled) ou
-        // std::string (SPDLOG_USE_STD_FORMAT) — nunca assumir fmt:: aqui:
-        // a construção abaixo funciona com os dois (data/size).
+        
+        
+        
         LogHistory::Push(ToLogLevel(msg.level),
                          std::string(formatted.data(), formatted.size()));
     }
@@ -62,16 +62,16 @@ protected:
 void Log::Init() {
     std::vector<spdlog::sink_ptr> sinks;
 #if defined(KZ_PLATFORM_ANDROID)
-    // Em Android o stdout é perdido; logcat (adb logcat -s Kizuri) é o
-    // console. O arquivo KizuriEngine.log também não faz sentido aqui (o
-    // filesDir dura enquanto o app existir; logcat tem filtro por tag).
+    
+    
+    
     sinks.push_back(std::make_shared<LogcatSink>());
     sinks.push_back(std::make_shared<MemorySink>());
 #else
     sinks.push_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
-    // v0.37.x: o arquivo KizuriEngine.log e o nível TRACE são só de
-    // DESENVOLVIMENTO (testadores). Em Release (usuário final): nada de
-    // arquivo no disco e nenhum TRACE — só logs úteis (info/warn/error).
+    
+    
+    
 #if defined(KZ_RELEASE)
     sinks.push_back(std::make_shared<MemorySink>());
 #else
@@ -83,8 +83,8 @@ void Log::Init() {
     sinks[0]->set_pattern("%^[%T] %n: %v%$");
 #if !defined(KZ_PLATFORM_ANDROID)
 #if defined(KZ_RELEASE)
-    // Release: 2 sinks (stdout + memória p/ o console do editor quando roda
-    // debug build; em build final de jogo não há console — só o stdout).
+    
+    
     sinks[1]->set_pattern("[%T] [%l] %n: %v");
 #else
     sinks[1]->set_pattern("[%T] [%l] %n: %v");
@@ -94,7 +94,7 @@ void Log::Init() {
     sinks[1]->set_pattern("[%T] %n: %v");
 #endif
 
-    // Nível: TRACE só em Debug/editor (testador); em Release começa em INFO.
+    
     auto level = spdlog::level::info;
 #if !defined(KZ_RELEASE)
     level = spdlog::level::trace;
@@ -111,4 +111,4 @@ void Log::Init() {
     s_AppLogger->flush_on(level);
 }
 
-} // namespace kizuri
+} 

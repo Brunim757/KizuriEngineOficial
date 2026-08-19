@@ -38,4 +38,4 @@ void LayerStack::PopOverlay(Layer* overlay) {
     }
 }
 
-} // namespace kizuri
+} 

@@ -16,17 +16,17 @@ add_executable(KizuriEditor
     src/UI/Panels/ProjectSettingsPanel.cpp
     $<$<BOOL:${WIN32}>:resources/kizuri-editor.rc>
 )
-# O cURL moderno nomeia o alvo estático de libcurl_static (não "curl");
-# consumidores de lib estática precisam do define CURL_STATICLIB no Windows.
+
+
 target_link_libraries(KizuriEditor PRIVATE KizuriEngine libcurl_static miniz)
 if(WIN32)
     target_compile_definitions(KizuriEditor PRIVATE CURL_STATICLIB)
 endif()
 target_include_directories(KizuriEditor PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-# ImGuizmo — gizmo de transformação no viewport. É só uma UI de edição, não
-# tem lugar no runtime do jogo, então fica no editor e não na engine.
-# O código-fonte vive em src/ dentro do repo (não na raiz).
+
+
+
 add_library(imguizmo STATIC ${imguizmo_SOURCE_DIR}/src/ImGuizmo.cpp)
 target_include_directories(imguizmo PUBLIC ${imguizmo_SOURCE_DIR}/src)
 target_link_libraries(imguizmo PUBLIC imgui)
@@ -39,9 +39,9 @@ if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND COMMAND kz_copy_mingw_runt
     kz_copy_mingw_runtime(KizuriEditor)
 endif()
 
-# As fontes da UI (JetBrains Mono) agora são embutidas direto no executável
-# em tempo de build (ver engine/CMakeLists.txt + cmake/EmbedResource.cmake),
-# então não há mais uma pasta assets/ pra copiar pra junto do binário.
+
+
+
 
 if(NOT MSVC)
     target_compile_options(KizuriEditor PRIVATE -Wall -Wextra -Werror -Wno-unused-parameter -Wno-unknown-warning-option)

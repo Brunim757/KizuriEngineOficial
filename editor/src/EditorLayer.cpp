@@ -1,8 +1,8 @@
-// IMGUI_DEFINE_MATH_OPERATORS precisa estar definido ANTES da primeira vez
-// que imgui.h é incluído neste arquivo (o header guard do imgui.h impede
-// que a macro tenha efeito numa inclusão posterior) — e EditorLayer.hpp já
-// inclui imgui.h de forma transitiva via Kizuri.hpp -> ImGuiLayer.hpp, por
-// isso o #define precisa vir antes até desse include.
+
+
+
+
+
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "EditorLayer.hpp"
 #include <glad/gl.h>
@@ -38,10 +38,10 @@
 
 using namespace kizuri;
 
-// Localiza um arquivo do Content Pack no disco. O zip da Release é
-// "exe + content/" lado a lado, então o caminho certo é relativo ao
-// diretório de trabalho ("content/..."); em builds de dev o conteúdo costuma
-// ficar um nível acima ("../content/..."). Tenta os dois — nunca quebra.
+
+
+
+
 static std::string FindContentFile(const std::string& relative) {
     std::string a = "content/" + relative;
     if (std::filesystem::exists(a)) return a;
@@ -50,22 +50,22 @@ static std::string FindContentFile(const std::string& relative) {
     return "";
 }
 
-// Escolhe a fonte de um asset de DEMONSTRAÇÃO com prioridade:
-//   1. Embutido no executável (kzres://) — sempre funciona, mesmo sem o
-//      Content Pack no disco e mesmo se o usuário apagar o arquivo externo.
-//   2. Content Pack no disco (content/ ou ../content) — asset mais rico
-//      quando presente.
-//   3. String vazia → a demo cai pros builtins (malhas procedurais).
-// É isso que deixa o editor/engine "pesado de verdade": os padrões usados
-// nas demonstrações vêm EMBUTIDOS, a função nunca quebra por falta de arquivo.
+
+
+
+
+
+
+
+
 static std::string PickDemoAsset(const char* kzresName, const char* contentRelative) {
     if (HasEmbeddedResource(kzresName)) return std::string("kzres://") + kzresName;
     return FindContentFile(contentRelative);
 }
 
-// Decompõe uma matriz de transformação em translação/rotação(euler,
-// radianos)/escala. Usado pra converter o resultado do ImGuizmo::Manipulate
-// (uma mat4 só) de volta pros três campos separados de TransformComponent.
+
+
+
 static bool DecomposeTransform(const glm::mat4& transform, glm::vec3& outTranslation, glm::vec3& outRotation, glm::vec3& outScale) {
     glm::vec3 skew;
     glm::vec4 perspective;
@@ -76,12 +76,12 @@ static bool DecomposeTransform(const glm::mat4& transform, glm::vec3& outTransla
     return true;
 }
 
-// Garante que nenhum painel mostre o botão de menu (triângulo) que o
-// próprio ImGui desenha no canto de um nó de dock — configurar a flag só
-// no DockSpace()/DockBuilderAddNode() não bastou pra sumir de fato em
-// todo painel, então força aqui, por janela, via ImGuiWindowClass. Chamar
-// antes de CADA ImGui::Begin() de painel (Hierarquia, Inspetor, Viewport,
-// Console, Content Browser) — não afeta a janela-hospedeira do dockspace.
+
+
+
+
+
+
 static void BeginPanelNoMenuButton() {
     ImGuiWindowClass windowClass;
     windowClass.DockNodeFlagsOverrideSet |= ImGuiDockNodeFlags_NoWindowMenuButton;
@@ -91,20 +91,20 @@ static void BeginPanelNoMenuButton() {
 EditorLayer::EditorLayer() : Layer("EditorLayer") {}
 
 EditorLayer::~EditorLayer() {
-    // Evita crash no encerramento se um check/download de atualização
-    // ainda estiver rodando na thread.
+    
+    
     if (m_UpdateThread.joinable()) m_UpdateThread.join();
 }
 
 void EditorLayer::OnAttach() {
     KZ_TRACE_SCOPE("EditorLayer::OnAttach");
 
-    // PRECISA ser a primeira coisa aqui, antes de qualquer ImGui::.., em
-    // TODO o resto do EditorLayer/Icons.cpp. Ver ImGuiLayer::GetContext()
-    // pra explicação completa: em build SHARED o KizuriEditor.exe compila
-    // sua própria cópia do ImGui (via ImGuizmo), com seu próprio GImGui
-    // separado do que a KizuriEngine.dll usa — sem isso, a primeira
-    // chamada ImGui:: do editor crasha na hora (contexto nulo).
+    
+    
+    
+    
+    
+    
     ImGui::SetCurrentContext(kizuri::ImGuiLayer::GetContext());
 
     FramebufferSpec fbSpec;
@@ -115,16 +115,16 @@ void EditorLayer::OnAttach() {
     m_ActiveScene = CreateRef<Scene>("Nova Cena");
     CreateDefaultSceneContent();
 
-    // Projetos recentes pro hub (KizuriRecents.json no diretório de trabalho).
+    
     LoadRecentProjects();
 
-    // Configurações gráficas (settings.json no diretório de trabalho) —
-    // carrega antes de qualquer render e aplica VSync pra janela.
+    
+    
     LoadGraphicsSettingsFromDisk();
 
-    // ---- Painéis dockáveis (Profiler, Game View, Material, Animator, Settings) ----
-    // Cada painel é uma classe própria em UI/Panels; aqui só os criamos e
-    // ligamos o contexto compartilhado. Nenhuma lógica de cena entra neles.
+    
+    
+    
     m_PanelContext = std::make_unique<EditorContext>();
     m_PanelContext->Graphics = &m_GraphicsSettings;
     m_PanelContext->EditorCamFlySpeed = &m_EditorCamFlySpeed;
@@ -145,15 +145,15 @@ void EditorLayer::OnAttach() {
     makePanel(std::make_unique<AnimatorPanel>(*m_PanelContext));
     makePanel(std::make_unique<ProjectSettingsPanel>(*m_PanelContext));
 
-    // Painéis que fazem sentido já abertos no layout padrão.
-    m_Panels[0]->SetVisible(true);  // Profiler
-    m_Panels[1]->SetVisible(true);  // Game View
+    
+    m_Panels[0]->SetVisible(true);  
+    m_Panels[1]->SetVisible(true);  
 }
 
 void EditorLayer::AutoSwitchViewportMode() {
-    // Seleção mudou (essa função é chamada em toda troca de seleção) — aborta
-    // o gesto de pintura em andamento, senão o snapshot "antes" ficaria
-    // preso da entidade anterior e o próximo undo seria de outro objeto.
+    
+    
+    
     m_TilePainting = false;
     if (m_SceneState != SceneState::Edit || !m_SelectedEntity) return;
 
@@ -180,11 +180,11 @@ void EditorLayer::AutoSwitchViewportMode() {
 void EditorLayer::CreateDefaultSceneContent() {
     KZ_TRACE_SCOPE("EditorLayer::CreateDefaultSceneContent");
 
-    // O conteúdo padrão respeita o MODO do projeto ativo — 2D ganha câmera
-    // ortográfica + sprites + física; 3D ganha câmera de perspectiva + cubo.
-    // Isso é o que faz um jogo 100% 2D (ou 100% 3D) rodar de verdade no Play:
-    // o Play renderiza o passe 2D só se a cena tem câmera primária ortográfica
-    // e o passe 3D só se tem câmera de perspectiva.
+    
+    
+    
+    
+    
     ProjectMode mode = ProjectMode::ThreeD;
     auto& project = Project::GetActive();
     if (project) mode = project->GetConfig().DefaultMode;
@@ -198,7 +198,7 @@ void EditorLayer::CreateDefaultSceneContent() {
         cc.OrthoSize = 10.0f;
         camera.GetComponent<TransformComponent>().Translation = { 0.0f, 0.0f, 0.0f };
 
-        // Chão 2D com física (Box2D) pra começar.
+        
         Entity ground = m_ActiveScene->CreateEntity("Chão");
         auto& gs = ground.AddComponent<SpriteRendererComponent>();
         gs.Color = { 0.16f, 0.17f, 0.2f, 1.0f };
@@ -208,7 +208,7 @@ void EditorLayer::CreateDefaultSceneContent() {
         ground.AddComponent<Rigidbody2DComponent>().Type = Rigidbody2DComponent::BodyType::Static;
         ground.AddComponent<BoxCollider2DComponent>().Size = { 12.0f, 1.0f };
 
-        // Caixa que cai (dinâmica).
+        
         Entity box = m_ActiveScene->CreateEntity("Caixa");
         auto& bs = box.AddComponent<SpriteRendererComponent>();
         bs.Color = { 0.85f, 0.25f, 0.3f, 1.0f };
@@ -224,7 +224,7 @@ void EditorLayer::CreateDefaultSceneContent() {
         cc.Type = CameraComponent::ProjectionType::Perspective3D;
         auto& camTransform = camera.GetComponent<TransformComponent>();
         camTransform.Translation = { 0.0f, 2.0f, 6.0f };
-        camTransform.Rotation = { glm::radians(-15.0f), 0.0f, 0.0f }; // pitch, yaw
+        camTransform.Rotation = { glm::radians(-15.0f), 0.0f, 0.0f }; 
 
         Entity cube = m_ActiveScene->CreateEntity("Cubo de Exemplo");
         auto& mr = cube.AddComponent<MeshRendererComponent>();
@@ -238,11 +238,11 @@ void EditorLayer::CreateDefaultSceneContent() {
     }
 }
 
-// Cena de demonstração 3D — showcase: Fox esquelético animado, DamagedHelmet
-// PBR, primitivas, HDRI de céu e fog. Os assets padrão vêm EMBUTIDOS no
-// executável (kzres:// — a CI injeta Fox + DamagedHelmet no binário); o
-// Content Pack no disco só é preferido quando presente (asset mais rico).
-// Sem nenhum dos dois, cai nos builtins (malhas procedurais + céu embutido).
+
+
+
+
+
 void EditorLayer::CreateDemoScene3D() {
     if (m_SceneState != SceneState::Edit) return;
 
@@ -280,8 +280,8 @@ void EditorLayer::CreateDemoScene3D() {
     gm.MeshMaterial.Roughness = 0.9f;
     ground.GetComponent<TransformComponent>().Scale = { 12.0f, 1.0f, 12.0f };
 
-    // Piso espelhado (metal polido) — reflete o ambiente (IBL) e, com o SSR
-    // 3.3-safe ligado, reflete as meshes da cena (reflexos por raio).
+    
+    
     Entity mirrorFloor = m_ActiveScene->CreateEntity("Piso Espelhado");
     auto& mm = mirrorFloor.AddComponent<MeshRendererComponent>();
     mm.MeshSource = "builtin:plane";
@@ -293,10 +293,10 @@ void EditorLayer::CreateDemoScene3D() {
     mt.Translation = { 0.0f, 0.012f, 0.0f };
     mt.Scale = { 6.0f, 1.0f, 6.0f };
 
-    // Céu: atmosférico procedural por padrão (estável). Prioridade:
-    // Content Pack (HDRI rico) → EMBUTIDO (kzres://skies/sky_gradient.hdr,
-    // sempre disponível) → procedural. Se apagarem o arquivo externo, o
-    // embutido assume — o céu nunca deixa de funcionar.
+    
+    
+    
+    
     Renderer3D::SetEnvironmentHDRIPath("");
     std::string hdri = FindContentFile("skies/qwantani_puresky_1k.hdr");
     if (!hdri.empty()) {
@@ -307,8 +307,8 @@ void EditorLayer::CreateDemoScene3D() {
         KZ_CORE_INFO("Demo 3D: céu EMBUTIDO (kzres://skies/sky_gradient.hdr).");
     }
 
-    // Cubo EMBUTIDO (kzres://models/Cube.glb) — sempre carrega, mesmo sem o
-    // Content Pack: prova do conteúdo embutido no executável.
+    
+    
     Entity embeddedCube = m_ActiveScene->CreateEntity("Cubo Embutido (kzres)");
     auto& ecm = embeddedCube.AddComponent<MeshRendererComponent>();
     ecm.MeshSource = "kzres://models/Cube.glb";
@@ -317,9 +317,9 @@ void EditorLayer::CreateDemoScene3D() {
     ecm.MeshMaterial.Roughness = 0.4f;
     embeddedCube.GetComponent<TransformComponent>().Translation = { -2.6f, 0.5f, 1.6f };
 
-    // Fox esquelético animado (skinning) — o coração do v0.3. EMBUTIDO na CI
-    // (kzres://models/Fox.glb), senão Content Pack, senão não carrega (a cena
-    // segue completa com builtins).
+    
+    
+    
     std::string foxPath = PickDemoAsset("models/Fox.glb", "models/Fox.glb");
     if (!foxPath.empty()) {
         Entity fox = m_ActiveScene->CreateEntity("Fox (animado)");
@@ -338,7 +338,7 @@ void EditorLayer::CreateDemoScene3D() {
                      foxPath, fa.Skin ? fa.Skin->Joints.size() : 0, fa.Skin ? fa.Skin->Clips.size() : 0);
     }
 
-    // DamagedHelmet PBR num pedestal — também embutido na CI.
+    
     std::string helmetPath = PickDemoAsset("models/DamagedHelmet.glb", "models/DamagedHelmet.glb");
     if (!helmetPath.empty()) {
         Entity pedestal = m_ActiveScene->CreateEntity("Pedestal");
@@ -361,7 +361,7 @@ void EditorLayer::CreateDemoScene3D() {
         ht.Scale = { 1.4f, 1.4f, 1.4f };
     }
 
-    // Primitivas de exemplo (novas builtins).
+    
     Entity torus = m_ActiveScene->CreateEntity("Torus Metálico");
     auto& tm = torus.AddComponent<MeshRendererComponent>();
     tm.MeshSource = "builtin:torus";
@@ -379,10 +379,10 @@ void EditorLayer::CreateDemoScene3D() {
     nm.MeshAsset = Mesh::FromSource(nm.MeshSource);
     nm.MeshMaterial.Albedo = { 0.02f, 0.02f, 0.05f };
     nm.MeshMaterial.Emissive = { 0.1f, 0.6f, 1.0f };
-    nm.MeshMaterial.EmissiveStrength = 6.0f; // alimenta o bloom
+    nm.MeshMaterial.EmissiveStrength = 6.0f; 
     neon.GetComponent<TransformComponent>().Translation = { -2.6f, 0.8f, -1.5f };
 
-    // Fog exponencial dá atmosfera (desligável nas Configurações Gráficas).
+    
     auto settings = Renderer3D::GetGraphicsSettings();
     settings.FogEnabled = true;
     settings.FogDensity = 0.02f;
@@ -396,13 +396,13 @@ void EditorLayer::CreateDemoScene3D() {
     KZ_CORE_INFO("Cena de demonstração 3D criada.");
 }
 
-// ---------------------------------------------------------------------------
-// Demo de IA (pilar AAA v0.34): arena com NavGrid + obstáculos, um jogador
-// (WASD) e 3 inimigos com EnemyAIComponent (patrulha → persegue → ataca)
-// usando NavAgent. Aperte Play e fuja dos inimigos.
-// ---------------------------------------------------------------------------
 
-// Script do jogador da demo — move no plano XZ e gira pro lado do movimento.
+
+
+
+
+
+
 class DemoPlayerMove : public NativeScript {
 public:
     void OnUpdate(Timestep ts) override {
@@ -422,7 +422,7 @@ public:
     }
 };
 
-// Script do inimigo da demo — trata o ataque disparado pelo EnemyAIComponent.
+
 class DemoEnemyScript : public NativeScript {
 public:
     void OnEnemyAttack(float amount) override {
@@ -438,13 +438,13 @@ void EditorLayer::CreateDemoSceneAI() {
     m_SelectedEntity = {};
     m_ViewportMode = ViewportMode::Mode3D;
 
-    // Registra os scripts da demo — BindByName sobrevive à cópia JSON do Play.
+    
     ScriptEngine::GetRegistry().Register<DemoPlayerMove>("DemoPlayerMove");
     ScriptEngine::GetRegistry().Register<DemoEnemyScript>("DemoEnemyScript");
 
     auto& scene = m_ActiveScene;
 
-    // Câmera em ângulo sobre a arena, seguindo o jogador.
+    
     Entity camera = scene->CreateEntity("Câmera Principal");
     auto& cc = camera.AddComponent<CameraComponent>();
     cc.Type = CameraComponent::ProjectionType::Perspective3D;
@@ -466,7 +466,7 @@ void EditorLayer::CreateDemoSceneAI() {
     sl.Intensity = 1.8f;
     sun.GetComponent<TransformComponent>().Rotation = { glm::radians(55.0f), glm::radians(30.0f), 0.0f };
 
-    // Chão.
+    
     Entity ground = scene->CreateEntity("Chão");
     auto& gm = ground.AddComponent<MeshRendererComponent>();
     gm.MeshSource = "builtin:plane";
@@ -475,7 +475,7 @@ void EditorLayer::CreateDemoSceneAI() {
     gm.MeshMaterial.Roughness = 0.9f;
     ground.GetComponent<TransformComponent>().Scale = { 30.0f, 1.0f, 30.0f };
 
-    // Grade de navegação (cobre ±25 do centro).
+    
     Entity navGrid = scene->CreateEntity("NavGrade");
     auto& ng = navGrid.AddComponent<NavGridComponent>();
     ng.Origin = { -25.0f, 0.0f, -25.0f };
@@ -483,7 +483,7 @@ void EditorLayer::CreateDemoSceneAI() {
     ng.Depth = 50;
     ng.CellSize = 1.0f;
 
-    // Obstáculos (visual + bloco da navegação).
+    
     const glm::vec3 obstaclePos[6] = {
         { -6.0f, 0.0f, -4.0f }, { 5.0f, 0.0f, -6.0f }, { 0.0f, 0.0f, 3.0f },
         { -8.0f, 0.0f, 6.0f },  { 7.0f, 0.0f, 5.0f },  { -2.0f, 0.0f, -9.0f },
@@ -498,10 +498,10 @@ void EditorLayer::CreateDemoSceneAI() {
         auto& ot = ob.GetComponent<TransformComponent>();
         ot.Translation = obstaclePos[i];
         ot.Scale = { 2.0f, 2.5f, 2.0f };
-        ob.AddComponent<NavObstacleComponent>(); // meio-vão vazio = usa a escala
+        ob.AddComponent<NavObstacleComponent>(); 
     }
 
-    // Jogador.
+    
     Entity player = scene->CreateEntity("Jogador");
     auto& pm = player.AddComponent<MeshRendererComponent>();
     pm.MeshSource = "builtin:cube";
@@ -514,7 +514,7 @@ void EditorLayer::CreateDemoSceneAI() {
     auto& pns = player.AddComponent<NativeScriptComponent>();
     pns.BindByName("DemoPlayerMove");
 
-    // Inimigos: patrulham; perseguem quando veem o jogador; atacam no alcance.
+    
     const glm::vec3 enemyPos[3] = { { 8.0f, 0.5f, 8.0f }, { -9.0f, 0.5f, -8.0f }, { 9.0f, 0.5f, -8.0f } };
     const glm::vec3 patrolPoints[3][3] = {
         { { 10.0f, 0.5f, 8.0f }, { -6.0f, 0.5f, 8.0f }, { 10.0f, 0.5f, -6.0f } },
@@ -550,7 +550,7 @@ void EditorLayer::CreateDemoSceneAI() {
         ens.BindByName("DemoEnemyScript");
     }
 
-    // Rótulo 2D de instrução.
+    
     Entity label = scene->CreateEntity("Instruções");
     auto& lt = label.AddComponent<TextComponent>();
     lt.Text = "Demo IA — WASD pra fugir dos inimigos (Eles patrulham, perseguem e atacam)";
@@ -565,15 +565,15 @@ void EditorLayer::CreateDemoSceneAI() {
     KZ_CORE_INFO("Cena de demonstração IA criada (NavGrid + NavAgent + EnemyAI).");
 }
 
-// ---------------------------------------------------------------------------
-// Demo de REDE (pilar AAA v0.34): duas instâncias jogando na mesma máquina.
-// 1ª instância = host (move o cubo com WASD); 2ª instância = cliente (vê o
-// cubo do host se mover). Aperte Play na 1ª e abra OUTRA janela do editor
-// (ou o KizuriGame com --net-connect) pra ser o cliente.
-// ---------------------------------------------------------------------------
 
-// Script do cubo de rede: no host controla e ENVIA o transform; no cliente
-// RECEBE e aplica. Mesmo prefab/cena roda nos dois lados.
+
+
+
+
+
+
+
+
 class DemoNetCube : public NativeScript {
 public:
     void OnCreate() override {
@@ -589,21 +589,21 @@ public:
     void OnUpdate(Timestep ts) override {
         auto& tc = GetComponent<TransformComponent>();
 
-        // Processa eventos (os dois lados).
+        
         kizuri::net::Event ev;
         while (kizuri::Network::PollEvent(ev)) {
             if (ev.Type == kizuri::net::EventType::Connect)
                 KZ_CORE_INFO("Rede: jogador {0} conectou!", ev.Peer);
             else if (ev.Type == kizuri::net::EventType::Data && ev.Data.size() >= kizuri::net::kNetTransformSize) {
                 kizuri::net::NetTransform t = kizuri::net::ReadNetTransform(ev.Data.data());
-                if (!m_Host) { // cliente: aplica o estado do host
+                if (!m_Host) { 
                     tc.Translation = { t.X, t.Y, t.Z };
                     tc.Rotation.y = t.Yaw;
                 }
             }
         }
 
-        // Host: controla com WASD e envia o transform (cadência ~10Hz).
+        
         if (m_Host) {
             const float speed = 4.0f;
             glm::vec2 input{ 0.0f };
@@ -701,8 +701,8 @@ void EditorLayer::CreateDemoSceneNet() {
     KZ_CORE_INFO("Cena de demonstração Rede criada (host/cliente na porta 26000).");
 }
 
-// Moeda da demo completa: gira, e quando o jogador chega perto pontua e
-// some (destruição deferida é segura dentro do OnUpdate — ver Scene.cpp).
+
+
 class DemoCoinScript : public NativeScript {
 public:
     static int s_Score;
@@ -773,7 +773,7 @@ void EditorLayer::CreateDemoSceneGame() {
     gm.MeshMaterial.Roughness = 0.9f;
     ground.GetComponent<TransformComponent>().Scale = { 22.0f, 1.0f, 22.0f };
 
-    // Jogador (mesmo script WASD da demo IA).
+    
     Entity player = scene->CreateEntity("Jogador");
     auto& pm = player.AddComponent<MeshRendererComponent>();
     pm.MeshSource = "builtin:cube";
@@ -783,7 +783,7 @@ void EditorLayer::CreateDemoSceneGame() {
     player.GetComponent<TransformComponent>().Translation = { 0.0f, 0.5f, 6.0f };
     player.AddComponent<NativeScriptComponent>().BindByName("DemoPlayerMove");
 
-    // 8 moedas douradas (cilindros girando).
+    
     const glm::vec3 coinPos[8] = {
         { -6.0f, 0.5f, -6.0f }, { 6.0f, 0.5f, -6.0f }, { 6.0f, 0.5f, 6.0f }, { -6.0f, 0.5f, 6.0f },
         { 0.0f, 0.5f, -8.0f },  { 8.0f, 0.5f, 0.0f },  { 0.0f, 0.5f, 8.0f },  { -8.0f, 0.5f, 0.0f },
@@ -802,7 +802,7 @@ void EditorLayer::CreateDemoSceneGame() {
         coin.AddComponent<NativeScriptComponent>().BindByName("DemoCoinScript");
     }
 
-    // 2 inimigos guardando as moedas (patrulham, perseguem, atacam).
+    
     const glm::vec3 enePos[2] = { { -4.0f, 0.5f, 4.0f }, { 4.0f, 0.5f, -4.0f } };
     const glm::vec3 patl[2][2] = {
         { { -6.0f, 0.5f, 6.0f }, { -2.0f, 0.5f, 2.0f } },
@@ -833,7 +833,7 @@ void EditorLayer::CreateDemoSceneGame() {
         enemy.AddComponent<NativeScriptComponent>().BindByName("DemoEnemyScript");
     }
 
-    // Placar (HUD) + instruções (texto 2D sobre a cena).
+    
     Entity placar = scene->CreateEntity("Placar");
     auto& ptxt = placar.AddComponent<TextComponent>();
     ptxt.Text = "Pontos: 0 / 8  ·  WASD pra coletar as moedas";
@@ -855,17 +855,17 @@ void EditorLayer::CreateDemoSceneGame() {
     KZ_CORE_INFO("Demo completa criada — colete 8 moedas fugindo dos inimigos.");
 }
 
-// Cena de demonstração 2D — showcase do pipeline 2D: sprites, física Box2D
-// (chão + caixas caindo), círculos, texto e UI (canvas + botão). Roda 100%
-// no Play com a câmera ortográfica.
+
+
+
 void EditorLayer::CreateDemoScene2D() {
     if (m_SceneState != SceneState::Edit) return;
     m_ActiveScene = CreateRef<Scene>("Demonstração 2D");
     m_ScenePath.clear();
     m_SelectedEntity = {};
     m_ViewportMode = ViewportMode::Mode2D;
-    // Reseta a câmera de edição 2D pra enquadrar a demo (sem isso o pan/zoom
-    // anterior deixa o viewport "fora da cena" e parece bugado).
+    
+    
     m_Editor2DZoom = 10.0f;
     m_Editor2DCamPos = { 0.0f, 0.0f };
     m_Editor2DFirstMouseLook = true;
@@ -876,8 +876,8 @@ void EditorLayer::CreateDemoScene2D() {
     cc.Primary = true;
     cc.OrthoSize = 10.0f;
 
-    // Fundo: z=0 (dentro do range ortográfico -1..1; z=-1 ficava no plano
-    // near e podia ser recortado) + camada de ordenação mais baixa.
+    
+    
     Entity bg = m_ActiveScene->CreateEntity("Fundo");
     auto& bs = bg.AddComponent<SpriteRendererComponent>();
     bs.Color = { 0.10f, 0.11f, 0.14f, 1.0f };
@@ -896,7 +896,7 @@ void EditorLayer::CreateDemoScene2D() {
     auto& gcol = ground.AddComponent<BoxCollider2DComponent>();
     gcol.Size = { 20.0f, 1.0f };
 
-    // Caixas que caem (física Box2D de verdade no Play).
+    
     for (int i = 0; i < 5; ++i) {
         Entity box = m_ActiveScene->CreateEntity("Caixa " + std::to_string(i + 1));
         auto& bxs = box.AddComponent<SpriteRendererComponent>();
@@ -910,7 +910,7 @@ void EditorLayer::CreateDemoScene2D() {
         bxc.Size = { 1.0f, 1.0f };
     }
 
-    // Moedas: círculos preenchidos (Thickness 1.0 = disco cheio; 0.9 era anel).
+    
     for (int i = 0; i < 6; ++i) {
         Entity coin = m_ActiveScene->CreateEntity("Moeda " + std::to_string(i + 1));
         auto& cs = coin.AddComponent<CircleRendererComponent>();
@@ -927,7 +927,7 @@ void EditorLayer::CreateDemoScene2D() {
     tc.SortingLayer = 5;
     title.GetComponent<TransformComponent>().Translation = { -8.0f, 8.4f, 0.0f };
 
-    // UI: canvas + botão com texto (espaço de tela, 0,0 = centro).
+    
     Entity canvas = m_ActiveScene->CreateEntity("Canvas");
     canvas.AddComponent<UICanvasComponent>();
     Entity button = m_ActiveScene->CreateEntity("Botão");
@@ -938,7 +938,7 @@ void EditorLayer::CreateDemoScene2D() {
     button.AddComponent<UIButtonComponent>();
     auto& btext = button.AddComponent<TextComponent>();
     btext.Text = "Kizuri 2D!";
-    btext.FontSize = 14.0f; // pixels de tela
+    btext.FontSize = 14.0f; 
     btext.Color = { 1.0f, 1.0f, 1.0f, 1.0f };
     button.SetParent(canvas);
 
@@ -946,8 +946,8 @@ void EditorLayer::CreateDemoScene2D() {
 }
 
 void EditorLayer::OnDetach() {
-    // Não pode fechar o editor com a thread de build do C# viva (o
-    // destruidor de std::thread chamaria std::terminate). Espera terminar.
+    
+    
     if (m_PlayBuildActive || m_PlayBuildThread.joinable()) {
         m_PlayBuildCancelled = true;
         if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join();
@@ -957,20 +957,20 @@ void EditorLayer::OnDetach() {
 void EditorLayer::OnUpdate(Timestep ts) {
     KZ_CORE_TRACE("EditorLayer::OnUpdate — início (viewport {0}x{1})", m_ViewportSize.x, m_ViewportSize.y);
 
-    // Checagem automática de atualização no início (a thread dorme ~2s pra
-    // não grudar o startup).
+    
+    
     if (m_UpdateCheckOnStartup && !m_UpdateStartupCheckDone) {
         m_UpdateStartupCheckDone = true;
         StartUpdateCheck();
     }
 
-    // FPS suavizado pro Profiler do viewport (média móvel exponencial).
+    
     if ((float)ts > 0.0f) {
         float inst = 1.0f / (float)ts;
         m_FpsSmoothed = m_FpsSmoothed > 0.0f ? m_FpsSmoothed * 0.95f + inst * 0.05f : inst;
     }
 
-    // Contexto compartilhado dos painéis dockáveis (preenchido todo frame).
+    
     if (m_PanelContext) {
         m_PanelContext->ActiveScene = m_ActiveScene;
         m_PanelContext->EditorScene = m_EditorScene;
@@ -983,9 +983,9 @@ void EditorLayer::OnUpdate(Timestep ts) {
         m_PanelContext->ViewportHovered = m_ViewportHovered;
     }
 
-    // Carregamento assíncrono de cena: processa um lote por orçamento de
-    // tempo (~4ms) a cada frame. A janela continua viva (eventos processados,
-    // tela de carregamento com progresso desenhada) — nada de travar.
+    
+    
+    
     if (m_SceneLoading) {
         float progress = m_PendingLoadProgress;
         bool done = false;
@@ -1003,8 +1003,8 @@ void EditorLayer::OnUpdate(Timestep ts) {
             m_PendingLoader.reset();
             m_PendingScene.reset();
             KZ_CORE_INFO("Cena carregada com sucesso: {0}", m_ScenePath);
-            // Se a troca veio de um Scene.Load durante o Play, religa o
-            // runtime da cena nova (a cópia antiga já foi parada).
+            
+            
             if (m_SceneState == SceneState::Play) {
                 m_ActiveScene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
                 m_ActiveScene->OnRuntimeStart();
@@ -1013,15 +1013,15 @@ void EditorLayer::OnUpdate(Timestep ts) {
             m_PendingLoadProgress = progress;
         }
 
-        // Durante a transição Hub -> Editor a Tela de Carregamento também
-        // avança o relógio (o mínimo de tempo só conta depois que o load
-        // termina; a tela cobre o carregamento inteiro).
+        
+        
+        
         if (m_EditorState == EditorState::Loading) m_LoadingElapsed += (float)ts;
-        return; // nada de atualizar a cena enquanto o load roda
+        return; 
     }
 
-    // Compilação do C# em segundo plano (Play): espera o build terminar e
-    // entra no Play — a janela continua viva com o overlay "Compilando...".
+    
+    
     if (m_PlayBuildActive) {
         if (m_PlayBuildDone && !m_PlayBuildCancelled) {
             if (m_PlayBuildOk) {
@@ -1031,31 +1031,31 @@ void EditorLayer::OnUpdate(Timestep ts) {
             } else {
                 KZ_CORE_ERROR("Play cancelado — falha ao compilar o jogo:\n{0}", m_PlayBuildError);
             }
-            // SEMPRE espera a thread do build terminar antes de seguir (ou de
-            // soltar m_PlayBuildActive) — sem o join aqui, a thread ficava
-            // joinable e o Play seguinte (novo std::thread) chamava
-            // std::terminate() e FECHAVA a engine.
+            
+            
+            
+            
             if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join();
             m_PlayBuildActive = false;
             if (m_PlayBuildOk) StartPlayInternal();
         } else if (m_PlayBuildDone && m_PlayBuildCancelled) {
             m_PlayBuildActive = false;
-            if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join(); // deixa a thread terminar em paz
+            if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join(); 
         }
-        return; // não atualiza a cena enquanto o build roda
+        return; 
     }
 
-    // Telinha de carregamento: avança o relógio e entra no editor quando o
-    // tempo mínimo passa (o carregamento em si é quase instantâneo — o
-    // mínimo existe pra tela ser percebida, como em engines maiores).
+    
+    
+    
     if (m_EditorState == EditorState::Loading) {
         m_LoadingElapsed += (float)ts;
         if (m_LoadingElapsed >= kHubLoadingMinSeconds)
             m_EditorState = EditorState::Editor;
     }
 
-    // Hub/telinha de carregamento: nada de cena pra renderizar — a tela é
-    // 100% ImGui. Só garante o viewport da janela pra UI desenhar certinho.
+    
+    
     if (m_EditorState != EditorState::Editor) {
         Application& app = Application::Get();
         auto& window = app.GetWindow();
@@ -1078,9 +1078,9 @@ void EditorLayer::OnUpdate(Timestep ts) {
     RenderCommand::Clear();
 
     if (m_SceneState == SceneState::Play) {
-        // Entrega o mouse (NDC relativo ao viewport) pro Scene fazer o
-        // hit-test dos UIButton. m_ViewportBounds é do frame anterior
-        // (setado no OnImGuiRender) — suficiente, só muda em resize.
+        
+        
+        
         glm::vec2 vpSize = m_ViewportBounds[1] - m_ViewportBounds[0];
         auto [mx, my] = Input::GetMousePosition();
         glm::vec2 ndc{ 0.0f, 0.0f };
@@ -1090,11 +1090,11 @@ void EditorLayer::OnUpdate(Timestep ts) {
         }
         m_ActiveScene->SetUIMouseNDC(ndc, Input::IsMouseButtonPressed(Mouse::Left));
 
-        // Play: roda a LÓGICA do jogo uma vez e renderiza o viewport.
-        // Padrão (recomendado): CÂMERA DO JOGO — o que o jogador vê, WASD
-        // move o personagem na tela. A câmera do editor (voar pela cena) é
-        // um modo opcional pra cenas sem câmera própria ou quando o usuário
-        // desligar a preferência nas Configurações.
+        
+        
+        
+        
+        
         m_ActiveScene->OnUpdateRuntimeLogic(ts);
         if (m_PlayUsesGameCamera && m_ActiveScene->HasPrimaryCamera()) {
             m_ActiveScene->RenderRuntimeView();
@@ -1108,9 +1108,9 @@ void EditorLayer::OnUpdate(Timestep ts) {
         if (m_ActiveScene->PollPendingLoad(nextScene)) {
             m_ActiveScene->OnRuntimeStop();
             AudioEngine::StopAll();
-            // Carrega a cena pedida pelo script de forma ASSÍNCRONA — o
-            // runtime não congela e a conclusão religa o Play (ver bloco de
-            // m_SceneLoading no topo do OnUpdate).
+            
+            
+            
             auto loaded = CreateRef<Scene>("Cena");
             auto loader = std::make_unique<SceneSerializer>(loaded);
             if (!loader->BeginDeserializeStepwiseFile(Project::ResolvePath(nextScene))) {
@@ -1129,14 +1129,14 @@ void EditorLayer::OnUpdate(Timestep ts) {
         KZ_CORE_TRACE("EditorLayer::OnUpdate — chamando OnUpdateEditor3D");
         m_ActiveScene->OnUpdateEditor3D(ts, m_EditorCamera);
 
-        // Escultura de terreno (pilar AAA v0.34): pincel no viewport 3D.
-        // Esquerdo = levanta, Shift+esquerdo = afunda.
+        
+        
         if (m_TerrainSculpting && m_ViewportHovered && m_SelectedEntity &&
             m_SelectedEntity.HasComponent<TerrainComponent>() &&
             Input::IsMouseButtonPressed(Mouse::Left)) {
             auto& terr = m_SelectedEntity.GetComponent<TerrainComponent>();
             if (terr.Heightmap.size() < (size_t)(terr.Segments + 1) * (terr.Segments + 1)) {
-                // Converte o fbm atual em heightmap (a 1ª pincelada congela).
+                
                 terr.Regenerate();
                 const auto& verts = terr.GeneratedMesh ? terr.GeneratedMesh->GetVertices() : std::vector<Vertex3D>{};
                 terr.Heightmap.resize((size_t)(terr.Segments + 1) * (terr.Segments + 1), 0.0f);
@@ -1144,7 +1144,7 @@ void EditorLayer::OnUpdate(Timestep ts) {
                     terr.Heightmap[k] = verts[k].Position.y;
             }
 
-            // Raio do mouse (mesma matemática do picking).
+            
             glm::vec2 mouse{ Input::GetMouseX(), Input::GetMouseY() };
             glm::vec2 local = mouse - m_ViewportBounds[0];
             glm::vec2 size = m_ViewportBounds[1] - m_ViewportBounds[0];
@@ -1157,7 +1157,7 @@ void EditorLayer::OnUpdate(Timestep ts) {
                 glm::vec3 rayOrigin = glm::vec3(nearP);
                 glm::vec3 rayDir = glm::normalize(glm::vec3(farP - nearP));
 
-                // Intersecta o raio com o plano y = altura média do terreno.
+                
                 glm::vec3 terrPos = glm::vec3(m_ActiveScene->GetWorldTransform(m_SelectedEntity)[3]);
                 float planeY = terrPos.y + terr.HeightScale * 0.5f;
                 if (std::abs(rayDir.y) > 1e-5f) {
@@ -1202,10 +1202,10 @@ void EditorLayer::OnUpdate(Timestep ts) {
     m_Framebuffer->Unbind();
     KZ_CORE_TRACE("EditorLayer::OnUpdate — framebuffer desvinculado, fim");
 
-    // Framebuffer::Bind() troca o glViewport para o tamanho do painel
-    // Viewport; sem restaurar aqui, o ImGui (que roda depois, em espaço da
-    // janela inteira) herdaria esse viewport errado e a UI apareceria
-    // cortada/deslocada.
+    
+    
+    
+    
     KZ_CORE_TRACE("EditorLayer::OnUpdate — buscando Application::Get()");
     Application& app = Application::Get();
     KZ_CORE_TRACE("EditorLayer::OnUpdate — Application::Get() ok, buscando janela");
@@ -1217,16 +1217,16 @@ void EditorLayer::OnUpdate(Timestep ts) {
     RenderCommand::SetViewport(0, 0, w, h);
     KZ_CORE_TRACE("EditorLayer::OnUpdate — SetViewport ok, retornando");
 
-    // Render dos painéis com FBO próprio (Game View, Material Editor...):
-    // DEPOIS do viewport, pra pegar o estado atualizado da cena.
+    
+    
     if (m_PanelContext) {
         for (auto& panel : m_Panels)
             if (panel->IsVisible()) panel->OnUpdate(ts);
     }
 
-    // Arquivos soltos do SISTEMA (Explorer/gerenciador de arquivos) na janela:
-    // cria a entidade correspondente na posição do mouse, como o arrasto
-    // interno do Content Browser. Só em modo edição.
+    
+    
+    
     if (m_SceneState == SceneState::Edit) {
         auto& dropped = Application::Get().GetWindow().GetDroppedFiles();
         if (!dropped.empty()) {
@@ -1242,8 +1242,8 @@ void EditorLayer::OnUpdate(Timestep ts) {
     }
 }
 
-// Posição de mundo (3D: no chão y=0; 2D: no plano) para onde o mouse do
-// viewport aponta — usada no drop de arquivos do sistema e no Content Browser.
+
+
 glm::vec3 EditorLayer::MouseDropWorldPos() const {
     glm::vec2 mouse{ ImGui::GetMousePos().x, ImGui::GetMousePos().y };
     glm::vec2 local = mouse - m_ViewportBounds[0];
@@ -1277,9 +1277,9 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
     auto [mx, my] = Input::GetMousePosition();
     glm::vec2 mousePos{ mx, my };
 
-    // Mesma convenção de PerspectiveCamera::RecalculateViewMatrix
-    // (Camera.cpp) — precisa bater pra WASD mover na direção que a
-    // câmera está de fato olhando.
+    
+    
+    
     glm::vec3 forward{
         cos(glm::radians(m_EditorCamYaw)) * cos(glm::radians(m_EditorCamPitch)),
         sin(glm::radians(m_EditorCamPitch)),
@@ -1312,9 +1312,9 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
                (Input::IsMouseButtonPressed(Mouse::Left) ||
                 Input::IsMouseButtonPressed(Mouse::Right) ||
                 Input::IsMouseButtonPressed(Mouse::Middle))) {
-        // ---- ÓRBITA (pivô): estilo Blender — Alt + arrastar gira a câmera
-        // ao redor do alvo (entidade selecionada, ou o ponto em que ela
-        // está olhando) em vez de girar no próprio eixo.
+        
+        
+        
         if (m_FirstMouseLook) {
             m_LastMousePos = mousePos;
             m_FirstMouseLook = false;
@@ -1327,13 +1327,13 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
             target = glm::vec3(world[3]);
             m_EditorOrbitTarget = target;
         } else if (m_EditorOrbitDist < 0.0f) {
-            // Sem alvo ainda: usa o ponto central da tela na distância atual.
+            
             m_EditorOrbitTarget = m_EditorCamPos + forward * glm::length(m_EditorCamPos);
             m_EditorOrbitDist = glm::length(m_EditorCamPos - m_EditorOrbitTarget);
         }
 
-        // Distância alvo->câmera (recaptura a cada órbita; zoom no scroll já
-        // existe e redimensiona essa distância quando orbitando).
+        
+        
         glm::vec3 toCam = m_EditorCamPos - m_EditorOrbitTarget;
         float dist = std::max(glm::length(toCam), 0.5f);
 
@@ -1349,23 +1349,23 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
         m_EditorCamPos = m_EditorOrbitTarget - fwd * dist;
         m_EditorOrbitDist = dist;
 
-        // Zoom continua funcionando na órbita (recalcula depois).
+        
         if (ImGui::GetIO().MouseWheel != 0.0f) {
             float k = 1.0f - ImGui::GetIO().MouseWheel * 0.12f;
             m_EditorOrbitDist = std::max(0.5f, m_EditorOrbitDist * k);
             m_EditorCamPos = m_EditorOrbitTarget - fwd * m_EditorOrbitDist;
         }
     } else {
-        // Solta o botão direito -> próxima vez que apertar não deve "pular"
-        // usando o delta acumulado enquanto o mouse não estava sendo lido.
+        
+        
         m_FirstMouseLook = true;
     }
 
     m_LastMousePos = mousePos;
 
-    // Zoom com a rodinha (só com o viewport sob o mouse): move a câmera na
-    // direção do olhar — igual Unity/Godot. Multiplicativo pra ser suave
-    // tanto de perto quanto de longe.
+    
+    
+    
     if (m_ViewportHovered && !flying) {
         float scroll = ImGui::GetIO().MouseWheel;
         if (scroll != 0.0f) {
@@ -1375,17 +1375,17 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
     }
 
     m_EditorCamera.SetPosition(m_EditorCamPos);
-    // ---- Vistas rápidas estilo Blender: 1 = frente (-Z), 3 = direita (+X),
-    // 7 = topo (-Y). Só com o viewport 3D sob o cursor e sem voar/digitando.
+    
+    
     if (m_ViewportMode == ViewportMode::Mode3D && m_ViewportHovered &&
         !Input::IsMouseButtonPressed(Mouse::Right) &&
         !Input::IsKeyPressed(Key::LeftAlt) && !ImGui::GetIO().WantTextInput) {
         if (Input::IsKeyPressed(Key::D1)) {
-            m_EditorCamYaw = -90.0f; m_EditorCamPitch = -10.0f; // frente
+            m_EditorCamYaw = -90.0f; m_EditorCamPitch = -10.0f; 
         } else if (Input::IsKeyPressed(Key::D3)) {
-            m_EditorCamYaw = 0.0f;   m_EditorCamPitch = 0.0f;   // direita
+            m_EditorCamYaw = 0.0f;   m_EditorCamPitch = 0.0f;   
         } else if (Input::IsKeyPressed(Key::D7)) {
-            m_EditorCamPitch = -89.5f;                          // topo
+            m_EditorCamPitch = -89.5f;                          
         }
     }
 
@@ -1394,12 +1394,12 @@ void EditorLayer::UpdateEditorCamera(Timestep ts) {
 
 void EditorLayer::UpdateEditor2DCamera(Timestep ts) {
     KZ_TRACE_SCOPE("EditorLayer::UpdateEditor2DCamera");
-    // Pan: segurar botão direito e arrastar. Zoom: scroll do mouse — só
-    // quando o viewport está sob o cursor, senão rolar a página inteira
-    // (ex: painel de Inspetor) zoomaria a câmera por engano.
-    // Com um Tilemap selecionado, o botão direito vira a borracha do pintor
-    // (ver OnImGuiRender) — então o pan é suprimido nesse caso, senão os
-    // dois lutariam pelo mesmo gesto.
+    
+    
+    
+    
+    
+    
     bool erasingTilemap = m_SceneState == SceneState::Edit && m_ViewportMode == ViewportMode::Mode2D &&
         m_SelectedEntity && m_SelectedEntity.HasComponent<TilemapComponent>() &&
         Input::IsMouseButtonPressed(Mouse::Right);
@@ -1415,12 +1415,12 @@ void EditorLayer::UpdateEditor2DCamera(Timestep ts) {
         }
         glm::vec2 delta = mousePos - m_Editor2DLastMousePos;
 
-        // Converte delta de pixels de tela pra unidades de mundo usando o
-        // zoom atual, senão arrastar teria uma "velocidade" diferente
-        // dependendo de quão perto/longe a câmera está.
+        
+        
+        
         float worldPerPixel = (m_Editor2DZoom * 2.0f) / std::max(m_ViewportSize.y, 1.0f);
         m_Editor2DCamPos.x -= delta.x * worldPerPixel;
-        m_Editor2DCamPos.y += delta.y * worldPerPixel; // Y de tela cresce pra baixo, Y de mundo cresce pra cima
+        m_Editor2DCamPos.y += delta.y * worldPerPixel; 
     } else {
         m_Editor2DFirstMouseLook = true;
     }
@@ -1441,8 +1441,8 @@ void EditorLayer::UpdateEditor2DCamera(Timestep ts) {
 }
 
 namespace {
-// Botão de toolbar que desenha um ícone vetorial por cima do próprio botão —
-// o padrão das engines: ferramenta identificada por ícone, não por texto.
+
+
 bool ToolbarIconButton(kizuri::editor::icons::IconFn icon, const char* id,
                        const ImVec2& size, ImU32 color) {
     ImGui::PushID(id);
@@ -1455,7 +1455,7 @@ bool ToolbarIconButton(kizuri::editor::icons::IconFn icon, const char* id,
     ImGui::PopID();
     return pressed;
 }
-} // namespace
+} 
 
 void EditorLayer::DrawViewportToolbar() {
     KZ_TRACE_SCOPE("EditorLayer::DrawViewportToolbar");
@@ -1466,7 +1466,7 @@ void EditorLayer::DrawViewportToolbar() {
 
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
 
-    // --- Ferramentas de gizmo por ÍCONE: Mover / Rotacionar / Escalar (W/E/R). ---
+    
     const kizuri::editor::icons::IconFn gizmoIcons[3] =
         { kizuri::editor::icons::Move, kizuri::editor::icons::Rotate, kizuri::editor::icons::Scale };
     const ImGuizmo::OPERATION gizmoOps[3] =
@@ -1486,8 +1486,8 @@ void EditorLayer::DrawViewportToolbar() {
 
     ImGui::SameLine(0.0f, 16.0f);
 
-    // --- Modo de navegação 2D/3D do editor (só muda a câmera de edição,
-    // nunca trava a cena — uma entidade 2D e uma 3D convivem). ---
+    
+    
     bool is2D = m_ViewportMode == ViewportMode::Mode2D;
     bool is3D = m_ViewportMode == ViewportMode::Mode3D;
 
@@ -1501,9 +1501,9 @@ void EditorLayer::DrawViewportToolbar() {
     if (ImGui::Button("3D", ImVec2(36.0f, 30.0f))) m_ViewportMode = ViewportMode::Mode3D;
     ImGui::PopStyleColor(2);
 
-    // --- Play/Stop por ícone no canto direito: física, scripts, partículas e
-    // áudio só rodam de verdade numa cópia isolada da cena (Scene::Copy) —
-    // editar durante o Play é seguro e o Stop nunca "perde" nada. ---
+    
+    
+    
     bool isPlaying = m_SceneState == SceneState::Play;
     ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 84.0f);
     ImGui::PushStyleColor(ImGuiCol_Button, isPlaying ? accent : inactive);
@@ -1517,8 +1517,8 @@ void EditorLayer::DrawViewportToolbar() {
         ImGui::SetTooltip(isPlaying ? "Parar o Play e voltar pra cena de edição (Shift+F5)"
                                     : "Testar a cena — física, scripts, partículas e áudio (F5)");
 
-    // --- Fullscreen do viewport: esconde os painéis laterais e o viewport
-    // ocupa o espaço todo (aperte de novo pra voltar). ---
+    
+    
     ImGui::SameLine(0.0f, 4.0f);
     ImGui::PushStyleColor(ImGuiCol_Button, m_ViewportMaximized ? accent : inactive);
     if (ToolbarIconButton(kizuri::editor::icons::Maximize, "##viewport_maximize", ImVec2(34.0f, 30.0f),
@@ -1529,7 +1529,7 @@ void EditorLayer::DrawViewportToolbar() {
         ImGui::SetTooltip(m_ViewportMaximized ? "Sair do fullscreen (mostra os painéis)"
                                               : "Fullscreen do viewport (F11)");
 
-    // F11 também alterna o fullscreen do viewport (edge-detect).
+    
     bool f11Down = kizuri::Input::IsKeyPressed(kizuri::Key::F11);
     bool f11JustPressed = f11Down && !m_PrevF11KeyDown;
     m_PrevF11KeyDown = f11Down;
@@ -1538,15 +1538,15 @@ void EditorLayer::DrawViewportToolbar() {
 
     ImGui::PopStyleVar();
 
-    // Linha de dica de navegação — dá cara de toolbar e lembra os atalhos.
+    
     ImGui::TextDisabled("%s", is2D
         ? "Botão direito arrasta para navegar; scroll aplica zoom"
         : "Navegue com botão direito + WASD; Q/E sobe e desce; W/E/R troca a ferramenta do gizmo");
 }
 
-// Projeta um ponto do mundo pra coordenada de tela dentro do retângulo do viewport, usando a
-// view-projection já calculada. Devolve false se o ponto está atrás da câmera (clip.w <= 0) —
-// nesse caso a linha desenhada ligado a ele ficaria "invertida", pior que não desenhar nada.
+
+
+
 static bool ProjectToViewport(const glm::mat4& viewProj, const glm::vec3& worldPos,
                                const glm::vec2& viewportPos, const glm::vec2& viewportSize, ImVec2& outScreen) {
     glm::vec4 clip = viewProj * glm::vec4(worldPos, 1.0f);
@@ -1557,10 +1557,10 @@ static bool ProjectToViewport(const glm::mat4& viewProj, const glm::vec3& worldP
     return true;
 }
 
-// Aceita drop de arquivo do Content Browser no widget que acabou de desenhar
-// (ex.: campo de textura/material no Inspetor). Devolve o caminho absoluto
-// do arquivo solto, ou false se nada foi solto aqui. É o mesmo payload dos
-// dois drag sources do Content Browser (KZ_CONTENT_FILE / KZ_CONTENT_BROWSER_FILE).
+
+
+
+
 static bool AcceptAssetDrop(std::string& outPath) {
     if (!ImGui::BeginDragDropTarget()) return false;
     bool accepted = false;
@@ -1575,10 +1575,10 @@ static bool AcceptAssetDrop(std::string& outPath) {
     return accepted;
 }
 
-// Botão "..." que abre o diálogo NATIVO de arquivos do sistema (Windows:
-// IFileDialog, a mesma janela do Explorer) e preenche 'outPath' com o caminho
-// RELATIVO ao projeto. Em plataformas sem backend o diálogo volta vazio e o
-// campo de texto manual continua sendo a alternativa (nunca travar nisso).
+
+
+
+
 static bool FileBrowseButton(const char* filterName, const char* filterPattern, std::string& outPath) {
     ImGui::SameLine();
     if (ImGui::Button("...")) {
@@ -1591,26 +1591,26 @@ static bool FileBrowseButton(const char* filterName, const char* filterPattern, 
     return false;
 }
 
-// Sem isso, uma Camera na cena era um ponto totalmente invisível — nenhuma pista de onde ela
-// tá nem pra onde aponta. Desenha uma pirâmide de frustum (tamanho fixo, só visualização —
-// não é o far clip real) + uma seta curta de "frente", projetadas manualmente pra tela via
-// ImDrawList (não passa pelo Renderer3D — mais simples que criar geometria de linha na GPU
-// só pra isso, e já ganha profundidade/oclusão de graça por não ter nenhuma, sempre por cima).
+
+
+
+
+
 void EditorLayer::DrawCameraGizmo() {
     if (!m_SelectedEntity || !m_SelectedEntity.HasComponent<CameraComponent>()) return;
-    if (m_ViewportMode != ViewportMode::Mode3D) return; // frustum só faz sentido olhando em 3D
+    if (m_ViewportMode != ViewportMode::Mode3D) return; 
 
     auto& cc = m_SelectedEntity.GetComponent<CameraComponent>();
     glm::mat4 world = m_ActiveScene->GetWorldTransform(m_SelectedEntity);
     glm::vec3 pos = glm::vec3(world[3]);
 
-    // A view da câmera do jogo agora vem da MATRIZ do Transform (ver
-    // PerspectiveCamera::SetWorldTransform) — o gizmo usa a MESMA base
-    // (forward/up das colunas), então desenha exatamente onde a câmera vê,
-    // mesmo com rotações como -90° em Y ou roll.
+    
+    
+    
+    
     glm::vec3 forward = glm::normalize(glm::mat3(world) * glm::vec3(0.0f, 0.0f, -1.0f));
     glm::vec3 worldUp = glm::normalize(glm::mat3(world) * glm::vec3(0.0f, 1.0f, 0.0f));
-    // Base ortonormal do lookAt: right = forward x up, up = right x forward.
+    
     glm::vec3 right = glm::normalize(glm::cross(forward, worldUp));
     glm::vec3 up = glm::cross(right, forward);
 
@@ -1634,18 +1634,18 @@ void EditorLayer::DrawCameraGizmo() {
     bool ok = ProjectToViewport(viewProj, pos, vpPos, vpSize, screenApex);
     for (int i = 0; i < 4; ++i) ok &= ProjectToViewport(viewProj, corners[i], vpPos, vpSize, screenCorners[i]);
     ok &= ProjectToViewport(viewProj, pos + forward * (gizmoDist * 0.4f), vpPos, vpSize, screenForwardTip);
-    if (!ok) return; // câmera do gizmo atrás da câmera do editor agora — melhor nada do que uma linha errada
+    if (!ok) return; 
 
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    const ImU32 color = IM_COL32(255, 205, 60, 255); // amarelo — não colide com os eixos RGB do transform gizmo
+    const ImU32 color = IM_COL32(255, 205, 60, 255); 
     for (int i = 0; i < 4; ++i) dl->AddLine(screenApex, screenCorners[i], color, 1.5f);
     for (int i = 0; i < 4; ++i) dl->AddLine(screenCorners[i], screenCorners[(i + 1) % 4], color, 1.5f);
     dl->AddLine(screenApex, screenForwardTip, IM_COL32(255, 255, 255, 220), 2.5f);
 }
 
-// Marcador visual de luz no viewport 3D: círculo com raios (ponto), seta
-// (direcional) ou círculo + seta (spot). Mesmo estilo do gizmo de câmera —
-// ImDrawList em espaço de tela, sempre por cima da cena.
+
+
+
 void EditorLayer::DrawLightGizmo() {
     if (!m_SelectedEntity || !m_SelectedEntity.HasComponent<LightComponent>()) return;
     if (m_ViewportMode != ViewportMode::Mode3D) return;
@@ -1659,7 +1659,7 @@ void EditorLayer::DrawLightGizmo() {
     ImVec2 screen;
     if (!ProjectToViewport(viewProj, pos, vpPos, vpSize, screen)) return;
 
-    // Direção da luz derivada do Transform (mesma convenção fps do render).
+    
     glm::vec3 euler, t, s;
     DecomposeTransform(world, t, euler, s);
     glm::vec3 forward = glm::normalize(glm::vec3(
@@ -1674,7 +1674,7 @@ void EditorLayer::DrawLightGizmo() {
     bool hasTip = ProjectToViewport(viewProj, pos + forward * 1.2f, vpPos, vpSize, tip);
 
     if (lc.Type == LightType::Point) {
-        // raios nas diagonais
+        
         for (int i = 0; i < 4; ++i) {
             float a = glm::radians(45.0f + i * 90.0f);
             ImVec2 d(cosf(a), sinf(a));
@@ -1682,7 +1682,7 @@ void EditorLayer::DrawLightGizmo() {
                         ImVec2(screen.x + d.x * (r + 8.0f), screen.y + d.y * (r + 8.0f)), color, 2.0f);
         }
     } else {
-        // direcional/spot: linha grossa pra frente + barra na ponta
+        
         if (hasTip) {
             dl->AddLine(screen, tip, color, 3.0f);
             glm::vec2 d(tip.x - screen.x, tip.y - screen.y);
@@ -1697,9 +1697,9 @@ void EditorLayer::DrawLightGizmo() {
     }
 }
 
-// Wireframe dos colisores da entidade selecionada (verde, estilo "debug draw"
-// de engine): círculo/box 2D no modo 2D; box/esfera 3D no modo 3D. Usa
-// ImDrawList em espaço de tela (mesmo padrão dos gizmos de câmera/luz).
+
+
+
 void EditorLayer::DrawColliderGizmo() {
     if (!m_SelectedEntity || m_SceneState != SceneState::Edit) return;
 
@@ -1745,9 +1745,9 @@ void EditorLayer::DrawColliderGizmo() {
             for (int i = 0; i < 4; ++i) Line(corners[i], corners[(i + 1) % 4]);
         }
     } else {
-        // 3D: linhas com TESTE DE PROFUNDIDADE (não flutuam por cima do objeto)
-        // e rotação pelo transform mundial (o wireframe abraça a malha mesmo
-        // com o corpo rotacionado).
+        
+        
+        
         glm::mat4 world = m_ActiveScene->GetWorldTransform(m_SelectedEntity);
         const glm::vec3 dbgColor(120.0f / 255.0f, 220.0f / 255.0f, 120.0f / 255.0f);
         auto SubmitLine = [&](const glm::vec3& a, const glm::vec3& b) {
@@ -1766,9 +1766,9 @@ void EditorLayer::DrawColliderGizmo() {
                     prev = p;
                 }
             };
-            ring({ 1,0,0 }, { 0,1,0 }); // XZ -> círculo no plano YZ? (X,Y) no plano Z
-            ring({ 1,0,0 }, { 0,0,1 }); // plano XZ
-            ring({ 0,1,0 }, { 0,0,1 }); // plano YZ
+            ring({ 1,0,0 }, { 0,1,0 }); 
+            ring({ 1,0,0 }, { 0,0,1 }); 
+            ring({ 0,1,0 }, { 0,0,1 }); 
         }
         if (m_SelectedEntity.HasComponent<BoxCollider3DComponent>()) {
             auto& col = m_SelectedEntity.GetComponent<BoxCollider3DComponent>();
@@ -1784,13 +1784,13 @@ void EditorLayer::DrawColliderGizmo() {
     }
 }
 
-// Overlay de física debug: desenha o wireframe de TODOS os colliders da cena
-// (2D: caixa/círculo; 3D: caixa/esfera), não só o da entidade selecionada.
-// Cor mais apagada pra não competir com o gizmo de seleção. Aproximação
-// axis-aligned (não rotaciona pelo corpo) — suficiente pra visualizar.
-// Debug da IA (v0.34): desenha a grade de navegação (células bloqueadas em
-// vermelho) e os caminhos atuais de cada NavAgent (amarelo, com o destino
-// em verde). Visível durante o Play e em edição com o overlay de colliders.
+
+
+
+
+
+
+
 void EditorLayer::DrawNavDebug() {
     if (!m_ActiveScene) return;
     if (m_SceneState == SceneState::Edit && !m_ShowColliders) return;
@@ -1811,7 +1811,7 @@ void EditorLayer::DrawNavDebug() {
 
     auto& registry = m_ActiveScene->GetRegistry();
 
-    // Grade de navegação.
+    
     registry.view<kizuri::TransformComponent, kizuri::NavGridComponent>().each([&](auto, auto&, auto& ngc) {
         if (!ngc.Grid || ngc.Grid->GetWidth() <= 0) return;
         const kizuri::NavGrid& g = *ngc.Grid;
@@ -1819,7 +1819,7 @@ void EditorLayer::DrawNavDebug() {
         const ImU32 blockCol = IM_COL32(255, 90, 80, 110);
         int w = g.GetWidth(), d = g.GetDepth();
         float cs = g.GetCellSize();
-        // Linhas da grade (a cada 4 células, pra não poluir).
+        
         int step = std::max(1, (int)(w / 20));
         for (int x = 0; x <= w; x += step) {
             Line({ g.GetOriginX() + x * cs, 0.02f, g.GetOriginZ() },
@@ -1829,7 +1829,7 @@ void EditorLayer::DrawNavDebug() {
             Line({ g.GetOriginX(), 0.02f, g.GetOriginZ() + z * cs },
                  { g.GetOriginX() + w * cs, 0.02f, g.GetOriginZ() + z * cs }, gridCol);
         }
-        // Células bloqueadas (quadradinhos).
+        
         ImVec2 a, b;
         if (Project({ g.GetOriginX(), 0.0f, g.GetOriginZ() }, a) &&
             Project({ g.GetOriginX() + cs, 0.0f, g.GetOriginZ() + cs }, b)) {
@@ -1845,7 +1845,7 @@ void EditorLayer::DrawNavDebug() {
         }
     });
 
-    // Caminhos dos agentes.
+    
     registry.view<kizuri::TransformComponent, kizuri::NavAgentComponent>().each([&](auto, auto&, auto& na) {
         if (!na.HasDestination) return;
         const ImU32 pathCol = IM_COL32(255, 220, 90, 200);
@@ -1944,9 +1944,9 @@ kizuri::Ref<kizuri::Texture2D> EditorLayer::GetThumbnail(const std::string& path
     auto it = m_ThumbCache.find(path);
     if (it != m_ThumbCache.end()) return it->second;
 
-    // Pasta com milhares de imagens não pode travar o editor: só decodifica
-    // até o orçamento do frame (m_ThumbBudget); o resto ganha o placeholder e
-    // a miniatura real aparece nos frames seguintes.
+    
+    
+    
     if (m_ThumbBudget <= 0) return nullptr;
     --m_ThumbBudget;
 
@@ -2002,24 +2002,24 @@ void EditorLayer::DrawSettings() {
     ImGui::End();
 }
 
-// Seção Gráficos das Configurações: qualidade, MSAA/SSAO/bloom/fog/HDRI.
+
 void EditorLayer::DrawSettingsGraphics() {
-    // Combo SEMPRE visível (inclui "Custom" como item) — clicar num preset
-    // sempre re-aplica na hora (o antigo escondia o combo em Custom e clicar
-    // no preset já selecionado não fazia nada).
+    
+    
+    
     const char* presets[] = { "Ultra", "High", "Medium", "Low", "Custom" };
     int presetIdx = (int)m_GraphicsSettings.Preset;
     bool presetApplied = false;
     if (ImGui::Combo("Qualidade", &presetIdx, presets, 5)) {
         if (presetIdx == 4) {
-            m_GraphicsSettings.Preset = kizuri::QualityPreset::Custom; // mantém valores atuais
+            m_GraphicsSettings.Preset = kizuri::QualityPreset::Custom; 
         } else {
             m_GraphicsSettings.ApplyPreset((kizuri::QualityPreset)presetIdx);
             kizuri::Renderer3D::SetGraphicsSettings(m_GraphicsSettings);
         }
         presetApplied = true;
     } else if ((int)m_GraphicsSettings.Preset == 4) {
-        presetApplied = true; // já está em Custom: nenhum preset pra re-aplicar
+        presetApplied = true; 
     }
 
     bool customTweak = false;
@@ -2055,8 +2055,8 @@ void EditorLayer::DrawSettingsGraphics() {
         customTweak |= ImGui::DragFloat("Raio SSAO", &m_GraphicsSettings.SSAORadius, 0.01f, 0.05f, 2.0f);
     }
     ImGui::Separator();
-    // SSR (reflexos em espaço de tela) — agora 3.3-safe: loop de passos fixos
-    // (constante no shader), funciona em qualquer driver GL 3.3 core.
+    
+    
     customTweak |= ImGui::Checkbox("Reflexos por raio (SSR)", &m_GraphicsSettings.SSREnabled);
     if (m_GraphicsSettings.SSREnabled) {
         customTweak |= ImGui::SliderInt("Passos do raio", &m_GraphicsSettings.SSRMaxSteps, 8, 48);
@@ -2141,8 +2141,8 @@ void EditorLayer::DrawSettingsGraphics() {
     if (customTweak && !presetApplied) m_GraphicsSettings.Preset = kizuri::QualityPreset::Custom;
     m_GraphicsSettings.Clamp();
 
-    // Aplica em runtime (recursos que dependem de tamanho/MSAA recriados
-    // lazy no próximo frame pelo Renderer3D).
+    
+    
     kizuri::Renderer3D::SetGraphicsSettings(m_GraphicsSettings);
     Application& app = Application::Get();
     if (app.GetWindow().IsVSync() != m_GraphicsSettings.VSync)
@@ -2150,14 +2150,14 @@ void EditorLayer::DrawSettingsGraphics() {
     if (applyHDRI) kizuri::Renderer3D::SetEnvironmentHDRIPath(m_EnvironmentHDRIPathBuffer);
 }
 
-// Seção Geral: projeto, janela e persistência.
+
 void EditorLayer::DrawSettingsGeneral() {
     auto& project = Project::GetActive();
     ImGui::TextUnformatted("Projeto");
     ImGui::Separator();
     if (project) {
-        // Project Settings: nome, cena inicial e GameModule editáveis
-        // (persistem no .kzproj via Project::Save).
+        
+        
         static char s_nameBuf[128] = { 0 };
         static char s_startBuf[512] = { 0 };
         static char s_moduleBuf[512] = { 0 };
@@ -2209,8 +2209,8 @@ void EditorLayer::DrawSettingsGeneral() {
     static int winW = (int)app.GetWindow().GetWidth();
     static int winH = (int)app.GetWindow().GetHeight();
     static bool s_winEdited = false;
-    // Mantém os campos sincronizados quando a janela muda por fora (ex.: o
-    // usuário redimensionou manualmente e reabriu as Configurações).
+    
+    
     if (!s_winEdited) {
         winW = (int)app.GetWindow().GetWidth();
         winH = (int)app.GetWindow().GetHeight();
@@ -2249,7 +2249,7 @@ void EditorLayer::DrawSettingsGeneral() {
     ImGui::TextDisabled("settings.json fica no diretório de trabalho (bin/).");
 }
 
-// Seção Editor: comportamento do editor.
+
 void EditorLayer::DrawSettingsEditor() {
     ImGui::TextUnformatted("Play");
     ImGui::Separator();
@@ -2310,11 +2310,11 @@ void EditorLayer::DrawGizmo() {
     KZ_TRACE_SCOPE("EditorLayer::DrawGizmo");
     if (!m_SelectedEntity || !m_SelectedEntity.HasComponent<TransformComponent>()) return;
 
-    // Atalhos de operação só valem com o viewport focado e a câmera livre
-    // desativada (botão direito solto) — senão W entraria em conflito com
-    // o "andar pra frente" da fly camera. E nada disso vale enquanto o
-    // usuário está DIGITANDO num campo de texto (ex.: renomeando objeto) —
-    // ImGui marcou WantTextInput; W/E/R devem ir pro campo, não pro gizmo.
+    
+    
+    
+    
+    
     bool flying = Input::IsMouseButtonPressed(Mouse::Right);
     if (m_ViewportHovered && !flying && !ImGui::GetIO().WantTextInput) {
         if (Input::IsKeyPressed(Key::W)) m_GizmoOperation = ImGuizmo::TRANSLATE;
@@ -2336,12 +2336,12 @@ void EditorLayer::DrawGizmo() {
     float snapAmount = (m_GizmoOperation == ImGuizmo::OPERATION::ROTATE) ? m_GizmoSnapRotation : m_GizmoSnapTranslation;
     float snapValues[3] = { snapAmount, snapAmount, snapAmount };
 
-    // No modo 2D, o eixo Z do gizmo fica de perfil pra câmera ortográfica
-    // (que olha reto por Z) e o cone/seta desse eixo achata numa mancha
-    // triangular colorida, com as linhas dos outros eixos em leque — era
-    // esse o "triângulo verde" bugado no viewport 2D. Em 2D só faz sentido
-    // manipular X/Y (translate) ou rotação em Z (rotate); então filtramos
-    // a operação pros eixos relevantes em vez de usar o enum cheio de 3D.
+    
+    
+    
+    
+    
+    
     ImGuizmo::OPERATION op = m_GizmoOperation;
     if (m_ViewportMode == ViewportMode::Mode2D) {
         if (m_GizmoOperation == ImGuizmo::TRANSLATE)
@@ -2359,15 +2359,15 @@ void EditorLayer::DrawGizmo() {
 
     bool isUsing = ImGuizmo::IsUsing();
 
-    // Início do arrasto: guarda o estado de antes pra poder desfazer o
-    // gesto inteiro de uma vez (não um comando por frame de movimento).
+    
+    
     if (!m_GizmoWasUsing && isUsing)
         m_GizmoEditBefore = EntitySnapshot::Capture(m_SelectedEntity);
 
     if (isUsing) {
-        // O gizmo edita o transform mundial; se a entidade tem pai, precisa
-        // voltar pro espaço local dele antes de gravar em TransformComponent
-        // (que sempre guarda posição/rotação/escala relativas ao pai).
+        
+        
+        
         glm::mat4 localTransform = worldTransform;
         Entity parent = m_SelectedEntity.GetParent();
         if (parent) localTransform = glm::inverse(m_ActiveScene->GetWorldTransform(parent)) * worldTransform;
@@ -2381,9 +2381,9 @@ void EditorLayer::DrawGizmo() {
         }
     }
 
-    // Fim do arrasto: fecha o comando com o estado final (só se algo de
-    // fato mudou — um clique que soltou sem arrastar não deveria virar
-    // uma entrada de undo vazia).
+    
+    
+    
     if (m_GizmoWasUsing && !isUsing) {
         EntitySnapshot after = EntitySnapshot::Capture(m_SelectedEntity);
         if (after.DiffersFrom(m_GizmoEditBefore))
@@ -2396,17 +2396,17 @@ void EditorLayer::OnScenePlay() {
     KZ_TRACE_SCOPE("EditorLayer::OnScenePlay");
     if (m_SceneLoading || m_PlayBuildActive) return;
 
-    // Compilar no Play, estilo Unity, em SEGUNDO PLANO: dotnet build pode
-    // levar segundos (e baixar pacotes na 1ª vez) — síncrono travava o
-    // editor. Enquanto compila, um overlay de "Compilando C#..." aparece e
-    // o Play entra quando o build termina (consumido no OnUpdate).
+    
+    
+    
+    
     if (m_AutoCompileOnPlay) {
         std::string csproj, engineRoot;
         GetGameBuildInfo(csproj, engineRoot);
         if (!csproj.empty()) {
-            // Nunca deixa uma thread antiga do build viva ao iniciar outro:
-            // reassignar std::thread joinable chamava std::terminate (a engine
-            // fechava no 2º Play quando o 1º build tinha falhado).
+            
+            
+            
             if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join();
             m_PlayBuildError.clear();
             m_PlayBuildDll.clear();
@@ -2421,25 +2421,25 @@ void EditorLayer::OnScenePlay() {
                 m_PlayBuildError = err;
                 m_PlayBuildDone = true;
             });
-            return; // entra no Play quando o build terminar
+            return; 
         }
     }
 
     StartPlayInternal();
 }
 
-// Entra de fato no Play (cópia da cena + runtime) — usado direto pelo
-// OnScenePlay quando não há build pendente, ou pelo OnUpdate quando o
-// build em segundo plano termina.
+
+
+
 void EditorLayer::StartPlayInternal() {
     if (m_PlayBuildThread.joinable()) m_PlayBuildThread.join();
 
     m_EditorScene = m_ActiveScene;
     m_ActiveScene = Scene::Copy(m_EditorScene);
     m_ActiveScene->OnViewportResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
-    // Play usa a câmera da PRÓPRIA cena, exatamente como autorada (a câmera
-    // livre do editor é só navegação) — igual Unity/Godot.
-    m_SelectedEntity = {}; // handle da cena antiga não é válido na cópia
+    
+    
+    m_SelectedEntity = {}; 
     ClearMultiSelection();
     m_SceneState = SceneState::Play;
     m_ActiveScene->OnRuntimeStart();
@@ -2448,17 +2448,17 @@ void EditorLayer::StartPlayInternal() {
 void EditorLayer::OnSceneStop() {
     KZ_TRACE_SCOPE("EditorLayer::OnSceneStop");
 
-    // Se um build de Play está em andamento, cancela a entrada no Play.
+    
     if (m_PlayBuildActive) {
         m_PlayBuildCancelled = true;
         return;
     }
 
     m_ActiveScene->OnRuntimeStop();
-    AudioEngine::StopAll(); // OnRuntimeStop só cuida de física/scripts — sem isso, som ficava tocando pra sempre
+    AudioEngine::StopAll(); 
 
-    // Ajustes de CÂMERA feitos durante o Play (inspetor / Game View) voltam
-    // pra cena original — "mexeu ao vivo, não perde ao parar".
+    
+    
     if (m_ActiveScene && m_EditorScene) {
         auto& copyReg = m_ActiveScene->GetRegistry();
         auto camView = copyReg.view<kizuri::TransformComponent, kizuri::CameraComponent>();
@@ -2486,7 +2486,7 @@ void EditorLayer::OnSceneStop() {
     }
 
     m_SelectedEntity = {};
-    m_ActiveScene = m_EditorScene; // cena original nunca foi tocada — restaurar é só isso
+    m_ActiveScene = m_EditorScene; 
     m_EditorScene = nullptr;
     m_SceneState = SceneState::Edit;
 }
@@ -2510,8 +2510,8 @@ void EditorLayer::SaveScene() {
         KZ_CORE_WARN("EditorLayer::SaveScene — ignorado durante o Play (salvaria a cópia efêmera, não a cena real).");
         return;
     }
-    // Sem caminho ainda associado à cena (nunca foi salva) -> se comporta
-    // como "Salvar Como" e pede o caminho antes de gravar.
+    
+    
     if (m_ScenePath.empty()) {
         SaveSceneAs();
         return;
@@ -2551,7 +2551,7 @@ Entity EditorLayer::CreateEntityFromAsset(const std::string& path, const glm::ve
         auto& mr = created.AddComponent<MeshRendererComponent>();
         mr.MeshSource = Project::MakeRelativePath(path);
         mr.MeshAsset = Mesh::FromSource(path);
-        mr.MeshMaterial = Mesh::ExtractMaterialFromGLTF(path); // material PBR do modelo
+        mr.MeshMaterial = Mesh::ExtractMaterialFromGLTF(path); 
     } else {
         std::string ext = lower.size() >= 4 ? lower.substr(lower.size() - 4) : "";
         bool isImage = (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".tga" || ext == ".gif");
@@ -2581,10 +2581,10 @@ void EditorLayer::OpenScene(const std::string& path) {
         return;
     }
 
-    // Carregamento ASSÍNCRONO: prepara o SceneSerializer e devolve na hora.
-    // Cada OnUpdate processa um lote (por orçamento de tempo), então a janela
-    // continua respondendo mesmo com projetos gigantes — e o usuário pode
-    // fechar/desistir sem a engine travar.
+    
+    
+    
+    
     auto newScene = CreateRef<Scene>("Carregando...");
     auto loader = std::make_unique<SceneSerializer>(newScene);
     if (!loader->BeginDeserializeStepwiseFile(path)) return;
@@ -2611,7 +2611,7 @@ void EditorLayer::DrawTitlebar() {
     dl->AddLine(ImVec2(barMin.x, barMax.y), ImVec2(barMax.x, barMax.y),
                 ImGui::GetColorU32(ImVec4(0.16f, 0.16f, 0.18f, 1.0f)), 1.0f);
 
-    // Marca (torii) + wordmark "KIZURI"
+    
     float markSize = 20.0f;
     ImVec2 markPos(barMin.x + 14.0f, barMin.y + (kTitlebarHeight - markSize) * 0.5f);
     kizuri::editor::icons::Torii(dl, markPos, markSize, IM_COL32(217, 64, 77, 255));
@@ -2622,8 +2622,8 @@ void EditorLayer::DrawTitlebar() {
     ImVec2 wordmarkTextSize = titleFont->CalcTextSizeA(titleFont->FontSize, FLT_MAX, 0.0f, "KIZURI");
     float dragZoneStartX = wordmarkPos.x + wordmarkTextSize.x + 24.0f;
 
-    // Nome do projeto ativo, discreto, logo depois do wordmark — ajuda a
-    // lembrar em qual projeto você está sem precisar abrir o menu Arquivo.
+    
+    
     {
         auto& project = Project::GetActive();
         std::string label = project ? project->GetConfig().Name : "Nenhum projeto aberto";
@@ -2634,7 +2634,7 @@ void EditorLayer::DrawTitlebar() {
         dragZoneStartX = labelPos.x + labelSize.x + 20.0f;
     }
 
-    // Botões da janela (minimizar / maximizar / fechar)
+    
     const float btnW = 46.0f;
     float rightEdge = barMax.x;
     ImVec2 closeMin(rightEdge - btnW, barMin.y), closeMax(rightEdge, barMax.y);
@@ -2674,8 +2674,8 @@ void EditorLayer::DrawTitlebar() {
     ImVec2 nc = center(minMin, minMax);
     dl->AddLine(ImVec2(nc.x - 4.5f, nc.y), ImVec2(nc.x + 4.5f, nc.y), iconColor, 1.3f);
 
-    // Zona de arrasto: do fim do wordmark até o início dos botões.
-    // Clique simples + arrastar move a janela; duplo-clique maximiza/restaura.
+    
+    
     float dragZoneEndX = minMin.x - 4.0f;
     ImGui::SetCursorScreenPos(ImVec2(dragZoneStartX, barMin.y));
     ImGui::InvisibleButton("##titlebar_drag", ImVec2(std::max(0.0f, dragZoneEndX - dragZoneStartX), kTitlebarHeight));
@@ -2718,9 +2718,9 @@ void EditorLayer::DrawResizeBorders() {
             m_ResizingEdge = edge;
     };
 
-    // Só laterais e parte de baixo: o topo é ocupado pela titlebar/menu, que
-    // já servem como zona de arrasto — redimensionar por cima é raro o
-    // suficiente pra não valer a complexidade extra aqui.
+    
+    
+    
     handle("##rs_l", ImVec2(left, top + kTitlebarHeight), ImVec2(kResizeBorder, bottom - top - kTitlebarHeight - kResizeBorder), ResizeEdge::Left, ImGuiMouseCursor_ResizeEW);
     handle("##rs_r", ImVec2(right - kResizeBorder, top + kTitlebarHeight), ImVec2(kResizeBorder, bottom - top - kTitlebarHeight - kResizeBorder), ResizeEdge::Right, ImGuiMouseCursor_ResizeEW);
     handle("##rs_b", ImVec2(left + kResizeBorder, bottom - kResizeBorder), ImVec2(std::max(0.0f, right - left - 2 * kResizeBorder), kResizeBorder), ResizeEdge::Bottom, ImGuiMouseCursor_ResizeNS);
@@ -2783,9 +2783,9 @@ void EditorLayer::DrawDockspace() {
     DrawTitlebar();
     KZ_CORE_TRACE("EditorLayer::DrawDockspace — DrawTitlebar ok");
 
-    // Faixa do menu, logo abaixo da titlebar. Desenhada à mão (em vez de
-    // ImGui::BeginMenuBar) pra ficar sob controle total do layout junto
-    // com a titlebar customizada.
+    
+    
+    
     ImVec2 winPos = ImGui::GetWindowPos();
     float width = ImGui::GetWindowSize().x;
     ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -2804,7 +2804,7 @@ void EditorLayer::DrawDockspace() {
         if (m < 5) ImGui::SameLine(0.0f, 2.0f);
     }
 
-    // ---- Arquivo ----
+    
     if (ImGui::BeginPopup("##menu_Arquivo")) {
         if (ImGui::MenuItem("Novo Projeto...")) {
             strncpy(m_NewProjectDirBuffer, "MeuJogo", sizeof(m_NewProjectDirBuffer));
@@ -2833,8 +2833,8 @@ void EditorLayer::DrawDockspace() {
         if (ImGui::MenuItem("Salvar Cena", nullptr, false, (bool)m_ActiveScene)) SaveScene();
         if (ImGui::MenuItem("Salvar Cena Como...")) SaveSceneAs();
         ImGui::Separator();
-        // Fluxo normal é automático (abrir projeto carrega, Play compila). O
-        // "Carregar GameModule" é fallback pra cena solta — fica em Avançado.
+        
+        
         if (ImGui::BeginMenu("Avançado")) {
             if (ImGui::MenuItem("Carregar GameModule...", nullptr, false, m_SceneState == SceneState::Edit)) {
                 m_RequestOpenGameModulePopup = true;
@@ -2846,7 +2846,7 @@ void EditorLayer::DrawDockspace() {
         ImGui::EndPopup();
     }
 
-    // ---- Editar (undo/redo/duplicar/excluir) ----
+    
     if (ImGui::BeginPopup("##menu_Editar")) {
         bool editing = m_SceneState == SceneState::Edit;
         if (ImGui::MenuItem("Desfazer", "Ctrl+Z", false, editing && m_History.CanUndo()))
@@ -2877,7 +2877,7 @@ void EditorLayer::DrawDockspace() {
         ImGui::EndPopup();
     }
 
-    // ---- Cena ----
+    
     if (ImGui::BeginPopup("##menu_Cena")) {
         if (ImGui::MenuItem("Nova Cena", nullptr, false, m_SceneState == SceneState::Edit)) NewScene();
         if (ImGui::MenuItem("Abrir Cena...", nullptr, false, m_SceneState == SceneState::Edit)) {
@@ -2899,7 +2899,7 @@ void EditorLayer::DrawDockspace() {
         ImGui::EndPopup();
     }
 
-    // ---- Exibir ----
+    
     if (ImGui::BeginPopup("##menu_Exibir")) {
         if (ImGui::MenuItem("Viewport 2D", nullptr, m_ViewportMode == ViewportMode::Mode2D)) m_ViewportMode = ViewportMode::Mode2D;
         if (ImGui::MenuItem("Viewport 3D", nullptr, m_ViewportMode == ViewportMode::Mode3D)) m_ViewportMode = ViewportMode::Mode3D;
@@ -2911,7 +2911,7 @@ void EditorLayer::DrawDockspace() {
         ImGui::EndPopup();
     }
 
-    // ---- Janelas ----
+    
     if (ImGui::BeginPopup("##menu_Janelas")) {
         ImGui::TextDisabled("Painéis (mostrar/ocultar)");
         ImGui::Separator();
@@ -2925,7 +2925,7 @@ void EditorLayer::DrawDockspace() {
         ImGui::EndPopup();
     }
 
-    // ---- Ajuda ----
+    
     if (ImGui::BeginPopup("##menu_Ajuda")) {
         ImGui::TextDisabled("Kizuri Engine v%s", KIZURI_VERSION);
         ImGui::TextDisabled("C++20 · OpenGL %s · GLSL %d core",
@@ -2970,37 +2970,37 @@ void EditorLayer::DrawDockspace() {
         ImGui::EndPopup();
     }
 
-    // Dockspace com uma pequena margem nas laterais/embaixo — é essa
-    // margem que sobra pras alças de redimensionamento (DrawResizeBorders)
-    // sem entrar em conflito com o conteúdo dos painéis dockados nela.
+    
+    
+    
     ImVec2 dockPos(winPos.x + kResizeBorder, menuMax.y);
     ImVec2 dockSize(width - kResizeBorder * 2.0f, winPos.y + ImGui::GetWindowSize().y - menuMax.y - kResizeBorder);
     ImGui::SetCursorScreenPos(dockPos);
 
     KZ_CORE_TRACE("EditorLayer::DrawDockspace — menu/faixa ok, montando dockspace");
     ImGuiID dockspaceID = ImGui::GetID("KizuriDockspace");
-    // ImGuiDockNodeFlags_AutoHideTabBar: esconde a aba nativa do ImGui
-    // quando um nó de dock tem uma única janela — que é o caso de todos os
-    // painéis do layout padrão. Sem isso, cada painel mostra dois títulos:
-    // a aba nativa (ex: "Hierarquia") por cima e o PanelHeader customizado
-    // com ícone (ex: "HIERARQUIA") logo abaixo, duplicando a informação.
-    // Se o usuário arrastar dois painéis pra dividir a mesma aba, a barra
-    // volta a aparecer automaticamente pra permitir alternar entre eles.
-    // ImGuiDockNodeFlags_NoWindowMenuButton: tira o triângulo de menu que
-    // o ImGui desenha no canto de cada nó de dock (undock/hide tab bar
-    // pelo menu) — decoração que não combina com o resto da UI da Kizuri,
-    // que já tem seu próprio PanelHeader fazendo esse papel visualmente.
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     ImGui::DockSpace(dockspaceID, dockSize, (ImGuiDockNodeFlags)((int)ImGuiDockNodeFlags_AutoHideTabBar | (int)ImGuiDockNodeFlags_NoWindowMenuButton));
     KZ_CORE_TRACE("EditorLayer::DrawDockspace — DockSpace ok");
 
-    // Layout padrão de fábrica do Kizuri Editor: Hierarquia e Content
-    // Browser empilhados na coluna esquerda, Viewport e Console
-    // empilhados na área central, Inspetor ocupando a coluna direita
-    // inteira. Sem imgui.ini (ver ImGuiLayer::OnAttach), não há layout
-    // salvo pra respeitar — é construído uma vez por sessão, sempre do
-    // mesmo jeito. Rearranjos manuais do usuário duram a sessão atual,
-    // mas não sobrevivem a fechar o editor; é a troca deliberada por não
-    // ter arquivo solto de configuração ao lado do executável.
+    
+    
+    
+    
+    
+    
+    
+    
     static bool shouldBuildDefaultLayout = true;
 
     if (shouldBuildDefaultLayout) {
@@ -3013,28 +3013,28 @@ void EditorLayer::DrawDockspace() {
         ImGuiID dockMainID = dockspaceID;
         ImGuiID dockLeftID  = ImGui::DockBuilderSplitNode(dockMainID, ImGuiDir_Left,  0.1417f, nullptr, &dockMainID);
         ImGuiID dockRightID = ImGui::DockBuilderSplitNode(dockMainID, ImGuiDir_Right, 0.1566f, nullptr, &dockMainID);
-        // dockMainID agora é só a área central (embaixo do menu, entre a
-        // coluna esquerda e a direita) — dividir ela em cima/baixo dá
-        // Viewport em cima e Console embaixo, sem afetar as outras colunas.
+        
+        
+        
         ImGuiID dockCenterBottomID = ImGui::DockBuilderSplitNode(dockMainID, ImGuiDir_Down, 0.28f, nullptr, &dockMainID);
-        // Mesma ideia na coluna esquerda: Hierarquia em cima, Content
-        // Browser embaixo, cada um com sua área própria (não em abas).
+        
+        
         ImGuiID dockLeftBottomID = ImGui::DockBuilderSplitNode(dockLeftID, ImGuiDir_Down, 0.35f, nullptr, &dockLeftID);
-        // Coluna direita: Inspetor em cima, Profiler + Material embaixo.
+        
         ImGuiID dockRightBottomID = ImGui::DockBuilderSplitNode(dockRightID, ImGuiDir_Down, 0.35f, nullptr, &dockRightID);
-        // Área central: Viewport em cima, Console embaixo; Game View vira uma
-        // ABA ao lado do Viewport (não flutuando na tela).
+        
+        
         ImGuiID dockCenterTopID = dockMainID;
 
         ImGui::DockBuilderDockWindow("Hierarquia", dockLeftID);
         ImGui::DockBuilderDockWindow("Content Browser", dockLeftBottomID);
         ImGui::DockBuilderDockWindow("Viewport", dockCenterTopID);
-        ImGui::DockBuilderDockWindow("Game View", dockCenterTopID);   // aba ao lado do viewport
+        ImGui::DockBuilderDockWindow("Game View", dockCenterTopID);   
         ImGui::DockBuilderDockWindow("Console", dockCenterBottomID);
         ImGui::DockBuilderDockWindow("Inspetor", dockRightID);
         ImGui::DockBuilderDockWindow("Profiler", dockRightBottomID);
-        // Material Editor e Project Settings NÃO são dockados de propósito —
-        // abrem como janelas flutuantes (solto na tela), cada um no seu lugar.
+        
+        
 
         ImGui::DockBuilderFinish(dockspaceID);
     }
@@ -3046,9 +3046,9 @@ void EditorLayer::DrawDockspace() {
 
 void EditorLayer::DrawSceneFileModals() {
     KZ_TRACE_SCOPE("EditorLayer::DrawSceneFileModals");
-    // As flags são setadas pelos itens do menu Arquivo (que rodam dentro de
-    // outro popup) e lidas aqui, no nível superior do frame, pra evitar
-    // abrir um popup modal a partir de dentro de outro.
+    
+    
+    
     if (m_RequestOpenSaveAsPopup) {
         m_RequestOpenSaveAsPopup = false;
         ImGui::OpenPopup("Salvar Cena Como");
@@ -3171,15 +3171,15 @@ void EditorLayer::DrawProjectModals() {
                               : ProjectMode::Empty;
             Ref<Project> project = Project::New(m_NewProjectDirBuffer, m_NewProjectNameBuffer, mode);
             if (project) {
-                // Sugere salvar a próxima cena já dentro da pasta de
-                // assets do projeto novo, em vez do diretório de trabalho
-                // solto de antes.
+                
+                
+                
                 std::string suggested = (std::filesystem::path(project->GetAssetDirectory()) / "cena.kzscene").string();
                 strncpy(m_ScenePathBuffer, suggested.c_str(), sizeof(m_ScenePathBuffer));
                 m_ScenePathBuffer[sizeof(m_ScenePathBuffer) - 1] = '\0';
 
-                // Content browser, modo do viewport, recentes e telinha de
-                // carregamento — tudo em um lugar só.
+                
+                
                 OnProjectOpened(project);
             }
             ImGui::CloseCurrentPopup();
@@ -3213,8 +3213,8 @@ void EditorLayer::DrawProjectModals() {
         if (open && m_OpenProjectPathBuffer[0] != '\0') {
             Ref<Project> project = Project::Load(m_OpenProjectPathBuffer);
             if (project) {
-                // Content browser, modo do viewport, recentes e telinha de
-                // carregamento — tudo em um lugar só.
+                
+                
                 OnProjectOpened(project);
             }
             ImGui::CloseCurrentPopup();
@@ -3282,7 +3282,7 @@ void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
     if (mode == ProjectMode::TwoD) m_ViewportMode = ViewportMode::Mode2D;
     else if (mode == ProjectMode::ThreeD) m_ViewportMode = ViewportMode::Mode3D;
 
-    // Build settings do projeto (nome/versão/resolução do export).
+    
     auto& cfg = project->GetConfig();
     if (!cfg.GameName.empty())
         strncpy(m_ExportGameName, cfg.GameName.c_str(), sizeof(m_ExportGameName) - 1);
@@ -3291,14 +3291,14 @@ void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
     m_ExportWidth = cfg.WindowWidth > 0 ? cfg.WindowWidth : 1280;
     m_ExportHeight = cfg.WindowHeight > 0 ? cfg.WindowHeight : 720;
 
-    // Recria a cena com o conteúdo padrão do MODO do projeto (2D = câmera
-    // ortográfica + sprites, 3D = perspectiva + cubo) — ou carrega a cena
-    // inicial configurada, se houver.
+    
+    
+    
     m_SelectedEntity = {};
     m_History.Clear();
 
-    // v0.37.5: projeto novo NÃO herda estado do anterior — reseta a câmera
-    // do editor (posição/vista/orbita), o modo 2D/3D e o gesto em andamento.
+    
+    
     m_EditorCamPos = { 0.0f, 3.0f, 8.0f };
     m_EditorCamYaw = -90.0f;
     m_EditorCamPitch = -10.0f;
@@ -3308,9 +3308,9 @@ void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
     m_TilePainting = false;
     m_ShowColliders = false;
 
-    // Cena inicial do projeto: carrega de forma ASSÍNCRONA (projeto grande
-    // não pode travar o editor). Enquanto carrega, mostra o conteúdo padrão
-    // do modo — e a cena real substitui quando terminar.
+    
+    
+    
     m_ActiveScene = CreateRef<Scene>("Nova Cena");
     m_ScenePath.clear();
     CreateDefaultSceneContent();
@@ -3319,18 +3319,18 @@ void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
     if (!startScene.empty()) {
         std::string resolved = Project::ResolvePath(startScene);
         m_ScenePath = resolved;
-        OpenScene(resolved); // assíncrono — a cena nova substitui m_ActiveScene quando pronta
+        OpenScene(resolved); 
     }
 
     RememberProject(project);
 
-    // Unity-style: sem carregar DLL manualmente. Se o projeto já tem um
-    // assembly COMPILADO (Source/bin), carrega na hora — os scripts aparecem
-    // no dropdown "Script Nativo" já no modo edição. Projeto novo (ainda sem
-    // build) fica vazio até o primeiro Play, que compila e carrega sozinho.
-    // IMPORTANTE: aqui só se CARREGA a dll existente (rápido). Compilar
-    // (dotnet build) de forma síncrona neste ponto travava o editor ao abrir
-    // o projeto — o build é responsabilidade do fluxo do Play.
+    
+    
+    
+    
+    
+    
+    
     std::string csproj, engineRoot;
     GetGameBuildInfo(csproj, engineRoot);
     if (!csproj.empty()) {
@@ -3341,7 +3341,7 @@ void EditorLayer::OnProjectOpened(const kizuri::Ref<kizuri::Project>& project) {
             KZ_CORE_INFO("Projeto sem assembly compilado ainda (o Play vai compilar).");
     }
 
-    // Entra com a telinha de carregamento (transição Hub -> Editor).
+    
     m_LoadingProjectName = project->GetConfig().Name;
     m_LoadingElapsed = 0.0f;
     m_EditorState = EditorState::Loading;
@@ -3376,7 +3376,7 @@ void EditorLayer::DrawHub() {
     ImU32 textBright = IM_COL32(229, 229, 234, 255);
     ImU32 textDim = IM_COL32(130, 130, 140, 255);
 
-    // ---- Coluna esquerda: marca + ações ----
+    
     const float leftCol = 420.0f;
     dl->AddLine(ImVec2(leftCol, 0.0f), ImVec2(leftCol, display.y), IM_COL32(45, 45, 52, 255), 1.0f);
 
@@ -3413,7 +3413,7 @@ void EditorLayer::DrawHub() {
 
     dl->AddText(ImGui::GetFont(), 12.0f, ImVec2(54.0f, display.y - 40.0f), IM_COL32(85, 85, 95, 255), "© 2026 Kizuri Engine");
 
-    // ---- Coluna direita: projetos recentes ----
+    
     float listX = leftCol + 44.0f;
     float listW = display.x - listX - 44.0f;
     ImGui::SetCursorPos(ImVec2(listX, 48.0f));
@@ -3444,7 +3444,7 @@ void EditorLayer::DrawHub() {
         if (itemY > display.y - 60.0f) break;
     }
 
-    // Botão fechar (o hub não tem titlebar nativa)
+    
     ImGui::SetCursorPos(ImVec2(display.x - 52.0f, 16.0f));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.82f, 0.24f, 0.27f, 0.9f));
@@ -3485,8 +3485,8 @@ void EditorLayer::DrawLoadingScreen() {
     ImVec2 ns = boldFont->CalcTextSizeA(boldFont->FontSize, FLT_MAX, 0.0f, m_LoadingProjectName.c_str());
     dl->AddText(boldFont, boldFont->FontSize, ImVec2(center.x - ns.x * 0.5f, center.y - 22.0f), IM_COL32(150, 150, 160, 255), m_LoadingProjectName.c_str());
 
-    // Barra de progresso: se há um carregamento assíncrono em andamento,
-    // mostra o progresso REAL da cena; senão, o tempo mínimo da tela.
+    
+    
     float t = m_LoadingElapsed / kHubLoadingMinSeconds;
     if (m_SceneLoading) t = m_PendingLoadProgress;
     if (t > 1.0f) t = 1.0f;
@@ -3495,7 +3495,7 @@ void EditorLayer::DrawLoadingScreen() {
     dl->AddRectFilled(barMin, ImVec2(barMin.x + barW, barMin.y + barH), IM_COL32(45, 45, 52, 255), 3.0f);
     dl->AddRectFilled(barMin, ImVec2(barMin.x + barW * t, barMin.y + barH), accent, 3.0f);
 
-    // Spinner girando (arco) ao lado da barra
+    
     float angle = m_LoadingElapsed * 3.0f;
     dl->PathArcTo(ImVec2(center.x + barW * 0.5f + 30.0f, barMin.y + barH * 0.5f), 10.0f, angle, angle + 4.4f, 20);
     dl->PathStroke(accent, false, 3.0f);
@@ -3538,7 +3538,7 @@ void EditorLayer::DrawGameModuleModal() {
 
         ImGui::Spacing();
 
-        // --- Status de verdade: o que aconteceu na última tentativa, não só "fechou o popup e torce". ---
+        
         bool loaded = ScriptEngine::IsModuleLoaded();
         const std::string& lastError = ScriptEngine::GetLastError();
         if (loaded) {
@@ -3569,11 +3569,11 @@ void EditorLayer::DrawGameModuleModal() {
         ImGui::Separator();
         ImGui::Spacing();
 
-        // --- Compilar Scripts ---
-        // O jogo é um assembly C# (Kizuri.Scripting + o projeto do jogo na
-        // pasta Source/). Com a checkbox abaixo, o Play compila o assembly
-        // automaticamente antes de rodar (estilo Unity) e recarrega; sem ela,
-        // o Play usa o que estiver carregado acima.
+        
+        
+        
+        
+        
         ImGui::Checkbox("Compilar C# automaticamente no Play", &m_AutoCompileOnPlay);
         ImGui::Spacing();
 
@@ -3592,8 +3592,8 @@ void EditorLayer::DrawGameModuleModal() {
         bool cancel = ImGui::Button("Fechar", ImVec2(80.0f, 0.0f));
 
         if (load && m_GameModulePathBuffer[0] != '\0') {
-            // Só fecha se deu certo — se falhar, o popup fica aberto mostrando o erro em vez de
-            // simplesmente sumir e deixar o usuário sem saber que nada foi carregado.
+            
+            
             if (ScriptEngine::LoadModule(m_GameModulePathBuffer)) ImGui::CloseCurrentPopup();
         } else if (unload) {
             ScriptEngine::UnloadModule();
@@ -3623,8 +3623,8 @@ void EditorLayer::GetGameBuildInfo(std::string& outCsproj, std::string& outEngin
         }
     }
 
-    // Raiz da engine: sobe da pasta bin/ do editor até achar o checkout
-    // (marcado por managed/Kizuri.Scripting/Kizuri.Scripting.csproj).
+    
+    
     std::string binDir = std::filesystem::current_path().string();
     const auto& args = GetCommandLineArgs();
     if (!args.empty()) {
@@ -3647,7 +3647,7 @@ void EditorLayer::ExportGame(const std::string& outputDir) {
     req.ScenePath = m_ScenePath;
     req.GameModulePath = ScriptEngine::IsModuleLoaded() ? ScriptEngine::GetLoadedPath() : std::string{};
 
-    // Pasta do executável do editor (= pasta bin/ do build).
+    
     req.EngineBinDirectory = std::filesystem::current_path().string();
     const auto& args = GetCommandLineArgs();
     if (!args.empty()) {
@@ -3656,8 +3656,8 @@ void EditorLayer::ExportGame(const std::string& outputDir) {
             req.EngineBinDirectory = std::filesystem::absolute(exePath.parent_path()).string();
     }
 
-    // Export self-contained: usa o csproj do jogo (Source/ do projeto ativo)
-    // e publica com o runtime .NET embutido.
+    
+    
     if (m_ExportSelfContained) {
         GetGameBuildInfo(req.GameProjectPath, req.EngineRoot);
         if (req.GameProjectPath.empty())
@@ -3665,13 +3665,13 @@ void EditorLayer::ExportGame(const std::string& outputDir) {
                          "Caindo pra cópia do assembly compilado (o jogador vai precisar do .NET).");
     }
 
-    // Build settings do projeto (nome/versão/resolução).
+    
     req.GameName = m_ExportGameName;
     req.Version = m_ExportVersion;
     req.WindowWidth = m_ExportWidth;
     req.WindowHeight = m_ExportHeight;
 
-    // Persiste no .kzproj ativo (se houver).
+    
     if (Project::GetActive()) {
         auto& cfg = Project::GetActive()->GetConfig();
         cfg.GameName = m_ExportGameName;
@@ -3900,15 +3900,15 @@ void EditorLayer::RevealFileInContentBrowser(const std::string& filePath) {
 
 namespace {
 
-// Cria um arquivo de script C# novo na pasta (template da API Kizuri.Scripting).
-// A engine REGISTRA a classe automaticamente no Play (Host escaneia o
-// assembly do jogo) — não precisa mexer em nenhum registro manual.
+
+
+
 void CreateNewCSharpScript(const std::filesystem::path& dir, int templateKind) {
     namespace fs = std::filesystem;
     std::error_code ec;
     if (!fs::is_directory(dir, ec)) return;
 
-    // Nome base por template (v0.37.0: scripts prontos pra aprender e usar).
+    
     const char* baseName = "NovoScript";
     if (templateKind == 1) baseName = "PlayerController";
     else if (templateKind == 2) baseName = "Movement2D";
@@ -3918,8 +3918,8 @@ void CreateNewCSharpScript(const std::filesystem::path& dir, int templateKind) {
     int n = 1;
     while (fs::exists(file, ec)) file = dir / (std::string(baseName) + std::to_string(++n) + ".cs");
 
-    // Template escolhido pelo usuário no momento de criar (código pronto,
-    // comentado em português, todo método opcional na v0.37.0).
+    
+    
     std::string view = R"CS(using Kizuri;
 using Kizuri.Math;
 )CS";
@@ -4011,14 +4011,14 @@ public sealed class NovoScript : Script
     KZ_CORE_INFO("Script C# criado: {0}", file.string());
 }
 
-} // namespace
+} 
 
 void EditorLayer::DrawContentBrowser() {
     KZ_TRACE_SCOPE("EditorLayer::DrawContentBrowser");
     BeginPanelNoMenuButton();
 
-    // Pedido do Inspetor (botão "Gerenciador"): abre o painel se estiver
-    // colapsado e navega pra pasta do arquivo revelado.
+    
+    
     if (m_ContentBrowserRevealRequested) {
         m_ContentBrowserRevealRequested = false;
         ImGui::SetNextWindowCollapsed(false, ImGuiCond_Always);
@@ -4027,7 +4027,7 @@ void EditorLayer::DrawContentBrowser() {
             std::filesystem::path p = kizuri::Project::ResolvePath(m_ContentBrowserRevealPath);
             if (p.has_parent_path())
                 p = p.parent_path();
-            // Só navega se o arquivo estiver dentro da raiz de assets.
+            
             auto rel = std::filesystem::relative(p, m_ContentBrowserRoot, ec);
             if (!ec && rel.string().find("..") == std::string::npos)
                 m_ContentBrowserCurrentDir = p;
@@ -4050,11 +4050,11 @@ void EditorLayer::DrawContentBrowser() {
         return;
     }
 
-    // Atalho de pasta: raiz do projeto, pasta de conteúdo (assets) e
-    // Source/ (scripts) — o Content Browser abre na pasta de conteúdo por
-    // padrão; com um clique você troca de pasta de trabalho.
+    
+    
+    
     {
-        auto proj = Project::GetActive(); // Ref<Project> (não-pointeiro)
+        auto proj = Project::GetActive(); 
         ImGui::PushID("cb_shortcuts");
         std::string label = "📁 " + (m_ContentBrowserCurrentDir == m_ContentBrowserRoot
             ? std::string("Conteúdo (assets)") : std::string("Pasta atual"));
@@ -4083,8 +4083,8 @@ void EditorLayer::DrawContentBrowser() {
         ImGui::Separator();
     }
 
-    // Breadcrumb + botão "voltar" — só habilitado enquanto ainda estamos
-    // dentro da raiz de assets (não deixa navegar pra fora dela).
+    
+    
     std::error_code eqEc;
     bool atRoot = std::filesystem::equivalent(m_ContentBrowserCurrentDir, m_ContentBrowserRoot, eqEc) || eqEc;
     ImGui::BeginDisabled(atRoot);
@@ -4105,7 +4105,7 @@ void EditorLayer::DrawContentBrowser() {
         }
         if (ImGui::MenuItem("Criar Script C#...")) {
             CreateNewCSharpScript(m_ContentBrowserCurrentDir, 0);
-            CompileAndRegisterGame(); // registra na hora, sem precisar de Play
+            CompileAndRegisterGame(); 
         }
         ImGui::EndPopup();
     }
@@ -4125,9 +4125,9 @@ void EditorLayer::DrawContentBrowser() {
         return a.path().filename() < b.path().filename();
     });
 
-    // Orçamento de thumbnails novos por frame: 8 decodificações no máximo.
-    // Pasta com milhares de imagens preenche as miniaturas aos poucos (alguns
-    // frames) sem nunca congelar a janela.
+    
+    
+    
     m_ThumbBudget = 8;
 
     for (auto& entry : entries) {
@@ -4144,7 +4144,7 @@ void EditorLayer::DrawContentBrowser() {
         bool clicked = ImGui::IsItemClicked();
         bool doubleClicked = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered();
 
-        // Arquivo arrastável pro viewport: payload com o caminho absoluto.
+        
         if (!isDir && ImGui::BeginDragDropSource()) {
             std::string filePath = entry.path().string();
             ImGui::SetDragDropPayload("KZ_CONTENT_FILE", filePath.c_str(), filePath.size() + 1);
@@ -4172,10 +4172,10 @@ void EditorLayer::DrawContentBrowser() {
             bool isImage = ext == ".png" || ext == ".jpg" || ext == ".jpeg" ||
                            ext == ".bmp" || ext == ".tga" || ext == ".hdr";
             if (isImage) {
-                // Preview real da imagem (cache por caminho — só carrega na 1ª
-                // vez, e limitado a um orçamento por frame pra pasta gigante
-                // não travar o editor; o resto vira placeholder até o frame
-                // seguinte).
+                
+                
+                
+                
                 auto thumb = GetThumbnail(entry.path().string());
                 if (thumb) {
                     ImGui::SetCursorScreenPos(cursor);
@@ -4194,11 +4194,11 @@ void EditorLayer::DrawContentBrowser() {
         ImGui::TextWrapped("%s", name.c_str());
         ImGui::EndGroup();
 
-        // Arrastar um arquivo daqui carrega o caminho absoluto no payload
-        // — ainda não há nenhum slot no Inspetor que aceite esse drop
-        // (entra quando a Pipeline de Assets da seção 7 do roadmap
-        // avançar), mas a fonte já existir agora significa zero retrabalho
-        // no editor quando isso acontecer.
+        
+        
+        
+        
+        
         if (!isDir && ImGui::BeginDragDropSource()) {
             std::string fullPath = entry.path().string();
             ImGui::SetDragDropPayload("KZ_CONTENT_BROWSER_FILE", fullPath.c_str(), fullPath.size() + 1);
@@ -4234,7 +4234,7 @@ void EditorLayer::DrawContentBrowser() {
 
     ImGui::EndTable();
 
-    // Modal de renomear (Arquivo > Content Browser).
+    
     if (m_RequestRenamePopup) {
         m_RequestRenamePopup = false;
         ImGui::OpenPopup("Renomear");
@@ -4267,18 +4267,18 @@ void EditorLayer::DrawSceneHierarchy() {
     ImGui::Begin("Hierarquia");
     kizuri::editor::icons::PanelHeader("HIERARQUIA", kizuri::editor::icons::Hierarchy);
 
-    // Durante o Play a hierarquia vira leitura: mostra a cena que está
-    // rodando (a cópia), mas sem selecionar/criar/deletar/reparentar —
-    // essas operações são de modo edição e mexeriam na cópia efêmera, que
-    // é descartada no Stop de qualquer jeito.
+    
+    
+    
+    
     bool editable = m_SceneState == SceneState::Edit;
 
-    // A entidade marcada pra deletar (se houver) só é destruída depois que
-    // o .each() abaixo termina de percorrer a view — destruir no meio da
-    // iteração invalidaria o iterador do EnTT.
+    
+    
+    
     Entity entityToDelete;
 
-    // Busca por nome (filtra): mostra uma lista plana das entidades que casam.
+    
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
     ImGui::SetNextItemWidth(-1.0f);
     ImGui::InputTextWithHint("##hierarchy_search", "Buscar entidade (nome)...",
@@ -4298,9 +4298,9 @@ void EditorLayer::DrawSceneHierarchy() {
                     m_SelectedEntity = entity;
             });
     } else {
-        // Só entra na recursão a partir das raízes (sem pai) — DrawEntityNode
-        // desenha os filhos dela mesma, então cada entidade aparece uma única
-        // vez na árvore em vez de duplicada como lista plana.
+        
+        
+        
         m_ActiveScene->GetRegistry().view<TagComponent, RelationshipComponent>().each(
             [&](auto entityHandle, TagComponent&, RelationshipComponent& rel) {
                 if (rel.Parent.IsValid()) return;
@@ -4316,8 +4316,8 @@ void EditorLayer::DrawSceneHierarchy() {
     }
 
     if (editable) {
-        // Espaço vazio do painel também aceita drop — soltar uma entidade aqui
-        // fora de qualquer nó desanexa ela do pai (vira raiz de novo).
+        
+        
         ImGui::Dummy(ImGui::GetContentRegionAvail());
         if (ImGui::BeginDragDropTarget()) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("KZ_ENTITY_UUID")) {
@@ -4346,7 +4346,7 @@ void EditorLayer::Reparent(Entity child, Entity newParent) {
     if (!child) return;
     UUID oldParentId = child.GetParent() ? child.GetParent().GetUUID() : UUID::Invalid();
     UUID newParentId = newParent ? newParent.GetUUID() : UUID::Invalid();
-    if (oldParentId == newParentId) return; // nada mudou, não polui o histórico
+    if (oldParentId == newParentId) return; 
 
     child.SetParent(newParent);
     m_History.Push(CreateRef<ReparentCommand>(child.GetUUID(), oldParentId, newParentId));
@@ -4380,8 +4380,8 @@ void EditorLayer::DrawEntityNode(Entity entity, Entity& outEntityToDelete, bool 
     if (isLeaf) flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
     bool opened = ImGui::TreeNodeEx((void*)(uint64_t)(uint32_t)entity, flags, "%s", tag.c_str());
-    // Só o modo edição seleciona por clique — no Play a árvore é leitura.
-    // Ctrl+clique alterna a multi-seleção.
+    
+    
     if (editable && ImGui::IsItemClicked()) {
         bool ctrl = ImGui::GetIO().KeyCtrl;
         if (ctrl) {
@@ -4392,11 +4392,11 @@ void EditorLayer::DrawEntityNode(Entity entity, Entity& outEntityToDelete, bool 
             m_MultiSelection.clear();
         }
         m_SelectedEntity = entity;
-        AutoSwitchViewportMode(); // selecionar 3D/2D troca o modo do viewport
+        AutoSwitchViewportMode(); 
     }
 
     if (editable) {
-        // Arrastar esta entidade pra reparentar em outra.
+        
         if (ImGui::BeginDragDropSource()) {
             uint64_t id = (uint64_t)entity.GetUUID();
             ImGui::SetDragDropPayload("KZ_ENTITY_UUID", &id, sizeof(uint64_t));
@@ -4404,7 +4404,7 @@ void EditorLayer::DrawEntityNode(Entity entity, Entity& outEntityToDelete, bool 
             ImGui::EndDragDropSource();
         }
 
-        // Soltar outra entidade em cima desta faz ela virar filha.
+        
         if (ImGui::BeginDragDropTarget()) {
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("KZ_ENTITY_UUID")) {
                 uint64_t draggedId;
@@ -4443,10 +4443,10 @@ void EditorLayer::DrawEntityNode(Entity entity, Entity& outEntityToDelete, bool 
     }
 }
 
-// Desenha o cabeçalho padrão de uma seção de componente removível: o
-// TreeNodeEx normal + um botão "x" alinhado à direita pra remover o
-// componente. Usado por todo componente opcional (tudo exceto Transform,
-// que toda entidade sempre tem).
+
+
+
+
 static bool DrawComponentHeader(const char* label, bool* removeRequested) {
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_AllowItemOverlap;
     bool open = ImGui::TreeNodeEx(label, flags);
@@ -4461,10 +4461,10 @@ void EditorLayer::DrawInspector() {
     ImGui::Begin("Inspetor");
     kizuri::editor::icons::PanelHeader("INSPETOR", kizuri::editor::icons::Inspector);
 
-    // Início de uma edição (qualquer widget do inspetor ficando ativo pela
-    // primeira vez neste frame): guarda o "antes". Cobre DragFloat,
-    // ColorEdit, Checkbox, Combo e até os botões de Adicionar/Remover
-    // Componente com o mesmo mecanismo — não precisa de fiação por widget.
+    
+    
+    
+    
     if (m_SelectedEntity && !m_InspectorWasActive) {
         m_InspectorEditEntity = m_SelectedEntity.GetUUID();
         m_InspectorEditBefore = EntitySnapshot::Capture(m_SelectedEntity);
@@ -4473,7 +4473,7 @@ void EditorLayer::DrawInspector() {
     if (m_SelectedEntity) {
         auto multi = GetMultiSelection();
         if (multi.size() > 1) {
-            // Multi-seleção: não edita componente individual — mostra resumo.
+            
             ImGui::TextDisabled("%zu entidades selecionadas", multi.size());
             ImGui::SameLine();
             if (ImGui::SmallButton("Excluir seleção")) {
@@ -4496,12 +4496,12 @@ void EditorLayer::DrawInspector() {
         buffer[sizeof(buffer) - 1] = '\0';
         if (ImGui::InputText("Nome", buffer, sizeof(buffer))) tag = std::string(buffer);
 
-        // Ativo/inativo (estilo GameObject.SetActive) — inativa não desenha
-        // nem atualiza (ela e os filhos herdam).
+        
+        
         auto& idc = m_SelectedEntity.GetComponent<IDComponent>();
         ImGui::Checkbox("Ativo", &idc.Active);
 
-        // Tags & Layers: camada de colisão + máscara (bits = camadas que colidem).
+        
         ImGui::SetNextItemWidth(70.0f);
         ImGui::InputInt("Camada", &tagc.Layer);
         ImGui::SetNextItemWidth(150.0f);
@@ -4578,9 +4578,9 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<CameraComponent>();
         }
 
-        // ---- Script C# (NativeScript) — o componente que roda código do
-        // jogo. A engine registra as classes automaticamente quando o
-        // jogo compila (Play) — aqui só escolhe qual classe roda.
+        
+        
+        
         if (m_SelectedEntity.HasComponent<NativeScriptComponent>()) {
             auto& nsc = m_SelectedEntity.GetComponent<NativeScriptComponent>();
             if (DrawComponentHeader("Script C#", &removeThis)) {
@@ -4676,7 +4676,7 @@ void EditorLayer::DrawInspector() {
         if (m_SelectedEntity.HasComponent<MeshRendererComponent>()) {
             auto& mr = m_SelectedEntity.GetComponent<MeshRendererComponent>();
             if (DrawComponentHeader("Mesh Renderer", &removeThis)) {
-                // Fonte da mesh: combobox com os builtins + campo livre pra arquivo.
+                
                 const char* builtins[] = { "builtin:cube", "builtin:plane", "builtin:sphere",
                                            "builtin:cylinder", "builtin:cone", "builtin:capsule", "builtin:torus" };
                 int currentBuiltin = -1;
@@ -4694,7 +4694,7 @@ void EditorLayer::DrawInspector() {
                     mr.MeshSource = meshBuf;
                     if (!mr.MeshSource.empty()) {
                         mr.MeshAsset = kizuri::Mesh::FromSource(mr.MeshSource);
-                        // Modelo glTF importado traz material PBR próprio — aplica.
+                        
                         if (mr.MeshSource.find(".glb") != std::string::npos || mr.MeshSource.find(".gltf") != std::string::npos)
                             mr.MeshMaterial = kizuri::Mesh::ExtractMaterialFromGLTF(Project::ResolvePath(mr.MeshSource));
                     }
@@ -4715,10 +4715,10 @@ void EditorLayer::DrawInspector() {
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Gerenciador")) RevealFileInContentBrowser(mr.MeshSource);
-                // Material NÃO é editado aqui — o painel "Material Editor"
-                // (menu Exibir, janela flutuante) tem preview + todos os
-                // campos PBR. O Inspetor cuida da malha; o material fica
-                // num lugar só.
+                
+                
+                
+                
                 if (ImGui::Button("Abrir Material Editor")) {
                     for (auto& p : m_Panels)
                         if (std::string(p->GetTitle()) == "Material Editor") { p->SetVisible(true); break; }
@@ -4727,7 +4727,7 @@ void EditorLayer::DrawInspector() {
                 ImGui::TextDisabled("Preview + campos PBR na janela dedicada.");
                 if (ImGui::Button("Assar Lightmap (AO + ambience)")) {
                     m_ActiveScene->BakeLightmap(m_SelectedEntity);
-                    // Salva a lightmap junto do projeto (assets/).
+                    
                     if (mr.LightmapTexture) {
                         std::string path = kizuri::Project::GetActive()->GetAssetDirectory() + "/Lightmaps/" + m_SelectedEntity.GetName() + "_lightmap.png";
                         std::error_code ec;
@@ -4747,8 +4747,8 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<MeshRendererComponent>();
         }
 
-        // LOD (Level of Detail): malhas por distância. Só tem efeito junto de
-        // um MeshRenderer.
+        
+        
         if (m_SelectedEntity.HasComponent<LODComponent>()) {
             auto& lod = m_SelectedEntity.GetComponent<LODComponent>();
             if (DrawComponentHeader("LOD (níveis de detalhe)", &removeThis)) {
@@ -4782,7 +4782,7 @@ void EditorLayer::DrawInspector() {
                 if (ImGui::Button("Gerar LOD automático (builtins)")) {
                     auto& mr = m_SelectedEntity.GetComponent<MeshRendererComponent>();
                     lod.Levels.clear();
-                    // Nível 0 = a malha do MeshRenderer (maior detalhe).
+                    
                     lod.Levels.push_back({ mr.MeshSource, 30.0f, mr.MeshAsset });
                     for (int lvl = 1; lvl <= 2; ++lvl) {
                         auto m = kizuri::Mesh::CreateLODMesh(mr.MeshSource, lvl);
@@ -4806,8 +4806,8 @@ void EditorLayer::DrawInspector() {
                 float dur = tl.Duration();
                 if (dur > 0.0f)
                     ImGui::SliderFloat("Tempo", &tl.Time, 0.0f, dur);
-                // Timeline VISUAL (pilar AAA v0.34): linha do tempo com os
-                // keyframes arrastáveis (Tempo editável) + posição/rotação.
+                
+                
                 int toRemove = -1;
                 if (!tl.Keyframes.empty()) {
                     float maxT = tl.Duration();
@@ -4820,7 +4820,7 @@ void EditorLayer::DrawInspector() {
                                               ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
                         }
                         ImGui::PopStyleVar();
-                        // faixa + marcador do keyframe
+                        
                         ImGui::BeginChild(ImGui::GetID((void*)(uintptr_t)(i + 1000)), ImVec2(0, 26));
                         ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.15f, 0.16f, 0.2f, 1.0f));
                         ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.82f, 0.24f, 0.27f, 1.0f));
@@ -4884,7 +4884,7 @@ void EditorLayer::DrawInspector() {
                 changed |= ImGui::DragFloat("Elevação", &t.HeightScale, 0.1f, 0.0f, 50.0f);
                 changed |= ImGui::DragInt("Semente", (int*)&t.Seed, 1);
                 if (changed || ImGui::Button("Regenerar terreno")) {
-                    if (changed) t.Heightmap.clear(); // mudou a geometria base — descarta a escultura
+                    if (changed) t.Heightmap.clear(); 
                     t.Regenerate();
                     if (m_SelectedEntity.HasComponent<MeshRendererComponent>())
                         m_SelectedEntity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;
@@ -4909,7 +4909,7 @@ void EditorLayer::DrawInspector() {
         if (m_SelectedEntity.HasComponent<AnimatorComponent>()) {
             auto& ac = m_SelectedEntity.GetComponent<AnimatorComponent>();
             if (DrawComponentHeader("Animador (skinning)", &removeThis)) {
-                // Skin carregada sob demanda (path do .glb/.gltf).
+                
                 if (!ac.Skin && !ac.MeshPath.empty())
                     ac.Skin = kizuri::SkinData::CreateFromGLTF(Project::ResolvePath(ac.MeshPath));
 
@@ -4925,7 +4925,7 @@ void EditorLayer::DrawInspector() {
                 if (ImGui::Button("Gerenciador")) RevealFileInContentBrowser(ac.MeshPath);
 
                 if (ac.Skin && !ac.Skin->Clips.empty()) {
-                    // Seletor de clip.
+                    
                     int currentClip = ac.Skin->GetClipIndex(ac.ClipName);
                     const char* preview = (currentClip >= 0) ? ac.Skin->Clips[(size_t)currentClip].Name.c_str() : "(pose de repouso)";
                     if (ImGui::BeginCombo("Animação", preview)) {
@@ -4939,7 +4939,7 @@ void EditorLayer::DrawInspector() {
                         ImGui::EndCombo();
                     }
 
-                    // Transporte de preview (roda em modo edição, no viewport).
+                    
                     ImGui::Checkbox("Tocando", &ac.Playing);
                     ImGui::SameLine();
                     ImGui::Checkbox("Em loop", &ac.Loop);
@@ -5072,7 +5072,7 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<TwoBoneIKComponent>();
         }
 
-        // ---- IA e Navegação (pilar AAA v0.34) ----
+        
         if (m_SelectedEntity.HasComponent<NavGridComponent>()) {
             auto& ng = m_SelectedEntity.GetComponent<NavGridComponent>();
             if (DrawComponentHeader("NavGrid (navegação)", &removeThis)) {
@@ -5305,7 +5305,7 @@ void EditorLayer::DrawInspector() {
                 ImGui::DragInt("Camada de ordenação", &tmc.SortingLayer, 1);
                 tmc.Tiles.resize((size_t)tmc.MapWidth * tmc.MapHeight);
 
-                // Pincel do pintor de tilemap (funciona no viewport 2D).
+                
                 ImGui::DragInt("Pincel", &m_TilemapBrushValue, 1, 0, 4096);
                 ImGui::TextDisabled("Pinte no viewport 2D: o botão esquerdo aplica o pincel, o botão direito apaga.");
 
@@ -5320,7 +5320,7 @@ void EditorLayer::DrawInspector() {
                     }
                 }
 
-                // Tiles sólidos: valores que geram collider Box2D no Play.
+                
                 if (ImGui::CollapsingHeader("Colisão (tiles sólidos)")) {
                     ImGui::TextDisabled("Tiles com colisor estático. Ex.: chão=1, plataforma=2.");
                     static int s_AddSolid = 1;
@@ -5560,9 +5560,9 @@ void EditorLayer::DrawAddComponentButton() {
         if (!m_SelectedEntity.HasComponent<CircleRendererComponent>() && ImGui::MenuItem("Circle Renderer"))
             m_SelectedEntity.AddComponent<CircleRendererComponent>();
         if (!m_SelectedEntity.HasComponent<CameraComponent>() && ImGui::MenuItem("Camera")) {
-            // Câmera nova nasce no modo do viewport atual (o default do
-            // componente é 2D — o testador reclamou que "câmera nova sempre
-            // nasce 2D mesmo em cena 3D").
+            
+            
+            
             auto& newCam = m_SelectedEntity.AddComponent<CameraComponent>();
             if (m_ViewportMode == ViewportMode::Mode3D) {
                 newCam.Type = CameraComponent::ProjectionType::Perspective3D;
@@ -5587,7 +5587,7 @@ void EditorLayer::DrawAddComponentButton() {
             if (!m_SelectedEntity.HasComponent<MeshRendererComponent>())
                 m_SelectedEntity.AddComponent<MeshRendererComponent>();
             if (!m_SelectedEntity.HasComponent<Rigidbody3DComponent>()) {
-                // Colisor estático (heightfield) — personagens andam no terreno.
+                
                 auto& rb = m_SelectedEntity.AddComponent<Rigidbody3DComponent>();
                 rb.Type = Rigidbody3DComponent::BodyType::Static;
             }
@@ -5633,7 +5633,7 @@ void EditorLayer::DrawAddComponentButton() {
         if (!m_SelectedEntity.HasComponent<NativeScriptComponent>() && ImGui::MenuItem("Script C#"))
             m_SelectedEntity.AddComponent<NativeScriptComponent>();
         ImGui::Separator();
-        // Física 3D (pilar AAA v0.34 — grupo completo no menu).
+        
         if (!m_SelectedEntity.HasComponent<Rigidbody3DComponent>() && ImGui::MenuItem("Rigidbody 3D"))
             m_SelectedEntity.AddComponent<Rigidbody3DComponent>();
         if (!m_SelectedEntity.HasComponent<BoxCollider3DComponent>() && ImGui::MenuItem("Box Collider 3D"))
@@ -5643,7 +5643,7 @@ void EditorLayer::DrawAddComponentButton() {
         if (!m_SelectedEntity.HasComponent<MeshColliderComponent>() && ImGui::MenuItem("Mesh Collider 3D (convexo)"))
             m_SelectedEntity.AddComponent<MeshColliderComponent>();
         ImGui::Separator();
-        // IA e Navegação (pilar AAA v0.34).
+        
         if (!m_SelectedEntity.HasComponent<NavGridComponent>() && ImGui::MenuItem("NavGrid (grade de navegação)"))
             m_SelectedEntity.AddComponent<NavGridComponent>();
         if (!m_SelectedEntity.HasComponent<NavObstacleComponent>() && ImGui::MenuItem("Nav Obstáculo"))
@@ -5669,34 +5669,34 @@ void EditorLayer::DrawAddComponentButton() {
 void EditorLayer::OnImGuiRender() {
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — início");
 
-    // NOTA DE DIAGNÓSTICO (ver KizuriEngine.log de 16/07/2026): o processo
-    // travou silenciosamente em algum ponto entre a linha "início" acima e
-    // a entrada em DrawDockspace() — nem "--> EditorLayer::DrawDockspace"
-    // (que o KZ_TRACE_SCOPE dela loga como PRIMEIRA coisa que faz) chegou a
-    // aparecer. Revisão linha a linha não achou nenhum bug lógico nesse
-    // trecho (m_ActiveScene e m_SelectedEntity já estavam válidos nesse
-    // ponto da execução, undo/redo com pilha vazia é no-op seguro). As
-    // linhas KZ_CORE_TRACE abaixo, ausentes na versão anterior, existem só
-    // pra isolar a linha exata se isso acontecer de novo — cada uma é um
-    // ponto de log síncrono (flush imediato) que sobrevive mesmo se o
-    // processo morrer logo em seguida.
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     ImGuiIO& io = ImGui::GetIO();
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — GetIO ok");
 
-    // FIX: o gizmo (2D e 3D) não respondia a clique/arrasto porque
-    // ImGuizmo::BeginFrame() nunca era chamado. A própria documentação do
-    // ImGuizmo exige essa chamada uma vez por frame, logo após
-    // ImGui::NewFrame() (que roda dentro de ImGuiLayer::Begin(), antes desta
-    // função) — sem ela, o estado interno de mouse/hover do ImGuizmo não é
-    // resetado a cada frame e Manipulate() nunca detecta IsOver()/IsUsing()
-    // corretamente. Precisa vir ANTES de qualquer ImGui::Begin() de painel
-    // (dockspace, viewport, etc), então fica logo no topo da função.
+    
+    
+    
+    
+    
+    
+    
+    
     ImGuizmo::SetImGuiContext(ImGui::GetCurrentContext());
     ImGuizmo::BeginFrame();
 
-    // Hub / telinha de carregamento: o editor completo não é desenhado —
-    // a seleção de projeto (ou o loading) cobre tudo, e os popups de
-    // projeto continuam funcionando por cima.
+    
+    
+    
     if (m_EditorState != EditorState::Editor) {
         if (m_EditorState == EditorState::Hub) DrawHub();
         else DrawLoadingScreen();
@@ -5704,26 +5704,26 @@ void EditorLayer::OnImGuiRender() {
         return;
     }
 
-    // Atalhos de undo/redo. Só valem no modo de edição: durante o Play o
-    // undo/redo mexeria na CÓPIA em runtime (e a pilha de comandos foi
-    // gravada contra a cena mestra), o que só confundiria — desfazer/refazer
-    // é ferramenta de edição. Também ignora enquanto o ImGui quer captura de
-    // texto (WantTextInput) — senão Ctrl+Z dentro de um campo de nome
-    // brigaria com o undo nativo do próprio InputText.
-    //
-    // Usa kizuri::Input (leitura direta do GLFW) em vez de
-    // ImGui::IsKeyPressed(ImGuiKey_Z/_Y, false): essa segunda forma foi
-    // isolada, via o trace fino logo acima, como o ponto exato de um crash
-    // silencioso e reproduzível nesta função em pelo menos um ambiente
-    // real (ver KizuriEngine.log — a execução nunca chegava a imprimir
-    // "atalho Ctrl+Z detectado" nem a linha seguinte, mesmo com o predicado
-    // inteiro sendo só leitura de bool + essa chamada). kizuri::Input já é
-    // usado sem problema em todo o resto desta mesma função (câmera livre
-    // do viewport, poucas linhas abaixo) — trocar pra ele aqui elimina a
-    // API suspeita sem perder a funcionalidade. A troca de "está segurada"
-    // (o que kizuri::Input dá) por "acabou de ser pressionada" (o que o
-    // atalho precisa, senão Ctrl+Z segurado desfaria a cada frame) é feita
-    // manualmente comparando com o estado do frame anterior.
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     bool ctrlDown = io.KeyCtrl;
     bool zDown = kizuri::Input::IsKeyPressed(kizuri::Key::Z);
     bool yDown = kizuri::Input::IsKeyPressed(kizuri::Key::Y);
@@ -5747,10 +5747,10 @@ void EditorLayer::OnImGuiRender() {
         }
     }
 
-    // F5 = Play, Shift+F5 = Stop — o mesmo botão do toolbar do viewport.
-    // Fora do Play o F5 começa (e não conflita com digitação), durante o
-    // Play o F5 também para (mata a cópia em execução). Igual aos atalhos
-    // acima, usa "acabou de ser pressionado" pra não reiniciar a cada frame.
+    
+    
+    
+    
     {
         bool f5Down = kizuri::Input::IsKeyPressed(kizuri::Key::F5);
         bool f5JustPressed = f5Down && !m_PrevF5KeyDown;
@@ -5761,10 +5761,10 @@ void EditorLayer::OnImGuiRender() {
         }
     }
 
-    // Ferramentas de edição: Del = apagar a entidade selecionada (com undo,
-    // mesmo comando do menu de contexto da Hierarquia); Ctrl+D = duplicar
-    // (com a subárvore) e já selecionar a cópia. Edge-detect no D pra não
-    // duplicar a cada frame enquanto o Ctrl+D estiver segurado.
+    
+    
+    
+    
     if (m_SceneState == SceneState::Edit && m_SelectedEntity && !io.WantTextInput) {
         bool delDown = kizuri::Input::IsKeyPressed(kizuri::Key::Delete);
         if (delDown) {
@@ -5787,13 +5787,13 @@ void EditorLayer::OnImGuiRender() {
     }
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — atalhos undo/redo + F5 ok");
 
-    // Um undo/redo pode ter destruído a entidade selecionada (ex: desfazer
-    // a criação dela) — sem essa checagem, o Inspetor ficaria segurando um
-    // handle apontando pra nada e travaria no primeiro GetComponent.
-    // Blindagem extra: m_ActiveScene nunca deveria ser nulo aqui (o editor
-    // sempre mantém uma cena ativa), mas se algum fluxo futuro criar uma
-    // janela de "nenhum projeto aberto" sem cena, isso não pode virar
-    // crash — só pula a checagem de seleção.
+    
+    
+    
+    
+    
+    
+    
     if (m_SelectedEntity && m_ActiveScene && !m_ActiveScene->GetRegistry().valid(m_SelectedEntity.GetHandle()))
         m_SelectedEntity = {};
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — validação de seleção ok, chamando DrawDockspace");
@@ -5813,9 +5813,9 @@ void EditorLayer::OnImGuiRender() {
         DrawInspector();
         DrawConsole();
         DrawContentBrowser();
-        // Painéis dockáveis (Profiler, Game View, Material Editor, Animator,
-        // Project Settings) — cada um é uma janela ImGui própria que entra no
-        // mesmo dockspace; só os visíveis (menu Janelas) são desenhados.
+        
+        
+        
         if (m_PanelContext) {
             for (auto& panel : m_Panels)
                 if (panel->IsVisible()) panel->OnImGuiRender();
@@ -5843,28 +5843,28 @@ void EditorLayer::OnImGuiRender() {
     ImVec2 panelSize = ImGui::GetContentRegionAvail();
     m_ViewportSize = { panelSize.x, panelSize.y };
 
-    // Os bounds do viewport têm que ser a POSIÇÃO REAL onde o framebuffer é
-    // desenhado — a do cursor logo antes do ImGui::Image (abaixo do título da
-    // janela, do PanelHeader e da toolbar). Usar GetWindowContentRegionMin()
-    // aqui contava a toolbar como parte do viewport: o conteúdo renderizado
-    // ficava visualmente mais baixo do que o gizmo/UI/picking supunham —
-    // gizmo "em cima do objeto", clique registrando mais abaixo e seleção
-    // errada (o famoso deslocamento vertical do v0.29+).
+    
+    
+    
+    
+    
+    
+    
     ImVec2 viewportPos = ImGui::GetCursorScreenPos();
     m_ViewportBounds[0] = { viewportPos.x, viewportPos.y };
     m_ViewportBounds[1] = { viewportPos.x + panelSize.x, viewportPos.y + panelSize.y };
 
     uint32_t textureID = m_Framebuffer->GetColorAttachmentRendererID();
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — chamando ImGui::Image (textureID={0}, {1}x{2})", textureID, panelSize.x, panelSize.y);
-    // O framebuffer é preenchido de baixo para cima (origem OpenGL), então
-    // invertemos as UVs verticalmente para a imagem aparecer com a
-    // orientação correta dentro do ImGui.
+    
+    
+    
     ImGui::Image((ImTextureID)(uint64_t)textureID, panelSize, ImVec2(0, 1), ImVec2(1, 0));
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — ImGui::Image ok");
 
-    // Overlay de estatísticas (Profiler do viewport): FPS, tempo de frame,
-    // draw calls e triângulos do frame anterior. Desligável em
-    // Configurações > Editor.
+    
+    
+    
     if (m_ShowStats) {
         ImDrawList* dl = ImGui::GetWindowDrawList();
         ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -5879,7 +5879,7 @@ void EditorLayer::OnImGuiRender() {
                  kizuri::RenderCommand::GetFrameTriangles(),
                  panelSize.x, panelSize.y,
                  kizuri::GetGLSLVersion());
-        // Fundo semi-transparente pra legibilidade sobre a cena.
+        
         ImVec2 textSize = ImGui::CalcTextSize(buf);
         float pad = 6.0f;
         dl->AddRectFilled(ImVec2(pos.x + pad, pos.y + pad),
@@ -5891,9 +5891,9 @@ void EditorLayer::OnImGuiRender() {
         (void)gs;
     }
 
-    // Janela de diagnóstico do TEXTO: atlas da fonte em tempo real + estado
-    // do blending + status do bake. Ligada em Configurações > Editor >
-    // "Diagnóstico de Texto" — pra investigar "texto em retângulo branco".
+    
+    
+    
     if (m_ShowTextDiag) {
         ImGui::SetNextWindowSize(ImVec2(560, 380), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowPos(ImVec2(60, 60), ImGuiCond_FirstUseEver);
@@ -5916,9 +5916,9 @@ void EditorLayer::OnImGuiRender() {
         ImGui::End();
     }
 
-    // Faixa de DIAGNÓSTICO (vermelha): mostra na tela a última falha de
-    // driver/shader/FBO — sem precisar caçar o KizuriEngine.log. Some sozinha
-    // quando um frame passa limpo.
+    
+    
+    
     const std::string& diag = kizuri::GetShaderDiagnostic();
     if (!diag.empty()) {
         ImDrawList* dl = ImGui::GetWindowDrawList();
@@ -5933,37 +5933,37 @@ void EditorLayer::OnImGuiRender() {
                     IM_COL32(255, 235, 235, 255), diag.c_str());
     }
 
-    // O gizmo precisa desenhar ANTES do teste de clique abaixo — é isso
-    // que atualiza ImGuizmo::IsOver()/IsUsing() pro estado do MOUSE ATUAL
-    // deste frame. Na ordem antiga (picking primeiro, gizmo depois), o
-    // teste usava o IsOver() do frame anterior: no exato frame em que o
-    // mouse entrava num handle pela primeira vez, IsOver() ainda estava
-    // "false" (só ficaria true depois que o Manipulate() daquele mesmo
-    // frame rodasse), então o clique passava batido pelo picking, não
-    // acertava nada em 3D, e desselecionava a entidade — o "seleciona e
-    // desseleciona rapidinho" que já foi reportado.
-    // Gizmo de transformação e gizmo de câmera são ferramentas de EDIÇÃO:
-    // não existem durante o Play (a seleção já é limpa em OnScenePlay, mas
-    // se algum fluxo futuro re-selecionasse durante o runtime, o gizmo
-    // ficaria flutuando sobre a cena rodando e permitiria arrastar entidades
-    // da cópia — comportamento de modo edição dentro do jogo).
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     if (m_SceneState == SceneState::Edit) {
         KZ_CORE_TRACE("EditorLayer::OnImGuiRender — chamando DrawGizmo");
         DrawGizmo();
         KZ_CORE_TRACE("EditorLayer::OnImGuiRender — DrawGizmo ok");
         DrawCameraGizmo();
-        DrawCamera2DPreview(); // quadrado da TELA DO JOGO no editor (v0.37.x)
+        DrawCamera2DPreview(); 
         DrawLightGizmo();
         DrawColliderGizmo();
-        if (m_ShowColliders) DrawAllColliders(); // overlay de física debug
+        if (m_ShowColliders) DrawAllColliders(); 
         DrawNavDebug();
     } else {
         KZ_CORE_TRACE("EditorLayer::OnImGuiRender — gizmo pulado (Play)");
-        DrawNavDebug(); // grade + caminhos da IA sempre visíveis no Play
+        DrawNavDebug(); 
     }
 
-    // Arrastar um arquivo do Content Browser pro viewport cria a entidade
-    // na posição do mouse (só em modo edição).
+    
+    
     if (m_SceneState == SceneState::Edit && ImGui::BeginDragDropTarget()) {
         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("KZ_CONTENT_FILE")) {
             std::string path((const char*)payload->Data);
@@ -5980,7 +5980,7 @@ void EditorLayer::OnImGuiRender() {
                     glm::vec4 farP  = inv * glm::vec4(ndc.x, ndc.y, 1.0f, 1.0f);
                     glm::vec3 o = glm::vec3(nearP) / nearP.w;
                     glm::vec3 d = glm::normalize(glm::vec3(farP) / farP.w - o);
-                    float t = (0.0f - o.y) / glm::max(d.y, 0.0001f); // cai no chão (y=0)
+                    float t = (0.0f - o.y) / glm::max(d.y, 0.0001f); 
                     spawn = (t > 0.0f) ? o + d * t : o;
                 } else {
                     glm::mat4 inv = glm::inverse(m_Editor2DCamera.GetProjectionMatrix() * m_Editor2DCamera.GetViewMatrix());
@@ -5997,10 +5997,10 @@ void EditorLayer::OnImGuiRender() {
         ImGui::EndDragDropTarget();
     }
 
-    // Clique esquerdo no viewport seleciona a entidade sob o cursor. No
-    // modo 3D é raycast contra o AABB dos meshes; no 2D é ponto-dentro-de-
-    // quad/círculo/texto (PickEntity2D). Ignora clique no próprio gizmo e
-    // só vale em modo de edição (no Play nada se seleciona).
+    
+    
+    
+    
     if (m_SceneState == SceneState::Edit &&
         ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
         !ImGuizmo::IsOver() && !ImGuizmo::IsUsing()) {
@@ -6022,23 +6022,23 @@ void EditorLayer::OnImGuiRender() {
                 glm::vec3 rayDir = glm::normalize(glm::vec3(farP - nearP));
                 m_SelectedEntity = m_ActiveScene->PickEntity(rayOrigin, rayDir);
             } else {
-                // 2D: projeta o NDC de volta pro plano Z=0 do mundo (câmera
-                // ortográfica do editor) e testa ponto contra os renderers 2D.
+                
+                
                 glm::mat4 invViewProj = glm::inverse(m_Editor2DCamera.GetProjectionMatrix() * m_Editor2DCamera.GetViewMatrix());
                 glm::vec4 worldP = invViewProj * glm::vec4(ndc.x, ndc.y, 0.0f, 1.0f);
                 worldP /= worldP.w;
                 m_SelectedEntity = m_ActiveScene->PickEntity2D({ worldP.x, worldP.y });
             }
-            AutoSwitchViewportMode(); // clicar num objeto 3D/2D ajusta o modo do viewport
+            AutoSwitchViewportMode(); 
             KZ_CORE_TRACE("EditorLayer::OnImGuiRender — picking por clique ok");
         }
     }
 
-    // Pintor de tilemap: com uma entidade Tilemap selecionada no modo 2D,
-    // arrastar com o botão esquerdo pinta o valor do pincel
-    // (m_TilemapBrushValue) e o botão direito apaga (0). Só em modo edição
-    // e sem conflitar com o gizmo. O undo é por gesto: snapshot no início e
-    // um EntityEditCommand ao soltar o mouse.
+    
+    
+    
+    
+    
     if (m_SceneState == SceneState::Edit && m_ViewportMode == ViewportMode::Mode2D &&
         m_SelectedEntity && m_SelectedEntity.HasComponent<TilemapComponent>() &&
         ImGui::IsItemHovered() && !ImGuizmo::IsOver() && !ImGuizmo::IsUsing()) {
@@ -6077,14 +6077,14 @@ void EditorLayer::OnImGuiRender() {
         }
     }
 
-    // Janela de configurações (Arquivo > Configurações).
-    // Configurações unificadas no painel Project Settings (menu Janelas).
-    // A janela antiga "Configurações" foi descontinuada (redundante).
+    
+    
+    
 
-    // Overlay de progresso do carregamento assíncrono de cena. A janela é
-    // desenhada por último (fica por cima de tudo) e o loop de eventos segue
-    // vivo — com projeto grande o usuário vê o progresso e pode fechar o
-    // editor, em vez de ficar com a janela congelada.
+    
+    
+    
+    
     if (m_SceneLoading) {
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
@@ -6108,8 +6108,8 @@ void EditorLayer::OnImGuiRender() {
         ImGui::PopStyleVar();
     }
 
-    // Overlay de compilação do C# (Play) — dotnet build roda em segundo
-    // plano; aqui só o aviso + spinner, a janela nunca trava.
+    
+    
     if (m_PlayBuildActive && !m_PlayBuildDone) {
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
@@ -6130,9 +6130,9 @@ void EditorLayer::OnImGuiRender() {
         ImGui::PopStyleVar();
     }
 
-    // Erro persistente do build C# (Play) — antes só ia pro console e
-    // "sumia rápido"; agora fica na tela até o usuário fechar ou um novo
-    // Play tentar compilar de novo.
+    
+    
+    
     if (!m_PlayBuildActive && !m_PlayBuildError.empty()) {
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
@@ -6149,8 +6149,8 @@ void EditorLayer::OnImGuiRender() {
             ImGui::Spacing();
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.85f, 0.8f, 1.0f));
             std::string display = m_PlayBuildError;
-            // Dicas amigáveis (v0.37.0): se o código usa API antiga/errada,
-            // o erro mostra a correção provável.
+            
+            
             std::string hints;
             std::error_code sec;
             if (Project::GetActive()) {
@@ -6183,10 +6183,10 @@ void EditorLayer::OnImGuiRender() {
     KZ_CORE_TRACE("EditorLayer::OnImGuiRender — fim");
 }
 
-// ---------------------------------------------------------------------------
-// Atualização automática — fluxo: check (thread) -> modal Sim/Não (com
-// "não perguntar novamente" persistido) -> download -> instala -> relaunch.
-// ---------------------------------------------------------------------------
+
+
+
+
 void EditorLayer::StartUpdateCheck() {
     {
         std::lock_guard lock(m_UpdateMutex);
@@ -6207,10 +6207,10 @@ void EditorLayer::StartUpdateCheck() {
             if (info.Valid && kizuri::Updater::GetSkipVersion() != info.Version) {
                 m_UpdateVersion = info.Version;
                 m_UpdateUrl = info.DownloadUrl;
-                m_UpdateState = 2; // nova versão disponível — pergunta
+                m_UpdateState = 2; 
             } else if (!err.empty() && !kizuri::Updater::GetApiUrl().empty()) {
-                // API configurada mas falhou (rede/HTTP) — mostra o motivo
-                // (silencioso se nunca foi configurada).
+                
+                
                 m_UpdateState = 6;
             } else {
                 m_UpdateState = 0;
@@ -6222,8 +6222,8 @@ void EditorLayer::StartUpdateCheck() {
 void EditorLayer::DrawUpdateModals() {
     int state = m_UpdateState;
 
-    // BeginPopupModal precisa de um OpenPopup antes (a transição pro estado
-    // acontece na thread do check).
+    
+    
     if (state == 2 && !m_UpdatePopupOpened) {
         m_UpdatePopupOpened = true;
         ImGui::OpenPopup("Nova versão disponível");
@@ -6234,9 +6234,9 @@ void EditorLayer::DrawUpdateModals() {
     }
 
     if (state == 1) {
-        // Verificando em segundo plano: sem janela/aviso na tela (o testador
-        // reclamou de "coisas em cima sem pedir"). O resultado aparece
-        // somente via modal quando há atualização (ou erro).
+        
+        
+        
         return;
     }
 
@@ -6252,7 +6252,7 @@ void EditorLayer::DrawUpdateModals() {
             if (ImGui::Button("Atualizar agora", ImVec2(140.0f, 0.0f))) {
                 if (m_UpdateSkipAsk) kizuri::Updater::SetSkipVersion(m_UpdateVersion);
                 m_UpdateSkipAsk = false;
-                // Baixa na thread; progresso aparece no modal seguinte.
+                
                 {
                     std::lock_guard lock(m_UpdateMutex);
                     m_UpdateState = 3;
@@ -6268,7 +6268,7 @@ void EditorLayer::DrawUpdateModals() {
                         std::lock_guard lock(m_UpdateMutex);
                         m_UpdateError = std::move(err);
                         m_UpdateBusy = false;
-                        m_UpdateState = ok ? 4 : 6; // 4 instala
+                        m_UpdateState = ok ? 4 : 6; 
                         m_UpdateZip = zip;
                     }
                 });
@@ -6295,8 +6295,8 @@ void EditorLayer::DrawUpdateModals() {
                 ImGui::Text("Baixando a nova versão...");
             else if (state == 4) {
                 ImGui::Text("Instalando a nova versão...");
-                // Inicia a instalação SO uma vez (quando a thread do
-                // download terminou).
+                
+                
                 std::lock_guard lock(m_UpdateMutex);
                 if (!m_UpdateBusy && !m_UpdateInstallStarted) {
                     m_UpdateInstallStarted = true;
@@ -6342,10 +6342,10 @@ void EditorLayer::DrawUpdateModals() {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Export Android LOCAL — a engine compila o APK sozinha (thread de fundo;
-// resultado aparece num popup e as etapas vão pro console).
-// ---------------------------------------------------------------------------
+
+
+
+
 void EditorLayer::StartAndroidExport() {
     if (m_AndroidRunning) return;
     {
@@ -6356,7 +6356,7 @@ void EditorLayer::StartAndroidExport() {
     }
     if (m_AndroidThread.joinable()) m_AndroidThread.join();
 
-    // Captura os parâmetros antes da thread.
+    
     std::string csproj, engineRoot;
     GetGameBuildInfo(csproj, engineRoot);
     std::string outputDir = m_ExportDirBuffer;
@@ -6367,7 +6367,7 @@ void EditorLayer::StartAndroidExport() {
     auto tools = m_AndroidTools;
 
     m_AndroidThread = std::thread([this, csproj, engineRoot, outputDir, gameName, projectDir, tools]() {
-        // Staging do conteúdo do jogo (cena + assets), sem lixo de build.
+        
         namespace fs = std::filesystem;
         std::string stageErr;
         std::string stage = (fs::path(outputDir) / "android_build" / "stage_game").string();
@@ -6386,7 +6386,7 @@ void EditorLayer::StartAndroidExport() {
                     fs::copy_file(e.path(), dst, fs::copy_options::overwrite_existing, ec);
                 }
             }
-            // A cena atual vira a inicial se estiver fora da pasta do projeto.
+            
             if (!m_ScenePath.empty()) {
                 fs::path startScene = fs::path(stage) / "Start.kzscene";
                 if (!fs::exists(startScene, ec))
@@ -6447,7 +6447,7 @@ void EditorLayer::DrawAndroidExportModals() {
 #else
                     cmd = "xdg-open \"" + std::filesystem::path(result.substr(10)).parent_path().string() + "\"";
 #endif
-                    if (std::system(cmd.c_str()) != 0) { /* ignora: abrir pasta é best-effort */ }
+                    if (std::system(cmd.c_str()) != 0) {  }
                 }
                 m_AndroidDone = false;
                 m_AndroidErrPopupOpened = false;
@@ -6459,8 +6459,8 @@ void EditorLayer::DrawAndroidExportModals() {
 }
 
 
-// Compila o jogo C# em background e CARREGA o módulo (registra os scripts)
-// — o dropdown do Inspetor fica pronto SEM precisar apertar Play (v0.37.x).
+
+
 void EditorLayer::CompileAndRegisterGame() {
     if (m_SceneState != SceneState::Edit) return;
     if (m_CompileRegBusy) return;
@@ -6484,9 +6484,9 @@ void EditorLayer::CompileAndRegisterGame() {
     });
 }
 
-// Quadrado da TELA DO JOGO: desenha a área exata que a câmera ortográfica
-// primária enxerga (largura = OrthoSize * aspect do viewport). Serve de
-// guia no editor: o que ficar fora da linha não aparece no jogo.
+
+
+
 void EditorLayer::DrawCamera2DPreview() {
     if (!m_ActiveScene || m_SceneState != SceneState::Edit) return;
     auto& registry = m_ActiveScene->GetRegistry();
@@ -6504,8 +6504,8 @@ void EditorLayer::DrawCamera2DPreview() {
         float halfW = cc.OrthoSize * aspect * 0.5f;
         float halfH = cc.OrthoSize * 0.5f;
 
-        // Cantos do retângulo da vista, no espaço do mundo (com a rotação
-        // da própria câmera, pra seguir ela se girar).
+        
+        
         glm::vec3 localCorners[4] = {
             { -halfW, -halfH, 0.0f }, {  halfW, -halfH, 0.0f },
             {  halfW,  halfH, 0.0f }, { -halfW,  halfH, 0.0f }
@@ -6522,7 +6522,7 @@ void EditorLayer::DrawCamera2DPreview() {
         if (!ok) return;
 
         ImDrawList* dl = ImGui::GetWindowDrawList();
-        const ImU32 color = IM_COL32(255, 190, 60, 255); // âmbar — visível sobre fundo claro/escuro
+        const ImU32 color = IM_COL32(255, 190, 60, 255); 
         for (int i = 0; i < 4; ++i)
             dl->AddLine(screen[i], screen[(i + 1) % 4], color, 2.0f);
         dl->AddRectFilled(screen[0], screen[2], IM_COL32(255, 190, 60, 10));

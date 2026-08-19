@@ -4,8 +4,8 @@
 
 namespace kizuri {
 
-// Códigos de tecla espelham GLFW para permitir cast direto, mas isolam o
-// jogo/KZScript da dependência direta de GLFW.
+
+
 namespace Key {
     enum : int {
         Space = 32, Apostrophe = 39, Comma = 44, Minus = 45, Period = 46, Slash = 47,
@@ -26,10 +26,10 @@ namespace Mouse {
 
 class Input {
 public:
-    // Não-inline de propósito — ver Input.cpp. Mesmo bug do
-    // Application::s_Instance: "static inline" duplica a variável por
-    // binário (DLL vs executável); com o corpo aqui, cada chamador
-    // acabaria escrevendo/lendo a própria cópia isolada.
+    
+    
+    
+    
     static void SetContext(void* nativeWindow);
 
     static bool IsKeyPressed(int keycode);
@@ -38,16 +38,16 @@ public:
     static float GetMouseX();
     static float GetMouseY();
 
-    // ---- Input Actions (mapeia um nome de ação a uma tecla, com rebind) ----
-    // Ações permitem que o jogo não dependa da tecla física: use
-    // Input.IsActionPressed("Pular") e o jogador re-mapeia via
-    // Input.SetActionKey("Pular", Key.Space) (persistido pelo jogo).
+    
+    
+    
+    
     static bool IsActionPressed(const std::string& action);
     static void SetActionKey(const std::string& action, int keycode);
-    static int GetActionKey(const std::string& action); // -1 se não mapeada
+    static int GetActionKey(const std::string& action); 
 
 private:
     static void* s_Window;
 };
 
-} // namespace kizuri
+} 

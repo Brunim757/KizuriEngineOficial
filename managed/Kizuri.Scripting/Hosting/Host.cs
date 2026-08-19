@@ -1,7 +1,7 @@
-// Host.cs — ponte host <-> managed. Estas funções são chamadas DIRETAMENTE
-// pela engine via load_assembly_and_get_function_pointer (CoreCLRHost.cpp);
-// as assinaturas precisam casar 1:1 com os typedefs de lá. Os delegates
-// públicos são usados como "delegate_type_name" para o marshalling.
+
+
+
+
 using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -36,25 +36,25 @@ public delegate void CollisionScriptFn(IntPtr handle, uint otherHandle, int begi
 
 public static class Host
 {
-	// Último erro da inicialização, legível do lado nativo via GetLastInitError.
-	// Sem isso, uma falha no [GameEntryPoint] era engolida pelo catch e o
-	// editor via "módulo carregado" com 0 scripts registrados e nenhum erro.
+	
+	
+	
 	internal static string s_LastInitError = string.Empty;
 
-	// Invocado pelo host assim que o runtime sobe: carrega o assembly do
-	// jogo (mesmo contexto do host — já foi resolvido) e chama os métodos
-	// marcados com [GameEntryPoint] para registrar os scripts.
+	
+	
+	
 	public static void InitializeGameModule([MarshalAs(UnmanagedType.LPUTF8Str)] string gameAssemblyPath)
 	{
 		s_LastInitError = string.Empty;
 		try
 		{
-			// IMPORTANTE: carrega no MESMO ALC do Host (o ALC coletável que o
-			// hostpolicy criou pro load_assembly_and_get_function_pointer), não
-			// no default. Com Assembly.LoadFrom o SampleGame.dll caía num segundo
-			// ALC e o [GameEntryPoint] registrava os scripts num GameModule
-			// diferente do que o lado nativo consulta em GetScriptCount — o
-			// editor via "0 scripts registrados" sem NENHUM erro.
+			
+			
+			
+			
+			
+			
 			var alc = AssemblyLoadContext.GetLoadContext(typeof(Host).Assembly);
 			var asm = alc.LoadFromAssemblyPath(gameAssemblyPath);
 			foreach (var type in asm.GetTypes())
@@ -66,11 +66,11 @@ public static class Host
 				}
 			}
 
-			// AUTO-REGISTRO: qualquer classe pública não-abstrata que herde
-			// de Script vira um script usável no Inspetor automaticamente —
-			// sem precisar do [GameEntryPoint] + Register manual. Se o dev
-			// registrou manualmente com outro nome, não duplica (o Registro
-			// manual tem prioridade).
+			
+			
+			
+			
+			
 			foreach (var type in asm.GetTypes())
 			{
 				if (!type.IsClass || type.IsAbstract) continue;
@@ -83,9 +83,9 @@ public static class Host
 		}
 		catch (Exception ex)
 		{
-			// Guarda o erro completo (incluindo ReflectionTypeLoadException,
-			// cujos detalhes reais ficam em LoaderExceptions). O log fica num
-			// try/catch próprio pra uma falha de logging nunca mascarar o erro.
+			
+			
+			
 			s_LastInitError = ex is ReflectionTypeLoadException rtl
 				? rtl.ToString() + "\n  -> " + string.Join("\n  -> ", rtl.LoaderExceptions.Select(e => e?.ToString()))
 				: ex.ToString();

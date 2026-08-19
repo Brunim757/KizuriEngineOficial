@@ -10,15 +10,15 @@
 
 namespace kizuri {
 
-// Versão GLSL do CONTEXTO atual (parse de GL_SHADING_LANGUAGE_VERSION uma
-// vez, cacheado), TRAVADA no teto da versão que a janela criou de fato
-// (SetContextGLSLVersion) — alguns drivers reportam GLSL maior que o
-// contexto real (ex.: 4.60 num contexto 3.3) e compilar shader acima da GL
-// quebra ou renderiza errado.
-static int s_ContextGLSL = 0; // teto definido pela janela (0 = sem teto)
+
+
+
+
+
+static int s_ContextGLSL = 0; 
 void SetContextGLSLVersion(int glsl) { s_ContextGLSL = glsl; }
 
-static std::string s_RenderDiagnostic; // última falha de driver/shader (tela)
+static std::string s_RenderDiagnostic; 
 void SetShaderDiagnostic(const std::string& msg) { s_RenderDiagnostic = msg; }
 const std::string& GetShaderDiagnostic() { return s_RenderDiagnostic; }
 
@@ -54,9 +54,9 @@ std::string GetOpenGLVersionString() {
 
 namespace {
 
-// Troca a linha "#version ..." (se houver) pela #version 330 core fixa.
-// Remove a diretiva de versão de QUALQUER lugar (e pré-adiciona a 330),
-// garantindo que o resultado sempre começa com "#version".
+
+
+
 std::string RewriteVersionFor(const std::string& src, int glsl) {
     (void)glsl;
     std::string body = src;
@@ -67,21 +67,21 @@ std::string RewriteVersionFor(const std::string& src, int glsl) {
         else body.erase(pos);
     }
 #if defined(KZ_PLATFORM_ANDROID)
-    // Android roda GLES 3.x: GLSL ES 300. Difere do desktop em dois pontos
-    // tratados aqui: a versão e a declaração de precisão (obrigatória no
-    // fragment shader ES — highp pro float/int evita artefatos de
-    // precisão em PBR/composição).
+    
+    
+    
+    
     return "#version 300 es\n"
            "precision highp float;\n"
            "precision highp int;\n" + body;
 #else
-    // A engine roda SEMPRE em GLSL 330 core (não há mais escalonamento por
-    // versão — as features 4.x foram removidas do código).
+    
+    
     return "#version 330 core\n" + body;
 #endif
 }
 
-} // namespace
+} 
 
 static uint32_t CompileStage(GLenum type, const std::string& source, const std::string& shaderName) {
     uint32_t shader = glCreateShader(type);
@@ -93,7 +93,7 @@ static uint32_t CompileStage(GLenum type, const std::string& source, const std::
     glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
     if (isCompiled == GL_FALSE) {
         int len;
-        glGetShaderiv(shader, 0x8B84 /*GL_INFO_LOG_LENGTH*/, &len);
+        glGetShaderiv(shader, 0x8B84 , &len);
         std::vector<char> info(len);
         glGetShaderInfoLog(shader, len, &len, info.data());
         KZ_CORE_ERROR("Falha ao compilar o shader '{0}': {1}", shaderName, info.data());
@@ -107,9 +107,9 @@ Shader::Shader(const std::string& name, const std::string& vertexSrc, const std:
     : m_Name(name) {
     KZ_TRACE_SCOPE("Shader::Shader");
 
-    // A engine roda SEMPRE em OpenGL 3.3 core — os shaders são #version 330
-    // (injetado via RewriteVersionFor) e não existe mais escalonamento por
-    // versão (as features 4.x foram removidas).
+    
+    
+    
     uint32_t vs = CompileStage(GL_VERTEX_SHADER, RewriteVersionFor(vertexSrc, 330), name);
     uint32_t fs = CompileStage(GL_FRAGMENT_SHADER, RewriteVersionFor(fragmentSrc, 330), name);
 
@@ -172,7 +172,7 @@ Ref<Shader> Shader::CreateFromFiles(const std::string& vertexPath, const std::st
     return CreateRef<Shader>(vertexPath, readFile(vertexPath), readFile(fragmentPath));
 }
 
-// ---- ShaderLibrary ----
+
 void ShaderLibrary::Add(const Ref<Shader>& shader) { m_Shaders[shader->GetName()] = shader; }
 
 Ref<Shader> ShaderLibrary::Load(const std::string& name, const std::string& vertexSrc, const std::string& fragmentSrc) {
@@ -181,8 +181,8 @@ Ref<Shader> ShaderLibrary::Load(const std::string& name, const std::string& vert
     return shader;
 }
 
-// Robusto: nunca lança std::out_of_range pra fora — shader ausente loga
-// uma vez e devolve vazio (callers que usam sem checar Exists não caem).
+
+
 Ref<Shader> ShaderLibrary::Get(const std::string& name) {
     auto it = m_Shaders.find(name);
     if (it == m_Shaders.end()) {
@@ -195,4 +195,4 @@ Ref<Shader> ShaderLibrary::Get(const std::string& name) {
 }
 bool ShaderLibrary::Exists(const std::string& name) const { return m_Shaders.find(name) != m_Shaders.end(); }
 
-} // namespace kizuri
+} 

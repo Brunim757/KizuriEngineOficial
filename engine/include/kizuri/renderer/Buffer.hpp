@@ -132,4 +132,4 @@ private:
     Ref<IndexBuffer> m_IndexBuffer;
 };
 
-} // namespace kizuri
+} 

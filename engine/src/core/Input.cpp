@@ -10,13 +10,13 @@ namespace kizuri {
 
 void* Input::s_Window = nullptr;
 
-// Input Actions: nome da ação -> código de tecla. O jogo pode rebindar em
-// runtime (SetActionKey) e persistir do jeito que quiser.
+
+
 static std::unordered_map<std::string, int> s_Actions;
 
 void Input::SetContext(void* nativeWindow) {
     s_Window = nativeWindow;
-    // Ações padrão de gameplay (rebindáveis em runtime via SetActionKey).
+    
     s_Actions.try_emplace("Pular", Key::Space);
     s_Actions.try_emplace("Esquerda", Key::A);
     s_Actions.try_emplace("Direita", Key::D);
@@ -29,8 +29,8 @@ void Input::SetContext(void* nativeWindow) {
 
 bool Input::IsKeyPressed(int keycode) {
 #if defined(KZ_PLATFORM_ANDROID)
-    // Android não tem teclado físico: só teclas virtuais (zonas de toque
-    // mapeadas pelo jogo via SetActionKey + AndroidPlatform::SetVirtualKey).
+    
+    
     return AndroidPlatform::IsVirtualKeyDown(keycode);
 #else
     auto* window = static_cast<GLFWwindow*>(s_Window);
@@ -42,7 +42,7 @@ bool Input::IsKeyPressed(int keycode) {
 
 bool Input::IsMouseButtonPressed(int button) {
 #if defined(KZ_PLATFORM_ANDROID)
-    // Tocar na tela == clique de mouse (qualquer dedo). Botão 0 = esquerdo.
+    
     if (button != 0) return false;
     return AndroidPlatform::IsAnyTouchDown();
 #else
@@ -81,4 +81,4 @@ int Input::GetActionKey(const std::string& action) {
     return it->second;
 }
 
-} // namespace kizuri
+} 

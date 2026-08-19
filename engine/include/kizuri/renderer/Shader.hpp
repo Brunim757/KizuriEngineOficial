@@ -6,25 +6,25 @@
 
 namespace kizuri {
 
-// Versão GLSL core do contexto atual (330, 400, 410, 430, 450, ...) —
-// detectada do GL_VERSION em runtime. É o que faz os shaders escalarem:
-// PC 3.3 usa 330, PC 4.5 usa 450.
-// Versão GLSL core do contexto atual (330, 400, 410, 430, 450, ...) —
-// detectada do runtime. É o que faz os shaders escalarem: PC 3.3 usa 330,
-// PC 4.5 usa 450.
+
+
+
+
+
+
 int GetGLSLVersion();
 
-// Define a versão GLSL do CONTEXTO criado pela janela (usada como teto:
-// alguns drivers reportam GL_SHADING_LANGUAGE_VERSION maior que o contexto
-// real — ex.: 4.60 num contexto 3.3 — e compilar shader acima da GL real
-// quebra). Chamado pelo Window logo após criar o contexto.
+
+
+
+
 void SetContextGLSLVersion(int glsl);
 
 std::string GetOpenGLVersionString();
 
-// Diagnóstico global de renderização: guarda a ÚLTIMA falha de driver/shader
-// (link, FBO incompleto, glGetError) pra o editor mostrar NA TELA — sem o
-// usuário precisar caçar o log. Vazio = sem erro.
+
+
+
 void SetShaderDiagnostic(const std::string& msg);
 const std::string& GetShaderDiagnostic();
 
@@ -47,10 +47,10 @@ public:
 
     const std::string& GetName() const { return m_Name; }
 
-    // true se o programa foi compilado E vinculado com sucesso. Um Shader
-    // cuja criação falhou ainda tem um m_RendererID não-zero (glCreateProgram
-    // devolve handle mesmo com link quebrado) — IsValid() distingue os dois,
-    // pra um driver que rejeite um shader não quebrar o frame inteiro.
+    
+    
+    
+    
     bool IsValid() const { return m_IsValid; }
 
     static Ref<Shader> CreateFromFiles(const std::string& vertexPath, const std::string& fragmentPath);
@@ -64,7 +64,7 @@ private:
     std::unordered_map<std::string, int> m_UniformLocationCache;
 };
 
-// Biblioteca simples de shaders indexada por nome, usada pelo Renderer.
+
 class ShaderLibrary {
 public:
     void Add(const Ref<Shader>& shader);
@@ -76,4 +76,4 @@ private:
     std::unordered_map<std::string, Ref<Shader>> m_Shaders;
 };
 
-} // namespace kizuri
+} 

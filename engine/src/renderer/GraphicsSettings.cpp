@@ -9,9 +9,9 @@
 namespace kizuri {
 
 void GraphicsSettings::TuneToHardware() {
-    // A engine roda SEMPRE em OpenGL 3.3 core (o caminho comprovado) — um
-    // único conjunto de valores. Padrão conservador (Medium) pra abrir em
-    // qualquer máquina; o usuário sobe o preset se quiser.
+    
+    
+    
     MSAA = 2; ShadowMapSize = 1024; ShadowPCFRadius = 1; SSAOSamples = 16;
     BloomIterations = 3;
     ShadowSoftness = 0.5f;
@@ -31,15 +31,15 @@ void GraphicsSettings::TuneToHardware() {
     SSRMarchDistance = 20.0f;
     TAAEnabled = true;
 
-    // Detecção ANTI-BUG de hardware fraco/antigo (ex.: Fermi GT 4xx/5xx,
-    // iGPUs velhas): os passes temporais/oudos de tela (TAA com histórico em
-    // 16F e SSR) viram "manchas que seguem a câmera" e piscadas nessas
-    // GPUs. Abaixo de OpenGL 4.2 o perfil cai pro modo SAFE: SSR e TAA
-    // desligam por padrão (o usuário religa em Configurações se quiser).
+    
+    
+    
+    
+    
     const char* rend = (const char*)glGetString(GL_RENDERER);
     const char* glv  = (const char*)glGetString(GL_VERSION);
     int gmaj = 0, gmin = 0;
-    if (glv) { // "4.1 NVIDIA ..." ou "3.3.0 NVIDIA ..."
+    if (glv) { 
         const char* p = glv;
         while (*p && !(*p >= '0' && *p <= '9')) ++p;
         if (*p) { gmaj = *p - '0'; p++; if (*p == '.') p++; if (*p >= '0' && *p <= '9') gmin = *p - '0'; }
@@ -194,7 +194,7 @@ void GraphicsSettings::ApplyPreset(QualityPreset preset) {
             BloomIterations = 2;
             break;
         default:
-            break; // Custom: mantém os valores atuais
+            break; 
     }
     Preset = preset;
     Clamp();
@@ -319,4 +319,4 @@ bool LoadGraphicsSettings(const std::string& path, GraphicsSettings& out) {
     }
 }
 
-} // namespace kizuri
+} 

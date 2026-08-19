@@ -4,7 +4,7 @@
 
 namespace kizuri {
 
-// Wrapper fino sobre spdlog com dois canais: Core (engine) e App (jogo/cliente).
+
 class Log {
 public:
     static void Init();
@@ -16,7 +16,7 @@ private:
     static std::shared_ptr<spdlog::logger> s_AppLogger;
 };
 
-} // namespace kizuri
+} 
 
 #define KZ_CORE_TRACE(...)    ::kizuri::Log::Core()->trace(__VA_ARGS__)
 #define KZ_CORE_INFO(...)     ::kizuri::Log::Core()->info(__VA_ARGS__)
@@ -32,14 +32,14 @@ private:
 
 namespace kizuri {
 
-// RAII: loga "entrando em X" no construtor e "saindo de X" no destrutor.
-// Como o log usa flush_on(trace) (grava em disco na hora, sem buffer), se
-// o processo morrer no meio de uma função marcada com KZ_TRACE_SCOPE, a
-// última linha do arquivo de log é sempre "entrando em <função que
-// travou>" — sem precisar de debugger anexado, só olhando o arquivo
-// depois. É o que torna prático caçar crash silencioso (sem exceção, sem
-// mensagem) em ambiente onde não dá pra anexar debugger, tipo builds
-// rodando em máquina/emulador de terceiros.
+
+
+
+
+
+
+
+
 class ScopeTracer {
 public:
     explicit ScopeTracer(const char* name) : m_Name(name) {
@@ -53,9 +53,9 @@ private:
     const char* m_Name;
 };
 
-} // namespace kizuri
+} 
 
-// KZ_TRACE_SCOPE("Classe::Metodo") no topo de uma função cobre entrada E
-// saída com uma linha só — não precisa mais de um par de KZ_CORE_TRACE
-// manual no início e no fim de cada função que a gente queira rastrear.
+
+
+
 #define KZ_TRACE_SCOPE(name) ::kizuri::ScopeTracer kz_scope_tracer_##__LINE__(name)

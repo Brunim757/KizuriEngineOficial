@@ -49,7 +49,7 @@ bool SceneSerializer::Deserialize(const std::string& filepath) {
     return true;
 }
 
-// ---- Carregamento incremental (projetos grandes) ----
+
 
 bool SceneSerializer::BeginDeserializeStepwiseFile(const std::string& filepath) {
     std::ifstream in(filepath);
@@ -74,7 +74,7 @@ bool SceneSerializer::BeginDeserializeStepwise(const json& root) {
 }
 
 void SceneSerializer::FinishStepwise() {
-    // Agora que todo mundo existe, resolve os pais (O(1) por entidade).
+    
     for (auto& [childUUID, parentUUID] : m_ParentOf) {
         Entity child = m_Scene->GetEntityByUUID(UUID(childUUID));
         Entity parent = m_Scene->GetEntityByUUID(UUID(parentUUID));
@@ -85,7 +85,7 @@ void SceneSerializer::FinishStepwise() {
     m_PendingEntities = json();
 }
 
-// Processa até maxEntities entidades; devolve true ao terminar tudo.
+
 bool SceneSerializer::StepDeserialize(int maxEntities, float& outProgress) {
     int done = 0;
     while (m_PendingIndex < m_PendingEntities.size() && done < maxEntities) {
@@ -109,9 +109,9 @@ bool SceneSerializer::StepDeserialize(int maxEntities, float& outProgress) {
     return false;
 }
 
-// Processa entidades até esgotar maxSeconds de trabalho (medido em tempo
-// real): entidades leves (sprites, texto) passam em lote grande, as pesadas
-// (glb/textura grande) são cortadas pelo relógio — a janela nunca trava.
+
+
+
 bool SceneSerializer::StepDeserializeTime(float maxSeconds, float& outProgress) {
     auto start = std::chrono::steady_clock::now();
     const float budgetSeconds = maxSeconds > 0.0f ? maxSeconds : 0.004f;
@@ -126,9 +126,9 @@ bool SceneSerializer::StepDeserializeTime(float maxSeconds, float& outProgress) 
 
         ++m_PendingIndex;
 
-        // Checa o orçamento depois de cada entidade (uma entidade pesada que
-        // estoure o orçamento sozinha encerra o frame mesmo assim — melhor do
-        // que congelar o editor inteiro).
+        
+        
+        
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::steady_clock::now() - start).count() / 1'000'000.0;
         if (elapsed >= budgetSeconds) break;
@@ -144,12 +144,12 @@ bool SceneSerializer::StepDeserializeTime(float maxSeconds, float& outProgress) 
 }
 
 bool SceneSerializer::DeserializeFromJson(const json& root) {
-    // Loop síncrono dos mesmos passos — mantém o comportamento antigo para
-    // quem chama de uma vez (Prefab, Scene::Copy do Play/Stop).
+    
+    
     if (!BeginDeserializeStepwise(root)) return false;
     float progress = 0.0f;
-    while (!StepDeserialize(INT_MAX, progress)) { /* sem limite de entidades */ }
+    while (!StepDeserialize(INT_MAX, progress)) {  }
     return true;
 }
 
-} // namespace kizuri
+} 

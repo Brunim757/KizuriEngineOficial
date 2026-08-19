@@ -8,15 +8,15 @@
 
 #define STB_IMAGE_IMPLEMENTATION_GUARD
 #ifdef STB_IMAGE_IMPLEMENTATION_GUARD
-    // stb_image_impl.cpp já define STB_IMAGE_IMPLEMENTATION; aqui só incluímos o header.
+    
 #endif
 #include <stb_image.h>
 
 namespace kizuri {
 
-// Filtragem anisotrópica (GL_TEXTURE_MAX_ANISOTROPY = 0x84FE): texturas
-// vistas em ângulo ficam nítidas em vez de borradas. Extensão ARB (presente
-// na prática em qualquer driver 3.3+) e núcleo no GL 4.6. Checado uma vez.
+
+
+
 static bool SupportsAnisotropy() {
     static bool s_checked = false, s_supported = false;
     if (!s_checked) {
@@ -30,14 +30,14 @@ static bool SupportsAnisotropy() {
                 while (*v && !(*v >= '0' && *v <= '9')) ++v;
                 if (*v >= '0' && *v <= '9') major = *v - '0';
             }
-            if (major >= 4) s_supported = true; // em 4.x todos os drivers práticos têm
+            if (major >= 4) s_supported = true; 
         }
     }
     return s_supported;
 }
 
 static void ApplyAnisotropy() {
-    if (SupportsAnisotropy()) glTexParameterf(GL_TEXTURE_2D, 0x84FE /*GL_TEXTURE_MAX_ANISOTROPY*/, 8.0f);
+    if (SupportsAnisotropy()) glTexParameterf(GL_TEXTURE_2D, 0x84FE , 8.0f);
 }
 
 Texture2D::Texture2D(uint32_t width, uint32_t height)
@@ -96,7 +96,7 @@ void Texture2D::Bind(uint32_t slot) const {
 Ref<Texture2D> Texture2D::Create(uint32_t width, uint32_t height) { return CreateRef<Texture2D>(width, height); }
 bool Texture2D::SaveToFile(const Ref<Texture2D>& texture, const std::string& path) {
 #if defined(KZ_PLATFORM_ANDROID)
-    // glGetTexImage não existe em GLES — export/editor é recurso de desktop.
+    
     (void)texture; (void)path;
     return false;
 #else
@@ -106,7 +106,7 @@ bool Texture2D::SaveToFile(const Ref<Texture2D>& texture, const std::string& pat
     std::vector<uint8_t> pixels((size_t)w * h * 4);
     glBindTexture(GL_TEXTURE_2D, texture->GetRendererID());
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-    // stbi_write_png espera y=0 no topo; a textura GL tem y=0 embaixo — inverte.
+    
     std::vector<uint8_t> flipped((size_t)w * h * 4);
     for (uint32_t y = 0; y < h; ++y)
         std::memcpy(flipped.data() + (size_t)(h - 1 - y) * w * 4, pixels.data() + (size_t)y * w * 4, (size_t)w * 4);
@@ -127,7 +127,7 @@ Ref<Texture2D> Texture2D::Create(const std::string& path) {
 
 Ref<Texture2D> Texture2D::CreateFromMemory(const void* data, size_t size, const std::string& debugName) {
     int width, height, channels;
-    stbi_set_flip_vertically_on_load(0); // UV glTF: v=0 no topo — nada de flip
+    stbi_set_flip_vertically_on_load(0); 
     stbi_uc* pixels = stbi_load_from_memory((const stbi_uc*)data, (int)size, &width, &height, &channels, 0);
     if (!pixels) {
         KZ_CORE_ERROR("Falha ao carregar textura em memória: {0}", debugName.empty() ? "(sem nome)" : debugName);
@@ -149,4 +149,4 @@ Ref<Texture2D> Texture2D::CreateFromMemory(const void* data, size_t size, const 
     return tex;
 }
 
-} // namespace kizuri
+} 

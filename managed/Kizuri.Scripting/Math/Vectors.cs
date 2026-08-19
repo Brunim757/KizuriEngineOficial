@@ -1,5 +1,5 @@
-// Math — tipos de matemática públicos do jogo. Nada de glm: A engine expõe
-// só números; estas structs são o "Vector3" do Kizuri C#.
+
+
 namespace Kizuri.Math;
 
 public struct Vector2

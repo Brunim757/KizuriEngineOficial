@@ -21,11 +21,11 @@ void ImGuiLayer::OnAttach() {
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
-    // Sem imgui.ini: o layout de painéis é sempre o padrão embutido no
-    // código (ver EditorLayer::DrawDockspace), não algo que persiste entre
-    // sessões num arquivo solto ao lado do executável. Isso também evita
-    // que um layout salvo de uma versão antiga do editor (com painéis que
-    // não existem mais) deixe a UI num estado inconsistente.
+    
+    
+    
+    
+    
     io.IniFilename = nullptr;
 
     LoadFonts();
@@ -34,19 +34,19 @@ void ImGuiLayer::OnAttach() {
     auto* window = static_cast<GLFWwindow*>(Application::Get().GetWindow().GetNativeWindow());
     ImGui_ImplGlfw_InitForOpenGL(window, true);
 
-    // A diretiva GLSL passada aqui PRECISA bater com o contexto que a
-    // Window realmente conseguiu criar (Window::Init tenta 4.5 -> 4.1 ->
-    // 3.3 core, na ordem, e fica com a primeira que a GPU/driver aceitar).
-    // Antes disso era fixo em "#version 450 core", ou seja: numa máquina
-    // que só conseguiu 3.3 core (comum em iGPU antiga, área de trabalho
-    // remota, ou camadas de tradução tipo Zink/Vortek/Winlator — exatamente
-    // o cenário do log que motivou essa correção), o backend do ImGui
-    // tentava compilar um shader GLSL 450 sobre um contexto 3.3. Alguns
-    // drivers tolerantes (Mesa/zink) deixam passar; drivers rígidos
-    // (NVIDIA/AMD/Intel oficiais) rejeitam — falha de compilação de shader
-    // silenciosa na melhor hipótese, comportamento indefinido na pior.
-    // As shaders do ImGui em si não usam nenhum recurso exclusivo de GLSL
-    // 4.x, então é seguro baixar a diretiva pra casar com o contexto real.
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     const auto& win = Application::Get().GetWindow();
     const char* glslVersion = "#version 330 core";
     if (win.GetGLVersionMajor() > 4 || (win.GetGLVersionMajor() == 4 && win.GetGLVersionMinor() >= 5))
@@ -58,32 +58,32 @@ void ImGuiLayer::OnAttach() {
     ImGui_ImplOpenGL3_Init(glslVersion);
 }
 
-// Fontes JetBrains Mono (SIL OFL) — dão à Kizuri Engine uma identidade de
-// "ferramenta de dev" própria, em vez da fonte padrão do ImGui (Proggy
-// Clean), que é a mesma usada por qualquer app genérico feito com ImGui.
-// Os .ttf em engine/resources/fonts/ são convertidos em arrays de bytes C++
-// em tempo de build (ver engine/CMakeLists.txt + cmake/EmbedResource.cmake)
-// e compilados direto no executável — não há mais nenhuma pasta "assets"
-// pra distribuir junto do binário nem caminho relativo pra resolver em
-// runtime.
+
+
+
+
+
+
+
+
 void ImGuiLayer::LoadFonts() {
     ImGuiIO& io = ImGui::GetIO();
 
-    // Intervalo de glifos: Latin-1 + setas + símbolos comuns.
-    // Sem as setas (←↑→↓), o Content Browser mostrava "?" no botão "← Voltar".
+    
+    
     static const ImWchar ranges[] = {
-        0x0020, 0x00FF,  // Latin básico + acentos (pt-BR)
-        0x2010, 0x2027,  // tipografia: – — ‘ ’ “ ” …
-        0x2190, 0x21FF,  // setas: ← ↑ → ↓ ↩ ↪ etc
+        0x0020, 0x00FF,  
+        0x2010, 0x2027,  
+        0x2190, 0x21FF,  
         0,
     };
 
     ImFontConfig config;
     config.OversampleH = 2;
     config.OversampleV = 2;
-    // Os dados ficam em arrays `static`/`inline const` com duração de todo
-    // o programa, então o ImGui não precisa (e não deve) copiá-los nem
-    // tentar liberá-los quando o atlas de fontes for destruído.
+    
+    
+    
     config.FontDataOwnedByAtlas = false;
 
     m_FontRegular = io.Fonts->AddFontFromMemoryTTF(
@@ -106,10 +106,10 @@ void ImGuiLayer::LoadFonts() {
     io.FontDefault = m_FontRegular;
 }
 
-// Roda sempre dentro do binário da engine (é aqui que a função existe de
-// verdade — em build SHARED, o executável só enxerga o import/thunk pra
-// isso, nunca uma cópia inline própria), então ImGui::GetCurrentContext()
-// aqui sempre lê o GImGui que ImGuiLayer::OnAttach() de fato inicializou.
+
+
+
+
 ImGuiContext* ImGuiLayer::GetContext() {
     return ImGui::GetCurrentContext();
 }
@@ -168,14 +168,14 @@ void ImGuiLayer::End() {
     KZ_CORE_TRACE("ImGuiLayer::End — fim");
 }
 
-// Paleta escura com destaque em "vermelho torii" — identidade visual da Kizuri Engine.
+
 void ImGuiLayer::SetDarkThemeKizuri() {
     ImGuiStyle& style = ImGui::GetStyle();
 
-    // Proporções mais retas/técnicas (quase sem arredondamento) combinam
-    // com a fonte monoespaçada e reforçam a sensação de "ferramenta",
-    // em vez do arredondamento suave padrão do ImGui que aparece em
-    // qualquer app feito com a lib sem nenhum ajuste.
+    
+    
+    
+    
     style.WindowRounding = 0.0f;
     style.ChildRounding = 0.0f;
     style.FrameRounding = 2.0f;
@@ -219,4 +219,4 @@ void ImGuiLayer::SetDarkThemeKizuri() {
     colors[ImGuiCol_TitleBgCollapsed] = ImVec4{ 0.08f, 0.08f, 0.09f, 1.0f };
 }
 
-} // namespace kizuri
+} 

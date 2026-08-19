@@ -10,7 +10,7 @@ namespace kizuri {
 
 namespace {
 
-// Aplica o canal no tempo t (linear pra T/S, slerp pra R).
+
 glm::vec4 SampleChannel(const AnimChannel& ch, float time) {
     if (ch.Times.size() == 1) return ch.Values[0];
     size_t hi = 0;
@@ -27,9 +27,9 @@ glm::vec4 SampleChannel(const AnimChannel& ch, float time) {
     return glm::mix(ch.Values[hi], ch.Values[hi + 1], f);
 }
 
-} // namespace
+} 
 
-// Definido abaixo (compartilhado entre o caminho de arquivo e o de memória).
+
 static Ref<SkinData> BuildSkinFromGLTF(cgltf_data* data, const std::string& label);
 
 Ref<SkinData> SkinData::CreateFromGLTF(const std::string& path) {
@@ -66,7 +66,7 @@ Ref<SkinData> SkinData::CreateFromGLTFMemory(const void* data, std::size_t size)
         KZ_CORE_ERROR("Animator: falha ao parsear glTF em memória (cgltf erro {0}).", (int)result);
         return nullptr;
     }
-    result = cgltf_load_buffers(&options, gltf, nullptr); // .glb: buffers vêm do chunk BIN
+    result = cgltf_load_buffers(&options, gltf, nullptr); 
     if (result != cgltf_result_success) {
         KZ_CORE_ERROR("Animator: falha ao carregar buffers do glTF em memória (cgltf erro {0}).", (int)result);
         cgltf_free(gltf);
@@ -80,7 +80,7 @@ static Ref<SkinData> BuildSkinFromGLTF(cgltf_data* data, const std::string& labe
     if (data->skins_count == 0) {
         cgltf_free(data);
         KZ_CORE_WARN("Animator: '{0}' não tem skin — sem esqueleto pra animar.", label);
-        return skin; // vazio (Joints==0) => entidade segue estática
+        return skin; 
     }
 
     const cgltf_skin& gskin = data->skins[0];
@@ -94,7 +94,7 @@ static Ref<SkinData> BuildSkinFromGLTF(cgltf_data* data, const std::string& labe
     skin->Joints.resize(jointCount);
     skin->Order.reserve(jointCount);
 
-    // Juntas: TRS default do nó + inverse bind.
+    
     for (cgltf_size i = 0; i < jointCount; ++i) {
         const cgltf_node* node = gskin.joints[i];
         SkinJoint& j = skin->Joints[i];
@@ -103,7 +103,7 @@ static Ref<SkinData> BuildSkinFromGLTF(cgltf_data* data, const std::string& labe
         j.R = glm::quat(node->rotation[3], node->rotation[0], node->rotation[1], node->rotation[2]);
         j.S = { node->scale[0], node->scale[1], node->scale[2] };
 
-        // inverse bind: vem do accessor da skin, quando existir
+        
         const cgltf_accessor* ibm = gskin.inverse_bind_matrices;
         if (ibm && i < ibm->count) {
             float m[16];
@@ -111,7 +111,7 @@ static Ref<SkinData> BuildSkinFromGLTF(cgltf_data* data, const std::string& labe
             j.InverseBind = glm::make_mat4(m);
         }
 
-        // parent: procura o nó pai dentro da lista de juntas
+        
         if (node->parent) {
             for (cgltf_size p = 0; p < jointCount; ++p) {
                 if (gskin.joints[p] == node->parent) { j.Parent = (int)p; break; }
@@ -119,7 +119,7 @@ static Ref<SkinData> BuildSkinFromGLTF(cgltf_data* data, const std::string& labe
         }
     }
 
-    // Ordem topológica (pai antes do filho) pra compor globais em 1 passe.
+    
     std::vector<bool> used(jointCount, false);
     for (int pass = 0; pass < (int)jointCount; ++pass) {
         for (cgltf_size i = 0; i < jointCount; ++i) {
@@ -132,7 +132,7 @@ static Ref<SkinData> BuildSkinFromGLTF(cgltf_data* data, const std::string& labe
         }
     }
 
-    // Clips: um por animation do arquivo.
+    
     for (cgltf_size a = 0; a < data->animations_count; ++a) {
         const cgltf_animation& ganim = data->animations[a];
         AnimationClip clip;
@@ -141,7 +141,7 @@ static Ref<SkinData> BuildSkinFromGLTF(cgltf_data* data, const std::string& labe
         for (cgltf_size c = 0; c < ganim.channels_count; ++c) {
             const cgltf_animation_channel& chan = ganim.channels[c];
             const cgltf_animation_sampler& samp = *chan.sampler;
-            if (chan.target_path == cgltf_animation_path_type_weights) continue; // morph (fora do escopo)
+            if (chan.target_path == cgltf_animation_path_type_weights) continue; 
 
             int joint = -1;
             for (cgltf_size j = 0; j < jointCount; ++j)
@@ -196,7 +196,7 @@ bool SkinData::Evaluate(const std::string& clipName, float time, glm::mat4* outM
     int n = (int)Joints.size();
     int count = std::min(n, maxJoints);
 
-    // TRS por junta, começando da pose de repouso do nó.
+    
     std::vector<glm::vec3> t(n), s(n, glm::vec3(1.0f));
     std::vector<glm::quat> r(n);
     for (int i = 0; i < n; ++i) {
@@ -219,7 +219,7 @@ bool SkinData::Evaluate(const std::string& clipName, float time, glm::mat4* outM
         }
     }
 
-    // Globais na ordem topológica, depois joint matrix = global * inverse bind.
+    
     std::vector<glm::mat4> global(n);
     for (int idx = 0; idx < (int)Order.size(); ++idx) {
         int i = Order[(size_t)idx];
@@ -232,9 +232,9 @@ bool SkinData::Evaluate(const std::string& clipName, float time, glm::mat4* outM
     return true;
 }
 
-// Igual ao Evaluate, mas devolve as matrizes GLOBAIS das juntas (SEM o
-// inverse bind) — o que o blend de animação e o IK precisam pra misturar/
-// corrigir a pose antes do skinning final.
+
+
+
 bool SkinData::EvaluateGlobal(const std::string& clipName, float time, glm::mat4* outMatrices, int maxJoints) const {
     if (outMatrices == nullptr || Joints.empty()) return false;
 
@@ -274,4 +274,4 @@ bool SkinData::EvaluateGlobal(const std::string& clipName, float time, glm::mat4
     return true;
 }
 
-} // namespace kizuri
+} 

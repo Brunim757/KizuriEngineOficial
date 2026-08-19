@@ -29,12 +29,12 @@ static ProjectMode ModeFromString(const std::string& s) {
     return ProjectMode::Empty;
 }
 
-// Escreve um Source/ que já compila sozinho — não só a pasta vazia. Desde a
-// v2 o jogo é um assembly .NET (C#): o csproj referencia a Kizuri.Scripting
-// via a raiz do checkout da engine (mesma ideia do antigo KIZURI_ENGINE_DIR
-// do CMake), e um script de exemplo já registrado aparece no Inspetor.
-// OutputType Exe de propósito: só aplicações geram o .runtimeconfig.json/
-// .deps.json que o host CoreCLR embutido (CoreCLRHost) usa pra inicializar.
+
+
+
+
+
+
 static void WriteSourceTemplate(const fs::path& sourceDir) {
     std::ofstream csproj(sourceDir / "Game.csproj");
     csproj <<
@@ -67,8 +67,8 @@ static void WriteSourceTemplate(const fs::path& sourceDir) {
         "</Project>\n";
     csproj.close();
 
-    // Main exigida pelo OutputType Exe (o que gera o runtimeconfig.json/
-    // deps.json). Nenhuma lógica roda aqui — quem comanda é a engine.
+    
+    
     std::ofstream program(sourceDir / "Program.cs");
     program <<
         "// Main de aplicação exigida pelo OutputType Exe (o que gera o\n"
@@ -132,11 +132,11 @@ Ref<Project> Project::New(const std::string& directory, const std::string& name,
     fs::create_directories(fs::path(directory) / project->m_Config.AssetDirectory, ec);
     if (ec) KZ_CORE_ERROR("Falha ao criar o diretório de assets do projeto: {0}", ec.message());
 
-    // Source/ com um Game.csproj e um script de exemplo já funcionando — não
-    // só a pasta vazia. É o que faz "o C# vem no projeto" ser uma frase
-    // concreta: compila esse diretório sozinho (com -p:EngineDir apontando
-    // pro checkout da engine) e já tem um Game.dll pronto pra carregar pelo
-    // menu Arquivo > Carregar GameModule.
+    
+    
+    
+    
+    
     fs::path sourceDir = fs::path(directory) / "Source";
     fs::create_directories(sourceDir, ec);
     if (!ec) WriteSourceTemplate(sourceDir);
@@ -227,7 +227,7 @@ std::string Project::MakeRelativePath(const std::string& path) {
 std::string Project::ResolvePath(const std::string& path) {
     if (path.empty()) return path;
     if (path.rfind("builtin:", 0) == 0) return path;
-    if (path.rfind("kzres://", 0) == 0) return path; // recurso embutido, sem resolução de disco
+    if (path.rfind("kzres://", 0) == 0) return path; 
 
     fs::path p(path);
     if (p.is_absolute()) return path;
@@ -241,4 +241,4 @@ std::string Project::ResolvePath(const std::string& path) {
     return path;
 }
 
-} // namespace kizuri
+} 

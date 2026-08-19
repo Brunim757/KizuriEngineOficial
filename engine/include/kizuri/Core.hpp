@@ -1,7 +1,7 @@
 #pragma once
 
-// Kizuri Engine - Core.hpp
-// Ponto único de include para tipos e macros fundamentais da engine.
+
+
 
 #include <memory>
 #include <string>
@@ -32,7 +32,7 @@ constexpr Ref<T> CreateRef(Args&&... args) { return std::make_shared<T>(std::for
 using EntityHandle = std::uint32_t;
 constexpr EntityHandle kInvalidEntity = 0;
 
-} // namespace kizuri
+} 
 
 #include "kizuri/core/Log.hpp"
 

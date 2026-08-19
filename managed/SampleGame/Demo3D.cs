@@ -1,10 +1,10 @@
 using Kizuri;
 using Kizuri.Math;
 
-// Demo3D — exercita a API 3D da v0.2: luzes dinâmicas (direcional + ponto),
-// mesh renderer com material PBR, rotação/escala em runtime e parâmetros de
-// câmera. O cubo usa o primeiro asset real da engine (content/models/Cube.glb
-// importado via glTF) quando o path é apontado; por padrão usa o builtin.
+
+
+
+
 	public sealed class Demo3D : Script
 {
 	private Entity _cube;
@@ -16,23 +16,23 @@ using Kizuri.Math;
 
 	public override void OnCreate()
 	{
-		// Sol (direcional): a 1ª luz direcional da cena projeta sombra (CSM).
+		
 		var sun = Scene.CreateEntity("Sol");
 		sun.AddLight(LightType.Directional, 1f, 0.95f, 0.85f, intensity: 2f);
 		sun.SetRotation(new Vector3(46f, 23f, 0f));
 
-		// Luz pontual colorida com sombra (efeito de fogo/magia).
+		
 		var point = Scene.CreateEntity("LuzPonto");
 		point.AddLight(LightType.Point, 1f, 0.3f, 0.1f, intensity: 5f, range: 8f, castsShadow: true);
 		point.SetPosition(new Vector3(2f, 1.5f, 0f));
 
-		// Cubo PBR que gira e pulsa.
+		
 		_cube = Scene.CreateEntity("Cubo");
 		_cube.AddMeshRenderer("builtin:cube");
 		_cube.SetMaterial(0.9f, 0.4f, 0.1f, metallic: 0.1f, roughness: 0.35f);
 		_cube.SetPosition(new Vector3(0f, 1f, 0f));
 
-		// Física 3D (Bullet3): caixa dinâmica que cai e leva impulso.
+		
 		_physicsBox = Scene.CreateEntity("CaixaFisica");
 		_physicsBox.AddMeshRenderer("builtin:cube");
 		_physicsBox.SetMaterial(0.3f, 0.6f, 0.9f, metallic: 0.8f, roughness: 0.2f);
@@ -40,7 +40,7 @@ using Kizuri.Math;
 		_physicsBox.AddRigidbody3D(BodyType3D.Dynamic, 1f);
 		_physicsBox.AddBoxCollider3D(0.5f, 0.5f, 0.5f);
 
-		// Bola que gira com torque (valida ApplyTorque / angular velocity).
+		
 		_spinningBall = Scene.CreateEntity("BolaGirando");
 		_spinningBall.AddMeshRenderer("builtin:sphere");
 		_spinningBall.SetMaterial(0.2f, 0.9f, 0.4f, metallic: 0.3f, roughness: 0.4f);
@@ -48,11 +48,11 @@ using Kizuri.Math;
 		_spinningBall.AddRigidbody3D(BodyType3D.Dynamic, 1f);
 		_spinningBall.AddSphereCollider3D(0.5f);
 
-		// Ajusta a câmera de perspectiva da cena em runtime.
+		
 		var cam = Scene.GetPrimaryCamera();
 		if (cam.IsValid) cam.SetCamera(60f, 0.05f, 500f);
 
-		// Busca por nome (valida Scene.Find) + renomeia em runtime.
+		
 		var found = Scene.Find("Cubo");
 		if (found.IsValid) found.Name = "Cubo Renomeado";
 		_spinningBall.TryGetWorldPosition(out var ballPos);
@@ -72,11 +72,11 @@ using Kizuri.Math;
 			_cube.SetScale(new Vector3(1f + (float)System.Math.Sin(_t) * 0.2f, 1f, 1f));
 		}
 
-		// De tempos em tempos dá um impulso pra cima na caixa (Bullet3).
+		
 		_impulseTimer -= deltaSeconds;
 		if (Input.IsKeyDown(Key.Space))
 		{
-			_impulseTimer = 3f; // espaço dispara imediatamente
+			_impulseTimer = 3f; 
 			if (_physicsBox.IsValid) _physicsBox.ApplyImpulse(new Vector3(0f, 8f, 0f));
 		}
 		if (_impulseTimer <= 0f && _physicsBox.IsValid)
@@ -89,7 +89,7 @@ using Kizuri.Math;
 			}
 		}
 
-		// Bola gira com torque (ApplyTorque) — valida a física angular.
+		
 		if (_spinningBall.IsValid)
 		{
 			_spinningBall.ApplyTorque(new Vector3(2f, 4f, 1f) * deltaSeconds);
@@ -97,7 +97,7 @@ using Kizuri.Math;
 				_spinningBall.SetMaterial(0.2f, 0.9f, 0.4f, metallic: 0.3f, roughness: 0.4f);
 		}
 
-		// Raycast 3D de exemplo: raio pra baixo, loga o que acerta.
+		
 		_rayTimer -= deltaSeconds;
 		if (_rayTimer <= 0f)
 		{

@@ -6,8 +6,8 @@
 
 namespace kizuri {
 
-// Uma Layer representa um "módulo" da aplicação (jogo, UI, editor, debug overlay...)
-// que recebe update, render e eventos em ordem definida pela LayerStack.
+
+
 class Layer {
 public:
     explicit Layer(std::string name = "Layer") : m_DebugName(std::move(name)) {}
@@ -42,4 +42,4 @@ private:
     unsigned int m_LayerInsertIndex = 0;
 };
 
-} // namespace kizuri
+} 

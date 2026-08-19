@@ -24,7 +24,7 @@ void NavGrid::SetBlocked(int x, int z, bool blocked) {
 }
 
 bool NavGrid::IsBlocked(int x, int z) const {
-    if (!IsValidCell(x, z)) return true; // fora da grade = bloqueado
+    if (!IsValidCell(x, z)) return true; 
     return m_Blocked[CellIndex(x, z)] != 0;
 }
 
@@ -52,10 +52,10 @@ void NavGrid::RasterizeBox(const glm::vec3& center, const glm::vec3& halfExtents
             if (IsValidCell(x, z)) m_Blocked[CellIndex(x, z)] = 1;
 }
 
-// ---------------------------------------------------------------------------
-// A* em grade com 8 direções (4 ortogonais + 4 diagonais), custo pela
-// distância Euclidiana. Heurística = distância diagonal otimizada.
-// ---------------------------------------------------------------------------
+
+
+
+
 struct AStarNode {
     int x, z;
     float g, f;
@@ -77,7 +77,7 @@ std::vector<glm::vec3> NavGrid::FindPath(const glm::vec3& from, const glm::vec3&
     std::vector<AStarNode> nodes((size_t)m_Width * m_Depth);
     for (auto& n : nodes) { n.opened = false; n.closed = false; n.g = n.f = 1e18f; }
 
-    // Índice linear de célula.
+    
     auto idx = [this](int x, int z) { return (size_t)z * m_Width + x; };
     AStarNode& start = nodes[idx(sx, sz)];
     start.x = sx; start.z = sz; start.g = 0.0f;
@@ -100,7 +100,7 @@ std::vector<glm::vec3> NavGrid::FindPath(const glm::vec3& from, const glm::vec3&
         size_t i = open.top().second;
         open.pop();
         AStarNode& cur = nodes[i];
-        if (f > cur.f + 0.0001f) continue; // entrada obsoleta
+        if (f > cur.f + 0.0001f) continue; 
         if (cur.closed) continue;
         cur.closed = true;
         if (cur.x == tx && cur.z == tz) { found = true; break; }
@@ -109,7 +109,7 @@ std::vector<glm::vec3> NavGrid::FindPath(const glm::vec3& from, const glm::vec3&
             int nx = cur.x + dx[d];
             int nz = cur.z + dz[d];
             if (!IsValidCell(nx, nz) || IsBlocked(nx, nz)) continue;
-            // Diagonal não corta vértice de célula bloqueada (move mais limpo).
+            
             if (d >= 4) {
                 if (IsBlocked(cur.x + dx[d], cur.z) || IsBlocked(cur.x, cur.z + dz[d])) continue;
             }
@@ -129,7 +129,7 @@ std::vector<glm::vec3> NavGrid::FindPath(const glm::vec3& from, const glm::vec3&
 
     if (!found) return result;
 
-    // Reconstrói do destino até a origem.
+    
     std::vector<std::pair<int, int>> cells;
     int cx = tx, cz = tz;
     while (!(cx == sx && cz == sz)) {
@@ -137,13 +137,13 @@ std::vector<glm::vec3> NavGrid::FindPath(const glm::vec3& from, const glm::vec3&
         const AStarNode& n = nodes[idx(cx, cz)];
         cx = n.parentX; cz = n.parentZ;
     }
-    // Push reverso da origem (excluída) até o destino.
+    
     for (auto it = cells.rbegin(); it != cells.rend(); ++it)
         result.push_back(CellToWorld(it->first, it->second));
     return result;
 }
 
-// Line of sight por Bresenham na grade.
+
 bool NavGrid::HasLineOfSight(const glm::vec3& a, const glm::vec3& b) const {
     int ax, az, bx, bz;
     if (!WorldToCell(a, ax, az) || !WorldToCell(b, bx, bz)) return false;
@@ -170,12 +170,12 @@ std::vector<glm::vec3> NavGrid::SmoothPath(const std::vector<glm::vec3>& path) c
     result.push_back(path.front());
     size_t last = 0;
     for (size_t i = 1; i < path.size(); ++i) {
-        if (HasLineOfSight(path[last], path[i])) continue; // ainda vê direto — avança
-        result.push_back(path[i - 1]); // waypoint anterior é virada
+        if (HasLineOfSight(path[last], path[i])) continue; 
+        result.push_back(path[i - 1]); 
         last = i - 1;
     }
     result.push_back(path.back());
     return result;
 }
 
-} // namespace kizuri
+} 

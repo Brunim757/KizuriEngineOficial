@@ -1,6 +1,6 @@
-/**
- * SPDX-License-Identifier: (WTFPL OR CC0-1.0) AND Apache-2.0
- */
+
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +15,7 @@
 #define GLAD_IMPL_UTIL_SSCANF sscanf
 #endif
 
-#endif /* GLAD_IMPL_UTIL_C_ */
+#endif 
 
 #ifdef __cplusplus
 extern "C" {

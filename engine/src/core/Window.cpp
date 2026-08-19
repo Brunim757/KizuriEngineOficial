@@ -21,12 +21,12 @@
 namespace kizuri {
 
 #if defined(KZ_PLATFORM_ANDROID)
-// Converte os eventos brutos do android_main (AndroidPlatform) nos eventos
-// Kizuri equivalentes (KeyPressed/MouseButton/Resize), igual GLFW faria.
+
+
 void Window::Init(const WindowProps& props) {
     m_Data.Title = props.Title;
 
-    // ---- registra a ponte de eventos (android_main alimenta a fila) ----
+    
     AndroidPlatform::SetEventHandler([](void* userData, uint32_t type, int keyCode, int action,
                                         float x, float y) {
         auto& data = *(WindowData*)userData;
@@ -85,8 +85,8 @@ void Window::Init(const WindowProps& props) {
         std::exit(1);
     }
 
-    // Config ES 3.x: RGBA8 + depth24 + MSAA 4. Cai pra ES 2 se o driver só
-    // tiver isso (a engine não é testada em ES2; melhor telas com aviso).
+    
+    
     EGLint configAttribs[] = {
         EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
         EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
@@ -99,7 +99,7 @@ void Window::Init(const WindowProps& props) {
     EGLConfig config = nullptr;
     eglChooseConfig(display, configAttribs, &config, 1, &configCount);
     if (configCount == 0) {
-        // Sem MSAA no driver: tenta sem antialias.
+        
         EGLint fallbackAttribs[] = {
             EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
             EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
@@ -149,8 +149,8 @@ void Window::Init(const WindowProps& props) {
     m_GLVersionMajor = 3;
     m_GLVersionMinor = 0;
 
-    // Tetos: GLSL ES 300 (a transformação #version em Shader.cpp cuida do
-    // resto — "330 core" vira "300 es" + precision).
+    
+    
     kizuri::SetContextGLSLVersion(300);
 
     int gladOk = gladLoadGL((GLADloadfunc)eglGetProcAddress);
@@ -181,16 +181,16 @@ void Window::DestroyAndroidEGLSurface() {
 void Window::HandleAndroidSurfaceChanged(void* nativeWindow) {
     ANativeWindow* window = (ANativeWindow*)nativeWindow;
     if (!window) {
-        // Tela destruída (app em background / rotação): derruba a superfície.
+        
         DestroyAndroidEGLSurface();
         return;
     }
     if (!m_EGLDisplay || !m_EGLContext) {
-        // A janela ainda não foi criada (Init roda depois do primeiro
-        // INIT_WINDOW) — nada a fazer; o Init cuida da superfície.
+        
+        
         return;
     }
-    // (Re)cria a superfície EGL sobre a ANativeWindow nova.
+    
     DestroyAndroidEGLSurface();
     EGLSurface surface = eglCreateWindowSurface((EGLDisplay)m_EGLDisplay, (EGLConfig)m_EGLConfig,
                                                 window, nullptr);
@@ -256,17 +256,17 @@ bool Window::IsMaximized() const { return false; }
 #else
 #endif
 
-// Mostra um popup nativo do sistema operacional. Necessário porque em
-// ambientes sem console visível (ex: emuladores como Winlator, ou o app
-// aberto por duplo-clique sem terminal) uma mensagem de log não é vista
-// por ninguém — o usuário só vê "nada abriu".
+
+
+
+
 #if !defined(KZ_PLATFORM_ANDROID)
 static void ShowFatalErrorPopup(const std::string& title, const std::string& message) {
 #if defined(_WIN32)
-    // MessageBoxA interpreta os bytes pela ANSI codepage do sistema (ex: CP-1252), não como
-    // UTF-8 — como as strings no código-fonte SÃO UTF-8 (acentos, travessão), isso produzia
-    // "NÃ£o foi possÃ-vel..." em vez de "Não foi possível...". MessageBoxW não tem esse
-    // problema: precisa só converter UTF-8 -> UTF-16 antes.
+    
+    
+    
+    
     auto toWide = [](const std::string& utf8) -> std::wstring {
         if (utf8.empty()) return std::wstring();
         int len = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), (int)utf8.size(), nullptr, 0);
@@ -285,7 +285,7 @@ static uint8_t s_GLFWWindowCount = 0;
 static void GLFWErrorCallback(int error, const char* description) {
     KZ_CORE_ERROR("Erro do GLFW ({0}): {1}", error, description);
 }
-#endif // !KZ_PLATFORM_ANDROID
+#endif 
 
 Window::Window(const WindowProps& props) {
     Init(props);
@@ -295,10 +295,10 @@ Window::~Window() {
     Shutdown();
 }
 
-// ===========================================================================
-// Backend desktop: GLFW + OpenGL 3.3 core (Win32/Linux/macOS). No Android a
-// implementação está no bloco #else do topo (EGL direto) — ver acima.
-// ===========================================================================
+
+
+
+
 #if !defined(KZ_PLATFORM_ANDROID)
 void Window::Init(const WindowProps& props) {
     m_Data.Title = props.Title;
@@ -322,9 +322,9 @@ void Window::Init(const WindowProps& props) {
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 #endif
 
-    // Responsividade: uma janela maior que a área de trabalho do monitor
-    // primário fica cortada/sem acesso às bordas ("a engine só funciona em
-    // resolução grande"). Limita o tamanho pedido ao work area e centraliza.
+    
+    
+    
     int winW = (int)props.Width, winH = (int)props.Height;
     {
         GLFWmonitor* monitor = glfwGetPrimaryMonitor();
@@ -346,12 +346,12 @@ void Window::Init(const WindowProps& props) {
     m_Data.Width = (uint32_t)winW;
     m_Data.Height = (uint32_t)winH;
 
-    // A engine roda SEMPRE em OpenGL 3.3 core: é o caminho comprovado e
-    // estável em QUALQUER máquina (Wine, iGPU, VM, driver novo) — sem a saga
-    // de viewport preto de drivers que anunciam GLSL 4.x e rejeitam os
-    // shaders. Não há mais features de outras versões no código (PCSS, sombra
-    // de luz pontual e SSR foram REMOVIDOS) — mesmo num PC com OpenGL 4.5/4.6
-    // o contexto pedido é só 3.3 e os shaders são #version 330 core.
+    
+    
+    
+    
+    
+    
     const int contextVersions[][2] = {
         {3, 3}
     };
@@ -362,9 +362,9 @@ void Window::Init(const WindowProps& props) {
         if (m_Window) {
             m_GLVersionMajor = version[0];
             m_GLVersionMinor = version[1];
-            // Trava a GLSL no teto da versão pedida (3.3 -> 330, 4.0 -> 400,
-            // 4.5 -> 450, ...). Alguns drivers reportam GLSL maior que o
-            // contexto real; compilar acima da GL quebra os shaders.
+            
+            
+            
             kizuri::SetContextGLSLVersion(version[0] == 3 ? 330 : version[0] * 100 + version[1] * 10);
             KZ_CORE_INFO("Contexto OpenGL {0}.{1} core criado com sucesso.", version[0], version[1]);
             break;
@@ -373,8 +373,8 @@ void Window::Init(const WindowProps& props) {
     }
 
     if (m_Window) {
-        // Ícone da janela (torii da marca): embutido no binário — o ícone do
-        // sisteminha (taskbar/alt-tab) funciona até sem arquivo externo.
+        
+        
         GLFWimage icon;
         icon.width = kizuri::windowicon::kWidth;
         icon.height = kizuri::windowicon::kHeight;
@@ -426,7 +426,7 @@ void Window::Init(const WindowProps& props) {
     glfwSetWindowUserPointer(m_Window, &m_Data);
     SetVSync(props.VSync);
 
-    // ---- callbacks GLFW -> eventos Kizuri ----
+    
     glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* w, int width, int height) {
         auto& data = *(WindowData*)glfwGetWindowUserPointer(w);
         data.Width = width; data.Height = height;
@@ -469,15 +469,15 @@ void Window::Init(const WindowProps& props) {
         if (data.EventCallback) data.EventCallback(e);
     });
 
-    // Drop de arquivos do SISTEMA (Explorer/gerenciador) na janela: guarda
-    // os caminhos — o editor consome depois no OnUpdate (cria entidades na
-    // posição do mouse). É o que permite arrastar um .glb/.png do Windows
-    // direto pra cena, além do arrasto interno do Content Browser.
+    
+    
+    
+    
     glfwSetDropCallback(m_Window, [](GLFWwindow* w, int count, const char** paths) {
         auto& data = *(WindowData*)glfwGetWindowUserPointer(w);
         if (!paths || count <= 0) return;
-        // Fila limitada a 64 caminhos — o editor drena no OnUpdate; se o
-        // usuário soltar 10.000 arquivos, não cresce sem limite (memória).
+        
+        
         constexpr size_t kMaxPendingDrops = 64;
         for (int i = 0; i < count; ++i) {
             if (!paths[i]) continue;
@@ -542,6 +542,6 @@ bool Window::IsMaximized() const {
     return glfwGetWindowAttrib(m_Window, GLFW_MAXIMIZED) != 0;
 }
 
-#endif // !KZ_PLATFORM_ANDROID
+#endif 
 
-} // namespace kizuri
+} 

@@ -4,7 +4,7 @@
 #include <mutex>
 #include <cstring>
 
-// stb_image: decodificação (a implementação fica no stb_image_impl.cpp).
+
 #include <stb_image.h>
 
 namespace kizuri {
@@ -33,14 +33,14 @@ void AssetManager::Clear() {
     s_Meshes.clear();
 }
 
-// ---- Streaming assíncrono de texturas (pilar AAA v0.34) --------------------
+
 namespace {
 
 struct CompletedTexture {
     std::string Path;
     AssetManager::TextureCallback Callback;
     int Width = 0, Height = 0, Channels = 0;
-    std::vector<unsigned char> Pixels; // RGBA já convertido
+    std::vector<unsigned char> Pixels; 
 };
 
 std::mutex s_CompletedMutex;
@@ -48,21 +48,21 @@ std::vector<CompletedTexture> s_Completed;
 std::vector<std::thread> s_Workers;
 std::mutex s_WorkersMutex;
 
-} // namespace
+} 
 
 bool AssetManager::LoadTextureAsync(const std::string& path, TextureCallback callback) {
     if (path.empty()) return false;
 
-    // Já em cache (ou em carregamento): devolve na hora via callback síncrono.
+    
     auto it = s_Textures.find(path);
     if (it != s_Textures.end()) {
         if (callback) callback(it->second);
         return true;
     }
 
-    // Decodifica numa thread de trabalho (só CPU — sem GL, seguro).
+    
     std::thread worker([path, callback]() {
-        // stbi tem um flip global; reaplica igual o Texture2D(path) faz.
+        
         stbi_set_flip_vertically_on_load(1);
         int w = 0, h = 0, ch = 0;
         stbi_uc* data = stbi_load(path.c_str(), &w, &h, &ch, 4);
@@ -89,7 +89,7 @@ bool AssetManager::LoadTextureAsync(const std::string& path, TextureCallback cal
 }
 
 void AssetManager::TickAsyncLoads() {
-    // Pega os jobs terminados (main thread).
+    
     std::vector<CompletedTexture> ready;
     {
         std::lock_guard<std::mutex> lock(s_CompletedMutex);
@@ -100,7 +100,7 @@ void AssetManager::TickAsyncLoads() {
         if (!done.Pixels.empty()) {
             tex = Texture2D::Create(done.Width, done.Height);
             tex->SetData(done.Pixels.data(), (uint32_t)done.Pixels.size());
-            s_Textures[done.Path] = tex; // entra no cache normal
+            s_Textures[done.Path] = tex; 
         } else {
             KZ_CORE_WARN("AssetManager: falha ao decodificar '{}' (async).", done.Path);
         }
@@ -122,4 +122,4 @@ void AssetManager::Shutdown() {
     }
 }
 
-} // namespace kizuri
+} 

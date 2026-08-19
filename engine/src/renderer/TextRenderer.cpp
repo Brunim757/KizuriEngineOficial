@@ -7,8 +7,8 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-// Fonte embutida (JetBrains Mono) — gerada pelo CMake em tempo de build
-// (EmbedResource.cmake) e compilada como array de bytes na engine.
+
+
 #include <EmbeddedFontRegular.hpp>
 
 #define STB_TRUETYPE_IMPLEMENTATION
@@ -17,45 +17,45 @@
 namespace kizuri {
 
 namespace {
-    // Atlas 1024x1024 dá folga pra CABER os dois blocos (ASCII + Latin-1);
-    // em 512x512 o bake pode estourar (retorno negativo = só uma parte
-    // coube) e os glifos que sobraram ficavam com caixa vazia (o sintoma
-    // clássico de "letra que some / vira retângulo").
+    
+    
+    
+    
     constexpr int kAtlasWidth = 1024;
     constexpr int kAtlasHeight = 1024;
-    constexpr int kPixelHeight = 48;   // altura do bake (px)
+    constexpr int kPixelHeight = 48;   
 
 
-    // Bloco 3: pontuação tipográfica comum em 3 bytes (— “ ” ‘ ’ … « »).
-    // A JetBrains Mono tem esses glifos; sem eles o travessão da demo 2D
-    // (e textos com aspas curvas) sumiria/viraria retângulo.
-    // Atlas ÚNICO e CONTÍNUO: 32..255 (ASCII + Latin-1 — ç ã é ê etc).
-    // Um único bake (stbtt_BakeFontBitmap), sem ranges/hacks: é o caminho
-    // mais simples e à prova de erro do stb.
+    
+    
+    
+    
+    
+    
     constexpr int kGlyphFirst = 32;
-    constexpr int kGlyphCount = 0xFF - 32 + 1;   // 224 glifos
+    constexpr int kGlyphCount = 0xFF - 32 + 1;   
 
     Ref<Texture2D> s_AtlasTexture;
     stbtt_bakedchar s_Baked[kGlyphCount];
     bool s_Ready = false;
 
-    // Uma única textura 1024² com os DOIS blocos: ASCII é bakes do canto
-    // (0,0) e Latin entra logo em seguida (o range 0xA0 usa o mesmo atlas,
-    // bake sequencial — stbtt empacota a partir de onde parou? Não:
-    // BakeFontBitmap reinicia de (1,1)! Então os blocos são bakes numa
-    // bitmap 1024² COMBINADA via dois buffers e empilhamento em y.
-    // Solução robusta: bake ASCII na metade de cima, Latin na de baixo.
+    
+    
+    
+    
+    
+    
     std::vector<uint8_t> s_Bitmap;
 
-    // MeasureWidth/DrawString decodifica UTF-8 (até 2 bytes — suficiente
-    // pro Latin-1; emojis/3+ bytes são ignorados sem quebrar a linha).
-    // Índice do glifo no atlas contínuo (32..255). Para codepoints de 3
-    // bytes (— “ ” …) normaliza pra um glifo Latin-1/ASCII próximo — sem
-    // glifo dedicado, sem retângulo, sem letra errada.
+    
+    
+    
+    
+    
     int DecodeGlyphIndex(const char*& p, const char* end) {
         unsigned char c = (unsigned char)*p;
         if (c >= 0x20 && c <= 0x7E) { ++p; return (int)(c - kGlyphFirst); }
-        if ((c & 0xE0) == 0xC0 && end - p >= 2) { // 2-byte: U+0080..U+07FF
+        if ((c & 0xE0) == 0xC0 && end - p >= 2) { 
             unsigned char c2 = (unsigned char)p[1];
             if ((c2 & 0xC0) == 0x80) {
                 unsigned int cp = ((c & 0x1Fu) << 6) | (c2 & 0x3Fu);
@@ -65,27 +65,27 @@ namespace {
                 }
             }
         }
-        if ((c & 0xF0) == 0xE0 && end - p >= 3) { // 3-byte: tipografia
+        if ((c & 0xF0) == 0xE0 && end - p >= 3) { 
             unsigned char c2 = (unsigned char)p[1], c3 = (unsigned char)p[2];
             if ((c2 & 0xC0) == 0x80 && (c3 & 0xC0) == 0x80) {
                 unsigned int cp = ((c & 0x0Fu) << 12) | ((c2 & 0x3Fu) << 6) | (c3 & 0x3Fu);
                 p += 3;
                 switch (cp) {
-                    case 0x2013: case 0x2014: case 0x2015: return '-'- kGlyphFirst; // – — ― → -
-                    case 0x2018: case 0x2019: case 0x201C: case 0x201D: return '"'- kGlyphFirst; // ‘ ’ “ ” → "
-                    case 0x2026: return '.'- kGlyphFirst;                                   // … → .
+                    case 0x2013: case 0x2014: case 0x2015: return '-'- kGlyphFirst; 
+                    case 0x2018: case 0x2019: case 0x201C: case 0x201D: return '"'- kGlyphFirst; 
+                    case 0x2026: return '.'- kGlyphFirst;                                   
                     default: return -1;
                 }
             }
         }
         ++p;
-        return -1; // fora do conjunto: pula o caractere
+        return -1; 
     }
 
-    // Escala determinística: px por unidade de mundo vem da projeção 2D
-    // ATUAL (já aberta por BeginScene) e do tamanho do viewport REAL.
-    // Casos degenerados caem num fallback saninho em vez de explodir
-    // (o que gerava os "retângulos brancos" gigantes no editor).
+    
+    
+    
+    
     float ComputeWorldScale(float fontSize) {
         float worldHeight = 2.0f / glm::max(glm::abs(Renderer2D::GetViewProjection()[1][1]), 0.1f);
         GLint vp[4];
@@ -94,7 +94,7 @@ namespace {
         float fallback = (fontSize / (float)kPixelHeight) * 0.02f;
         if (!(pxPerUnit > 0.01f)) return fallback;
         float scale = (fontSize / (float)kPixelHeight) / pxPerUnit;
-        if (!(scale > 0.0f) || scale > 100.0f) return fallback; // quad gigante = bug de projeção
+        if (!(scale > 0.0f) || scale > 100.0f) return fallback; 
         return scale;
     }
 }
@@ -109,14 +109,14 @@ void TextRenderer::EnsureAtlas() {
         return;
     }
 
-    // UM único bake contínuo (32..255) — o mecanismo mais simples do stb.
-    // Sem ranges, sem oversampling, sem quadrantes: x0/y0..x1/y1 do
-    // bakedchar apontam direto pros glifos no atlas.
+    
+    
+    
     std::vector<uint8_t> bitmap(kAtlasWidth * kAtlasHeight, 0);
-    // Zera o array DE ANTES do bake — se algum glifo não couber no atlas,
-    // fica com x0=x1=y0=y1=0 (degenerado) e é ignorado no DrawString.
-    // SEM isso, os lixos pareciam glifos válidos mas todos mapeavam pro
-    // mesmo lugar errado → todas as letras iguais ("retângulos iguais").
+    
+    
+    
+    
     std::fill(s_Baked, s_Baked + kGlyphCount, stbtt_bakedchar{});
     int baked = stbtt_BakeFontBitmap((const unsigned char*)font, 0, (float)kPixelHeight,
                                      bitmap.data(), kAtlasWidth, kAtlasHeight,
@@ -128,7 +128,7 @@ void TextRenderer::EnsureAtlas() {
     if (baked < kGlyphCount)
         KZ_CORE_WARN("TextRenderer: só {0}/{1} glifos couberam no atlas.", baked, kGlyphCount);
 
-    // Expande 1 canal (alfa) → RGBA (branco + alfa), como a engine exige.
+    
     std::vector<uint8_t> rgba(kAtlasWidth * kAtlasHeight * 4);
     for (size_t i = 0; i < bitmap.size(); ++i) {
         rgba[i * 4 + 0] = 255; rgba[i * 4 + 1] = 255;
@@ -136,8 +136,8 @@ void TextRenderer::EnsureAtlas() {
     }
 
     s_AtlasTexture = Texture2D::Create(kAtlasWidth, kAtlasHeight);
-    // CLAMP_TO_EDGE evita que UVs exatamente em 0.0 ou 1.0 wrapem pra
-    // outro glifo (GL_REPEAT causava bordas fantasma entre letras).
+    
+    
     s_AtlasTexture->Bind(0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -170,7 +170,7 @@ float TextRenderer::MeasureWidth(const std::string& text, float fontSize) {
         const char* before = p;
         int idx = DecodeGlyphIndex(p, end);
         if (idx < 0) continue;
-        if (p == before) ++p; // avanço garantido (proteção anti-loop)
+        if (p == before) ++p; 
         if (idx < kGlyphCount) lineWidth += s_Baked[idx].xadvance * scale;
     }
     return glm::max(maxWidth, lineWidth);
@@ -189,9 +189,9 @@ void TextRenderer::DrawString(const std::string& text, const glm::vec3& position
     if (!s_Ready) EnsureAtlas();
     if (!s_Ready || text.empty()) return;
 
-    // Diagnóstico (v0.37.x): bytes que não são UTF-8 válido geram "letras
-    // estranhas" ou glifos ausentes. Loga uma vez por 10s com os bytes em
-    // hex pra identificar a origem (encoding errado no .cs / import).
+    
+    
+    
     static int64_t s_LastDiag = 0;
     {
         auto nowMs = (int64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -219,14 +219,14 @@ void TextRenderer::DrawString(const std::string& text, const glm::vec3& position
         }
     }
 
-    // Blindagem: o texto PRECISA de alpha blending. Qualquer passe que tenha
-    // deixado o GL_BLEND desligado (ex.: decals/partículas do 3D) virava os
-    // glifos em retângulos brancos opacos — força aqui, no desenho.
+    
+    
+    
     RenderCommand::SetBlending(true);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // Divide o texto em linhas e desenha cada uma — posição é o canto
-    // esquerdo-superior da primeira linha; alinhamento desloca cada linha.
+    
+    
     std::vector<std::string> lines;
     std::string current;
     for (char c : text) {
@@ -236,7 +236,7 @@ void TextRenderer::DrawString(const std::string& text, const glm::vec3& position
     lines.push_back(current);
 
     float scale = ComputeWorldScale(fontSize);
-    // Altura da linha: 1.2em (em = 1 unidade de 48px do bake).
+    
     float lineHeight = scale * (float)kPixelHeight * 1.2f;
     if (lineHeight <= 0.0f) lineHeight = 0.01f;
     float penY = position.y;
@@ -267,25 +267,25 @@ void TextRenderer::DrawString(const std::string& text, const glm::vec3& position
             float x = penX + b->xoff * scale;
             float w = (b->x1 - b->x0) * scale;
             float h = (b->y1 - b->y0) * scale;
-            // stbtt: yoff = deslocamento do TOPO do glifo em relação à linha
-            // de base (negativo = acima dela), em px do bake. O mundo é Y-UP:
-            // topo do glifo fica ACIMA da base em +(-yoff)*scale, e o glifo
-            // desce h a partir do topo. Antes usávamos penY+yoff como BASE do
-            // quad — cada glifo (A vs p vs m) saía com topo/base em alturas
-            // diferentes = letras desalinhadas na mesma linha.
+            
+            
+            
+            
+            
+            
             float yTop = penY - b->yoff * scale;
             float y = yTop - h * 0.5f;
 
-            // UVs do atlas — o bitmap do stbtt tem linha 0 no TOPO do atlas e
-            // é enviado pra GL sem flip (linha 0 = v=0). Então o topo do
-            // glifo (y0 < y1) fica em v MENOR. O quad: vértice de cima
-            // (uvMax) recebe v do topo do glifo (y0); vértice de baixo (uvMin)
-            // recebe v da base (y1). Sem o "1.0f -": esse flip amostrava o
-            // lado espelhado do atlas = outros glifos = letras aleatórias.
+            
+            
+            
+            
+            
+            
             float u0 = b->x0 * invW;
             float u1 = b->x1 * invW;
-            float v0 = (float)b->y1 * invH;  // base do glifo (v maior)
-            float v1 = (float)b->y0 * invH;  // topo do glifo (v menor)
+            float v0 = (float)b->y1 * invH;  
+            float v1 = (float)b->y0 * invH;  
 
             glm::mat4 transform = glm::translate(glm::mat4(1.0f), { x + w * 0.5f, y + h * 0.5f, position.z })
                                 * glm::scale(glm::mat4(1.0f), { w, h, 1.0f });
@@ -293,8 +293,8 @@ void TextRenderer::DrawString(const std::string& text, const glm::vec3& position
 
             penX += b->xadvance * scale;
         }
-        penY -= lineHeight; // mundo Y-up: a próxima linha desce na tela
+        penY -= lineHeight; 
     }
 }
 
-} // namespace kizuri
+} 

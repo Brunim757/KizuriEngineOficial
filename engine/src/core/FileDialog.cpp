@@ -2,7 +2,7 @@
 
 #if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
-    #define INITGUID // define os CLSID/IID direto neste .cpp — evita precisar linkar uuid.lib
+    #define INITGUID 
     #include <Windows.h>
     #include <shobjidl.h>
 #endif
@@ -22,20 +22,20 @@ static std::wstring Utf8ToWide(const std::string& utf8) {
 static std::string WideToUtf8(const wchar_t* wide) {
     if (!wide || !wide[0]) return {};
     int len = WideCharToMultiByte(CP_UTF8, 0, wide, -1, nullptr, 0, nullptr, nullptr);
-    std::string out(len > 0 ? len - 1 : 0, '\0'); // len inclui o \0 final, não queremos ele no std::string
+    std::string out(len > 0 ? len - 1 : 0, '\0'); 
     if (len > 0) WideCharToMultiByte(CP_UTF8, 0, wide, -1, out.data(), len, nullptr, nullptr);
     return out;
 }
 
-// Uma função só por baixo dos três métodos públicos — muda só save/pickFolder/filtro.
+
 static std::string RunDialog(bool save, bool pickFolder, const std::wstring& filterName,
                               const std::wstring& filterPattern, const std::wstring& defaultExt) {
     std::string result;
 
-    // COINIT_APARTMENTTHREADED é o exigido pelo IFileDialog. Se COM já tiver sido inicializado
-    // em outro modo em algum outro lugar (GLFW, driver), CoInitializeEx devolve
-    // RPC_E_CHANGED_MODE — o diálogo ainda funciona nesse caso, só não somos nós quem desliga
-    // o COM depois (por isso só chama CoUninitialize se foi ESTA chamada que inicializou).
+    
+    
+    
+    
     HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     bool weInitialized = (hr == S_OK || hr == S_FALSE);
 
@@ -87,7 +87,7 @@ std::string FileDialog::SelectFolder() {
     return RunDialog(false, true, L"", L"", L"");
 }
 
-#else // não-Windows: sem backend nativo ainda — ver comentário no header
+#else 
 
 std::string FileDialog::OpenFile(const std::string&, const std::string&) { return {}; }
 std::string FileDialog::SaveFile(const std::string&, const std::string&, const std::string&) { return {}; }
@@ -95,4 +95,4 @@ std::string FileDialog::SelectFolder() { return {}; }
 
 #endif
 
-} // namespace kizuri
+} 

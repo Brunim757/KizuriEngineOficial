@@ -10,9 +10,9 @@
     #include <Windows.h>
 #endif
 
-// Qualquer executável Kizuri (jogo feito em "KZScript C++" ou editor) só
-// precisa implementar kizuri::CreateApplication() e incluir este header uma
-// única vez no arquivo que contém main().
+
+
+
 extern kizuri::Application* kizuri::CreateApplication();
 
 static void KzShowUnhandledExceptionPopup(const char* what) {
@@ -20,8 +20,8 @@ static void KzShowUnhandledExceptionPopup(const char* what) {
     std::string msg = std::string("A Kizuri Engine encerrou por um erro inesperado:\n\n") + what +
         "\n\nSe estiver rodando em um emulador (ex: Winlator) ou máquina virtual, "
         "verifique se o dispositivo suporta OpenGL 3.3+ com aceleração de GPU.";
-    // MessageBoxA interpreta os bytes pela ANSI codepage do sistema, não como UTF-8 (mesmo bug
-    // corrigido em Window.cpp) — MessageBoxW com conversão explícita evita o mojibake.
+    
+    
     auto toWide = [](const std::string& utf8) -> std::wstring {
         if (utf8.empty()) return std::wstring();
         int len = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), (int)utf8.size(), nullptr, 0);

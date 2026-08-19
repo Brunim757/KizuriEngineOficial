@@ -12,9 +12,9 @@ namespace kizuri {
 
 struct LoadedSound {
     ma_sound Sound;
-    // Sem isso, ma_sound_init_from_file deixava o som "vivo" no grafo de mixagem interno do
-    // miniaudio pra sempre — só liberar a memória em C++ (via unique_ptr) não desconectava
-    // ele de lá, um use-after-free em potencial na próxima vez que o engine processasse áudio.
+    
+    
+    
     ~LoadedSound() { ma_sound_uninit(&Sound); }
 };
 
@@ -24,15 +24,15 @@ static std::unordered_map<SoundHandle, std::unique_ptr<LoadedSound>> s_Sounds;
 static std::unordered_map<std::string, SoundHandle> s_NameToHandle;
 static SoundHandle s_NextHandle = 1;
 
-// Volumes por grupo (Audio mixer): 0=SFX, 1=Música, 2=UI.
+
 static float s_GroupVolumes[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-// ---------------------------------------------------------------------------
-// Reverb (pilar AAA v0.34): nó customizado do miniaudio (Schroeder — 4
-// combs + 2 allpass por canal) inserido no grafo do ma_engine entre os sons
-// e o endpoint. Sons com reverb ligado são roteados pelo nó; os demais
-// seguem direto no endpoint (caminho seco, sem custo).
-// ---------------------------------------------------------------------------
+
+
+
+
+
+
 struct ReverbChannelState {
     std::vector<float> CombBuf[4];
     std::vector<float> AllpassBuf[2];
@@ -41,7 +41,7 @@ struct ReverbChannelState {
     float LowpassState = 0.0f;
 
     void Init(uint32_t sampleRate) {
-        // Tamanhos clássicos do Freeverb (em ms), escalados pela taxa.
+        
         const float combMs[4] = { 29.7f, 37.1f, 41.1f, 43.7f };
         const float apMs[2] = { 5.0f, 1.7f };
         for (int i = 0; i < 4; ++i) CombBuf[i].assign((size_t)(combMs[i] * sampleRate / 1000.0f), 0.0f);
@@ -54,7 +54,7 @@ struct ReverbChannelState {
             size_t len = CombBuf[i].size();
             if (len == 0) continue;
             float delayed = CombBuf[i][CombPos[i]];
-            // Damping: passa-baixa de 1 polo no caminho de feedback.
+            
             LowpassState = delayed * (1.0f - damp) + LowpassState * damp;
             CombBuf[i][CombPos[i]] = input + LowpassState * feedback;
             CombPos[i] = (CombPos[i] + 1) % len;
@@ -75,9 +75,9 @@ struct ReverbChannelState {
 };
 
 struct ReverbNode {
-    ma_node_base base; // primeiro membro SEMPRE (padrão miniaudio)
-    ma_node* pNode = nullptr; // handle (aponta pra este struct)
-    std::vector<ReverbChannelState> Channels; // um por canal (processa até 2)
+    ma_node_base base; 
+    ma_node* pNode = nullptr; 
+    std::vector<ReverbChannelState> Channels; 
     float Wet = 0.0f;
     float Room = 0.5f;
     float Damp = 0.3f;
@@ -105,16 +105,16 @@ static void ReverbProcess(ma_node* pNode, const float** ppFramesIn, ma_uint32* p
 }
 
 static ma_node_vtable s_ReverbVTable = {
-    ReverbProcess, // onProcess
-    NULL,          // onGetRequiredInputFrameCount
-    1,             // inputBusCount
-    1,             // outputBusCount
-    MA_NODE_FLAG_CONTINUOUS_PROCESSING | MA_NODE_FLAG_ALLOW_NULL_INPUT, // o tail soa mesmo sem áudio nova
+    ReverbProcess, 
+    NULL,          
+    1,             
+    1,             
+    MA_NODE_FLAG_CONTINUOUS_PROCESSING | MA_NODE_FLAG_ALLOW_NULL_INPUT, 
 };
 
 static ReverbNode* s_Reverb = nullptr;
 static bool s_ReverbNodeReady = false;
-static std::unordered_map<SoundHandle, float> s_ReverbWet; // fonte -> wet (reverb ligado)
+static std::unordered_map<SoundHandle, float> s_ReverbWet; 
 
 static void EnsureReverbNode() {
     if (s_ReverbNodeReady || !s_Initialized) return;
@@ -130,20 +130,20 @@ static void EnsureReverbNode() {
     ma_uint32 inChs[1] = { chs };
     ma_uint32 outChs[1] = { chs };
     ma_node_config cfg = ma_node_config_init();
-    cfg.vtable = &s_ReverbVTable;      // o vtable declara 1 input + 1 output bus
+    cfg.vtable = &s_ReverbVTable;      
     cfg.pInputChannels = inChs;
     cfg.pOutputChannels = outChs;
 
     ma_node_graph* graph = ma_engine_get_node_graph(&s_Engine);
-    // O handle ma_node É o próprio struct (ma_node_base no início).
+    
     ma_node* node = (ma_node*)data;
     if (ma_node_init(graph, &cfg, nullptr, node) != MA_SUCCESS) {
         delete data;
         return;
     }
     data->pNode = node;
-    // Reverb (saída) -> endpoint do grafo (entrada): todo o caminho úmido
-    // passa por aqui; os sons secos continuam indo direto ao endpoint.
+    
+    
     ma_node_attach_output_bus(node, 0, ma_node_graph_get_endpoint(graph), 0);
     s_Reverb = data;
     s_ReverbNodeReady = true;
@@ -156,16 +156,16 @@ static void RouteSoundThroughReverb(ma_sound* sound, bool enabled, float wet) {
         ma_node_detach_output_bus((ma_node*)sound, 0);
         ma_node_attach_output_bus((ma_node*)sound, 0, s_Reverb->pNode, 0);
     } else {
-        // Volta pro caminho padrão: o endpoint do grafo.
+        
         ma_node_detach_output_bus((ma_node*)sound, 0);
         ma_node_attach_output_bus((ma_node*)sound, 0, ma_node_graph_get_endpoint(ma_engine_get_node_graph(&s_Engine)), 0);
     }
     (void)wet;
 }
 
-// Pool de one-shots POSICIONAIS. O end-callback roda na thread de áudio e
-// só MARCA o slot livre; a desinicialização do ma_sound fica pro main thread
-// (na próxima reutilização do slot) — uninit na thread de áudio é proibido.
+
+
+
 struct OneShotSound {
     ma_sound Sound;
     bool InUse = false;
@@ -228,7 +228,7 @@ void AudioEngine::Play(SoundHandle handle, bool loop, float volume, int group) {
 void AudioEngine::PlayOneShot(const std::string& path, float volume, int group) {
     if (!s_Initialized) return;
     ma_engine_play_sound(&s_Engine, path.c_str(), nullptr);
-    (void)volume; (void)group; // miniaudio permite volume por grupo; simplificado aqui
+    (void)volume; (void)group; 
 }
 
 void AudioEngine::PlayOneShotAt(const std::string& path, float volume, const glm::vec3& position, int group) {
@@ -238,7 +238,7 @@ void AudioEngine::PlayOneShotAt(const std::string& path, float volume, const glm
     for (auto& s : s_OneShots) {
         if (!s.InUse) {
             slot = &s;
-            ma_sound_uninit(&slot->Sound); // libera o uso anterior (main thread)
+            ma_sound_uninit(&slot->Sound); 
             break;
         }
     }
@@ -268,14 +268,14 @@ void AudioEngine::Stop(SoundHandle handle) {
 
 void AudioEngine::StopAll() {
     if (!s_Initialized) return;
-    // One-shots posicionais: para e libera o slot (o uninit fica pro main
-    // thread na reutilização do slot).
+    
+    
     for (auto& os : s_OneShots) {
         if (os.InUse) { ma_sound_stop(&os.Sound); os.InUse = false; }
     }
-    // Sons carregados: limpar o mapa destrói cada LoadedSound, e o destrutor
-    // dele agora chama ma_sound_uninit — é assim que os sons realmente param
-    // e a memória nativa é liberada.
+    
+    
+    
     s_Sounds.clear();
 }
 
@@ -329,7 +329,7 @@ void AudioEngine::SetGlobalReverb(float wet, float roomSize, float damp) {
     if (!s_Initialized) return;
     wet = glm::clamp(wet, 0.0f, 1.0f);
     if (wet <= 0.001f) {
-        // Desliga: sons com reverb voltam ao caminho seco.
+        
         for (auto& [handle, w] : s_ReverbWet) {
             auto it = s_Sounds.find(handle);
             if (it != s_Sounds.end()) RouteSoundThroughReverb(&it->second->Sound, false, 0.0f);
@@ -364,4 +364,4 @@ bool AudioEngine::IsSoundReverbing(SoundHandle handle) {
     return s_ReverbWet.find(handle) != s_ReverbWet.end();
 }
 
-} // namespace kizuri
+} 

@@ -4,7 +4,7 @@
 
 namespace kizuri {
 
-// Câmera ortográfica para o pipeline 2D.
+
 class OrthographicCamera {
 public:
     OrthographicCamera(float left, float right, float bottom, float top);
@@ -32,7 +32,7 @@ private:
     float m_Rotation = 0.0f;
 };
 
-// Câmera de perspectiva para o pipeline 3D, estilo "fly camera".
+
 class PerspectiveCamera {
 public:
     PerspectiveCamera(float fovDeg, float aspectRatio, float nearClip, float farClip);
@@ -41,11 +41,11 @@ public:
     void SetPosition(const glm::vec3& pos) { m_Position = pos; RecalculateViewMatrix(); }
     void SetRotation(float yawDeg, float pitchDeg) { m_Yaw = yawDeg; m_Pitch = pitchDeg; RecalculateViewMatrix(); }
 
-    // Orienta a câmera pela MATRIZ de transform da entidade (a mesma que o
-    // mesh usa): posição + forward/up extraídos das colunas. É o que casa a
-    // câmera do jogo com a rotação real do Transform — a fórmula yaw/pitch
-    // (SetRotation) falseava ângulos (ex.: rotacionar -90° em Y deixava a
-    // câmera olhando pra outra direção que o mesh) e ignorava o roll.
+    
+    
+    
+    
+    
     void SetWorldTransform(const glm::mat4& world);
 
     const glm::vec3& GetPosition() const { return m_Position; }
@@ -71,4 +71,4 @@ private:
     float m_FOV = 45.0f, m_Aspect = 16.0f / 9.0f, m_Near = 0.1f, m_Far = 1000.0f;
 };
 
-} // namespace kizuri
+} 

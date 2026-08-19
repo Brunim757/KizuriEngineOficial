@@ -12,7 +12,7 @@ void AnimatorPanel::OnImGuiRender() {
         ImGui::End();
         return;
     }
-    // HasComponent/GetComponent não são const na Entity — copia para local.
+    
     kizuri::Entity sel = m_Ctx.SelectedEntity;
     if (!sel.HasComponent<kizuri::AnimatorComponent>()) {
         ImGui::TextDisabled("A entidade selecionada não tem Animator.\n\nAdicione pelo Inspetor (Componente > Animador).");
@@ -22,7 +22,7 @@ void AnimatorPanel::OnImGuiRender() {
 
     auto& anim = sel.GetComponent<kizuri::AnimatorComponent>();
 
-    // Skin carregada sob demanda (path do .glb/.gltf).
+    
     if (!anim.Skin && !anim.MeshPath.empty())
         anim.Skin = kizuri::SkinData::CreateFromGLTF(kizuri::Project::ResolvePath(anim.MeshPath));
 
@@ -32,10 +32,10 @@ void AnimatorPanel::OnImGuiRender() {
         return;
     }
 
-    // Lista de clips.
+    
     if (!anim.Skin->Clips.empty()) {
         m_SelectedClip = std::max(m_SelectedClip, 0);
-        // Acha o índice do clip atual pra sincronizar a lista.
+        
         int current = anim.Skin->GetClipIndex(anim.ClipName);
         if (current >= 0 && current != m_SelectedClip) m_SelectedClip = current;
 
@@ -55,7 +55,7 @@ void AnimatorPanel::OnImGuiRender() {
         ImGui::TextDisabled("Sem clips de animação na skin.");
     }
 
-    // Transport controls.
+    
     bool playing = anim.Playing;
     if (ImGui::Button(playing ? "Pausar" : "Tocar"))
         anim.Playing = !anim.Playing;
@@ -65,13 +65,13 @@ void AnimatorPanel::OnImGuiRender() {
     ImGui::SetNextItemWidth(100.0f);
     ImGui::DragFloat("Velocidade", &anim.Speed, 0.01f, -4.0f, 4.0f, "%.2fx");
 
-    // Time scrubber.
+    
     float dur = anim.Skin->GetClipDuration(anim.ClipName);
     if (dur > 0.0f) {
         float t = anim.Time;
         if (ImGui::SliderFloat("Tempo", &t, 0.0f, dur)) {
             anim.Time = t;
-            anim.Playing = false; // scrub manual pausa
+            anim.Playing = false; 
         }
         ImGui::TextDisabled("%.2f / %.2f s", anim.Time, dur);
     }

@@ -1,8 +1,8 @@
 using Kizuri;
 using Kizuri.Math;
 
-// PlayerController — demonstra a API de gameplay: movimento, projéteis
-// criados em runtime, HUD dinâmico, save/load e raycast 2D.
+
+
 public sealed class PlayerController : Script
 {
 	private const float Speed = 5.0f;
@@ -24,12 +24,12 @@ public sealed class PlayerController : Script
 	{
 		Log.Info($"PlayerController entidade '{Entity.Id}' pronta.");
 
-		// HUD criado e alterado em runtime (texto world-space, atualizado no OnUpdate).
+		
 		_hud = Scene.CreateEntity("HUD");
 		_hud.AddText("Pontos: 0", 32f);
 		_hud.SetPosition(new Vector3(-8f, 5f, 0f));
 
-		// Save: o Get* carrega do disco automaticamente na primeira consulta.
+		
 		_score = SaveSystem.GetFloat("score", 0f);
 	}
 
@@ -59,15 +59,15 @@ public sealed class PlayerController : Script
 			Entity.SetPosition(t.Translation);
 		}
 
-		// Clique esquerdo atira um projétil (entidade criada em runtime com
-		// sprite de cor sólida; o movimento é atualizado aqui embaixo).
+		
+		
 		if (Input.IsMouseButtonPressed(MouseButton.Left) && !_mouseDown)
 		{
 			_mouseDown = true;
 			if (Entity.TryGetTransform(out var tp))
 			{
 				var bullet = Scene.CreateEntity("Bullet");
-				bullet.AddSprite(); // sem textura = cor sólida
+				bullet.AddSprite(); 
 				bullet.SetSpriteColor(1f, 0.85f, 0.2f);
 				bullet.SetPosition(tp.Translation);
 				_bullets.Add(new Bullet { Entity = bullet, Velocity = new Vector3(8f, 0f, 0f), Life = 1.5f });
@@ -93,7 +93,7 @@ public sealed class PlayerController : Script
 			_bullets[i] = b;
 		}
 
-		// Pontuação cresce com o tempo; F5 grava em save.json.
+		
 		_score += deltaSeconds * 10f;
 		_hud.SetText($"Pontos: {(int)_score} | Projéteis: {_bullets.Count}");
 		if (Input.IsKeyPressed(Key.F5))
@@ -103,7 +103,7 @@ public sealed class PlayerController : Script
 			Log.Info("Jogo salvo.");
 		}
 
-		// Raycast 2D de exemplo: raio pra baixo, loga o primeiro hit a cada 0.5s.
+		
 		_raycastTimer -= deltaSeconds;
 		if (_raycastTimer <= 0f)
 		{
@@ -123,7 +123,7 @@ public sealed class PlayerController : Script
 	public override void OnDestroy() { }
 }
 
-// Registro global dos scripts (equivalente 'RegisterScripts(name)').
+
 public static class SampleGameModule
 {
 	[Kizuri.GameEntryPoint]

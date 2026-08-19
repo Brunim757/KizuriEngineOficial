@@ -22,12 +22,12 @@ public:
     static Ref<Texture2D> Create(uint32_t width, uint32_t height);
     static Ref<Texture2D> Create(const std::string& path);
 
-    // Textura a partir de bytes em memória (ex.: imagens embutidas num .glb).
-    // NÃO inverte verticalmente — convenção UV do glTF (v=0 no topo).
+    
+    
     static Ref<Texture2D> CreateFromMemory(const void* data, size_t size, const std::string& debugName = "");
 
-    // Salva a textura num .png (readback GL + stbi_write_png). Usada pelo
-    // bake de lightmap do editor pra persistir o resultado em disco.
+    
+    
     static bool SaveToFile(const Ref<Texture2D>& texture, const std::string& path);
 
 private:
@@ -37,4 +37,4 @@ private:
     uint32_t m_InternalFormat = 0, m_DataFormat = 0;
 };
 
-} // namespace kizuri
+} 

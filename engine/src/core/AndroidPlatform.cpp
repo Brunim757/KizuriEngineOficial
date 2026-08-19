@@ -10,8 +10,8 @@ namespace {
 
 struct RawEvent {
     uint32_t Type = 0;
-    int A = 0;     // keyCode/button
-    int B = 0;     // action/repeat
+    int A = 0;     
+    int B = 0;     
     float X = 0.0f;
     float Y = 0.0f;
 };
@@ -26,28 +26,28 @@ GluePumpFn s_GluePump = nullptr;
 ShouldExitFn s_ShouldExit = nullptr;
 
 RawEvent s_EventQueue[128];
-unsigned s_EventHead = 0; // próximo slot a escrever
-unsigned s_EventTail = 0; // próximo slot a ler
+unsigned s_EventHead = 0; 
+unsigned s_EventTail = 0; 
 
 TouchPoint s_Touches[kMaxTouches];
 int s_TouchCount = 0;
 float s_LastTouchX = 0.0f;
 float s_LastTouchY = 0.0f;
 
-bool s_VirtualKeys[kVirtualKeyBase + 256] = {}; // faixa virtual usada
+bool s_VirtualKeys[kVirtualKeyBase + 256] = {}; 
 
 EventHandler s_Handler = nullptr;
 void* s_HandlerUserData = nullptr;
 
 void PushEvent(uint32_t type, int a = 0, int b = 0, float x = 0.0f, float y = 0.0f) {
     unsigned next = (s_EventHead + 1) % (sizeof(s_EventQueue) / sizeof(s_EventQueue[0]));
-    if (next == s_EventTail) return; // fila cheia: descarta o mais antigo é complexo; só ignora
+    if (next == s_EventTail) return; 
     RawEvent& ev = s_EventQueue[s_EventHead];
     ev.Type = type; ev.A = a; ev.B = b; ev.X = x; ev.Y = y;
     s_EventHead = next;
 }
 
-} // namespace
+} 
 
 void SetNativeWindow(ANativeWindow* window) {
     s_NativeWindow = window;
@@ -81,7 +81,7 @@ void HandleMouseMove(float x, float y) {
     PushEvent(EvMouseMoved, 0, 0, x, y);
 }
 void HandleTouch(float x, float y, bool down, int id) {
-    // O toque vira mouse (botão esquerdo) + tecla virtual da faixa dedicada.
+    
     if (down) {
         bool exists = false;
         int slot = -1;
@@ -102,7 +102,7 @@ void HandleTouch(float x, float y, bool down, int id) {
             if (s_Touches[i].Id == id && s_Touches[i].Down) {
                 s_Touches[i].Down = false;
                 s_Touches[i].Id = -1;
-                s_TouchCount = 0; // recomputa abaixo
+                s_TouchCount = 0; 
                 break;
             }
         }
@@ -111,9 +111,9 @@ void HandleTouch(float x, float y, bool down, int id) {
             if (s_Touches[i].Down) s_TouchCount++;
         SetVirtualKey(kVirtualKeyBase + id, false);
     }
-    PushEvent(down ? EvMouseButtonPressed : EvMouseButtonReleased, 0 /*Mouse::Left*/, 0, x, y);
+    PushEvent(down ? EvMouseButtonPressed : EvMouseButtonReleased, 0 , 0, x, y);
 }
-void HandleAppPause() { PushEvent(EvKeyReleased, 10000 /*Escape virtual*/, 0, 0, 0); }
+void HandleAppPause() { PushEvent(EvKeyReleased, 10000 , 0, 0, 0); }
 void HandleAppResume() {}
 
 void SetVirtualKey(int key, bool down) {
@@ -153,5 +153,5 @@ void SetEventHandler(EventHandler handler, void* userData) {
     s_HandlerUserData = userData;
 }
 
-} // namespace AndroidPlatform
-} // namespace kizuri
+} 
+} 

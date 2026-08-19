@@ -1,13 +1,13 @@
 name: Build Kizuri Engine
 
-# Necessário para o softprops/action-gh-release criar/publicar a Release.
+
 permissions:
   contents: write
 
 on:
-  # Manual (editor/CI de teste).
+  
   workflow_dispatch:
-  # Push de tag vX.Y.Z -> compila e PUBLICA uma Release do GitHub.
+  
   push:
     tags:
       - 'v*'
@@ -62,8 +62,8 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      # Kizuri.Scripting vai pro zip como DLL PRÉ-COMPILADA (API fechada):
-      # o csproj do jogo referencia a DLL em vez de recompilar o binding.
+      
+      
       - name: Compilar binding (Kizuri.Scripting.dll)
         shell: bash
         run: |
@@ -88,10 +88,10 @@ jobs:
       - name: Compilar
         run: cmake --build build --config Release --parallel
 
-      # ---- RELEASE (só em push de tag v*) -------------------------------
-      # Content Pack — Starter Pack CC0 (modelos glTF, HDRIs, texturas PBR).
-      # Baixado nas DUAS plataformas (o zip principal NÃO inclui conteúdo —
-      # o Content Pack é um download separado e opcional do Release).
+      
+      
+      
+      
       - name: Baixar Content Pack (CC0)
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
@@ -105,14 +105,14 @@ jobs:
             if [ -s "$2" ]; then printf '%-32s %10s bytes\n' "$3" "$(wc -c < "$2")" >> "$manifest"; else rm -f "$2"; fi
           }
           base="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0"
-          # Modelos esqueléticos/animações
+          
           dl "$base/Fox/glTF-Binary/Fox.glb"                    content/models/Fox.glb                    Fox.glb
           dl "$base/BoxAnimated/glTF-Binary/BoxAnimated.glb"    content/models/BoxAnimated.glb            BoxAnimated.glb
           dl "$base/BrainStem/glTF-Binary/BrainStem.glb"        content/models/BrainStem.glb              BrainStem.glb
           dl "$base/CesiumMan/glTF-Binary/CesiumMan.glb"        content/models/CesiumMan.glb              CesiumMan.glb
           dl "$base/RiggedFigure/glTF-Binary/RiggedFigure.glb"  content/models/RiggedFigure.glb           RiggedFigure.glb
           dl "$base/SimpleSkin/glTF-Binary/SimpleSkin.glb"      content/models/SimpleSkin.glb              SimpleSkin.glb
-          # Modelos PBR/materiais
+          
           dl "$base/DamagedHelmet/glTF-Binary/DamagedHelmet.glb" content/models/DamagedHelmet.glb         DamagedHelmet.glb
           dl "$base/Avocado/glTF-Binary/Avocado.glb"            content/models/Avocado.glb                 Avocado.glb
           dl "$base/BoomBox/glTF-Binary/BoomBox.glb"            content/models/BoomBox.glb                 BoomBox.glb
@@ -121,7 +121,7 @@ jobs:
           dl "$base/Duck/glTF-Binary/Duck.glb"                  content/models/Duck.glb                    Duck.glb
           dl "$base/Character/glTF-Binary/Character.glb"        content/models/Character.glb              Character.glb
           dl "$base/ReciprocatingSaw/glTF-Binary/ReciprocatingSaw.glb" content/models/ReciprocatingSaw.glb ReciprocatingSaw.glb
-          # Céus HDRIs (1k e alguns 4k)
+          
           sky="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k"
           dl "$sky/qwantani_puresky_1k.hdr"                     content/skies/qwantani_puresky_1k.hdr     qwantani_puresky_1k.hdr
           dl "$sky/kloofendal_48d_partly_cloudy_puresky_1k.hdr" content/skies/kloofendal_1k.hdr          kloofendal_1k.hdr
@@ -132,7 +132,7 @@ jobs:
           sky4="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k"
           dl "$sky4/qwantani_puresky_4k.hdr"                    content/skies/qwantani_puresky_4k.hdr     qwantani_puresky_4k.hdr
           dl "$sky4/venice_sunset_4k.hdr"                       content/skies/venice_sunset_4k.hdr        venice_sunset_4k.hdr
-          # Prefabs prontos (vêm do repo — commits em content/Prefabs)
+          
           if [ -d "content/Prefabs" ]; then cp content/Prefabs/*.kzprefab content/Prefabs/ 2>/dev/null || true; fi
           echo "---- Content Pack: $(grep -c . "$manifest") arquivos ----" >> "$manifest"
           cat "$manifest"
@@ -141,36 +141,36 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
-          # Estrutura do zip = o FORMATO DO UPDATE: bin/ na raiz com o
-          # editor + engine + managed. O updater da engine baixa este zip
-          # (download_url da API) e extrai bin/ por cima da instalação.
+          
+          
+          
           mkdir -p release/bin
           cp -r build/bin/* release/bin/
-          # Atualização v0.37.x: a API é entregue como DLL PRÉ-COMPILADA (fechada)
-          # — os .cs e exemplos do SampleGame NÃO vêm mais no zip. Fica só:
-          #   bin/managed/Kizuri.Scripting.dll            (o binding)
-          #   bin/managed/Kizuri.Scripting/Kizuri.Scripting.csproj (marcador p/
-          #   o editor resolver o EngineDir e o Play compilar o jogo do usuário)
+          
+          
+          
+          
+          
           mkdir -p release/bin/managed/Kizuri.Scripting
           cp managed/Kizuri.Scripting.dll release/bin/managed/Kizuri.Scripting.dll
           cp managed/Kizuri.Scripting/Kizuri.Scripting.csproj release/bin/managed/Kizuri.Scripting/Kizuri.Scripting.csproj
-          # garantia: se por algum motivo a DLL não veio (CI off-line), copia a
-          # árvore de fontes como fallback (obriga o Play a compilar o binding).
+          
+          
           if [ ! -f release/bin/managed/Kizuri.Scripting.dll ] && [ -d managed/Kizuri.Scripting ]; then
             cp -r managed release/bin/managed
           fi
-          # Ícone + entrada de desktop: SÓ no zip do Linux (no Windows o
-          # ícone já vem embutido no .exe via recurso .rc — nada de pasta
-          # solta). Estrutura padrão FHS pra instalação manual.
+          
+          
+          
           if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
             mkdir -p release/share/applications release/share/icons/hicolor/256x256/apps
             cp packaging/icons/kizuri-torii-256.png release/share/icons/hicolor/256x256/apps/kizuri-torii.png
             cp packaging/linux/kizuri-editor.desktop release/share/applications/
           fi
-          # Cada plataforma exporta SÓ a dela: zip único, sem mistura.
-          # ATENÇÃO: tar -a com .zip gera TAR puro (o GNU tar não cria zip) —
-          # o updater da engine exige ZIP de verdade. zip -r (linux) /
-          # Compress-Archive (windows, nativo).
+          
+          
+          
+          
           if [ "${{ runner.os }}" = "Windows" ]; then
             (cd release && powershell -Command "Compress-Archive -Path * -DestinationPath ../KizuriGame-${{ matrix.os }}-x86_64.zip -Force")
           else
@@ -203,7 +203,7 @@ jobs:
           files: KizuriEngine-Content-Pack.zip
           generate_release_notes: false
 
-  # ------- Scripting C# (Kizuri.Scripting) -------
+  
   managed:
     strategy:
       fail-fast: false
@@ -259,9 +259,9 @@ jobs:
         with:
           files: managed/Kizuri.Managed-${{ matrix.os }}.zip
 
-  # ------- Android (APK do KizuriGame) -------------------------------
-  # Mesmo CoreCLR do desktop, embutido no APK (hostfxr via runtime pack
-  # android-arm64): C++ da engine + EGL/GLES próprios (sem GLFW/ImGui).
+  
+  
+  
   android:
     runs-on: ubuntu-latest
     defaults:
@@ -308,8 +308,8 @@ jobs:
 
       - name: Instalar NDK, build-tools e plataforma
         run: |
-          # O setup-android não põe o sdkmanager no PATH: localiza no
-          # cmdline-tools instalado por ele (latest ou versão com hash).
+          
+          
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           if [ ! -f "$SDKMANAGER" ]; then
             SDKMANAGER=$(ls "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)
@@ -320,15 +320,15 @@ jobs:
             exit 1
           fi
           yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-          # yes + pipefail: o sdkmanager fecha o stdin cedo e o yes morre com
-          # broken pipe (status 141) — desliga o pipefail só nesses comandos.
+          
+          
           set +o pipefail
           "$SDKMANAGER" --install "platform-tools" "ndk;27.2.12479018" \
             "platforms;android-34" "build-tools;34.0.0" \
             || { echo "::error::sdkmanager --install falhou"; exit 1; }
           set -o pipefail
-          # Valida o essencial (o android.jar do platform é opcional pro
-          # aapt2 no nosso manifest 100% nativo; o NDK é obrigatório).
+          
+          
           for d in build-tools/34.0.0 ndk/27.2.12479018; do
             test -d "$ANDROID_HOME/$d" \
               || { echo "::error::$d não instalado em $ANDROID_HOME"; find "$ANDROID_HOME" -maxdepth 2 | head -20; exit 1; }
@@ -354,22 +354,22 @@ jobs:
           dotnet publish managed/SampleGame/SampleGame.csproj \
             -c Release -r android-arm64 --self-contained true \
             -o android_dotnet --nologo
-          # O publish de um projeto puro do .NET SDK NÃO copia os .so do
-          # runtime pack android-arm64 (só o workload Android faz isso).
-          # Layout garantido: baixa o .nupkg original do NuGet (o cache do
-          # restore reestrutura a extração e alguns arquivos somem de lá).
+          
+          
+          
+          
           RPM_VER=$(grep -oE 'Microsoft\.NETCore\.App\.Runtime\.android-arm64/[0-9.]+' android_dotnet/SampleGame.deps.json | head -1 | cut -d/ -f2)
           test -n "$RPM_VER" || { echo "::error::versão do runtime pack não achada no deps.json"; exit 1; }
           echo "Baixando runtime pack $RPM_VER do NuGet..."
           curl -fsSL -o pack.nupkg \
             "https://api.nuget.org/v3-flatcontainer/microsoft.netcore.app.runtime.android-arm64/${RPM_VER}/microsoft.netcore.app.runtime.android-arm64.${RPM_VER}.nupkg"
           unzip -q -o pack.nupkg -d pack
-          # Debug de layout: mostra onde os .so e os System.*.dll estão.
+          
           find pack -name "*.so" -o -name "System.Private.CoreLib.dll" | head -10
           cp -f pack/runtimes/android-arm64/native/*.so android_dotnet/
           cp -rf pack/runtimes/android-arm64/lib/.* android_dotnet/ 2>/dev/null || true
-          # Android não tem hostfxr (nem apphost): a engine inicializa o
-          # CoreCLR pelas exports do próprio libcoreclr (coreclr_initialize).
+          
+          
           test -f android_dotnet/libcoreclr.so \
             || { echo "::error::libcoreclr.so ausente no runtime pack"; exit 1; }
           echo "Runtime embutível pronto em android_dotnet/ ($RPM_VER)"
@@ -399,9 +399,9 @@ jobs:
           files: KizuriGame-android.apk
           generate_release_notes: false
 
-  # ------- Linux AppImage (jogo autônomo num arquivo) -----------------
-  # O .exe fica no job do Windows e o .apk no do Android — aqui o LINUX
-  # exporta SÓ o .AppImage (nada de plataformas misturadas num pacote).
+  
+  
+  
   linux-appimage:
     runs-on: ubuntu-latest
     defaults:

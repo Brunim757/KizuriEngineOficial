@@ -39,21 +39,21 @@ Entity Prefab::Instantiate(Scene& scene, const std::string& filepath, const glm:
     json root;
     in >> root;
 
-    // Passo 1: cria todas as entidades com UUIDs novos, guardando o mapa
-    // uuid-antigo -> uuid-novo pra resolver a hierarquia depois. Isso é o
-    // que permite instanciar a mesma prefab várias vezes sem colisão.
+    
+    
+    
     std::unordered_map<uint64_t, uint64_t> remap;
     std::vector<Entity> created;
     created.reserve(root["Prefab"].size());
 
     for (auto& je : root["Prefab"]) {
         uint64_t oldId = je.value("ID", (uint64_t)0);
-        Entity entity = detail::DeserializeEntityJson(je, scene, 0 /* força UUID novo */);
+        Entity entity = detail::DeserializeEntityJson(je, scene, 0 );
         remap[oldId] = (uint64_t)entity.GetUUID();
         created.push_back(entity);
     }
 
-    // Passo 2: resolve hierarquia com os UUIDs remapeados.
+    
     size_t i = 0;
     for (auto& je : root["Prefab"]) {
         uint64_t oldParentId = je.value("Parent", (uint64_t)0);
@@ -67,8 +67,8 @@ Entity Prefab::Instantiate(Scene& scene, const std::string& filepath, const glm:
 
     if (created.empty()) return {};
 
-    // A primeira entidade salva por CollectSubtree é sempre a raiz da
-    // subárvore (pré-ordem: raiz antes dos filhos).
+    
+    
     Entity rootEntity = created.front();
     rootEntity.GetComponent<TransformComponent>().Translation = position;
 
@@ -76,4 +76,4 @@ Entity Prefab::Instantiate(Scene& scene, const std::string& filepath, const glm:
     return rootEntity;
 }
 
-} // namespace kizuri
+} 

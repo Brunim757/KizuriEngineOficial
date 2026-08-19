@@ -1,8 +1,8 @@
-// Coroutine — execução diferida no estilo Unity: StartCoroutine com
-// `yield return new WaitForSeconds(...)` ou `WaitForFrames(...)`. A classe
-// Script (ver Script.cs) expõe StartCoroutine e o host
-// (Kizuri.Hosting.Host.UpdateScript) chama UpdateCoroutines depois de cada
-// OnUpdate, então o jogo não precisa gerenciar nada.
+
+
+
+
+
 namespace Kizuri;
 
 public sealed class Coroutine
@@ -13,7 +13,7 @@ public sealed class Coroutine
 
 	public Coroutine(System.Collections.IEnumerator enumerator) => m_Enumerator = enumerator;
 
-	// true = corrotina terminou.
+	
 	public bool Tick(float deltaSeconds)
 	{
 		if (m_WaitSeconds > 0f) { m_WaitSeconds -= deltaSeconds; return false; }

@@ -1,10 +1,10 @@
-// KizuriNative.cs — P/Invoke para o ABI C 'kz_*' exportado pela engine
-// (engine/src/scripting/CSharpBridge.cpp). Regras:
-//   - bool   -> int (1/0)
-//   - structs de saída (Math.Vector2/3) -> out (ponteiro; layout pod, blittable)
-//   - arg de entrada -> primitivos float (evita ambiguidades de marshalling)
-//   - uint -> handle de entidade (opaco)
-// Isolado aqui para que a parte pública do assembly nunca dependa de C++.
+
+
+
+
+
+
+
 using System.Runtime.InteropServices;
 
 namespace Kizuri.Interop;
@@ -15,10 +15,10 @@ internal static class KizuriNative
 
     [DllImport(Lib)] internal static extern void kz_set_active_scene(IntPtr scene);
 
-    // ---- Log (channel 0 = core, 1 = app; level 0=trace..5=critical) --------
+    
     [DllImport(Lib)] internal static extern void kz_log(int channel, int level, [MarshalAs(UnmanagedType.LPUTF8Str)] string message);
 
-    // ---- Time ---------------------------------------------------------------
+    
     [DllImport(Lib)] internal static extern void kz_set_time_delta(double seconds);
     [DllImport(Lib)] internal static extern double kz_time_delta_seconds();
     [DllImport(Lib)] internal static extern double kz_time_get_time();
@@ -27,7 +27,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_set_time_scale(float scale);
     [DllImport(Lib)] internal static extern float kz_get_time_scale();
 
-    // ---- Input --------------------------------------------------------------
+    
     [DllImport(Lib)] internal static extern int kz_input_is_key_pressed(int key);
     [DllImport(Lib)] internal static extern int kz_input_is_key_down(int key);
     [DllImport(Lib)] internal static extern int kz_input_is_action_pressed([MarshalAs(UnmanagedType.LPUTF8Str)] string action);
@@ -37,7 +37,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_input_is_mouse_button_down(int button);
     [DllImport(Lib)] internal static extern void kz_input_get_mouse_position(out float x, out float y);
 
-    // ---- Entities / scene ----------------------------------------------------
+    
     [DllImport(Lib)] internal static extern uint kz_scene_create_entity([MarshalAs(UnmanagedType.LPUTF8Str)] string name);
     [DllImport(Lib)] internal static extern void kz_scene_destroy_entity(uint entity);
     [DllImport(Lib)] internal static extern int kz_entity_has_component(uint entity, int componentType);
@@ -50,7 +50,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_entity_get_scale(uint entity, out Math.Vector3 scale);
     [DllImport(Lib)] internal static extern void kz_entity_set_parent(uint child, uint parent);
 
-    // ---- Cena em runtime ------------------------------------------------------
+    
     [DllImport(Lib)] internal static extern uint kz_scene_instantiate_prefab([MarshalAs(UnmanagedType.LPUTF8Str)] string path, float x, float y, float z);
     [DllImport(Lib)] internal static extern uint kz_scene_instantiate_prefab_rot([MarshalAs(UnmanagedType.LPUTF8Str)] string path, float x, float y, float z, float rx, float ry, float rz);
     [DllImport(Lib)] internal static extern void kz_scene_draw_instanced([MarshalAs(UnmanagedType.LPUTF8Str)] string meshSource, float r, float g, float b, [In] float[] transformData, int count);
@@ -87,7 +87,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_scene_get_entity_count();
     [DllImport(Lib)] internal static extern uint kz_scene_get_entity_at(int index);
 
-    // ---- Adicionar componentes em runtime -------------------------------------
+    
     [DllImport(Lib)] internal static extern int kz_entity_add_sprite(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string? texturePath);
     [DllImport(Lib)] internal static extern int kz_entity_add_text(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string text, float fontSize);
     [DllImport(Lib)] internal static extern int kz_entity_add_audio(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string clipPath, int loop, int playOnStart);
@@ -104,7 +104,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_entity_add_terrain(uint entity, uint segments, float size, float heightScale, uint seed);
     [DllImport(Lib)] internal static extern int kz_terrain_regenerate(uint entity, uint segments, float size, float heightScale, uint seed);
 
-    // ---- Animação esquelética (skinning) -------------------------------------
+    
     [DllImport(Lib)] internal static extern int kz_entity_add_animator(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string meshPath);
     [DllImport(Lib)] internal static extern int kz_animator_play(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string clipName);
     [DllImport(Lib)] internal static extern float kz_animator_get_time(uint entity);
@@ -115,14 +115,14 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_animator_set_state(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string stateName, float blendTime);
     internal static string kz_animator_get_state(uint entity)
     {
-        // A engine mantém o último estado num buffer estático (thread-safe
-        // aqui: chamado sempre da thread principal).
+        
+        
         IntPtr p = kz_animator_get_state_ptr(entity);
         return p == IntPtr.Zero ? "" : Marshal.PtrToStringUTF8(p);
     }
     [DllImport(Lib)] internal static extern IntPtr kz_animator_get_state_ptr(uint entity);
 
-    // ---- Física 3D (Bullet3) ---------------------------------------------------
+    
     [DllImport(Lib)] internal static extern int kz_entity_add_rigidbody3d(uint entity, int bodyType, float mass);
     [DllImport(Lib)] internal static extern int kz_entity_add_box_collider3d(uint entity, float hx, float hy, float hz);
     [DllImport(Lib)] internal static extern int kz_entity_add_sphere_collider3d(uint entity, float radius);
@@ -141,7 +141,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_physics3d_overlap_sphere_count(float x, float y, float z, float radius);
     [DllImport(Lib)] internal static extern int kz_physics3d_overlap_sphere_fill(float x, float y, float z, float radius, [Out] uint[] handles, int maxCount);
 
-    // ---- Mutação de componentes em runtime ------------------------------------
+    
     [DllImport(Lib)] internal static extern int kz_sprite_set_texture(uint entity, [MarshalAs(UnmanagedType.LPUTF8Str)] string path);
     [DllImport(Lib)] internal static extern int kz_sprite_set_color(uint entity, float r, float g, float b, float a);
     [DllImport(Lib)] internal static extern void kz_sprite_set_flip(uint entity, int flipX, int flipY);
@@ -150,7 +150,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern int kz_text_set_size(uint entity, float size);
     [DllImport(Lib)] internal static extern int kz_text_set_color(uint entity, float r, float g, float b, float a);
 
-    // ---- Luz / material PBR --------------------------------------------------
+    
     [DllImport(Lib)] internal static extern void kz_light_set_color(uint entity, float r, float g, float b);
     [DllImport(Lib)] internal static extern void kz_light_set_intensity(uint entity, float intensity);
     [DllImport(Lib)] internal static extern void kz_material_set_albedo(uint entity, float r, float g, float b);
@@ -192,7 +192,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern uint kz_entity_get_collision_mask(uint entity);
     [DllImport(Lib)] internal static extern void kz_material_set_emissive(uint entity, float r, float g, float b, float strength);
 
-    // ---- UI (Canvas / Rect / Botão / Texto em espaço de tela) ------------------
+    
     [DllImport(Lib)] internal static extern int kz_entity_add_ui_canvas(uint entity, float orthoSize);
     [DllImport(Lib)] internal static extern int kz_entity_add_ui_rect(uint entity, float x, float y, float w, float h, float r, float g, float b, float a);
     [DllImport(Lib)] internal static extern int kz_entity_add_ui_button(uint entity, float x, float y, float w, float h, float r, float g, float b, float a);
@@ -202,7 +202,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_ui_set_rect(uint entity, float x, float y, float w, float h);
     [DllImport(Lib)] internal static extern void kz_ui_set_color(uint entity, float r, float g, float b, float a);
 
-    // ---- Áudio ------------------------------------------------------------------
+    
     [DllImport(Lib)] internal static extern int kz_audio_play(uint entity);
     [DllImport(Lib)] internal static extern int kz_audio_stop(uint entity);
     [DllImport(Lib)] internal static extern void kz_audio_set_volume(uint entity, float volume);
@@ -214,7 +214,7 @@ internal static class KizuriNative
     [DllImport(Lib)] internal static extern void kz_audio_set_group_volume(int group, float volume);
     [DllImport(Lib)] internal static extern float kz_audio_get_group_volume(int group);
 
-    // ---- Physics 2D ----------------------------------------------------------
+    
     [DllImport(Lib)] internal static extern int kz_entity_get_rigidbody2d(uint entity, out int bodyType, out Math.Vector2 velocity);
     [DllImport(Lib)] internal static extern void kz_rigidbody2d_set_linear_velocity(uint entity, float vx, float vy);
     [DllImport(Lib)] internal static extern void kz_rigidbody2d_apply_linear_impulse(uint entity, float ix, float iy, int wake);

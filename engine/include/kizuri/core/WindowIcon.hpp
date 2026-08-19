@@ -1,5 +1,5 @@
-// Gerado por scripts/packaging (torii 48px) — não editar à mão.
-// Mesma identidade visual do ícone do app (packaging/icons/kizuri-torii-48.png).
+
+
 #pragma once
 #include <cstdint>
 namespace kizuri {

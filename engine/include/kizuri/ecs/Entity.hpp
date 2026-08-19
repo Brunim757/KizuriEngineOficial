@@ -8,8 +8,8 @@
 
 namespace kizuri {
 
-// Wrapper "handle" leve em cima de entt::entity, no estilo de engines
-// modernas (Hazel/Godot-like). Cada Entity sabe a qual Scene pertence.
+
+
 class Entity {
 public:
     Entity() = default;
@@ -54,8 +54,8 @@ public:
     const std::string& GetName() { return GetComponent<TagComponent>().Tag; }
     Scene* GetScene() { return m_Scene; }
 
-    // Hierarquia — ver RelationshipComponent e Scene::SetParent para as
-    // regras (anti-ciclo, transform mundial etc).
+    
+    
     void SetParent(Entity parent) { m_Scene->SetParent(*this, parent); }
 
     Entity GetParent() {
@@ -75,8 +75,8 @@ public:
         return result;
     }
 
-    // Transform local (relativo ao pai). Para posição/rotação/escala no
-    // espaço do mundo, use GetWorldTransform().
+    
+    
     glm::mat4 GetLocalTransform() { return GetComponent<TransformComponent>().GetTransform(); }
     glm::mat4 GetWorldTransform() { return m_Scene->GetWorldTransform(*this); }
 
@@ -85,4 +85,4 @@ private:
     Scene* m_Scene = nullptr;
 };
 
-} // namespace kizuri
+} 

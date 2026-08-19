@@ -4,8 +4,8 @@
 
 namespace kizuri {
 
-// Acha a câmera primária ativa (ou a primeira de perspectiva, caída) da
-// cena — usada pelo preview e pelo editor de câmera.
+
+
 static bool FindPrimaryCamera(Scene& scene, Entity& outCamera, CameraComponent*& outComp) {
     auto& registry = scene.GetRegistry();
     auto view = registry.view<TransformComponent, CameraComponent>();
@@ -40,7 +40,7 @@ static bool SceneHasPrimaryCamera(Scene& scene) {
     return false;
 }
 
-} // namespace kizuri
+} 
 
 void GameViewPanel::OnUpdate(kizuri::Timestep ts) {
     (void)ts;
@@ -48,11 +48,11 @@ void GameViewPanel::OnUpdate(kizuri::Timestep ts) {
     kizuri::Scene* scene = m_Ctx.ActiveScene.get();
     if (!scene) return;
 
-    // Renderiza a câmera do jogo SEMPRE que existe câmera primária — em
-    // Play ou em Edit (preview ao vivo; o testador pediu pra não precisar
-    // dar Play pra ver a câmera).
+    
+    
+    
     if (!kizuri::SceneHasPrimaryCamera(*scene)) {
-        // Sem câmera: limpa (sem ficar congelado no último frame).
+        
         if (m_Framebuffer) {
             m_Framebuffer->Bind();
             kizuri::RenderCommand::SetClearColor({ 0.05f, 0.05f, 0.06f, 1.0f });
@@ -70,8 +70,8 @@ void GameViewPanel::OnUpdate(kizuri::Timestep ts) {
         m_Framebuffer = kizuri::Framebuffer::Create({ (uint32_t)m_Ctx.ViewportSize.x, (uint32_t)m_Ctx.ViewportSize.y, 1 });
     m_Framebuffer->Resize((uint32_t)m_Ctx.ViewportSize.x, (uint32_t)m_Ctx.ViewportSize.y);
 
-    // TAA/MotionBlur têm histórico global entre frames — render extra não pode
-    // sobrescrever o histórico do viewport principal.
+    
+    
     ScopedTemporalOff temporal;
     m_Framebuffer->Bind();
     kizuri::RenderCommand::SetClearColor({ 0.05f, 0.05f, 0.06f, 1.0f });
@@ -98,9 +98,9 @@ void GameViewPanel::OnImGuiRender() {
     ImGui::TextDisabled("%s", m_Ctx.IsPlay ? "Play — câmera do jogador" : "preview ao vivo (sem Play)");
     ImGui::SameLine();
     if (ImGui::SmallButton("Focar câmera")) {
-        // Seleciona a câmera principal NO INSPETOR: é lá que se edita (FOV,
-        // near/far, tipo...), inclusive durante o Play — e os ajustes voltam
-        // pra cena quando o Play para.
+        
+        
+        
         if (scene) {
             kizuri::Entity cam;
             kizuri::CameraComponent* cc = nullptr;

@@ -15,9 +15,9 @@
 
 namespace {
 
-// Decodifica uma data-URI base64 ("data:image/png;base64,...."). Alguns .glb
-// embutem as imagens como data-URI em vez de buffer view do BIN — sem isso o
-// material fica sem textura (a saga do "Fox cinza" não pode voltar).
+
+
+
 std::vector<uint8_t> DecodeBase64DataURI(const char* uri) {
     std::vector<uint8_t> out;
     if (!uri || strncmp(uri, "data:", 5) != 0) return out;
@@ -38,7 +38,7 @@ std::vector<uint8_t> DecodeBase64DataURI(const char* uri) {
     for (const char* p = b64; *p; ++p) {
         if (*p == '\r' || *p == '\n') continue;
         int8_t v = table[(uint8_t)*p];
-        if (v < 0) continue; // ignora padding '='
+        if (v < 0) continue; 
         acc = (acc << 6) | (uint32_t)v;
         bits += 6;
         if (bits >= 8) {
@@ -49,9 +49,9 @@ std::vector<uint8_t> DecodeBase64DataURI(const char* uri) {
     return out;
 }
 
-// Carrega a textura de uma textura_view do glTF: prioriza a imagem embutida
-// no buffer (glb) via CreateFromMemory (sem flip — UV glTF), senão data-URI
-// base64, senão o arquivo externo (uri). Devolve null se não houver textura.
+
+
+
 kizuri::Ref<kizuri::Texture2D> LoadGLTFTexture(const cgltf_texture_view& view) {
     if (!view.texture || !view.texture->image) return nullptr;
     const cgltf_image* img = view.texture->image;
@@ -71,7 +71,7 @@ kizuri::Ref<kizuri::Texture2D> LoadGLTFTexture(const cgltf_texture_view& view) {
     return nullptr;
 }
 
-} // namespace
+} 
 
 #include <glm/gtc/constants.hpp>
 #include <cmath>
@@ -109,17 +109,17 @@ Mesh::Mesh(const std::vector<Vertex3D>& vertices, const std::vector<uint32_t>& i
 
 Ref<Mesh> Mesh::CreateCube() {
     std::vector<Vertex3D> v = {
-        // frente
+        
         {{-0.5f,-0.5f, 0.5f},{0,0,1},{0,0}}, {{0.5f,-0.5f,0.5f},{0,0,1},{1,0}}, {{0.5f,0.5f,0.5f},{0,0,1},{1,1}}, {{-0.5f,0.5f,0.5f},{0,0,1},{0,1}},
-        // trás
+        
         {{0.5f,-0.5f,-0.5f},{0,0,-1},{0,0}}, {{-0.5f,-0.5f,-0.5f},{0,0,-1},{1,0}}, {{-0.5f,0.5f,-0.5f},{0,0,-1},{1,1}}, {{0.5f,0.5f,-0.5f},{0,0,-1},{0,1}},
-        // esquerda
+        
         {{-0.5f,-0.5f,-0.5f},{-1,0,0},{0,0}}, {{-0.5f,-0.5f,0.5f},{-1,0,0},{1,0}}, {{-0.5f,0.5f,0.5f},{-1,0,0},{1,1}}, {{-0.5f,0.5f,-0.5f},{-1,0,0},{0,1}},
-        // direita
+        
         {{0.5f,-0.5f,0.5f},{1,0,0},{0,0}}, {{0.5f,-0.5f,-0.5f},{1,0,0},{1,0}}, {{0.5f,0.5f,-0.5f},{1,0,0},{1,1}}, {{0.5f,0.5f,0.5f},{1,0,0},{0,1}},
-        // topo
+        
         {{-0.5f,0.5f,0.5f},{0,1,0},{0,0}}, {{0.5f,0.5f,0.5f},{0,1,0},{1,0}}, {{0.5f,0.5f,-0.5f},{0,1,0},{1,1}}, {{-0.5f,0.5f,-0.5f},{0,1,0},{0,1}},
-        // base
+        
         {{-0.5f,-0.5f,-0.5f},{0,-1,0},{0,0}}, {{0.5f,-0.5f,-0.5f},{0,-1,0},{1,0}}, {{0.5f,-0.5f,0.5f},{0,-1,0},{1,1}}, {{-0.5f,-0.5f,0.5f},{0,-1,0},{0,1}},
     };
     std::vector<uint32_t> idx;
@@ -223,10 +223,10 @@ Ref<Mesh> Mesh::CreateCylinder(uint32_t sectors) {
     for (uint32_t i = 0; i <= sectors; ++i) {
         float a = (float)i * 2.0f * PI / (float)sectors;
         glm::vec2 ring(glm::cos(a), glm::sin(a));
-        // corpo (2 anéis: topo e base)
+        
         vertices.push_back({ { ring.x * radius, halfH, ring.y * radius }, { ring.x, 0.0f, ring.y }, { a / (2.0f * PI), 1.0f } });
         vertices.push_back({ { ring.x * radius, -halfH, ring.y * radius }, { ring.x, 0.0f, ring.y }, { a / (2.0f * PI), 0.0f } });
-        // tampas (centro + borda) — topo com normal +Y, base -Y
+        
         vertices.push_back({ { 0.0f, halfH, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.5f, 0.5f } });
         vertices.push_back({ { ring.x * radius, halfH, ring.y * radius }, { 0.0f, 1.0f, 0.0f }, { (ring.x * 0.5f + 0.5f), (ring.y * 0.5f + 0.5f) } });
         vertices.push_back({ { 0.0f, -halfH, 0.0f }, { 0.0f, -1.0f, 0.0f }, { 0.5f, 0.5f } });
@@ -236,9 +236,9 @@ Ref<Mesh> Mesh::CreateCylinder(uint32_t sectors) {
     for (uint32_t i = 0; i < sectors; ++i) {
         uint32_t top0 = i * 6, top1 = (i + 1) * 6;
         uint32_t b0 = top0 + 1, b1 = top1 + 1;
-        // parede
+        
         indices.insert(indices.end(), { top0, b0, top1, top1, b0, b1 });
-        // tampas
+        
         uint32_t tc0 = top0 + 2, te0 = top0 + 3, tc1 = top1 + 2, te1 = top1 + 3;
         uint32_t bc0 = top0 + 4, be0 = top0 + 5, bc1 = top1 + 4, be1 = top1 + 5;
         indices.insert(indices.end(), { tc0, te0, tc1, tc1, te0, te1 });
@@ -258,15 +258,15 @@ Ref<Mesh> Mesh::CreateCone(uint32_t sectors) {
         glm::vec2 ring(glm::cos(a), glm::sin(a));
         glm::vec3 edge(ring.x * radius, -halfH, ring.y * radius);
         glm::vec3 normal = glm::normalize(glm::vec3(ring.x, radius / glm::max(halfH * 2.0f, 0.001f), ring.y));
-        vertices.push_back({ { 0.0f, halfH, 0.0f }, normal, { 0.5f, 0.5f } });            // ápice
-        vertices.push_back({ edge, normal, { a / (2.0f * PI), 0.0f } });                    // borda
-        vertices.push_back({ { 0.0f, -halfH, 0.0f }, { 0.0f, -1.0f, 0.0f }, { 0.5f, 0.5f } }); // centro da base
-        vertices.push_back({ edge, { 0.0f, -1.0f, 0.0f }, { (ring.x * 0.5f + 0.5f), (ring.y * 0.5f + 0.5f) } }); // borda da base
+        vertices.push_back({ { 0.0f, halfH, 0.0f }, normal, { 0.5f, 0.5f } });            
+        vertices.push_back({ edge, normal, { a / (2.0f * PI), 0.0f } });                    
+        vertices.push_back({ { 0.0f, -halfH, 0.0f }, { 0.0f, -1.0f, 0.0f }, { 0.5f, 0.5f } }); 
+        vertices.push_back({ edge, { 0.0f, -1.0f, 0.0f }, { (ring.x * 0.5f + 0.5f), (ring.y * 0.5f + 0.5f) } }); 
     }
     for (uint32_t i = 0; i < sectors; ++i) {
         uint32_t o0 = i * 4, o1 = (i + 1) * 4;
-        indices.insert(indices.end(), { o0, o1 + 1, o0 + 1 });       // lateral
-        indices.insert(indices.end(), { o0 + 2, o0 + 3, o1 + 3, o1 + 3, o1 + 2, o0 + 2 }); // base
+        indices.insert(indices.end(), { o0, o1 + 1, o0 + 1 });       
+        indices.insert(indices.end(), { o0 + 2, o0 + 3, o1 + 3, o1 + 3, o1 + 2, o0 + 2 }); 
     }
     return CreateRef<Mesh>(vertices, indices);
 }
@@ -277,7 +277,7 @@ Ref<Mesh> Mesh::CreateCapsule(uint32_t sectors, uint32_t stacks) {
     const float PI = glm::pi<float>();
     const float radius = 0.25f, halfBody = 0.35f;
 
-    // hemisférios: amostra ângulo de elevação de 0..90 no topo e 90..180 embaixo.
+    
     auto PushRing = [&](float phi, float y) {
         for (uint32_t i = 0; i <= sectors; ++i) {
             float a = (float)i * 2.0f * PI / (float)sectors;
@@ -288,11 +288,11 @@ Ref<Mesh> Mesh::CreateCapsule(uint32_t sectors, uint32_t stacks) {
     };
 
     for (uint32_t s = 0; s <= stacks; ++s) {
-        float phi = PI * (0.5f - 0.5f * (float)s / (float)stacks); // topo: phi de 90°→0°
+        float phi = PI * (0.5f - 0.5f * (float)s / (float)stacks); 
         PushRing(phi, halfBody);
     }
     for (uint32_t s = 0; s <= stacks; ++s) {
-        float phi = PI * (0.5f + 0.5f * (float)s / (float)stacks); // base: phi de 0°→-90°
+        float phi = PI * (0.5f + 0.5f * (float)s / (float)stacks); 
         PushRing(phi, -halfBody);
     }
     uint32_t rings = (uint32_t)vertices.size() / (sectors + 1);
@@ -332,14 +332,14 @@ Ref<Mesh> Mesh::CreateTorus(uint32_t majorSeg, uint32_t minorSeg) {
     return CreateRef<Mesh>(vertices, indices);
 }
 
-// Terreno procedural: grade com elevação por fbm (ruído de valor), normais
-// calculadas por diferenças finitas. Rápido de gerar (uma vez por configuração).
+
+
 Ref<Mesh> Mesh::CreateTerrain(uint32_t segments, float size, float heightScale, uint32_t seed) {
     segments = glm::clamp(segments, 2u, 256u);
     std::vector<Vertex3D> vertices;
     std::vector<uint32_t> indices;
 
-    // hash + ruído de valor 2D (para o heightmap ser determinístico).
+    
     auto hash = [&](float x, float z) {
         uint32_t h = (uint32_t)(x * 127.1f + z * 311.7f) + seed * 7919u;
         h = (h ^ (h >> 16)) * 0x45d9f3bu;
@@ -373,14 +373,14 @@ Ref<Mesh> Mesh::CreateTerrain(uint32_t segments, float size, float heightScale, 
             float x = -half + size * (float)i / (float)segments;
             float z = -half + size * (float)j / (float)segments;
             h[i][j] = fbm(x * 0.05f, z * 0.05f) * heightScale;
-            // canto afunda pra parecer um "terreno" cercado (borda suave).
+            
             float edge = glm::clamp((half - std::max(std::abs(x), std::abs(z))) / (half * 0.2f), 0.0f, 1.0f);
             h[i][j] *= edge;
             vertices.push_back({ glm::vec3(x, h[i][j], z), glm::vec3(0.0f, 1.0f, 0.0f),
                                  { (float)i / (float)segments, (float)j / (float)segments } });
         }
     }
-    // Normais por diferenças finitas.
+    
     for (uint32_t i = 0; i <= segments; ++i) {
         for (uint32_t j = 0; j <= segments; ++j) {
             float hL = h[i > 0 ? i - 1 : i][j], hR = h[i < segments ? i + 1 : i][j];
@@ -420,7 +420,7 @@ Ref<Mesh> Mesh::CreateTerrainFromHeightmap(uint32_t segments, float size,
                                  { (float)i / (float)segments, (float)j / (float)segments } });
         }
     }
-    // Normais por diferenças finitas (mesma convenção do CreateTerrain).
+    
     for (uint32_t i = 0; i <= segments; ++i) {
         for (uint32_t j = 0; j <= segments; ++j) {
             float hL = heights[(i > 0 ? i - 1 : i) * (segments + 1) + j];
@@ -442,7 +442,7 @@ Ref<Mesh> Mesh::CreateTerrainFromHeightmap(uint32_t segments, float size,
     return CreateRef<Mesh>(vertices, indices);
 }
 
-// LOD automático: versão com menos polígonos de um builtin.
+
 Ref<Mesh> Mesh::CreateLODMesh(const std::string& source, int level) {
     level = glm::clamp(level, 0, 3);
     if (source == "builtin:sphere")
@@ -455,7 +455,7 @@ Ref<Mesh> Mesh::CreateLODMesh(const std::string& source, int level) {
         return CreateCapsule((uint32_t)glm::max(6, 24 >> level), (uint32_t)glm::max(3, 12 >> level));
     if (source == "builtin:torus")
         return CreateTorus((uint32_t)glm::max(8, 48 >> level), (uint32_t)glm::max(4, 24 >> level));
-    return FromSource(source); // cube/plane (sem redução) ou mesh externa
+    return FromSource(source); 
 }
 
 Ref<Mesh> Mesh::FromSource(const std::string& source) {
@@ -484,11 +484,11 @@ Ref<Mesh> Mesh::FromSource(const std::string& source) {
     return CreateCube();
 }
 
-// Flatten compartilhado: converte um cgltf_data já parseado (meshes +
-// primitivas triangulares) num Mesh único. Usado tanto pelo caminho de
-// arquivo quanto pelo caminho em memória.
+
+
+
 static Ref<Mesh> BuildMeshFromGLTF(cgltf_data* data, const std::string& label) {
-    // Acha os accessors certos por atributo dentro de cada primitiva.
+    
     auto FindAttr = [](const cgltf_primitive& prim, cgltf_attribute_type type, int idx) -> const cgltf_accessor* {
         for (cgltf_size a = 0; a < prim.attributes_count; ++a) {
             const cgltf_attribute& attr = prim.attributes[a];
@@ -505,7 +505,7 @@ static Ref<Mesh> BuildMeshFromGLTF(cgltf_data* data, const std::string& label) {
         const cgltf_mesh& mesh = data->meshes[m];
         for (cgltf_size p = 0; p < mesh.primitives_count; ++p) {
             const cgltf_primitive& prim = mesh.primitives[p];
-            if (prim.type != cgltf_primitive_type_triangles) continue; // só triângulos (v1)
+            if (prim.type != cgltf_primitive_type_triangles) continue; 
 
             const cgltf_accessor* pos = FindAttr(prim, cgltf_attribute_type_position, 0);
             if (!pos) continue;
@@ -523,7 +523,7 @@ static Ref<Mesh> BuildMeshFromGLTF(cgltf_data* data, const std::string& label) {
                 if (uv) cgltf_accessor_read_float(uv, i, &v.TexCoord.x, 2);
                 if (jnt) {
                     glm::vec4 ji(0.0f);
-                    cgltf_accessor_read_float(jnt, i, &ji.x, 4); // convertido de ubyte/uint pra float
+                    cgltf_accessor_read_float(jnt, i, &ji.x, 4); 
                     v.Joints = ji;
                 }
                 if (wgt) cgltf_accessor_read_float(wgt, i, &v.Weights.x, 4);
@@ -575,7 +575,7 @@ Ref<Mesh> Mesh::LoadFromGLTFMemory(const void* data, std::size_t size) {
         KZ_CORE_ERROR("Falha ao carregar a malha glTF em memória (cgltf erro {0}).", (int)result);
         return CreateCube();
     }
-    result = cgltf_load_buffers(&options, gltf, nullptr); // .glb: buffers já vêm do chunk BIN
+    result = cgltf_load_buffers(&options, gltf, nullptr); 
     if (result != cgltf_result_success) {
         KZ_CORE_ERROR("Falha ao carregar os buffers do glTF em memória (cgltf erro {0}).", (int)result);
         cgltf_free(gltf);
@@ -584,7 +584,7 @@ Ref<Mesh> Mesh::LoadFromGLTFMemory(const void* data, std::size_t size) {
     return BuildMeshFromGLTF(gltf, "memória");
 }
 
-// Extrai o material PBR (texturas incluídas) de um glTF já parseado.
+
 static Material ExtractMaterialFromGLTFData(cgltf_data* data) {
     Material mat;
     if (data->materials_count > 0) {
@@ -603,7 +603,7 @@ static Material ExtractMaterialFromGLTFData(cgltf_data* data) {
 }
 
 Material Mesh::ExtractMaterialFromGLTF(const std::string& path) {
-    // kzres:// → parse em memória (conteúdo embutido) — não depende de disco.
+    
     if (IsEmbeddedPath(path)) {
         EmbeddedBuffer buf;
         if (!GetEmbeddedResource(EmbeddedNameFromPath(path), buf)) {
@@ -637,4 +637,4 @@ Material Mesh::ExtractMaterialFromGLTFMemory(const void* dataPtr, std::size_t si
     return mat;
 }
 
-} // namespace kizuri
+} 

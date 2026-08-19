@@ -41,7 +41,7 @@ uint32_t RenderCommand::GetFrameDrawCalls() { return s_FrameDrawCalls; }
 uint32_t RenderCommand::GetFrameTriangles() { return s_FrameTriangles; }
 void RenderCommand::AddInstancedStats(uint32_t instances) {
     s_FrameDrawCalls += 1;
-    s_FrameTriangles += instances * 2; // quad = 2 triângulos
+    s_FrameTriangles += instances * 2; 
 }
 
-} // namespace kizuri
+} 

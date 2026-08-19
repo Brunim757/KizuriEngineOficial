@@ -2,9 +2,9 @@ using System;
 
 namespace Kizuri
 {
-	// Rede multiplayer (pilar AAA v0.34): uma sessão por processo, atualizada
-	// automaticamente pela engine. Host numa instância do jogo, clientes nas
-	// outras (porta padrão 26000). Eventos consultados por PollEvent.
+	
+	
+	
 	public enum NetEventType : int { Connect = 0, Disconnect = 1, Data = 2, Error = 3 }
 
 	public struct NetEvent
@@ -28,7 +28,7 @@ namespace Kizuri
 		public static bool Send(uint peer, byte[] data)
 			=> Interop.KizuriNative.kz_net_send(peer, data, (uint)data.Length) != 0;
 
-		// Próximo evento pendente (false se a fila está vazia).
+		
 		public static bool PollEvent(out NetEvent ev)
 		{
 			ev = new NetEvent();

@@ -23,4 +23,4 @@ void NativeScript::DestroyEntity() {
     if (scene && m_Entity) scene->DestroyEntity(m_Entity);
 }
 
-} // namespace kizuri
+} 

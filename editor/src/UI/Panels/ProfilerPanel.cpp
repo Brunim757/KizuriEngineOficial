@@ -7,8 +7,8 @@
 #include <unistd.h>
 #endif
 
-// Memória RAM usada pelo processo (Linux via /proc/self/statm; Windows: sem
-// suporte simples, retorna -1 = n/d).
+
+
 static double ProcessRAMMB() {
 #ifdef _WIN32
     return -1.0;
@@ -54,27 +54,27 @@ void ProfilerPanel::OnImGuiRender() {
     ImGui::TextDisabled("Tempo de frame (últimos %d frames)", kHistory);
 
     if (!m_FrameTimes.empty()) {
-        // Gráfico rolante com o próprio ImDrawList (mais leve que PlotLines).
+        
         ImVec2 avail = ImGui::GetContentRegionAvail();
         float w = avail.x, h = 60.0f;
         ImVec2 p0 = ImGui::GetCursorScreenPos();
         ImVec2 p1 = { p0.x + w, p0.y + h };
         ImDrawList* dl = ImGui::GetWindowDrawList();
 
-        // Fundo + borda.
+        
         dl->AddRectFilled(p0, p1, IM_COL32(18, 18, 22, 255));
         dl->AddRect(p0, p1, IM_COL32(70, 70, 90, 255));
 
-        float maxMs = 16.6f; // escala fixa: 16.6ms = 60 FPS
+        float maxMs = 16.6f; 
         for (float v : m_FrameTimes) maxMs = std::max(maxMs, v);
         maxMs *= 1.1f;
 
-        // Linhas de referência de 60/30 FPS.
+        
         auto yAt = [&](float ms) { return p1.y - (ms / maxMs) * (p1.y - p0.y); };
         dl->AddLine({ p0.x, yAt(16.6f) }, { p1.x, yAt(16.6f) }, IM_COL32(60, 140, 70, 80));
         dl->AddLine({ p0.x, yAt(33.3f) }, { p1.x, yAt(33.3f) }, IM_COL32(140, 100, 50, 80));
 
-        // Polilinha dos últimos N samples.
+        
         int n = (int)m_FrameTimes.size();
         float dx = n > 1 ? w / (float)(n - 1) : 0.0f;
         for (int i = 1; i < n; ++i) {

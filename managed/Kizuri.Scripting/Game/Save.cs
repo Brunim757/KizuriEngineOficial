@@ -1,7 +1,7 @@
-// SaveSystem — persistência simples de jogo num arquivo JSON ("save.json" no
-// diretório de trabalho por padrão). Puramente managed (System.Text.Json),
-// nada de ABI. Use Save() pra gravar em disco e os Get* pra ler (a leitura
-// é automática na primeira consulta).
+
+
+
+
 using System.Text.Json;
 
 namespace Kizuri;
@@ -14,7 +14,7 @@ public static class SaveSystem
 
 	public static string FilePath => s_Path;
 
-	// Muda o arquivo de save (ex: "jogos/fase1.save"). Limpa o cache atual.
+	
 	public static void SetPath(string path)
 	{
 		s_Path = string.IsNullOrWhiteSpace(path) ? "save.json" : path;
@@ -80,7 +80,7 @@ public static class SaveSystem
 			? new Math.Vector3(x, y, z) : fallback;
 	}
 
-	// Grava o estado atual em disco. Chamar ao sair de fase / no Pause.
+	
 	public static void Save()
 	{
 		try { File.WriteAllText(s_Path, JsonSerializer.Serialize(s_Data)); }

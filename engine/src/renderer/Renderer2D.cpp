@@ -17,8 +17,8 @@ struct QuadVertex {
     float TilingFactor;
 };
 
-// Vértice do pipeline de círculos — posição local (quad unitário) + atributos
-// de desenho; o fragment shader calcula o SDF do disco/anel.
+
+
 struct CircleVertex {
     glm::vec3 WorldPosition;
     glm::vec3 LocalPosition;
@@ -41,9 +41,9 @@ struct Renderer2DData {
     Ref<Shader> QuadShader;
     Ref<Texture2D> WhiteTexture;
 
-    // Textura ativa do batch atual — quads são agrupados por textura e o
-    // batch é despejado (Flush) quando ela muda. É o que mantém o shader em
-    // GLSL 330 (sem indexação dinâmica de sampler array).
+    
+    
+    
     Ref<Texture2D> CurrentTexture;
 
     uint32_t QuadIndexCount = 0;
@@ -54,7 +54,7 @@ struct Renderer2DData {
 
     glm::mat4 ViewProjection{ 1.0f };
 
-    // Pipeline de círculos — buffer/VAO próprios, flush separado do de quads.
+    
     Ref<VertexArray> CircleVertexArray;
     Ref<VertexBuffer> CircleVertexBuffer;
     Ref<Shader> CircleShader;
@@ -71,13 +71,13 @@ struct Renderer2DData {
 
 static Renderer2DData s_Data;
 
-// O batching de quads roda 100% em GLSL 330 core (o mínimo que a engine
-// garante, ver Window::Init) — inclusive o shader de quads. O preço da
-// portabilidade: GLSL 1.30–3.30 não permite indexar array de sampler com
-// índice dinâmico (`u_Textures[index]` com índice por-vértice só existe a
-// partir do 4.00), então em vez de um draw call multi-textura a engine
-// agrupa os quads POR textura e faz um draw call por textura do lote —
-// o mesmo resultado visual com zero dependência de driver novo.
+
+
+
+
+
+
+
 static const char* s_QuadVertexSrc = R"(
 #version 330 core
 layout(location = 0) in vec3 a_Position;
@@ -144,9 +144,9 @@ void main() {
 }
 )";
 
-// Círculo 2D: desenha um quad expandido e calcula o SDF no fragment shader
-// (distância ao centro em espaço local) — disco suave ou anel fino, sem
-// precisar de textura nem geometria curva na CPU.
+
+
+
 static const char* s_CircleVertexSrc = R"(
 #version 330 core
 layout(location = 0) in vec3 a_WorldPosition;
@@ -231,9 +231,9 @@ void Renderer2D::Init() {
     s_Data.QuadVertexPositions[2] = {  0.5f,  0.5f, 0.0f, 1.0f };
     s_Data.QuadVertexPositions[3] = { -0.5f,  0.5f, 0.0f, 1.0f };
 
-    // Grid de referência no plano XY — equivalente 2D do grid de chão do
-    // Renderer3D, mesma ideia (fixo, construído uma vez, eixo destacado
-    // pra dar noção de orientação além de escala).
+    
+    
+    
     s_Data.GridShader = CreateRef<Shader>("Renderer2D_Line", s_LineVertexSrc, s_LineFragmentSrc);
 
     const float halfSize = 50.0f;
@@ -247,13 +247,13 @@ void Renderer2D::Init() {
 
     for (int i = -(int)halfSize; i <= (int)halfSize; ++i) {
         float x = (float)i;
-        glm::vec3 c = (i == 0) ? yAxisColor : gridColor; // x=0 é o eixo Y
+        glm::vec3 c = (i == 0) ? yAxisColor : gridColor; 
         gridVerts.push_back({ { x, -halfSize, 0.0f }, c });
         gridVerts.push_back({ { x,  halfSize, 0.0f }, c });
     }
     for (int i = -(int)halfSize; i <= (int)halfSize; ++i) {
         float y = (float)i;
-        glm::vec3 c = (i == 0) ? xAxisColor : gridColor; // y=0 é o eixo X
+        glm::vec3 c = (i == 0) ? xAxisColor : gridColor; 
         gridVerts.push_back({ { -halfSize, y, 0.0f }, c });
         gridVerts.push_back({ {  halfSize, y, 0.0f }, c });
     }
@@ -267,7 +267,7 @@ void Renderer2D::Init() {
     });
     s_Data.GridVertexArray->AddVertexBuffer(gridVB);
 
-    // ---- Pipeline de círculos ----
+    
     s_Data.CircleVertexArray = CreateRef<VertexArray>();
     s_Data.CircleVertexBufferBase.resize(Renderer2DData::MaxCircleVertices);
 
@@ -304,11 +304,11 @@ void Renderer2D::BeginScene(const OrthographicCamera& camera) { BeginScene(camer
 
 void Renderer2D::BeginScene(const glm::mat4& viewProjection) {
     KZ_TRACE_SCOPE("Renderer2D::BeginScene");
-    // Estado de blend DONO do pipeline 2D: o 3D desliga/religa o GL_BLEND à
-    // vontade (decals/partículas), e um frame deixado com blend OFF aqui
-    // apagava a transparência do texto (retângulos brancos em vez de letras).
-    // Cada BeginScene força o estado correto de novo — nunca depende do que
-    // veio antes no frame.
+    
+    
+    
+    
+    
     RenderCommand::SetBlending(true);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -320,14 +320,14 @@ void Renderer2D::BeginScene(const glm::mat4& viewProjection) {
 
 void Renderer2D::DrawGrid() {
     KZ_TRACE_SCOPE("Renderer2D::DrawGrid");
-    // Desenha fora do batch de quads (shader e VAO diferentes) — não
-    // interfere no StartBatch/Flush do resto da cena.
+    
+    
     s_Data.GridShader->Bind();
     s_Data.GridShader->SetMat4("u_ViewProjection", s_Data.ViewProjection);
     RenderCommand::DrawLines(s_Data.GridVertexArray, s_Data.GridVertexCount);
-    // Restaura o shader de quads pra que toda renderização subsequente
-    // (sprites, texto, rects) use o vertex layout correto — SEM isso,
-    // o GridShader ficava ativo e bagunçava as UVs/cor de tudo.
+    
+    
+    
     s_Data.QuadShader->Bind();
     s_Data.QuadShader->SetMat4("u_ViewProjection", s_Data.ViewProjection);
 }
@@ -360,17 +360,17 @@ void Renderer2D::Flush() {
     KZ_TRACE_SCOPE("Renderer2D::Flush");
     if (s_Data.QuadIndexCount == 0) return;
 
-    // Garante que o shader de quads está ativo — DrawGrid/DrawCircle podem
-    // ter trocado o programa ativo, e desenhar com o shader errado produz
-    // retângulos coloridos em vez de texto/sprites.
+    
+    
+    
     s_Data.QuadShader->Bind();
     s_Data.QuadShader->SetMat4("u_ViewProjection", s_Data.ViewProjection);
 
     uint32_t dataSize = s_Data.QuadVertexBufferPtr * sizeof(QuadVertex);
     s_Data.QuadVertexBuffer->SetData(s_Data.QuadVertexBufferBase.data(), dataSize);
 
-    // Textura única do batch — GLSL 330 não permite sampler array dinâmico,
-    // então cada batch carrega só a textura atual na unidade 0.
+    
+    
     if (s_Data.CurrentTexture) {
         s_Data.CurrentTexture->Bind(0);
         s_Data.QuadShader->SetInt("u_Texture", 0);
@@ -379,12 +379,12 @@ void Renderer2D::Flush() {
     RenderCommand::DrawIndexed(s_Data.QuadVertexArray, s_Data.QuadIndexCount);
     ++s_Data.Stats.DrawCalls;
 
-    // CRÍTICO: zera os contadores depois de desenhar. ANTES isso não era
-    // feito — o próximo Flush (troca de textura no meio do frame ou o
-    // EndScene) redesenhava os quads JÁ desenhados, com a textura NOVA
-    // do lote atual. Sintoma real: o quadrado colorido do fundo saía
-    // estampado com o atlas inteiro (retângulos/caracteres atrás das
-    // letras, "que se movem junto com o fundo").
+    
+    
+    
+    
+    
+    
     s_Data.QuadIndexCount = 0;
     s_Data.QuadVertexBufferPtr = 0;
 }
@@ -407,11 +407,11 @@ static void PushQuadVertices(const glm::mat4& transform, const glm::vec4& color,
 
 void Renderer2D::DrawTransformedQuad(const glm::mat4& transform, const glm::vec4& color, int) {
     static const glm::vec2 texCoords[4] = { {0,0}, {1,0}, {1,1}, {0,1} };
-    // Quad colorido usa a textura branca 1x1 — mas precisa TROCAR pra ela
-    // explicitamente. Se o quad anterior era texturizado (sprite, atlas de
-    // texto), esse quad herda a textura errada e amostra ela com UVs
-    // (0,0)-(1,1) — sintoma: o quadrado do fundo estampado com o atlas
-    // inteiro (caracteres aleatórios) e cobrindo o texto por cima.
+    
+    
+    
+    
+    
     if (*s_Data.CurrentTexture != *s_Data.WhiteTexture) {
         Renderer2D::Flush();
         s_Data.CurrentTexture = s_Data.WhiteTexture;
@@ -430,9 +430,9 @@ void Renderer2D::DrawTransformedQuadUV(const glm::mat4& transform, const Ref<Tex
         { uvMin.x, uvMin.y }, { uvMax.x, uvMin.y }, { uvMax.x, uvMax.y }, { uvMin.x, uvMax.y },
     };
 
-    // Troca de textura = fim do batch atual; o próximo quad começa um lote
-    // novo com a nova textura (flush no meio do frame é OK — o buffer de
-    // vértice continua acumulando, só despeja o que já estava lá).
+    
+    
+    
     if (*s_Data.CurrentTexture != *texture) {
         Renderer2D::Flush();
         s_Data.CurrentTexture = texture;
@@ -443,8 +443,8 @@ void Renderer2D::DrawTransformedQuadUV(const glm::mat4& transform, const Ref<Tex
 void Renderer2D::DrawRectOutline(const glm::vec2& center, const glm::vec2& size, float thickness, const glm::vec4& color) {
     const float t = glm::max(thickness, 0.001f);
     const glm::vec2 half = size * 0.5f;
-    // Topo e base (barras horizontais) + esquerda e direita (verticais) —
-    // sobreposição nas pontas é invisível (mesma cor).
+    
+    
     DrawQuad({ center.x, center.y + half.y - t * 0.5f, 0.0f }, { size.x, t }, color);
     DrawQuad({ center.x, center.y - half.y + t * 0.5f, 0.0f }, { size.x, t }, color);
     DrawQuad({ center.x - half.x + t * 0.5f, center.y, 0.0f }, { t, size.y }, color);
@@ -453,7 +453,7 @@ void Renderer2D::DrawRectOutline(const glm::vec2& center, const glm::vec2& size,
 
 void Renderer2D::DrawCircle(const glm::mat4& transform, const glm::vec4& color, float thickness, float fade, int) {
     if (s_Data.CircleIndexCount >= Renderer2DData::MaxCircleIndices) {
-        // Lote cheio: despeja o que tem e recomeça — mesmo padrão dos quads.
+        
         EndScene();
         StartBatch();
     }
@@ -497,4 +497,4 @@ void Renderer2D::ResetStats() { s_Data.Stats = {}; }
 Renderer2DStats Renderer2D::GetStats() { return s_Data.Stats; }
 glm::mat4 Renderer2D::GetViewProjection() { return s_Data.ViewProjection; }
 
-} // namespace kizuri
+} 

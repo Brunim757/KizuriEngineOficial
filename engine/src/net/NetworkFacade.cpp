@@ -27,7 +27,7 @@ bool Network::Send(uint32_t peer, const void* data, size_t size) {
 void Network::Update(float dt) {
     s_Session.Update(dt, [](const net::Event& ev) {
         s_Queue.push_back(ev);
-        if (s_Queue.size() > 256) s_Queue.erase(s_Queue.begin()); // fila segura
+        if (s_Queue.size() > 256) s_Queue.erase(s_Queue.begin()); 
     });
 }
 
@@ -38,4 +38,4 @@ bool Network::PollEvent(net::Event& out) {
     return true;
 }
 
-} // namespace kizuri
+} 

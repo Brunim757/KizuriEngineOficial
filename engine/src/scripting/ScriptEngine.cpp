@@ -23,8 +23,8 @@ bool ScriptEngine::LoadModule(const std::string& path) {
         return false;
     }
 
-    // O .runtimeconfig.json do jogo fica do lado do assembly (saída do
-    // `dotnet build`/`publish`). É ele que diz qual shared framework usar.
+    
+    
     fs::path runtimeConfig = assemblyPath.parent_path() /
                              (assemblyPath.stem().string() + ".runtimeconfig.json");
 
@@ -38,9 +38,9 @@ bool ScriptEngine::LoadModule(const std::string& path) {
     s_Registry.Clear();
     int count = scripting::CoreCLRHost::GetScriptCount();
     if (count <= 0) {
-        // O assembly subiu mas o [GameEntryPoint] não registrou nada — antes
-        // isso fechava o modal "com sucesso" e o dropdown ficava vazio sem
-        // nenhum erro. Agora reporta o erro real do lado managed.
+        
+        
+        
         std::string initError = scripting::CoreCLRHost::GetLastInitError();
         s_LastError = "Assembly carregado mas nenhum script foi registrado.";
         if (!initError.empty()) s_LastError += " Erro do host: " + initError;
@@ -51,8 +51,8 @@ bool ScriptEngine::LoadModule(const std::string& path) {
     }
     for (int i = 0; i < count; ++i) {
         std::string className = scripting::CoreCLRHost::GetScriptName(i);
-        // Factory por nome, igual ao módulo C++ antigo — o editor lista e a
-        // Scene instancia sem nunca conhecer o tipo managed.
+        
+        
         s_Registry.Register(className, [className]() -> NativeScript* {
             return new ManagedScript(className);
         });
@@ -66,9 +66,9 @@ bool ScriptEngine::LoadModule(const std::string& path) {
 
 void ScriptEngine::UnloadModule() {
     if (!scripting::CoreCLRHost::IsInitialized()) return;
-    // Limpa o registro antes de derrubar o runtime — os factories guardam
-    // lambdas que criam ManagedScript (código nativo, seguro), mas os
-    // GCHandles dos scripts vivos morreriam junto com o runtime.
+    
+    
+    
     s_Registry.Clear();
     scripting::CoreCLRHost::Shutdown();
     s_LoadedPath.clear();
@@ -81,4 +81,4 @@ const std::string& ScriptEngine::GetLoadedPath() { return s_LoadedPath; }
 
 ScriptRegistry& ScriptEngine::GetRegistry() { return s_Registry; }
 
-} // namespace kizuri
+} 

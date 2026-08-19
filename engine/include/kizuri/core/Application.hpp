@@ -14,9 +14,9 @@ struct ApplicationSpec {
     bool CustomTitlebar = false;
 };
 
-// Application é o ponto de entrada de qualquer produto feito com a Kizuri Engine
-// (jogo, editor ou ferramenta). Controla o loop principal, a janela, a
-// LayerStack e a camada de ImGui de debug.
+
+
+
 class Application {
 public:
     explicit Application(const ApplicationSpec& spec = ApplicationSpec());
@@ -33,8 +33,8 @@ public:
     Window& GetWindow() { return *m_Window; }
     class ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
 
-    // Get() e s_Instance NÃO podem ser inline — ver Application.cpp pro
-    // porquê (é o bug raiz da engine não abrir depois de virar SHARED).
+    
+    
     static Application& Get();
 
 private:
@@ -52,7 +52,7 @@ private:
     static Application* s_Instance;
 };
 
-// Implementado pelo jogo/cliente (ver EntryPoint.hpp)
+
 Application* CreateApplication();
 
-} // namespace kizuri
+} 

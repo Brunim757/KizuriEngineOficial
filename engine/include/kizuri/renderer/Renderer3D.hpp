@@ -12,19 +12,19 @@
 
 namespace kizuri {
 
-struct Material; // forward — o struct completo vem logo abaixo do Mesh
-// Vértice 3D. Joints/Weights (índices como float, convertido com int() no
-// shader — evita glVertexAttribIPointer) ficam 0 pra malha estática, então
-// o skinning é identidade e o mesmo shader atende os dois casos.
+struct Material; 
+
+
+
 struct Vertex3D {
     glm::vec3 Position;
     glm::vec3 Normal;
     glm::vec2 TexCoord;
-    glm::vec4 Joints = glm::vec4(0.0f);   // índices das até 4 juntas que pesam no vértice
-    glm::vec4 Weights = glm::vec4(0.0f);  // pesos (normalizados; 0 = estática)
+    glm::vec4 Joints = glm::vec4(0.0f);   
+    glm::vec4 Weights = glm::vec4(0.0f);  
 };
 
-// Mesh estática 3D (geometria + buffers de GPU já prontos).
+
 class Mesh {
 public:
     Mesh(const std::vector<Vertex3D>& vertices, const std::vector<uint32_t>& indices);
@@ -32,12 +32,12 @@ public:
     const Ref<VertexArray>& GetVertexArray() const { return m_VertexArray; }
     uint32_t GetIndexCount() const { return m_IndexCount; }
 
-    // Vértices no espaço local (mantidos em CPU além do buffer de GPU) —
-    // usado pelo editor/picking e pela física (heightmap do terreno).
+    
+    
     const std::vector<Vertex3D>& GetVertices() const { return m_Vertices; }
     const std::vector<uint32_t>& GetIndices() const { return m_Indices; }
 
-    // AABB local, calculado uma vez no construtor — usado pelo picking por raio do editor.
+    
     const glm::vec3& GetBoundsMin() const { return m_BoundsMin; }
     const glm::vec3& GetBoundsMax() const { return m_BoundsMax; }
 
@@ -48,32 +48,32 @@ public:
     static Ref<Mesh> CreateCone(uint32_t sectors = 32);
     static Ref<Mesh> CreateCapsule(uint32_t sectors = 24, uint32_t stacks = 12);
     static Ref<Mesh> CreateTorus(uint32_t majorSeg = 48, uint32_t minorSeg = 24);
-    // Terreno procedural (heightmap de fbm): grade de Segments+1 x Segments+1,
-    // Size unidades de lado, elevação até HeightScale, com Seed fixo.
+    
+    
     static Ref<Mesh> CreateTerrain(uint32_t segments = 64, float size = 100.0f,
                                    float heightScale = 5.0f, uint32_t seed = 1);
 
-    // LOD automático (pilar AAA v0.34): versão reduzida de um builtin pro
-    // nível de detalhe 'level' (0 = máximo). Fora isso devolve a malha
-    // original (decimação genérica de malha ainda não existe — prefabs/
-    // meshes importadas usam os níveis manuais do LODComponent).
+    
+    
+    
+    
     static Ref<Mesh> CreateLODMesh(const std::string& source, int level);
-    // Terreno a partir de um heightmap EXPLÍCITO ((segments+1)² alturas, em
-    // ordem i-major: [i][j] = heights[i*(segments+1)+j], i ao longo de X).
-    // Usado pela escultura do editor — mesma malha/normais do CreateTerrain.
+    
+    
+    
     static Ref<Mesh> CreateTerrainFromHeightmap(uint32_t segments, float size,
                                                 const std::vector<float>& heights);    static Ref<Mesh> LoadFromOBJ(const std::string& path);
-    static Ref<Mesh> LoadFromGLTF(const std::string& path); // .glb/.gltf via cgltf
-    static Ref<Mesh> LoadFromGLTFMemory(const void* data, std::size_t size); // .glb em memória (embutido)
+    static Ref<Mesh> LoadFromGLTF(const std::string& path); 
+    static Ref<Mesh> LoadFromGLTFMemory(const void* data, std::size_t size); 
 
-    // Extrai o material PBR do primeiro material do .glb/.gltf (fatores +
-    // texturas embutidas no arquivo). Vazio/padrão se o arquivo não tiver.
-    // Aceita caminho de disco OU kzres:// (recurso embutido).
+    
+    
+    
     static Material ExtractMaterialFromGLTF(const std::string& path);
-    static Material ExtractMaterialFromGLTFMemory(const void* data, std::size_t size); // .glb em memória (embutido)
+    static Material ExtractMaterialFromGLTFMemory(const void* data, std::size_t size); 
 
-    // Reconstrói uma mesh a partir da string serializável do editor
-    // ("builtin:cube|plane|sphere|cylinder|cone|capsule|torus" | caminho .obj/.glb/.gltf).
+    
+    
     static Ref<Mesh> FromSource(const std::string& source);
 
 private:
@@ -89,18 +89,18 @@ struct Material {
     glm::vec3 Albedo = { 0.8f, 0.8f, 0.8f };
     float Metallic = 0.0f;
     float Roughness = 0.5f;
-    float AO = 1.0f; // oclusão ambiente escalar, só afeta a parte IBL
-    glm::vec3 Emissive = glm::vec3(0.0f); // cor emissiva (alimenta o bloom)
+    float AO = 1.0f; 
+    glm::vec3 Emissive = glm::vec3(0.0f); 
     float EmissiveStrength = 0.0f;
     Ref<Texture2D> AlbedoMap;
-    Ref<Texture2D> NormalMap; // tangent-space; TBN calculado por derivada de tela, sem atributo extra na mesh
-    Ref<Texture2D> MetallicRoughnessMap; // canal G = roughness, canal B = metallic (convenção glTF)
+    Ref<Texture2D> NormalMap; 
+    Ref<Texture2D> MetallicRoughnessMap; 
     Ref<Texture2D> EmissiveMap;
-    Ref<Texture2D> HeightMap; // parallax occlusion mapping (POM) — profundidade real de superfície
-    float HeightScale = 0.08f; // intensidade do deslocamento de paralaxe (POM)
-    bool PlanarReflect = false; // espelho real: a cena é renderizada de novo numa câmera refletida na face da entidade
-    // Caminhos serializáveis — é o que permite salvar/abrir cena com
-    // textura de material (ver ComponentSerialization.hpp). Vazios = sem mapa.
+    Ref<Texture2D> HeightMap; 
+    float HeightScale = 0.08f; 
+    bool PlanarReflect = false; 
+    
+    
     std::string AlbedoMapPath;
     std::string NormalMapPath;
     std::string MetallicRoughnessMapPath;
@@ -110,8 +110,8 @@ struct Material {
 
 enum class LightType { Directional = 0, Point = 1, Spot = 2 };
 
-// Uma luz dinâmica da cena. Directional é a única que projeta sombra (v1) e
-// serve de sol pro céu/IBL; Point/Spot só contribuem luz direta.
+
+
 struct Light {
     LightType Type = LightType::Directional;
     glm::vec3 Position = { 0.0f, 0.0f, 0.0f };
@@ -121,25 +121,25 @@ struct Light {
     float Range = 10.0f;
     float InnerConeDeg = 20.0f;
     float OuterConeDeg = 30.0f;
-    bool CastsShadow = false; // Point/Spot: projeta sombra (depth cubemap)
+    bool CastsShadow = false; 
 };
 
-using DirectionalLight = Light; // alias de compatibilidade com código/serialização antigos
+using DirectionalLight = Light; 
 
-constexpr int kCascadeCount = 3; // faixas de distância do CSM: perto/média/longe
-constexpr uint32_t kMaxParticlesPerBatch = 4000; // cap do buffer de instância na GPU
-constexpr uint32_t kMaxInstancesPerBatch = 128;  // instâncias de malha por draw call (uniform array)
+constexpr int kCascadeCount = 3; 
+constexpr uint32_t kMaxParticlesPerBatch = 4000; 
+constexpr uint32_t kMaxInstancesPerBatch = 128;  
 
-// Dado por-partícula que vai pra GPU via instancing (glVertexAttribDivisor) — um draw call
-// desenha o lote inteiro. Layout tem que bater com o stride/offset usados em Init()/EndScene.
+
+
 struct ParticleInstance {
     glm::vec3 Position{ 0.0f };
     float Size = 0.1f;
     glm::vec4 Color{ 1.0f };
 };
 
-// Pipeline forward, PBR (Cook-Torrance) + normal mapping + IBL (céu
-// procedural) + até kMaxLights luzes dinâmicas + sombra da luz direcional.
+
+
 class Renderer3D {
 public:
     static void Init();
@@ -148,60 +148,60 @@ public:
     static void BeginScene(const PerspectiveCamera& camera);
     static void EndScene();
 
-    // VP da câmera da passada atual — usada pelo Scene pro culling de luzes.
+    
     static glm::mat4 GetLastViewProjection() { return s_ViewProjection; }
 
-    // Configurações gráficas globais (qualidade preset / MSAA / SSAO /
-    // bloom / exposição / resolução interna). Aplicar em runtime não exige
-    // reiniciar nada: os recursos que dependem de tamanho (HDR, shadow map,
-    // SSAO) são recriados no próximo EndScene de forma preguiçosa.
+    
+    
+    
+    
     static const GraphicsSettings& GetGraphicsSettings();
     static void SetGraphicsSettings(const GraphicsSettings& settings);
 
-    // Ambiente IBL: caminho vazio = céu procedural (padrão); caminho de um
-    // .hdr/.exr equirectangular = carrega, converte pra cubemap e rebakeia
-    // irradiância + pré-filtro a partir da imagem HDR real.
+    
+    
+    
     static void SetEnvironmentHDRIPath(const std::string& path);
     static const std::string& GetEnvironmentHDRIPath();
 
-    // Empilha uma luz pro frame atual; a 1ª Directional submetida vira a que projeta sombra/céu.
+    
     static void SubmitLight(const Light& light);
 
-    // Empilha um comando de desenho; EndScene() resolve sombra + cor de verdade em dois passes.
+    
     static void Submit(const Ref<Mesh>& mesh, const Material& material, const glm::mat4& transform);
-    // Com lightmap assada (pilar AAA v0.35).
+    
     static void Submit(const Ref<Mesh>& mesh, const Material& material, const glm::mat4& transform,
                        const Ref<Texture2D>& lightmap);
 
-    // Mesmo que Submit, mas com skinning: jointMatrices (global * inverseBind)
-    // das kMaxSkinJoints primeiras juntas, avaliadas pela SkinData do animator.
+    
+    
     static void SubmitSkinned(const Ref<Mesh>& mesh, const Material& material, const glm::mat4& transform,
                               const glm::mat4* jointMatrices, uint32_t jointCount);
 
-    // Instancing de malhas: desenha a MESMA malha/material em N transformadas
-    // num ÚNICO draw call (floresta, multidão, pedras...). Internamente usa
-    // uniform array + gl_InstanceID (128 por lote; chamadas maiores dividem).
+    
+    
+    
     static void SubmitMeshInstances(const Ref<Mesh>& mesh, const Material& material,
                                     const glm::mat4* transforms, uint32_t count);
 
-    // Empilha um lote de partículas (billboards sempre de frente pra câmera, GPU-instanced —
-    // um glDrawElementsInstanced por lote, não um draw call por partícula). Sem textura (nullptr)
-    // usa um degradê radial procedural; recorta pra kMaxParticlesPerBatch se vier maior que isso.
+    
+    
+    
     static void SubmitParticles(const std::vector<ParticleInstance>& instances, bool additive,
                                 const Ref<Texture2D>& texture = nullptr);
 
-    // Grid de referência do editor (plano XZ) — não entra no jogo exportado nem no shadow map.
+    
     static void DrawGrid();
 
-    // Linhas de DEPURAÇÃO com teste de profundidade (gizmos de collider etc.).
-    // Desenhadas dentro do passe HDR, depois das malhas — ocultadas por
-    // geometria mais próxima e no topo da superfície do próprio objeto.
+    
+    
+    
     struct DebugLine { glm::vec3 From; glm::vec3 To; glm::vec3 Color; };
     static void SubmitDebugLine(const glm::vec3& from, const glm::vec3& to, const glm::vec3& color);
 
-    // Decal (pilar AAA v0.35): textura projetada na cena por uma caixa
-    // orientada (transform da entidade; escala = tamanho; projeção ao longo
-    // do eixo Z local). Renderizado após a geometria, com blend e depth test.
+    
+    
+    
     static void SubmitDecal(const glm::mat4& transform, const Ref<Texture2D>& texture,
                             const glm::vec4& tint = glm::vec4(1.0f));
 
@@ -210,11 +210,11 @@ private:
         Ref<Mesh> MeshAsset;
         Material Mat;
         glm::mat4 Transform;
-        std::vector<glm::mat4> Joints; // vazio = malha estática
-        Ref<Texture2D> Lightmap;       // lightmap assada (pilar AAA v0.35)
+        std::vector<glm::mat4> Joints; 
+        Ref<Texture2D> Lightmap;       
     };
 
-    // Lote instanciado: mesma malha/material, N transformadas num draw call.
+    
     struct InstanceBatch {
         Ref<Mesh> MeshAsset;
         Material Mat;
@@ -232,28 +232,28 @@ private:
     static std::vector<InstanceBatch> s_InstanceBatches;
     static std::vector<DebugLine> s_DebugLines;
     static std::vector<Light> s_LightList;
-    static Light s_ShadowCaster;   // 1ª luz Directional do frame; usada pro shadow map e pro céu/IBL
+    static Light s_ShadowCaster;   
     static bool s_HasShadowCaster;
     static glm::vec3 s_CameraPos;
 
-    // Shadow mapping direcional em cascata (CSM), 3 faixas de distância da câmera —
-    // cada cascata tem seu próprio FBO/textura/matriz, área ajustada à parte do frustum que cobre.
+    
+    
     static uint32_t s_ShadowFBO[kCascadeCount];
     static uint32_t s_ShadowMap[kCascadeCount];
     static Ref<Shader> s_ShadowShader;
     static glm::mat4 s_LightSpaceMatrix[kCascadeCount];
-    static float s_CascadeSplits[kCascadeCount]; // distância (view-space) onde cada cascata termina
+    static float s_CascadeSplits[kCascadeCount]; 
 
 
-    // HDRI: textura equirectangular 2D carregada do arquivo (0 = procedural);
-    // o shader converte pra cubemap durante o bake.
+    
+    
     static uint32_t s_EquirectTexture;
     static Ref<Shader> s_EquirectShader;
     static std::string s_EnvironmentHDRIPath;
 
-    // IBL: céu procedural (s_EnvironmentCubemap, também usado como skybox), convoluído em
-    // irradiância difusa (s_IrradianceCubemap) e pré-filtrado GGX por rugosidade (s_PrefilterCubemap).
-    // Bake único em Init() — ver GenerateEnvironment() e a limitação de ambiente estático no ROADMAP.
+    
+    
+    
     static uint32_t s_EnvironmentCubemap;
     static uint32_t s_IrradianceCubemap;
     static uint32_t s_PrefilterCubemap;
@@ -264,96 +264,96 @@ private:
     static float s_CamFOV, s_CamAspect, s_CamNear, s_CamFar;
 
     static void GenerateEnvironment();
-    static void ComputeCascades(const glm::vec3& lightDir); // preenche s_LightSpaceMatrix[]/s_CascadeSplits[]
+    static void ComputeCascades(const glm::vec3& lightDir); 
     static bool LoadHDRI(const std::string& path);
 
-    // Pós-processamento: a cena inteira (mesh + skybox) é desenhada num framebuffer HDR interno
-    // (RGBA16F, sem clamp em [0,1]) em vez de ir direto pro destino final. Com MSAA ligado esse
-    // framebuffer é multisample; depois do passe da cena um blit resolve cor+profundidade pro
-    // framebuffer simples s_HDRFBO (que é o que os passes seguintes amostram). Dali, um bright-pass +
-    // blur separável (ping-pong, meia resolução) gera o glow do bloom, SSAO é calculado do depth
-    // resolvido, e um passe de composição final soma bloom + aplica oclusão + tonemap ACES e grava
-    // no framebuffer que o chamador pediu.
-    static void EnsurePostBuffers(uint32_t width, uint32_t height, int msaa); // (re)cria se o tamanho/msaa mudou
-    static void EnsureShadowMaps(uint32_t size); // (re)cria os shadow maps se a resolução mudou
-    static void EnsureSSAOBuffers(uint32_t width, uint32_t height); // (re)cria se o tamanho mudou
+    
+    
+    
+    
+    
+    
+    
+    static void EnsurePostBuffers(uint32_t width, uint32_t height, int msaa); 
+    static void EnsureShadowMaps(uint32_t size); 
+    static void EnsureSSAOBuffers(uint32_t width, uint32_t height); 
     static GraphicsSettings s_Settings;
-    static uint32_t s_HDRFBO, s_HDRColorBuffer, s_HDRDepthTexture;      // destino simples (resolvido)
-    static uint32_t s_MSAAHDRFBO, s_MSAAHDRColor, s_MSAAHDRDepthRBO;    // destino multisample (MSAA>1)
+    static uint32_t s_HDRFBO, s_HDRColorBuffer, s_HDRDepthTexture;      
+    static uint32_t s_MSAAHDRFBO, s_MSAAHDRColor, s_MSAAHDRDepthRBO;    
     static int s_CurrentMSAA;
     static uint32_t s_BloomFBO[2], s_BloomColorBuffer[2];
     static uint32_t s_PostWidth, s_PostHeight;
     static Ref<VertexArray> s_FullscreenQuad;
     static Ref<Shader> s_BrightPassShader, s_BlurShader, s_CompositeShader;
-    static bool s_DrawGridFlag; // DrawGrid() só marca a intenção; o desenho de verdade é dentro do passe HDR (EndScene)
+    static bool s_DrawGridFlag; 
 
-    // SSAO: depth resolvido -> oclusão meia-resolução -> blur -> aplicado no composite.
+    
     static uint32_t s_SSAOFBO, s_SSAOColorBuffer;
     static uint32_t s_SSAOBlurFBO, s_SSAOBlurBuffer;
-    static uint32_t s_NoiseTexture; // 4x4 vetores aleatórios pra quebrar a banda do hemisfério
+    static uint32_t s_NoiseTexture; 
     static Ref<Shader> s_SSAOShader;
-    static std::vector<glm::vec3> s_SSAOKernel; // amostras do hemisfério (geradas em Init)
+    static std::vector<glm::vec3> s_SSAOKernel; 
     static uint32_t s_SSAOWidth, s_SSAOHeight;
 
-    // SSR (reflexos em espaço de tela) — marcha do raio refletido contra o depth
-    // buffer num loop de PASSOS FIXOS (GLSL 330-safe). Cor + depth -> RGBA16F;
-    // o composite adiciona a reflexão ao HDR antes do tonemap.
+    
+    
+    
     static Ref<Shader> s_SSRShader;
     static uint32_t s_SSRFBO, s_SSRColorBuffer;
 
-    // TAA (anti-aliasing temporal): composite escreve num alvo intermediário
-    // (s_TAAComposite), um passe fullscreen mistura com o histórico
-    // (ping-pong s_TAAHistoryFBO) com clamp de vizinhança e blita pro destino.
+    
+    
+    
     static Ref<Shader> s_TAAShader;
     static uint32_t s_TAACompositeFBO, s_TAACompositeTex;
     static uint32_t s_TAAHistoryFBO[2], s_TAAHistoryTex[2];
     static bool s_TAAHistoryValid;
     static uint32_t s_TAACounter;
 
-    // God rays / luz volumétrica (espaço de tela): marcha radial até o sol na
-    // tela, acumulando o brilho da cena (loop de passos FIXOS, GLSL 330-safe).
+    
+    
     static Ref<Shader> s_GodRaysShader;
     static uint32_t s_GodRaysFBO, s_GodRaysColorBuffer;
 
-    // Planar reflections (espelho real): a cena é renderizada de novo numa
-    // câmera refletida na face do espelho (pré-passe), e o material espelhado
-    // amostra essa textura. 100% OpenGL 3.3 (FBO + blit padrão).
+    
+    
+    
     static uint32_t s_PlanarFBO, s_PlanarColor, s_PlanarDepth;
     static uint32_t s_PlanarWidth, s_PlanarHeight;
-    static glm::mat4 s_ReflectionViewProjection; // VP da câmera refletida (pro sampling no shader)
+    static glm::mat4 s_ReflectionViewProjection; 
     static bool s_HasPlanarReflection;
 
-    // DOF (bokeh, 1 passe) + Motion blur (por reprojeção): FBOs RGBA16F entre
-    // a cena HDR e o bright-pass. Movimento estimado pela VP do frame anterior
-    // (sem velocity buffer) — ambos com loops de passos FIXOS, GLSL 330-safe.
+    
+    
+    
     static Ref<Shader> s_DOFShader, s_MotionBlurShader;
     static uint32_t s_DOFFBO, s_DOFTex;
     static uint32_t s_MotionFBO, s_MotionTex;
-    static glm::mat4 s_MotionPrevVP; // VP (sem jitter) do frame anterior
-    static glm::mat4 s_MotionCurrVP; // VP (sem jitter) do frame atual
+    static glm::mat4 s_MotionPrevVP; 
+    static glm::mat4 s_MotionCurrVP; 
 
-    // v0.25 — SSGI (GI 1-bounce), Lens flare, FXAA.
+    
     static Ref<Shader> s_SSGIShader;
     static uint32_t s_SSGIFBO, s_SSGIColor;
     static Ref<Shader> s_LensFlareShader;
     static uint32_t s_LensFBO, s_LensColor;
     static Ref<Shader> s_FXAAShader;
 
-    // (Re)cria o FBO da reflexão planar se a resolução mudou.
+    
     static void EnsurePlanarBuffers(uint32_t width, uint32_t height);
-    // Pré-passe do espelho real: desenha skybox + meshes (sem o espelho) com a
-    // câmera refletida e projeção com near plane oblíquo na face do espelho.
+    
+    
     static void RenderPlanarReflection(const glm::vec3& planePoint, const glm::vec3& planeNormal,
                                        int mirrorIndex, uint32_t width, uint32_t height,
                                        const glm::mat4& reflectView, const glm::mat4& reflectProj,
                                        const glm::mat4& reflectVP, const glm::vec3& reflectCam);
 
-    // Partículas: 1 VAO reaproveitado por todos os lotes do frame — buffer de quad estático
-    // (attribs 0/1) + buffer de instância dinâmico, reescrito via glBufferSubData a cada lote.
+    
+    
     struct ParticleBatch { std::vector<ParticleInstance> Instances; bool Additive; Ref<Texture2D> Texture; };
     static std::vector<ParticleBatch> s_ParticleBatches;
     static uint32_t s_ParticleVAO, s_ParticleQuadVBO, s_ParticleEBO, s_ParticleInstanceVBO;
     static Ref<Shader> s_ParticleShader;
 };
 
-} // namespace kizuri
+} 

@@ -2,8 +2,8 @@ using Kizuri;
 using Kizuri.Math;
 using System.Collections;
 
-// Demonstra o sistema de UI + utilidades de gameplay: um Canvas com botão
-// clicável, HUD de texto, corrotinas e TimeScale.
+
+
 public sealed class UISample : Script
 {
 	private Entity _canvas;
@@ -14,7 +14,7 @@ public sealed class UISample : Script
 
 	public override void OnCreate()
 	{
-		// Canvas raiz: filhos com UIRect são desenhados em espaço de tela.
+		
 		_canvas = Scene.CreateEntity("UI Canvas");
 		_canvas.AddUICanvas(10f);
 
@@ -23,13 +23,13 @@ public sealed class UISample : Script
 		title.AddUIText("KIZURI ENGINE", 24f, 1f, 1f, 1f);
 		title.SetUIRect(0f, 7.5f, 0f, 0f);
 
-		// Botão = rect com fundo + texto no centro (mesma entidade).
+		
 		_button = Scene.CreateEntity("Botao");
 		_button.SetParent(_canvas);
 		_button.AddUIButton(0f, 1f, 6f, 2f, 0.22f, 0.42f, 0.9f);
 		_button.AddUIText("Clique em mim", 16f, 1f, 1f, 1f);
 
-		// HUD de pontuação (texto sem fundo).
+		
 		_counterText = Scene.CreateEntity("Contador");
 		_counterText.SetParent(_canvas);
 		_counterText.AddUIText("Cliques: 0", 14f, 1f, 0.95f, 0.5f);
@@ -38,7 +38,7 @@ public sealed class UISample : Script
 
 	public override void OnUpdate(float deltaSeconds)
 	{
-		// Clique no botão: incrementa, pisca a cor via corrotina e toca som.
+		
 		if (_button.UIButtonWasClicked())
 		{
 			_clicks++;
@@ -48,11 +48,11 @@ public sealed class UISample : Script
 
 		_counterText.SetText($"Cliques: {_clicks}");
 
-		// TimeScale (câmera lenta) com F; volta ao normal com G.
+		
 		if (Input.IsKeyPressed(Key.F)) Time.TimeScale = 0.3f;
 		else if (Input.IsKeyPressed(Key.G)) Time.TimeScale = 1f;
 
-		// Exemplo de corrotina periódica + Rand.
+		
 		_announceTimer -= deltaSeconds;
 		if (_announceTimer <= 0f)
 		{

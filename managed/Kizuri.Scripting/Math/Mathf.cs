@@ -1,4 +1,4 @@
-// Mathf — helpers matemáticos comuns de gameplay (estilo Unity). Puro managed.
+
 namespace Kizuri;
 
 public static class Mathf
@@ -15,15 +15,15 @@ public static class Mathf
 	public static float LerpUnclamped(float a, float b, float t)
 		=> a + (b - a) * t;
 
-	// Move 'current' em direção a 'target' no máximo 'maxDelta' por frame.
+	
 	public static float MoveTowards(float current, float target, float maxDelta)
 	{
 		if (System.MathF.Abs(target - current) <= maxDelta) return target;
 		return current + System.MathF.Sign(target - current) * maxDelta;
 	}
 
-	// Suavização exponencial (Frame-rate independent): quanto maior
-	// smoothTime, mais lento. t ~1 = quase instantâneo.
+	
+	
 	public static float SmoothDamp(float current, float target, ref float velocity, float smoothTime, float deltaSeconds)
 	{
 		float omega = 2f / System.MathF.Max(smoothTime, 0.0001f);
@@ -35,29 +35,29 @@ public static class Mathf
 		return target + (change + temp) * exp;
 	}
 
-	// Valor no intervalo [0, max] que repete (pra ângulos, timers, etc).
+	
 	public static float Repeat(float t, float length)
 		=> Clamp(t - System.MathF.Floor(t / length) * length, 0f, length);
 
-	// SmoothStep: interpola com suavização (S-curve, sem overshoot).
+	
 	public static float SmoothStep(float a, float b, float t)
 	{
 		t = Clamp((t - a) / (b - a), 0f, 1f);
 		return t * t * (3f - 2f * t);
 	}
 
-	// Oscila entre 0 e length no sentido e na velocidade de t (0,5,10,0,5...).
+	
 	public static float PingPong(float t, float length)
 	{
 		t = Repeat(t, length * 2f);
 		return length - System.MathF.Abs(t - length);
 	}
 
-	// Re-mapeia um valor de um intervalo pra outro (ex.: 0..1 -> -90..90).
+	
 	public static float Remap(float value, float fromMin, float fromMax, float toMin, float toMax)
 		=> toMin + (value - fromMin) / (fromMax - fromMin) * (toMax - toMin);
 
-	// Interpolação de âNGULO que pega o caminho curto (ex.: 350° -> 10°).
+	
 	public static float LerpAngle(float a, float b, float t)
 	{
 		float delta = Repeat(b - a, 360f);
@@ -65,7 +65,7 @@ public static class Mathf
 		return a + delta * Clamp(t, 0f, 1f);
 	}
 
-	// Angulo (graus) entre dois vetores 2D.
+	
 	public static float Angle(Math.Vector2 a, Math.Vector2 b)
 		=> System.MathF.Atan2(a.X * b.Y - a.Y * b.X, a.X * b.X + a.Y * b.Y) * 180f / System.MathF.PI;
 
@@ -78,7 +78,7 @@ public static class Mathf
 	public static float Sin(float v) => System.MathF.Sin(v);
 	public static float Cos(float v) => System.MathF.Cos(v);
 
-	// Distância entre dois pontos (2D e 3D).
+	
 	public static float Distance(Math.Vector2 a, Math.Vector2 b)
 		=> (a - b).Length;
 

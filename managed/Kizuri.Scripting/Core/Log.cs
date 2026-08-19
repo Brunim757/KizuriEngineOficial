@@ -1,4 +1,4 @@
-// Log — api de logging managed para o jogo (a engine loga via spdlog interno).
+
 namespace Kizuri;
 
 public static class Log

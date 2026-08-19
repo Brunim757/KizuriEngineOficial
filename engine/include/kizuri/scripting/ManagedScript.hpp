@@ -1,7 +1,7 @@
 #pragma once
-// ManagedScript — NativeScript cujo corpo é um script C# gerenciado pelo
-// CoreCLR (ver CoreCLRHost). A Scene enxerga só NativeScript*, então nada
-// no runtime precisa saber que o jogo agora é C#.
+
+
+
 #include "kizuri/scripting/NativeScript.hpp"
 #include <string>
 
@@ -24,4 +24,4 @@ private:
     void* m_ManagedHandle = nullptr;
 };
 
-} // namespace kizuri
+} 

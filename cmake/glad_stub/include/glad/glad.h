@@ -1,8 +1,8 @@
-/*
- * Kizuri Engine - minimal hand-written OpenGL core loader.
- * Cobre o subconjunto de OpenGL 4.5 core usado pelo renderer da engine.
- * API de uso idêntica ao glad tradicional: chame gladLoadGL(loaderFn).
- */
+
+
+
+
+
 #ifndef KIZURI_GLAD_H
 #define KIZURI_GLAD_H
 
@@ -24,7 +24,7 @@ typedef void* (*KZGLLoaderFn)(const char* name);
 
 int gladLoadGL(KZGLLoaderFn loader);
 
-/* ---- tipos básicos ---- */
+
 typedef unsigned int GLenum;
 typedef unsigned char GLboolean;
 typedef unsigned int GLbitfield;
@@ -42,7 +42,7 @@ typedef char GLchar;
 typedef khronos_ssize_t GLsizeiptr;
 typedef khronos_intptr_t GLintptr;
 
-/* ---- constantes usadas pela engine ---- */
+
 #define GL_FALSE 0
 #define GL_TRUE 1
 #define GL_TRIANGLES 0x0004
@@ -103,7 +103,7 @@ typedef khronos_intptr_t GLintptr;
 #define GL_FRAMEBUFFER_BINDING 0x8CA6
 #define GL_VIEWPORT 0x0BA2
 
-/* ---- ponteiros de função carregados em runtime ---- */
+
 extern void (KZGL_APIENTRY *glViewport)(GLint x, GLint y, GLsizei w, GLsizei h);
 extern void (KZGL_APIENTRY *glClearColor)(GLfloat r, GLfloat g, GLfloat b, GLfloat a);
 extern void (KZGL_APIENTRY *glClear)(GLbitfield mask);
@@ -178,4 +178,4 @@ extern void (KZGL_APIENTRY *glGetIntegerv)(GLenum pname, GLint* data);
 #ifdef __cplusplus
 }
 #endif
-#endif /* KIZURI_GLAD_H */
+#endif 

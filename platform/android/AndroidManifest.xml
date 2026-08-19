@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Manifest do app Android do KizuriGame (o jogo standalone da engine).
-     Empacotado pelo platform/android/package_apk.sh com aapt2:
-     libKizuriGame.so (com a engine embutida) + runtime .NET no lib/<abi>/
-     + assets/{dotnet,game} (extraídos pro filesDir na primeira execução). -->
+
+
+
+
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="br.com.kizuri.game"
     android:versionCode="1"

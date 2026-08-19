@@ -1,13 +1,13 @@
-#!/usr/bin/env bash
-# make-appimage.sh — empacota o jogo Linux como AppImage único (autônomo).
-#
-#   $1 = bin/ do build Linux (deve ter KizuriGame + libKizuriEngine.so)
-#   $2 = conteúdo do jogo (Start.kzscene + assets) — entra em usr/share/kizuri/game/
-#   $3 = onde gravar o .AppImage
-#
-# O AppImage roda a partir do diretório do jogo (AppRun faz cd), então a
-# cena inicial resolve como no desktop. Tudo dentro de UM arquivo: nada de
-# "grudado" com outra plataforma — cada export sai 100% da sua.
+
+
+
+
+
+
+
+
+
+
 set -euo pipefail
 
 BIN_DIR="${1:?bin dir}"; GAME_SRC="${2:?game assets}"; OUT="${3:?output .AppImage}"
@@ -37,10 +37,10 @@ Categories=Game;
 Terminal=false
 DESKTOP
 
-# AppRun: o jogo espera a cena relativa ao CWD — roda a partir do diretório
-# dos dados do AppImage.
+
+
 cat > "$APP/AppRun" <<'RUN'
-#!/usr/bin/env bash
+
 HERE="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 cd "$HERE/usr/share/kizuri/game" || exit 1
 exec "$HERE/usr/bin/kizuri-game"
@@ -55,8 +55,8 @@ curl -fsSL -o "$RUNTIME" \
 chmod +x "$RUNTIME"
 
 echo "==> (3/4) montando o AppImage (tipo 2: runtime + squashfs)"
-# appimagetool exige FUSE/glibc novos no runner; o formato é simples:
-# arquivo único = [runtime][squashfs do AppDir]. mksquashfs do squashfs-tools.
+
+
 command -v mksquashfs >/dev/null || { echo "ERRO: instale squashfs-tools"; exit 1; }
 mksquashfs "$APP" "$WORK/kizuri.squashfs" -root-owned -noappend
 cat "$RUNTIME" "$WORK/kizuri.squashfs" > "$OUT"

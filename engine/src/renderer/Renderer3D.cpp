@@ -13,9 +13,9 @@
 #include <cmath>
 #include <utility>
 
-// GLES (Android) não garante RGB16F como color-renderable; RGBA16F é o
-// formato obrigatório (ES 3.1+). Nos dois lados os shaders só leem .rgb, e
-// os formatos de texel (GL_RGB/GL_FLOAT) continuam válidos no upload.
+
+
+
 #if defined(KZ_PLATFORM_ANDROID)
     #define KZ_HDR_INTERNAL_FORMAT GL_RGBA16F
 #else
@@ -110,7 +110,7 @@ uint32_t Renderer3D::s_SSGIFBO = 0, Renderer3D::s_SSGIColor = 0;
 Ref<Shader> Renderer3D::s_LensFlareShader;
 uint32_t Renderer3D::s_LensFBO = 0, Renderer3D::s_LensColor = 0;
 Ref<Shader> Renderer3D::s_FXAAShader;
-static float s_PostTime = 0.0f; // relógio do pós-processamento (grão de filme animado)
+static float s_PostTime = 0.0f; 
 
 std::vector<Renderer3D::ParticleBatch> Renderer3D::s_ParticleBatches;
 uint32_t Renderer3D::s_ParticleVAO = 0, Renderer3D::s_ParticleQuadVBO = 0;
@@ -550,7 +550,7 @@ void main() {
 }
 )";
 
-// ---- Decal (pilar AAA v0.35) -----------------------------------------------
+
 static const char* s_DecalVertexSrc = R"(
 #version 330 core
 layout(location = 0) in vec3 a_Position;
@@ -589,12 +589,12 @@ void main() {
 }
 )";
 
-// ---------------------------------------------------------------------
-// Shaders de bake do ambiente (IBL) — rodam só dentro de GenerateEnvironment(),
-// nunca no loop de desenho normal. Todos compartilham o mesmo vertex shader:
-// desenham um cubo unitário centrado na origem e passam a própria posição
-// local como direção (o cubo nunca se move, só a câmera de captura gira).
-// ---------------------------------------------------------------------
+
+
+
+
+
+
 static const char* s_CaptureVertexSrc = R"(
 #version 330 core
 layout(location = 0) in vec3 a_Position;
@@ -611,10 +611,10 @@ void main() {
 }
 )";
 
-// Céu atmosférico procedural (ESCURO de propósito): mantém o gradiente base
-// que funcionava (IBL estável) e adiciona tinta de pôr-do-sol no horizonte,
-// azul mais rico no zênite e estrelas à noite. O clamp em 4.0 garante que o
-// cubemap de ambiente nunca estoure o tonemap/lave os objetos de branco.
+
+
+
+
 static const char* s_SkyFragmentSrc = R"(
 #version 330 core
 in vec3 v_LocalPos;
@@ -666,11 +666,11 @@ void main() {
 }
 )";
 
-// Convolução de irradiância: integra cosseno-ponderado sobre a hemisfera
-// ao redor de cada normal (aqui, cada direção do cubo de destino), lendo o
-// cubemap de ambiente já pronto. sampleDelta = 0.05 é deliberadamente
-// grosso (~2500 amostras/texel) — aceitável porque isso roda só uma vez,
-// numa textura pequena (32x32/face), no bake de Init(), nunca por frame.
+
+
+
+
+
 static const char* s_IrradianceFragmentSrc = R"(
 #version 330 core
 in vec3 v_LocalPos;
@@ -702,14 +702,14 @@ void main() {
 }
 )";
 
-// Pré-filtragem especular GGX: pra cada mip (= uma faixa de rugosidade),
-// faz importance sampling do ambiente ponderado pela distribuição GGX
-// daquela rugosidade. Mip 0 (rugosidade 0) degenera pra praticamente um
-// espelho; mips mais altos ficam progressivamente mais borrados. 32
-// amostras por texel é pouco pra padrão AAA, mas o bake acontece uma vez
-// só, então o trade-off (leve ruído em rugosidade média em troca de bake
-// rápido) é aceitável pra v1 — mais amostras é ajuste de uma linha se
-// algum dia isso incomodar visualmente.
+
+
+
+
+
+
+
+
 static const char* s_PrefilterFragmentSrc = R"(
 #version 330 core
 in vec3 v_LocalPos;
@@ -784,11 +784,11 @@ void main() {
 }
 )";
 
-// Skybox de verdade (desenhado por frame): mesmo cubo, mas com a
-// profundidade forçada pro plano mais distante possível (gl_Position.z =
-// gl_Position.w) e comparação de profundidade LEQUAL — assim ele só
-// aparece onde nenhuma outra geometria já desenhou, sem precisar desenhar
-// primeiro nem desligar o teste de profundidade.
+
+
+
+
+
 static const char* s_SkyboxVertexSrc = R"(
 #version 330 core
 layout(location = 0) in vec3 a_Position;
@@ -991,9 +991,9 @@ void main() {
 }
 )";
 
-// ---------------------------------------------------------------------
-// Pós-processamento: quad de tela cheia + bright-pass + blur + composição.
-// ---------------------------------------------------------------------
+
+
+
 static const char* s_FullscreenVertexSrc = R"(
 #version 330 core
 layout(location = 0) in vec2 a_Position;
@@ -1005,8 +1005,8 @@ void main() {
 }
 )";
 
-// Extrai só os pixels acima do limiar (com "joelho" suave, não corte duro) — o que sobra
-// vira a semente do glow do bloom depois de borrado.
+
+
 static const char* s_BrightPassFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
@@ -1026,8 +1026,8 @@ void main() {
 }
 )";
 
-// Blur gaussiano separável 9-tap — duas passadas (horizontal, vertical) por iteração,
-// alternando entre os dois FBOs de ping-pong.
+
+
 static const char* s_BlurFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
@@ -1053,9 +1053,9 @@ void main() {
 }
 )";
 
-// Soma cena HDR + bloom, aplica oclusão + exposição, tonemap ACES, gamma e o
-// "pós-cinema" sutil: aberração cromática, vinheta e grão de filme animado
-// (pós-tonemap — não afeta o IBL, então não lava nada).
+
+
+
 static const char* s_CompositeFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
@@ -1161,14 +1161,14 @@ void main() {
 }
 )";
 
-// ---------------------------------------------------------------------
-// God rays / luz volumétrica em espaço de tela. Cada pixel marcha do próprio
-// ponto até a posição do SOL na tela (u_SunUV), acumulando a cor brilhante
-// da cena com atenuação (density/decay). O loop tem TETO CONSTANTE
-// (GODRAY_MAX_STEPS é #define fixo) — compila em GLSL 330 core em qualquer
-// driver. Limitação conhecida do método em espaço de tela: raios "atravessam"
-// obstáculos finos (sem depth-aware); o default deixa o efeito sutil.
-// ---------------------------------------------------------------------
+
+
+
+
+
+
+
+
 static const char* s_GodRaysFragmentSrc = R"(
 #version 330 core
 #define GODRAY_MAX_STEPS 28
@@ -1205,13 +1205,13 @@ void main() {
 }
 )";
 
-// ---------------------------------------------------------------------
-// DOF — depth of field (bokeh) em UM passe (gather). Para cada pixel calcula o
-// círculo de confusão pela distância ao plano focal (reconstruída do depth) e
-// amostra um disco de Poisson FIXO (20 taps, teto constante — GLSL 330-safe);
-// as amostras fora de foco contribuem menos (o próprio CoC delas pondera),
-// então frente/fundo desfocam naturalmente com bokeh.
-// ---------------------------------------------------------------------
+
+
+
+
+
+
+
 static const char* s_DOFFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
@@ -1272,11 +1272,11 @@ void main() {
 }
 )";
 
-// ---------------------------------------------------------------------
-// Motion blur por REPROJEÇÃO (sem velocity buffer): reconstrói o ponto do
-// mundo pelo depth, projeta com a VP do frame ANTERIOR e do atual, e desloca
-// a amostragem ao longo do vetor de movimento (taps FIXOS, GLSL 330-safe).
-// ---------------------------------------------------------------------
+
+
+
+
+
 static const char* s_MotionBlurFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
@@ -1317,10 +1317,10 @@ void main() {
 }
 )";
 
-// ---------------------------------------------------------------------
-// FXAA — anti-aliasing de pós-processamento (3 taps clássico). Usado como
-// alternativa/complemento ao TAA (ligar os dois dá a imagem mais limpa).
-// ---------------------------------------------------------------------
+
+
+
+
 static const char* s_FXAAFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
@@ -1364,10 +1364,10 @@ void main() {
 }
 )";
 
-// ---------------------------------------------------------------------
-// Lens flare (espaço de tela): ghosts ao longo da linha pixel->sol a partir
-// do brilho (bloom), + um streak horizontal. Loop de passos FIXOS.
-// ---------------------------------------------------------------------
+
+
+
+
 static const char* s_LensFlareFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
@@ -1408,11 +1408,11 @@ void main() {
 }
 )";
 
-// ---------------------------------------------------------------------
-// SSGI — iluminação global em espaço de tela (1-bounce difuso). Raios do
-// hemisfério (8 direções fixas) marchados contra o depth (como o SSR); a cor
-// do impacto vira luz indireta. Meia resolução, loop de passos FIXOS.
-// ---------------------------------------------------------------------
+
+
+
+
+
 static const char* s_SSGIFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
@@ -1483,13 +1483,13 @@ void main() {
 }
 )";
 
-// ---------------------------------------------------------------------
-// SSAO (oclusão de ambiente em espaço de tela) — amostra a vizinhança de
-// cada pixel num hemisfério orientado pela normal reconstruída do depth e
-// mede quanta geometria oculta ele. A saída é um valor de oclusão em
-// [0,1], borrado depois pra esconder o ruído da amostragem (os 4x4 vetores
-// aleatórios u_Noise quebram a regularidade do kernel).
-// ---------------------------------------------------------------------
+
+
+
+
+
+
+
 static const char* s_SSAOFragmentSrc = R"(
 #version 330 core
 // Teto FIXO de amostras (mesmo padrão do SSR): GLSL 330 core exige loops de
@@ -1557,20 +1557,20 @@ void main() {
 }
 )";
 
-// ---------------------------------------------------------------------
-// SSR — reflexos em espaço de tela (GLSL 330 core SEGURO). Para cada pixel,
-// projeta o raio refletido (normal reconstruída do depth) no espaço de tela
-// e marcha contra o depth buffer até acertar geometria; a cor do impacto
-// vira a reflexão (com Fresnel — ângulos rasantes refletem mais).
-//
-// A diferença pro SSR antigo (que exigia GL 4.0+): o loop de marcha tem
-// TETO CONSTANTE (SSR_MAX_STEPS é #define fixo) e o número de passos é
-// clampado nele. Em GLSL 3.30 core o compilador exige loops com contagem
-// determinável em compile-time; o loop antigo derivava o teto de um
-// uniform (comprimento VARIÁVEL) e por isso só rodava em 4.x. Aqui o
-// `for (int i = 0; i < SSR_MAX_STEPS; ++i)` é unrollável e compila em
-// qualquer driver 3.3 (Wine, iGPU, VM) — sem risco de viewport preto.
-// ---------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 static const char* s_SSRFragmentSrc = R"(
 #version 330 core
 #define SSR_MAX_STEPS 48
@@ -1661,14 +1661,14 @@ void main() {
 }
 )";
 
-// ---------------------------------------------------------------------
-// TAA — anti-aliasing temporal. O composite escreve LDR num alvo
-// intermediário (s_TAAComposite); aqui misturamos com o histórico do frame
-// anterior usando um clamp em caixa (AABB dos 3x3 vizinhos do frame atual)
-// pra não vazar cores/ghosting. Roda em LDR (pós-tonemap), 100% GLSL 330.
-// Sem velocity buffer nesta v1: o clamp de vizinhança limita o ghosting em
-// movimento de câmera; com câmera parada a convergência é total.
-// ---------------------------------------------------------------------
+
+
+
+
+
+
+
+
 static const char* s_TAAFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
@@ -1716,8 +1716,8 @@ void main() {
 }
 )";
 
-// Converte equirectangular (latitude/longitude, textura 2D) pra cubemap —
-// roda no bake do ambiente quando o usuário carrega um .hdr de céu.
+
+
 static const char* s_EquirectFragmentSrc = R"(
 #version 330 core
 in vec3 v_LocalPos;
@@ -1739,11 +1739,11 @@ void main() {
 }
 )";
 
-// ---------------------------------------------------------------------
-// Partículas: quad billboard (sempre de frente pra câmera, via u_CameraRight/Up)
-// instanciado — atributos 0/1 vêm do quad estático, 2/3/4 vêm do buffer de
-// instância (glVertexAttribDivisor=1, um valor por partícula, não por vértice).
-// ---------------------------------------------------------------------
+
+
+
+
+
 static const char* s_ParticleVertexSrc = R"(
 #version 330 core
 layout(location = 0) in vec2 a_LocalPos;
@@ -1767,10 +1767,10 @@ void main() {
 }
 )";
 
-// Sem textura de propósito (v1): um degradê radial suave já dá uma partícula redonda
-// decente sem precisar de nenhum asset — mesma filosofia do céu procedural.
-// Textura opcional de partícula (uniform): sem textura usa o degradê radial
-// procedural (v1); com textura, a cor vem dela (alpha = intensidade).
+
+
+
+
 static const char* s_ParticleFragmentSrc = R"(
 #version 330 core
 in vec2 v_TexCoord;
@@ -1790,9 +1790,9 @@ void main() {
 }
 )";
 
-// Shader do passe de sombra: só precisa escrever profundidade, não tem
-// saída de cor nenhuma. Com skinning (u_Animated) a pose animada do
-// personagem projeta a sombra certa — antes ficava na pose de repouso.
+
+
+
 static const char* s_ShadowVertexSrc = R"(
 #version 330 core
 layout(location = 0) in vec3 a_Position;
@@ -1851,18 +1851,18 @@ void main() {
 void Renderer3D::Init() {
     KZ_TRACE_SCOPE("Renderer3D::Init");
 
-    // Auto-tune por hardware: extrai o máximo de cada versão do OpenGL
-    // (3.3 conservador, 4.0+ agressivo, 4.5+ teto). O editor pode
-    // sobrescrever via settings.json.
+    
+    
+    
     s_Settings.TuneToHardware();
 
     s_MeshShader = CreateRef<Shader>("Renderer3D_Mesh", s_MeshVertexSrc, s_MeshFragmentSrc);
     s_LineShader = CreateRef<Shader>("Renderer3D_Line", s_LineVertexSrc, s_LineFragmentSrc);
 
-    // Grid fixo de 100x100 unidades, uma linha por unidade — construído
-    // uma vez aqui e reutilizado em todo DrawGrid(). Cor cinza padrão, com
-    // a linha em x=0 pintada de azul (eixo Z) e a linha em z=0 de vermelho
-    // (eixo X), pra dar noção de orientação além de escala.
+    
+    
+    
+    
     const float halfSize = 50.0f;
     const glm::vec3 gridColor(0.32f, 0.32f, 0.35f);
     const glm::vec3 xAxisColor(0.75f, 0.25f, 0.25f);
@@ -1874,13 +1874,13 @@ void Renderer3D::Init() {
 
     for (int i = -(int)halfSize; i <= (int)halfSize; ++i) {
         float x = (float)i;
-        glm::vec3 c = (i == 0) ? zAxisColor : gridColor; // x=0 é o eixo Z
+        glm::vec3 c = (i == 0) ? zAxisColor : gridColor; 
         verts.push_back({ { x, 0.0f, -halfSize }, c });
         verts.push_back({ { x, 0.0f,  halfSize }, c });
     }
     for (int i = -(int)halfSize; i <= (int)halfSize; ++i) {
         float z = (float)i;
-        glm::vec3 c = (i == 0) ? xAxisColor : gridColor; // z=0 é o eixo X
+        glm::vec3 c = (i == 0) ? xAxisColor : gridColor; 
         verts.push_back({ { -halfSize, 0.0f, z }, c });
         verts.push_back({ {  halfSize, 0.0f, z }, c });
     }
@@ -1894,19 +1894,19 @@ void Renderer3D::Init() {
     });
     s_GridVAO->AddVertexBuffer(vb);
 
-    // Framebuffer de sombra: só profundidade, sem color attachment — uma cópia por cascata.
-    // O tamanho vem das configurações gráficas (shadow map size do preset).
+    
+    
     s_ShadowShader = CreateRef<Shader>("Renderer3D_Shadow", s_ShadowVertexSrc, s_ShadowFragmentSrc);
     EnsureShadowMaps((uint32_t)s_Settings.ShadowMapSize);
 
-    // Shadow map de luz pontual (depth cubemap com profundidade LINEAR).
+    
     s_EquirectShader = CreateRef<Shader>("Renderer3D_Equirect", s_CaptureVertexSrc, s_EquirectFragmentSrc);
     s_DecalShader = CreateRef<Shader>("Renderer3D_Decal", s_DecalVertexSrc, s_DecalFragmentSrc);
     s_DecalCube = Mesh::CreateCube();
 
     GenerateEnvironment();
 
-    // Quad de tela cheia (NDC -1..1) reaproveitado pelos 3 passes de pós-processamento.
+    
     float quadVertices[] = {
         -1.0f,  1.0f,  0.0f, 1.0f,
         -1.0f, -1.0f,  0.0f, 0.0f,
@@ -1924,18 +1924,18 @@ void Renderer3D::Init() {
     s_BlurShader = CreateRef<Shader>("Renderer3D_Blur", s_FullscreenVertexSrc, s_BlurFragmentSrc);
     s_CompositeShader = CreateRef<Shader>("Renderer3D_Composite", s_FullscreenVertexSrc, s_CompositeFragmentSrc);
 
-    // SSAO: kernel de hemisfério (64 amostras) + textura de ruído 4x4 que
-    // gira o kernel por pixel e esconde o padrão de amostragem.
+    
+    
     s_SSAOShader = CreateRef<Shader>("Renderer3D_SSAO", s_FullscreenVertexSrc, s_SSAOFragmentSrc);
-    // SSR (reflexos em espaço de tela) — loop de passos FIXOS, compila em
-    // GLSL 330 core em qualquer driver (o SSR antigo, de loop variável,
-    // precisava de 4.x e foi removido; este é 3.3 puro e sempre disponível).
+    
+    
+    
     s_SSRShader = CreateRef<Shader>("Renderer3D_SSR", s_FullscreenVertexSrc, s_SSRFragmentSrc);
-    // TAA — anti-aliasing temporal (jitter + histórico com clamp de vizinhança).
+    
     s_TAAShader = CreateRef<Shader>("Renderer3D_TAA", s_FullscreenVertexSrc, s_TAAFragmentSrc);
-    // God rays — luz volumétrica em espaço de tela (marcha radial fixa).
+    
     s_GodRaysShader = CreateRef<Shader>("Renderer3D_GodRays", s_FullscreenVertexSrc, s_GodRaysFragmentSrc);
-    // DOF (bokeh) + Motion blur (por reprojeção) — passes fullscreen 3.3-safe.
+    
     s_DOFShader = CreateRef<Shader>("Renderer3D_DOF", s_FullscreenVertexSrc, s_DOFFragmentSrc);
     s_MotionBlurShader = CreateRef<Shader>("Renderer3D_MotionBlur", s_FullscreenVertexSrc, s_MotionBlurFragmentSrc);
     s_SSGIShader = CreateRef<Shader>("Renderer3D_SSGI", s_FullscreenVertexSrc, s_SSGIFragmentSrc);
@@ -1949,7 +1949,7 @@ void Renderer3D::Init() {
                     (float)std::rand() / (float)RAND_MAX);
         s = glm::normalize(s);
         float scale = (float)i / 64.0f;
-        scale = 0.1f + 0.9f * scale * scale; // concentra as amostras perto do fragmento
+        scale = 0.1f + 0.9f * scale * scale; 
         s_SSAOKernel[i] = s * scale;
     }
 
@@ -1966,8 +1966,8 @@ void Renderer3D::Init() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    // Partículas: quad unitário (-0.5..0.5) nos attribs 0/1, buffer de instância vazio (preenchido
-    // por lote em EndScene) nos attribs 2/3/4 com divisor 1 — 1 valor por instância, não por vértice.
+    
+    
     float particleQuad[] = {
         -0.5f, -0.5f,  0.0f, 0.0f,
          0.5f, -0.5f,  1.0f, 0.0f,
@@ -2008,14 +2008,14 @@ void Renderer3D::Init() {
     s_ParticleShader = CreateRef<Shader>("Renderer3D_Particle", s_ParticleVertexSrc, s_ParticleFragmentSrc);
 }
 
-// (Re)cria o framebuffer HDR e os dois de bloom (meia resolução) se o tamanho
-// OU o MSAA mudou desde a última chamada — evita realocar textura todo frame
-// à toa. Com MSAA>1 a cena renderiza num FBO multisample (s_MSAAHDRFBO) e um
-// blit resolve cor+profundidade pro s_HDRFBO simples, que é o que os passes
-// de pós (SSAO, bright-pass, composite) amostram.
+
+
+
+
+
 void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
-    // Memória da última recusa: uma GPU que rejeitou 8x continua rejeitando —
-    // não pode recriar/refalhar o FBO todo frame (só loga uma vez e segue).
+    
+    
     static int s_MSAARejected = 0;
     if (s_MSAARejected > 0 && msaa >= s_MSAARejected) msaa = 1;
     msaa = (msaa > 1) ? msaa : 1;
@@ -2052,7 +2052,7 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         glDeleteTextures(1, &s_LensColor);
     }
 
-    // --- Destino simples (o que os passes de pós amostram): cor HDR + depth textura ---
+    
     glGenTextures(1, &s_HDRColorBuffer);
     glBindTexture(GL_TEXTURE_2D, s_HDRColorBuffer);
     glTexImage2D(GL_TEXTURE_2D, 0, KZ_HDR_INTERNAL_FORMAT, (GLsizei)width, (GLsizei)height, 0, GL_RGB, GL_FLOAT, nullptr);
@@ -2078,10 +2078,10 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         SetShaderDiagnostic("Framebuffer HDR INCOMPLETO");
     }
 
-    // --- Destino multisample (se MSAA>1): a cena renderiza aqui; o blit resolve ---
-    // Fallback obrigatório: se a GPU não suportar o nº de amostras no FBO HDR
-    // (iGPU antiga, drivers limitados), o FBO fica INCOMPLETO e renderizar nele
-    // dá viewport preto. Nesse caso cai pra sem-MSAA em vez de quebrar a tela.
+    
+    
+    
+    
     int requestedMsaa = msaa;
     if (msaa > 1) {
         GLint maxSamples = 1;
@@ -2095,9 +2095,9 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         glGenTextures(1, &s_MSAAHDRColor);
         glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, s_MSAAHDRColor);
 #if defined(KZ_PLATFORM_ANDROID)
-        // GLES: glTexImage2DMultisample não existe (é glTexStorage2DMultisample,
-        // do ES 3.1+). Sem ES 3.1 a textura fica vazia, o FBO abaixo fica
-        // incompleto e o fallback existente desliga o MSAA sozinho.
+        
+        
+        
         if (GLAD_GL_ES_VERSION_3_1)
             glTexStorage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, (GLsizei)msaa, KZ_HDR_INTERNAL_FORMAT,
                                       (GLsizei)width, (GLsizei)height, GL_TRUE);
@@ -2114,8 +2114,8 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, s_MSAAHDRColor, 0);
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, s_MSAAHDRDepthRBO);
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            // GPU recusou o MSAA mesmo dentro do máximo reportado: desliga sem
-            // renderizar no FBO quebrado (senão o viewport fica preto).
+            
+            
             KZ_CORE_ERROR("Framebuffer HDR MSAA incompleto — desabilitando MSAA (fallback).");
             SetShaderDiagnostic("Framebuffer HDR MSAA INCOMPLETO — MSAA desligado");
             s_MSAARejected = requestedMsaa;
@@ -2125,7 +2125,7 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
             msaa = 1;
         }
     }
-    s_CurrentMSAA = msaa; // reflete o que de fato ficou (pode ter caído pra 1)
+    s_CurrentMSAA = msaa; 
 
     glGenFramebuffers(2, s_BloomFBO);
     glGenTextures(2, s_BloomColorBuffer);
@@ -2144,8 +2144,8 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         }
     }
 
-    // --- SSR (reflexos em espaço de tela): cor HDR + depth -> RGBA16F ---
-    // Textura só cor (a profundidade vem do s_HDRDepthTexture, já resolvido).
+    
+    
     glGenFramebuffers(1, &s_SSRFBO);
     glGenTextures(1, &s_SSRColorBuffer);
     glBindTexture(GL_TEXTURE_2D, s_SSRColorBuffer);
@@ -2162,8 +2162,8 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // --- TAA (anti-aliasing temporal): alvo intermediário do composite + 2
-    // históricos ping-pong (RGBA8, espaço LDR pós-tonemap) ---
+    
+    
     auto makeTex = [](uint32_t& tex, uint32_t w, uint32_t h) {
         glGenTextures(1, &tex);
         glBindTexture(GL_TEXTURE_2D, tex);
@@ -2188,10 +2188,10 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
             SetShaderDiagnostic("Framebuffer TAA histórico INCOMPLETO");
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    s_TAAHistoryValid = false; // resolução/alvo mudou: histórico antigo é inválido
+    s_TAAHistoryValid = false; 
     s_TAACounter = 0;
 
-    // --- God rays: meia resolução, RGBA16F (cor brilhante acumulada) ---
+    
     uint32_t grW = glm::max(1u, width / 2), grH = glm::max(1u, height / 2);
     glGenFramebuffers(1, &s_GodRaysFBO);
     glGenTextures(1, &s_GodRaysColorBuffer);
@@ -2207,7 +2207,7 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         SetShaderDiagnostic("Framebuffer God rays INCOMPLETO");
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // --- DOF (bokeh) + Motion blur: alvos RGBA16F em resolução interna ---
+    
     auto makeColorTex = [](uint32_t& tex, uint32_t w, uint32_t h) {
         glGenTextures(1, &tex);
         glBindTexture(GL_TEXTURE_2D, tex);
@@ -2231,7 +2231,7 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
         SetShaderDiagnostic("Framebuffer Motion blur INCOMPLETO");
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // --- SSGI (meia resolução) + Lens flare: alvos RGBA16F ---
+    
     uint32_t ssgiW = glm::max(1u, width / 2), ssgiH = glm::max(1u, height / 2);
     glGenFramebuffers(1, &s_SSGIFBO);
     makeColorTex(s_SSGIColor, ssgiW, ssgiH);
@@ -2248,9 +2248,9 @@ void Renderer3D::EnsurePostBuffers(uint32_t width, uint32_t height, int msaa) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-// (Re)cria o FBO da reflexão planar (espelho real): cor RGBA16F + depth.
-// Resolução interna do frame (qualidade de espelho). Só é criado se há
-// material com PlanarReflect no frame (checado no EndScene).
+
+
+
 void Renderer3D::EnsurePlanarBuffers(uint32_t width, uint32_t height) {
     if (s_PlanarFBO != 0 && width == s_PlanarWidth && height == s_PlanarHeight) return;
     s_PlanarWidth = width;
@@ -2282,10 +2282,10 @@ void Renderer3D::EnsurePlanarBuffers(uint32_t width, uint32_t height) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-// Reflete a cena vista pela câmera na face do espelho (pré-passe). Desenha o
-// skybox + todas as meshes (exceto o próprio espelho) com a câmera refletida,
-// numa projeção com near plane oblíquo na face do espelho (sem isso a geometria
-// abaixo do espelho "vaza" pro reflexo).
+
+
+
+
 void Renderer3D::RenderPlanarReflection([[maybe_unused]] const glm::vec3& planePoint,
                                         [[maybe_unused]] const glm::vec3& planeNormal,
                                         int mirrorIndex, uint32_t width, uint32_t height,
@@ -2299,7 +2299,7 @@ void Renderer3D::RenderPlanarReflection([[maybe_unused]] const glm::vec3& planeP
     glViewport(0, 0, (GLsizei)width, (GLsizei)height);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Skybox (LEQUAL, sem escrita de profundidade).
+    
     glDepthFunc(GL_LEQUAL);
     glDepthMask(GL_FALSE);
     s_SkyboxShader->Bind();
@@ -2312,9 +2312,9 @@ void Renderer3D::RenderPlanarReflection([[maybe_unused]] const glm::vec3& planeP
         ? glm::normalize(-s_ShadowCaster.Direction)
         : glm::normalize(glm::vec3(0.3f, 1.0f, 0.2f));
     s_SkyboxShader->SetFloat3("u_SunDirection", sunDir);
-    // Céu: HDRI se carregado; senão, raymarch atmosférico SÓ se o usuário
-    // optou (AtmosphereSky) — por padrão o gradiente procedural limpo, que
-    // é estável até em GPUs fracas/emuladores.
+    
+    
+    
     bool atmosphere = s_EnvironmentHDRIPath.empty() && s_Settings.AtmosphereSky;
     s_SkyboxShader->SetInt("u_AtmosphereSky", atmosphere ? 1 : 0);
     s_SkyboxShader->SetInt("u_CloudsEnabled", (atmosphere && s_Settings.CloudsEnabled) ? 1 : 0);
@@ -2323,7 +2323,7 @@ void Renderer3D::RenderPlanarReflection([[maybe_unused]] const glm::vec3& planeP
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);
 
-    // Meshes (sem o espelho, que não pode refletir a si mesmo).
+    
     if (!s_DrawList.empty()) {
         s_MeshShader->Bind();
         s_MeshShader->SetMat4("u_ViewProjection", reflectVP);
@@ -2374,7 +2374,7 @@ void Renderer3D::RenderPlanarReflection([[maybe_unused]] const glm::vec3& planeP
             s_MeshShader->SetFloat("u_LightOuterCos" + idx, glm::cos(glm::radians(l.OuterConeDeg)));
         }
 
-        // No reflexo, nenhum material é "espelho" (evita recursão infinita).
+        
         s_MeshShader->SetInt("u_IsPlanarMirror", 0);
         for (int i = 0; i < (int)s_DrawList.size(); ++i) {
             if (i == mirrorIndex) continue;
@@ -2424,9 +2424,9 @@ void Renderer3D::RenderPlanarReflection([[maybe_unused]] const glm::vec3& planeP
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-// (Re)cria os 3 shadow maps se a resolução mudou (preset de qualidade pode
-// trocar entre 512..4096 em runtime sem reiniciar). Tamanho estático entre
-// frames (checagem barata no início do EndScene).
+
+
+
 void Renderer3D::EnsureShadowMaps(uint32_t size) {
     size = glm::max(512u, size);
     static uint32_t s_CurrentShadowSize = 0;
@@ -2442,21 +2442,21 @@ void Renderer3D::EnsureShadowMaps(uint32_t size) {
         }
     }
 
-    float borderColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f }; // fora do shadow map = nunca em sombra
+    float borderColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f }; 
     for (int i = 0; i < kCascadeCount; ++i) {
         glGenFramebuffers(1, &s_ShadowFBO[i]);
         glGenTextures(1, &s_ShadowMap[i]);
         glBindTexture(GL_TEXTURE_2D, s_ShadowMap[i]);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, (GLsizei)size, (GLsizei)size,
                      0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-        // GL_LINEAR na profundidade = PCF bilinear de hardware (borda de sombra
-        // mais suave que o sample único NEAREST; o loop manual do shader soma
-        // por cima). Filtragem de textura de profundidade é GL 3.0+.
+        
+        
+        
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 #if defined(KZ_PLATFORM_ANDROID)
-        // CLAMP_TO_BORDER só existe no ES 3.2+; em 3.0/3.1 as bordas ficam
-        // CLAMP_TO_EDGE (a diferença é visível só no miolo do PCF manual).
+        
+        
         if (GLAD_GL_ES_VERSION_3_2) {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
@@ -2474,8 +2474,8 @@ void Renderer3D::EnsureShadowMaps(uint32_t size) {
         glBindFramebuffer(GL_FRAMEBUFFER, s_ShadowFBO[i]);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, s_ShadowMap[i], 0);
 #if !defined(KZ_PLATFORM_ANDROID)
-        // GLES: não existe glDrawBuffer/glReadBuffer — FBO só com depth já
-        // completa sem color attachment (draw/read = NONE implícito).
+        
+        
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
 #endif
@@ -2485,8 +2485,8 @@ void Renderer3D::EnsureShadowMaps(uint32_t size) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-// (Re)cria os dois FBOs de SSAO (oclusão bruta + borrada), meia resolução,
-// se o tamanho mudou desde a última vez.
+
+
 void Renderer3D::EnsureSSAOBuffers(uint32_t width, uint32_t height) {
     uint32_t w = glm::max(1u, width / 2), h = glm::max(1u, height / 2);
     if (s_SSAOColorBuffer != 0 && w == s_SSAOWidth && h == s_SSAOHeight) return;
@@ -2522,17 +2522,17 @@ void Renderer3D::EnsureSSAOBuffers(uint32_t width, uint32_t height) {
 }
 
 
-// único, síncrono. A fonte do ambiente é o céu procedural OU uma imagem HDR
-// equirectangular (Renderer3D::SetEnvironmentHDRIPath) — pra HDRI a imagem é
-// carregada, convertida pra cubemap e a partir daí o restante do pipeline
-// (irradiância + pré-filtro GGX) é idêntico. O bake roda uma vez no Init() e
-// de novo sob demanda quando o usuário troca a fonte (mudar a direção do sol
-// em runtime continua sendo a limitação registrada: recalcular convolução por
-// frame é caro demais).
+
+
+
+
+
+
+
 void Renderer3D::GenerateEnvironment() {
     KZ_TRACE_SCOPE("Renderer3D::GenerateEnvironment");
 
-    // Rebake: libera os cubemaps anteriores antes de criar os novos.
+    
     if (s_EnvironmentCubemap) glDeleteTextures(1, &s_EnvironmentCubemap);
     if (s_IrradianceCubemap) glDeleteTextures(1, &s_IrradianceCubemap);
     if (s_PrefilterCubemap) glDeleteTextures(1, &s_PrefilterCubemap);
@@ -2544,10 +2544,10 @@ void Renderer3D::GenerateEnvironment() {
     auto captureShaderIrradiance = CreateRef<Shader>("Renderer3D_CaptureIrradiance", s_CaptureVertexSrc, s_IrradianceFragmentSrc);
     auto captureShaderPrefilter  = CreateRef<Shader>("Renderer3D_CapturePrefilter", s_CaptureVertexSrc, s_PrefilterFragmentSrc);
 
-    // As 6 matrizes de vista, uma por face do cubemap, todas olhando da
-    // origem (o "olho" da captura nunca sai do centro — só a orientação
-    // muda) — ordem e "up" seguem a convenção do OpenGL pra
-    // GL_TEXTURE_CUBE_MAP_POSITIVE_X..NEGATIVE_Z.
+    
+    
+    
+    
     glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
     glm::mat4 captureViews[6] = {
         glm::lookAt(glm::vec3(0.0f), glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
@@ -2569,17 +2569,17 @@ void Renderer3D::GenerateEnvironment() {
     glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
     glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
 
-    // Sol padrão pro bake (caminho procedural): mesma direção default de
-    // DirectionalLight (ver Renderer3D.hpp) — se a cena não tiver luz nenhuma
-    // ainda quando o ambiente é gerado, o céu já nasce coerente com o sol default.
+    
+    
+    
     DirectionalLight defaultSun;
     glm::vec3 sunDirToLight = glm::normalize(-defaultSun.Direction);
 
-    // HDRI: se há caminho configurado E a imagem carrega, o céu vem dela;
-    // caso contrário cai pro procedural (com erro logado, sem quebrar o bake).
+    
+    
     bool useHDRI = (!s_EnvironmentHDRIPath.empty() && LoadHDRI(s_EnvironmentHDRIPath));
 
-    // --- 1. Cubemap de ambiente (céu procedural ou HDRI) ----------------
+    
     glGenTextures(1, &s_EnvironmentCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, s_EnvironmentCubemap);
     for (uint32_t i = 0; i < 6; ++i) {
@@ -2597,8 +2597,8 @@ void Renderer3D::GenerateEnvironment() {
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
     glViewport(0, 0, (GLsizei)kEnvironmentSize, (GLsizei)kEnvironmentSize);
 
-    // Sem cull de face aqui: é mais simples/seguro desenhar os dois lados
-    // do cubo de captura do que garantir a winding certa vista de dentro.
+    
+    
     glDisable(GL_CULL_FACE);
     if (useHDRI) {
         glActiveTexture(GL_TEXTURE0);
@@ -2625,7 +2625,7 @@ void Renderer3D::GenerateEnvironment() {
         }
     }
 
-    // --- 2. Cubemap de irradiância (difusa) -----------------------------
+    
     glGenTextures(1, &s_IrradianceCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, s_IrradianceCubemap);
     for (uint32_t i = 0; i < 6; ++i) {
@@ -2654,7 +2654,7 @@ void Renderer3D::GenerateEnvironment() {
         RenderCommand::DrawIndexed(s_CaptureCube->GetVertexArray(), s_CaptureCube->GetIndexCount());
     }
 
-    // --- 3. Cubemap especular pré-filtrado, um mip por faixa de rugosidade ---
+    
     glGenTextures(1, &s_PrefilterCubemap);
     glBindTexture(GL_TEXTURE_CUBE_MAP, s_PrefilterCubemap);
     for (uint32_t i = 0; i < 6; ++i) {
@@ -2666,14 +2666,14 @@ void Renderer3D::GenerateEnvironment() {
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glGenerateMipmap(GL_TEXTURE_CUBE_MAP); // aloca a cadeia de mip; cada nível é preenchido abaixo
+    glGenerateMipmap(GL_TEXTURE_CUBE_MAP); 
 
     captureShaderPrefilter->Bind();
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, s_EnvironmentCubemap);
     captureShaderPrefilter->SetInt("u_EnvironmentMap", 0);
     for (uint32_t mip = 0; mip < kPrefilterMipLevels; ++mip) {
-        uint32_t mipSize = kPrefilterBaseSize >> mip; // 128, 64, 32, 16, 8
+        uint32_t mipSize = kPrefilterBaseSize >> mip; 
         glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, (GLsizei)mipSize, (GLsizei)mipSize);
         glViewport(0, 0, (GLsizei)mipSize, (GLsizei)mipSize);
@@ -2689,13 +2689,13 @@ void Renderer3D::GenerateEnvironment() {
         }
     }
 
-    // Restaura GL_CULL_FACE pro estado real de antes desse bake: OFF. O
-    // resto do renderer (mesh normal, shadow pass) nunca chama
-    // glEnable(GL_CULL_FACE) em lugar nenhum — só glCullFace() pra trocar
-    // o MODO, que não tem efeito com o teste desligado. Deixar ligado
-    // aqui mudaria silenciosamente o comportamento de toda mesh desenhada
-    // depois disso (culling de back-face passaria a valer pra cena
-    // inteira, não só pra esse bake) — por isso desliga de novo, não liga.
+    
+    
+    
+    
+    
+    
+    
     glDisable(GL_CULL_FACE);
     glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prevFBO);
     glViewport(prevViewport[0], prevViewport[1], (GLsizei)prevViewport[2], (GLsizei)prevViewport[3]);
@@ -2707,17 +2707,17 @@ void Renderer3D::GenerateEnvironment() {
                  useHDRI ? " — fonte HDRI" : " — céu procedural");
 }
 
-// Carrega uma imagem HDR equirectangular (ex.: .hdr Radiance) numa textura
-// 2D float; a conversão pra cubemap acontece no bake (GenerateEnvironment).
+
+
 bool Renderer3D::LoadHDRI(const std::string& path) {
     int w = 0, h = 0, comp = 0;
     float* data = nullptr;
 
-    // stbi_set_flip_vertically_on_load é GLOBAL. Cada loader de textura seta
-    // o valor antes do próprio load; o LoadHDRI não setava NADA e herdava o
-    // flip da ÚLTIMA textura carregada (PNG flipada = céu certo; glTF sem
-    // flip = céu DE CABEÇA PARA BAIXO — as nuvens iam pro chão). O equirect
-    // precisa de flip: zênite (topo da imagem) deve cair em v=1.0.
+    
+    
+    
+    
+    
     stbi_set_flip_vertically_on_load(1);
 
     if (IsEmbeddedPath(path)) {
@@ -2757,22 +2757,22 @@ void Renderer3D::SetGraphicsSettings(const GraphicsSettings& settings) {
 void Renderer3D::SetEnvironmentHDRIPath(const std::string& path) {
     if (path == s_EnvironmentHDRIPath) return;
     s_EnvironmentHDRIPath = path;
-    if (s_EnvironmentCubemap != 0) GenerateEnvironment(); // rebakeia com a nova fonte
+    if (s_EnvironmentCubemap != 0) GenerateEnvironment(); 
 }
 
 const std::string& Renderer3D::GetEnvironmentHDRIPath() { return s_EnvironmentHDRIPath; }
 
-// Não libera shadow FBO/map nem os cubemaps de IBL — mesma lacuna que já
-// existia aqui antes desta v1 de PBR (só documentando, não é regressão
-// nova). Inofensivo hoje porque Shutdown() só roda no fim do processo
-// (driver recupera tudo), mas vira problema de verdade no dia em que a
-// engine ganhar "trocar de cena/projeto sem reiniciar o processo" —
-// registrar aqui pra não se perder.
+
+
+
+
+
+
 void Renderer3D::Shutdown() { KZ_TRACE_SCOPE("Renderer3D::Shutdown"); }
 
-// Divide o frustum da câmera em kCascadeCount faixas de distância (mistura log/uniforme,
-// lambda=0.5) e ajusta uma matriz luz ortográfica "apertada" em cada uma — sombra nítida
-// perto, mais grosseira longe, e a área sempre acompanha a câmera (não fica mais fixa na origem).
+
+
+
 void Renderer3D::ComputeCascades(const glm::vec3& lightDir) {
     constexpr float kLambda = 0.5f;
     float near = s_CamNear, far = s_CamFar;
@@ -2789,8 +2789,8 @@ void Renderer3D::ComputeCascades(const glm::vec3& lightDir) {
 
     float prevSplit = near;
     for (int i = 0; i < kCascadeCount; ++i) {
-        // 8 cantos do sub-frustum [prevSplit, splits[i]] em NDC -> mundo, via a
-        // câmera de verdade (reaproveita a projeção da cena, só troca near/far).
+        
+        
         glm::mat4 subProj = glm::perspective(glm::radians(s_CamFOV), s_CamAspect, prevSplit, splits[i]);
         glm::mat4 subInv = glm::inverse(subProj * s_View);
 
@@ -2807,8 +2807,8 @@ void Renderer3D::ComputeCascades(const glm::vec3& lightDir) {
         for (auto& corn : corners) center += corn;
         center /= 8.0f;
 
-        // Raio da esfera que envolve o sub-frustum: usar esfera (não AABB apertado) evita
-        // "tremida" da sombra quando a câmera gira, ao custo de desperdiçar um pouco de resolução.
+        
+        
         float radius = 0.0f;
         for (auto& corn : corners) radius = glm::max(radius, glm::length(corn - center));
         radius = glm::ceil(radius * 16.0f) / 16.0f;
@@ -2818,8 +2818,8 @@ void Renderer3D::ComputeCascades(const glm::vec3& lightDir) {
         glm::mat4 lightProj = glm::ortho(-radius, radius, -radius, radius, 0.01f, radius * 4.0f);
         s_LightSpaceMatrix[i] = lightProj * lightView;
 
-        // Distância guardada em view-space (Z da câmera, positivo pra frente) — é o que o
-        // fragment shader compara pra escolher a cascata certa por pixel.
+        
+        
         s_CascadeSplits[i] = splits[i];
         prevSplit = splits[i];
     }
@@ -2830,7 +2830,7 @@ void Renderer3D::BeginScene(const PerspectiveCamera& camera) {
     s_View = camera.GetViewMatrix();
     s_Projection = camera.GetProjectionMatrix();
     s_CameraPos = camera.GetPosition();
-    // VP SEM jitter (o TAA muda a projeção depois) — base do motion blur.
+    
     s_MotionCurrVP = camera.GetViewProjectionMatrix();
     s_CamFOV = camera.GetFOV();
     s_CamAspect = camera.GetAspect();
@@ -2859,7 +2859,7 @@ void Renderer3D::SubmitLight(const Light& light) {
     if (light.Type == LightType::Directional && !s_HasShadowCaster) {
         s_ShadowCaster = light;
         s_HasShadowCaster = true;
-        s_LightList.insert(s_LightList.begin(), light); // shadow caster sempre no índice 0
+        s_LightList.insert(s_LightList.begin(), light); 
         return;
     }
     s_LightList.push_back(light);
@@ -2871,20 +2871,20 @@ void Renderer3D::EndScene() {
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFBO);
     glGetIntegerv(GL_VIEWPORT, prevViewport);
     uint32_t targetW = (uint32_t)prevViewport[2], targetH = (uint32_t)prevViewport[3];
-    if (targetW == 0 || targetH == 0) { s_DrawList.clear(); return; } // painel/janela minimizado
+    if (targetW == 0 || targetH == 0) { s_DrawList.clear(); return; } 
 
-    // Resolução interna respeita o render scale do preset — o passe de
-    // composição upscale/downscale pro destino do chamador automaticamente.
+    
+    
     uint32_t internalW = glm::max(1u, (uint32_t)glm::round((float)targetW * s_Settings.RenderScale));
     uint32_t internalH = glm::max(1u, (uint32_t)glm::round((float)targetH * s_Settings.RenderScale));
     EnsurePostBuffers(internalW, internalH, s_Settings.MSAA);
     EnsureShadowMaps((uint32_t)s_Settings.ShadowMapSize);
 
-    // Jitter da câmera (TAA): desloca a projeção por ±1 pixel em cada eixo,
-    // em sequência Halton de baixa discrepância, pra cada frame amostrar uma
-    // subposição de pixel diferente — o misturador temporal junta tudo.
-    // Aplicado ANTES de renderizar a cena, pra cor+depth+AO/SSR ficarem
-    // consistentes com a mesma projeção jitterada.
+    
+    
+    
+    
+    
     bool taaEnabled = s_Settings.TAAEnabled;
     if (taaEnabled) {
         ++s_TAACounter;
@@ -2901,9 +2901,9 @@ void Renderer3D::EndScene() {
         s_ViewProjection = s_Projection * s_View;
     }
 
-    // --- Pré-passe 0.5: reflexão planar (espelho real). Se alguma entidade do
-    // frame é um espelho, renderiza a cena refletida numa câmera espelhada e o
-    // material espelhado amostra essa textura no passe principal. ---
+    
+    
+    
     s_HasPlanarReflection = false;
     int mirrorIndex = -1;
     glm::vec3 mirrorPoint(0.0f), mirrorNormal(0.0f, 1.0f, 0.0f);
@@ -2916,7 +2916,7 @@ void Renderer3D::EndScene() {
         mirrorNormal = glm::normalize(glm::mat3(mirror.Transform) * glm::vec3(0.0f, 1.0f, 0.0f));
         float side = glm::dot(mirrorNormal, s_CameraPos - mirrorPoint);
         if (side > 0.001f) {
-            // Câmera refletida (posição + view) e projeção com near oblíquo.
+            
             glm::vec3 reflectCam = glm::reflect(s_CameraPos - mirrorPoint, mirrorNormal) + mirrorPoint;
             glm::mat4 R(1.0f);
             R[0] = { 1.0f - 2.0f*mirrorNormal.x*mirrorNormal.x, -2.0f*mirrorNormal.x*mirrorNormal.y, -2.0f*mirrorNormal.x*mirrorNormal.z, 0.0f };
@@ -2926,8 +2926,8 @@ void Renderer3D::EndScene() {
             R[3] = { -2.0f*mirrorNormal.x*d, -2.0f*mirrorNormal.y*d, -2.0f*mirrorNormal.z*d, 1.0f };
             glm::mat4 reflectView = s_View * R;
 
-            // Near plane oblíquo na face do espelho (Lengyel): a geometria do
-            // outro lado do espelho é cortada em vez de "vazar" pro reflexo.
+            
+            
             glm::vec4 planeWorld(mirrorNormal, -d);
             glm::vec4 cp = glm::transpose(glm::inverse(s_View)) * planeWorld;
             glm::mat4 reflectProj = s_Projection;
@@ -2946,10 +2946,10 @@ void Renderer3D::EndScene() {
         }
     }
 
-    // --- Passe 0: profundidade vista da luz, uma vez por cascata (só se há shadow caster) ---
+    
     if (!s_DrawList.empty() && s_HasShadowCaster) {
         ComputeCascades(s_ShadowCaster.Direction);
-        glCullFace(GL_FRONT); // reduz acne de sombra sem precisar de bias grande
+        glCullFace(GL_FRONT); 
         s_ShadowShader->Bind();
         uint32_t shadowSize = (uint32_t)s_Settings.ShadowMapSize;
         for (int c = 0; c < kCascadeCount; ++c) {
@@ -2959,8 +2959,8 @@ void Renderer3D::EndScene() {
             s_ShadowShader->SetMat4("u_LightSpaceMatrix", s_LightSpaceMatrix[c]);
             for (auto& cmd : s_DrawList) {
                 s_ShadowShader->SetMat4("u_Model", cmd.Transform);
-                // Malha esquelética: sobe as juntas e liga o skinning pra a
-                // sombra seguir a pose animada (não a de repouso).
+                
+                
                 if (cmd.Joints.empty()) {
                     s_ShadowShader->SetInt("u_Animated", 0);
                 } else {
@@ -2976,15 +2976,15 @@ void Renderer3D::EndScene() {
         glCullFace(GL_BACK);
     }
 
-    // --- Passe 1: cena inteira (mesh + skybox), pro framebuffer HDR interno ---
+    
     uint32_t sceneFBO = (s_CurrentMSAA > 1) ? s_MSAAHDRFBO : s_HDRFBO;
     glBindFramebuffer(GL_FRAMEBUFFER, sceneFBO);
     glViewport(0, 0, (GLsizei)internalW, (GLsizei)internalH);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     if (s_DrawGridFlag) {
-        // Grid SEM jitter do TAA: a VP sem jitter (s_MotionCurrVP) evita que
-        // as linhas de 1px tremam/piscarem frame a frame e o "horizonte preto".
+        
+        
         s_LineShader->Bind();
         s_LineShader->SetMat4("u_ViewProjection", s_MotionCurrVP);
         RenderCommand::DrawLines(s_GridVAO, s_GridVertexCount);
@@ -3007,7 +3007,7 @@ void Renderer3D::EndScene() {
             }
         }
 
-        // Unidade 0 é o AlbedoMap (setado por draw call); 1-3=sombra (cascatas), 4=normal, 5=irradiância, 6=prefiltro.
+        
         for (int c = 0; c < kCascadeCount; ++c) {
             glActiveTexture(GL_TEXTURE1 + c);
             glBindTexture(GL_TEXTURE_2D, s_ShadowMap[c]);
@@ -3050,8 +3050,8 @@ void Renderer3D::EndScene() {
             s_MeshShader->SetFloat("u_Roughness", cmd.Mat.Roughness);
             s_MeshShader->SetFloat("u_AO", cmd.Mat.AO);
 
-            // Skinning: se o comando trouxe juntas, sobe as matrizes e liga
-            // o branch no vertex shader (malha estática = weights 0 = identidade).
+            
+            
             if (cmd.Joints.empty()) {
                 s_MeshShader->SetInt("u_Animated", 0);
             } else {
@@ -3102,8 +3102,8 @@ void Renderer3D::EndScene() {
             s_MeshShader->SetFloat3("u_Emissive", cmd.Mat.Emissive);
             s_MeshShader->SetFloat("u_EmissiveStrength", cmd.Mat.EmissiveStrength);
 
-            // Espelho real: só o material marcado amostra a textura da câmera
-            // refletida (os demais ficam com o caminho IBL/SSR normal).
+            
+            
             bool isMirror = cmd.Mat.PlanarReflect && s_HasPlanarReflection;
             s_MeshShader->SetInt("u_IsPlanarMirror", isMirror ? 1 : 0);
             if (isMirror) {
@@ -3117,8 +3117,8 @@ void Renderer3D::EndScene() {
         }
     }
 
-    // --- Malhas INSTANCIADAS (floresta/multidão): mesma malha/material em N
-    // transformadas num único draw call (uniform array + gl_InstanceID). ---
+    
+    
     if (!s_InstanceBatches.empty()) {
         s_MeshShader->SetInt("u_Instanced", 1);
         for (auto& batch : s_InstanceBatches) {
@@ -3146,12 +3146,12 @@ void Renderer3D::EndScene() {
             s_MeshShader->SetInt("u_HasHeightMap", hasHeight ? 1 : 0);
             s_MeshShader->SetFloat("u_HeightScale", mat.HeightScale);
             if (hasHeight) { mat.HeightMap->Bind(9); s_MeshShader->SetInt("u_HeightMap", 9); }
-            s_MeshShader->SetInt("u_HasLightmap", 0); // instâncias: sem lightmap (v1)
+            s_MeshShader->SetInt("u_HasLightmap", 0); 
             s_MeshShader->SetFloat3("u_Emissive", mat.Emissive);
             s_MeshShader->SetFloat("u_EmissiveStrength", mat.EmissiveStrength);
             s_MeshShader->SetInt("u_IsPlanarMirror", 0);
 
-            // Desenha em blocos de até kMaxInstancesPerBatch.
+            
             const std::vector<glm::mat4>& T = batch.Transforms;
             uint32_t done = 0;
             while (done < (uint32_t)T.size()) {
@@ -3168,7 +3168,7 @@ void Renderer3D::EndScene() {
         s_MeshShader->SetInt("u_Instanced", 0);
     }
 
-    // Skybox por último — LEQUAL + sem escrita de profundidade, só aparece onde nada mais desenhou.
+    
     glDepthFunc(GL_LEQUAL);
     glDepthMask(GL_FALSE);
     s_SkyboxShader->Bind();
@@ -3177,16 +3177,16 @@ void Renderer3D::EndScene() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, s_EnvironmentCubemap);
     s_SkyboxShader->SetInt("u_EnvironmentMap", 0);
-    // Céu atmosférico: o sol segue a luz direcional (sombras batem na mesma
-    // direção do disco do sol). Sem luz direcional, usa um sol padrão.
+    
+    
     glm::vec3 sunDir = s_HasShadowCaster
         ? glm::normalize(-s_ShadowCaster.Direction)
         : glm::normalize(glm::vec3(0.3f, 1.0f, 0.2f));
     s_SkyboxShader->SetFloat3("u_SunDirection", sunDir);
-    // HDRI carregado = o usuário quer ver o ambiente dele; senão, scattering.
-    // Céu: HDRI se carregado; senão, raymarch atmosférico SÓ se o usuário
-    // optou (AtmosphereSky) — por padrão o gradiente procedural limpo, que
-    // é estável até em GPUs fracas/emuladores.
+    
+    
+    
+    
     bool atmosphere = s_EnvironmentHDRIPath.empty() && s_Settings.AtmosphereSky;
     s_SkyboxShader->SetInt("u_AtmosphereSky", atmosphere ? 1 : 0);
     s_SkyboxShader->SetInt("u_CloudsEnabled", (atmosphere && s_Settings.CloudsEnabled) ? 1 : 0);
@@ -3195,7 +3195,7 @@ void Renderer3D::EndScene() {
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);
 
-    // Decals: projetados na geometria (depth test, sem escrever profundidade).
+    
     if (!s_DecalList.empty()) {
         s_DecalShader->Bind();
         s_DecalShader->SetMat4("u_ViewProjection", s_ViewProjection);
@@ -3210,16 +3210,16 @@ void Renderer3D::EndScene() {
             s_DecalShader->SetInt("u_DecalTexture", 0);
             RenderCommand::DrawIndexed(s_DecalCube->GetVertexArray(), s_DecalCube->GetIndexCount());
         }
-        // Estado restaurado PROPOSITALMENTE: deixar o blend desligado aqui
-        // apagava a transparência do texto/2D do resto do frame (retângulos
-        // brancos no lugar das letras — bug clássico de estado global GL).
+        
+        
+        
         RenderCommand::SetBlending(true);
         glDepthMask(GL_TRUE);
         s_DecalList.clear();
     }
 
-    // Partículas: testam profundidade contra a geometria real (ficam atrás de paredes),
-    // mas não escrevem (partículas sobrepostas se misturam entre si, não se ocluem).
+    
+    
     if (!s_ParticleBatches.empty()) {
         glm::vec3 cameraRight(s_View[0][0], s_View[1][0], s_View[2][0]);
         glm::vec3 cameraUp(s_View[0][1], s_View[1][1], s_View[2][1]);
@@ -3240,20 +3240,20 @@ void Renderer3D::EndScene() {
             glBindBuffer(GL_ARRAY_BUFFER, s_ParticleInstanceVBO);
             glBufferSubData(GL_ARRAY_BUFFER, 0, (GLsizeiptr)(batch.Instances.size() * sizeof(ParticleInstance)), batch.Instances.data());
             glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr, (GLsizei)batch.Instances.size());
-            RenderCommand::AddInstancedStats((uint32_t)batch.Instances.size()); // 1 draw + instâncias*2 tris
+            RenderCommand::AddInstancedStats((uint32_t)batch.Instances.size()); 
         }
         glBindVertexArray(0);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // volta pro padrão
-        // Blend RELIGADO: o texto/2D desenha depois no frame e precisa de
-        // alpha — desligado aqui gerava "texto = retângulos brancos".
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); 
+        
+        
         RenderCommand::SetBlending(true);
         glDepthMask(GL_TRUE);
     }
 
-    // Linhas de DEPURAÇÃO (gizmos de collider do editor): desenhadas depois
-    // das malhas com teste de profundidade — ficam sobre a superfície do
-    // próprio objeto, mas são ocultadas por geometria mais próxima (em vez de
-    // flutuar por cima de tudo como um overlay de tela).
+    
+    
+    
+    
     if (!s_DebugLines.empty()) {
         struct LineVertex { glm::vec3 Position; glm::vec3 Color; };
         std::vector<LineVertex> verts;
@@ -3263,7 +3263,7 @@ void Renderer3D::EndScene() {
             verts.push_back({ l.To, l.Color });
         }
         if (!s_DebugVAO) {
-            const uint32_t kMaxDebugVerts = 8192u * 2u; // teto de SubmitDebugLine
+            const uint32_t kMaxDebugVerts = 8192u * 2u; 
             s_DebugVAO = CreateRef<VertexArray>();
             s_DebugVBO = CreateRef<VertexBuffer>(kMaxDebugVerts * (uint32_t)sizeof(LineVertex));
             s_DebugVBO->SetLayout({
@@ -3276,15 +3276,15 @@ void Renderer3D::EndScene() {
         glDepthFunc(GL_LEQUAL);
         glDepthMask(GL_TRUE);
         s_LineShader->Bind();
-        // VP SEM jitter (s_MotionCurrVP), como o grid — evita o tremido de 1px.
+        
         s_LineShader->SetMat4("u_ViewProjection", s_MotionCurrVP);
         RenderCommand::DrawLines(s_DebugVAO, (uint32_t)verts.size());
         glDepthFunc(GL_LESS);
         s_DebugLines.clear();
     }
 
-    // Resolve MSAA -> destino simples (cor + profundidade). Sem MSAA a cena
-    // já foi renderizada direto no s_HDRFBO, não precisa de blit.
+    
+    
     if (s_CurrentMSAA > 1) {
         glBindFramebuffer(GL_READ_FRAMEBUFFER, s_MSAAHDRFBO);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, s_HDRFBO);
@@ -3293,12 +3293,12 @@ void Renderer3D::EndScene() {
                           GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST);
     }
 
-    // A partir daqui são passes de tela cheia sobre texturas — o teste de
-    // profundidade não faz sentido e o quad de tela inteira se perderia na
-    // geometria da cena se ele continuasse ligado.
+    
+    
+    
     RenderCommand::SetDepthTest(false);
 
-    // --- Passe 1.5: SSAO (do depth resolvido), meia resolução + blur ---
+    
     bool hasAO = false;
     if (s_Settings.SSAOEnabled && s_SSAOShader && s_SSAOShader->IsValid()) {
         EnsureSSAOBuffers(internalW, internalH);
@@ -3315,14 +3315,14 @@ void Renderer3D::EndScene() {
         s_SSAOShader->SetMat4("u_Projection", s_Projection);
         s_SSAOShader->SetMat4("u_InverseProjection", glm::inverse(s_Projection));
         s_SSAOShader->SetFloat("u_Radius", s_Settings.SSAORadius);
-        s_SSAOShader->SetFloat("u_Power", 1.2f); // 2.0 escurecia demais (relato de cena 'meio escura' no 4.0)
+        s_SSAOShader->SetFloat("u_Power", 1.2f); 
         s_SSAOShader->SetInt("u_SampleCount", s_Settings.SSAOSamples);
         for (size_t i = 0; i < s_SSAOKernel.size(); ++i)
             s_SSAOShader->SetFloat3("u_Samples[" + std::to_string(i) + "]", s_SSAOKernel[i]);
         s_SSAOShader->SetFloat2("u_NoiseScale", glm::vec2((float)s_SSAOWidth / 4.0f, (float)s_SSAOHeight / 4.0f));
         RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
 
-        // Blur separável (reaproveita o gaussiano do bloom) pra esconder o ruído.
+        
         int aoRead = 0, aoWrite = 1;
         s_BlurShader->Bind();
         for (int i = 0; i < 2; ++i) {
@@ -3333,15 +3333,15 @@ void Renderer3D::EndScene() {
             glBindTexture(GL_TEXTURE_2D, readTex);
             s_BlurShader->SetInt("u_Image", 0);
             s_BlurShader->SetInt("u_Horizontal", (i == 0) ? 1 : 0);
-            s_BlurShader->SetFloat("u_Anamorphic", 0.0f); // AO não usa streaks
+            s_BlurShader->SetFloat("u_Anamorphic", 0.0f); 
             RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
             std::swap(aoRead, aoWrite);
         }
         hasAO = true;
     }
 
-    // --- Passe 1.75: SSR (reflexos em espaço de tela) — cor + depth resolvidos,
-    // marcha do raio refletido com loop de PASSOS FIXOS (seguro em 3.3) ---
+    
+    
     bool hasSSR = false;
     if (s_Settings.SSREnabled) {
         glBindFramebuffer(GL_FRAMEBUFFER, s_SSRFBO);
@@ -3364,8 +3364,8 @@ void Renderer3D::EndScene() {
         hasSSR = true;
     }
 
-    // --- Passe 1.75b: SSGI — iluminação global 1-bounce (meia resolução),
-    // raios do hemisfério marchados contra o depth coletando cor indireta ---
+    
+    
     bool hasSSGI = false;
     if (s_Settings.SSGIEnabled && s_Settings.SSGIIntensity > 0.001f) {
         uint32_t ssgiW = glm::max(1u, internalW / 2), ssgiH = glm::max(1u, internalH / 2);
@@ -3385,8 +3385,8 @@ void Renderer3D::EndScene() {
         hasSSGI = true;
     }
 
-    // --- Passe 1.8: God rays / luz volumétrica (meia resolução) — marcha
-    // radial do pixel até o sol na tela acumulando o brilho da cena ---
+    
+    
     bool hasGodRays = false;
     if (s_Settings.GodRaysEnabled && s_Settings.GodRaysIntensity > 0.001f) {
         glm::vec3 sunDir = s_HasShadowCaster
@@ -3396,7 +3396,7 @@ void Renderer3D::EndScene() {
         if (sunClip.w > 0.0f) {
             glm::vec2 sunNDC = glm::vec2(sunClip) / sunClip.w;
             glm::vec2 sunUV = sunNDC * 0.5f + 0.5f;
-            // Só renderiza se o sol está (quase) dentro da tela.
+            
             if (sunUV.x >= -0.6f && sunUV.x <= 1.6f && sunUV.y >= -0.6f && sunUV.y <= 1.6f) {
                 uint32_t grW = glm::max(1u, internalW / 2), grH = glm::max(1u, internalH / 2);
                 glBindFramebuffer(GL_FRAMEBUFFER, s_GodRaysFBO);
@@ -3412,7 +3412,7 @@ void Renderer3D::EndScene() {
                 s_GodRaysShader->SetFloat("u_Intensity", s_Settings.GodRaysIntensity);
                 RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
 
-                // Um passe de blur horizontal pra suavizar os raios.
+                
                 s_BlurShader->Bind();
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, s_GodRaysColorBuffer);
@@ -3425,9 +3425,9 @@ void Renderer3D::EndScene() {
         }
     }
 
-    // --- Passe 1.9: DOF (bokeh) + Motion blur (reprojeção) — a "fonte" da
-    // cena pros passes seguintes (bright + composite) vira a saída borrada.
-    // Ordem: HDR → (DOF) → (Motion blur) → bright/composite. ---
+    
+    
+    
     uint32_t sceneTex = s_HDRColorBuffer;
     if (s_Settings.DOFEnabled && s_Settings.DOFStrength > 0.001f) {
         glBindFramebuffer(GL_FRAMEBUFFER, s_DOFFBO);
@@ -3464,7 +3464,7 @@ void Renderer3D::EndScene() {
         sceneTex = s_MotionTex;
     }
 
-    // --- Passe 2: bright-pass (meia resolução) — extrai o glow, se bloom ligado ---
+    
     uint32_t bloomW = glm::max(1u, internalW / 2), bloomH = glm::max(1u, internalH / 2);
     int bloomReadIdx = 0;
     if (s_Settings.BloomEnabled) {
@@ -3477,7 +3477,7 @@ void Renderer3D::EndScene() {
         s_BrightPassShader->SetFloat("u_Threshold", s_Settings.BloomThreshold);
         RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
 
-        // --- Passe 3: blur gaussiano separável, ping-pong entre os dois FBOs de bloom ---
+        
         bool horizontal = true;
         uint32_t blurIterations = glm::max(1u, (uint32_t)s_Settings.BloomIterations);
         s_BlurShader->Bind();
@@ -3495,8 +3495,8 @@ void Renderer3D::EndScene() {
         }
     }
 
-    // --- Passe 3.5: Lens flare — ghosts + streak a partir do brilho do bloom,
-    // na direção do sol. Usa o bloom borrado (ou o HDR se bloom desligado). ---
+    
+    
     bool hasLensFlare = false;
     if (s_Settings.LensFlareEnabled && s_Settings.LensFlareIntensity > 0.001f) {
         glm::vec3 sunDir = s_HasShadowCaster
@@ -3519,9 +3519,9 @@ void Renderer3D::EndScene() {
         }
     }
 
-    // --- Passe 4: composição final (HDR + bloom + AO + exposição, tonemap ACES) ---
-    // Com TAA/FXAA ligados o composite escreve num alvo intermediário
-    // (resolução interna); o passe seguinte (TAA e/ou FXAA) blita pro destino.
+    
+    
+    
     bool fxaaEnabled = s_Settings.FXAAEnabled;
     GLuint compositeTarget = (GLuint)prevFBO;
     int compositeW = prevViewport[2], compositeH = prevViewport[3];
@@ -3534,7 +3534,7 @@ void Renderer3D::EndScene() {
     glViewport(0, 0, (GLsizei)compositeW, (GLsizei)compositeH);
     s_CompositeShader->Bind();
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, sceneTex); // pode ser o HDR cru, o DOF ou o motion blur
+    glBindTexture(GL_TEXTURE_2D, sceneTex); 
     s_CompositeShader->SetInt("u_SceneColor", 0);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, s_Settings.BloomEnabled ? s_BloomColorBuffer[bloomReadIdx] : s_HDRColorBuffer);
@@ -3547,12 +3547,12 @@ void Renderer3D::EndScene() {
     s_CompositeShader->SetInt("u_ToneMapping", s_Settings.ToneMapping);
     s_CompositeShader->SetFloat("u_Saturation", s_Settings.Saturation);
     s_CompositeShader->SetFloat("u_Contrast", s_Settings.Contrast);
-    s_PostTime += 0.016f; // grão de filme animado (relógio de pós-processamento)
+    s_PostTime += 0.016f; 
     s_CompositeShader->SetFloat("u_Time", s_PostTime);
     s_CompositeShader->SetInt("u_HasAO", hasAO ? 1 : 0);
     if (hasAO) {
         glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, s_SSAOColorBuffer); // borrada (passe 2 do blur volta pro s_SSAOFBO)
+        glBindTexture(GL_TEXTURE_2D, s_SSAOColorBuffer); 
         s_CompositeShader->SetInt("u_AOTexture", 2);
     }
     s_CompositeShader->SetInt("u_HasSSR", hasSSR ? 1 : 0);
@@ -3581,8 +3581,8 @@ void Renderer3D::EndScene() {
     }
     RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
 
-    // --- Passe 4.5: TAA — mistura com o histórico (clamp de vizinhança). O
-    // histórico antigo (read) vira o novo (write); a saída é a entrada do FXAA.
+    
+    
     uint32_t finalInput = s_TAACompositeTex;
     if (taaEnabled) {
         int histRead = (int)(s_TAACounter % 2u);
@@ -3604,8 +3604,8 @@ void Renderer3D::EndScene() {
         s_TAAHistoryValid = true;
     }
 
-    // --- Passe 4.75: FXAA (opcional) — AA de pós-processamento em cima do
-    // composite (ou do TAA), direto pro destino final. ---
+    
+    
     if (fxaaEnabled) {
         glBindFramebuffer(GL_FRAMEBUFFER, (GLuint)prevFBO);
         glViewport(prevViewport[0], prevViewport[1], (GLsizei)prevViewport[2], (GLsizei)prevViewport[3]);
@@ -3616,7 +3616,7 @@ void Renderer3D::EndScene() {
         s_FXAAShader->SetFloat2("u_InvResolution", glm::vec2(1.0f / (float)internalW, 1.0f / (float)internalH));
         RenderCommand::DrawIndexed(s_FullscreenQuad, 6);
     } else if (taaEnabled) {
-        // Sem FXAA, o resultado do TAA é blitado pro destino (upscale).
+        
         glBindFramebuffer(GL_READ_FRAMEBUFFER, finalInput);
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint)prevFBO);
         glBlitFramebuffer(0, 0, (GLint)internalW, (GLint)internalH,
@@ -3627,8 +3627,8 @@ void Renderer3D::EndScene() {
 
     RenderCommand::SetDepthTest(true);
 
-    // Diagnóstico: qualquer erro de driver neste frame aparece no log (ex.:
-    // GL_INVALID_FRAMEBUFFER_OPERATION = FBO incompleto, que é tela preta).
+    
+    
     if (GLenum err = glGetError(); err != GL_NO_ERROR) {
         KZ_CORE_ERROR("OpenGL erro 0x{0:x} no frame (pós).", (unsigned)err);
         char buf[64];
@@ -3636,24 +3636,24 @@ void Renderer3D::EndScene() {
         SetShaderDiagnostic(buf);
     }
 
-    // Detecção de VIEWPORT PRETO no 1º frame: a cena padrão nunca é preta de
-    // verdade — se o readback do centro do HDR buffer vier ~0, algo do pipeline
-    // falhou silenciosamente. Loga nos 3 primeiros frames (a progressão mostra
-    // se a degradação automática resolveu), degrada no 1º e grava render_info.
+    
+    
+    
+    
     static int s_BlackFrames = 0;
     if (s_BlackFrames < 3) {
         ++s_BlackFrames;
         glBindFramebuffer(GL_READ_FRAMEBUFFER, s_HDRFBO);
         float px[3] = { 1.0f, 1.0f, 1.0f };
         glReadPixels((GLint)(internalW / 2), (GLint)(internalH / 2),
-                     1, 1, GL_RGB, GL_FLOAT, px); // RGB combina com o RGB16F
+                     1, 1, GL_RGB, GL_FLOAT, px); 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         float lum = px[0] + px[1] + px[2];
         KZ_CORE_INFO("Verificação de frame {0}: centro do HDR = ({1:.3f}, {2:.3f}, {3:.3f}).",
                      s_BlackFrames, px[0], px[1], px[2]);
 
         if (s_BlackFrames == 1) {
-            // Sempre grava um dossiê de render (render_info.txt ao lado do exe).
+            
             std::ofstream dump("render_info.txt");
             dump << "Kizuri Engine — diagnostico de render\n";
             dump << "OpenGL: " << GetOpenGLVersionString() << "\n";
@@ -3702,7 +3702,7 @@ void Renderer3D::EndScene() {
         }
     }
 
-    s_MotionPrevVP = s_MotionCurrVP; // base do motion blur do próximo frame
+    s_MotionPrevVP = s_MotionCurrVP; 
     s_DrawList.clear();
 }
 
@@ -3711,7 +3711,7 @@ void Renderer3D::DrawGrid() {
 }
 
 void Renderer3D::SubmitDebugLine(const glm::vec3& from, const glm::vec3& to, const glm::vec3& color) {
-    if (s_DebugLines.size() >= 8192) return; // teto — nunca trava o frame
+    if (s_DebugLines.size() >= 8192) return; 
     s_DebugLines.push_back({ from, to, color });
 }
 
@@ -3755,4 +3755,4 @@ void Renderer3D::SubmitSkinned(const Ref<Mesh>& mesh, const Material& material, 
     s_DrawList.push_back(std::move(cmd));
 }
 
-} // namespace kizuri
+} 

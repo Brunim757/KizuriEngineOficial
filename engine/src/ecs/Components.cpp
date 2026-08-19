@@ -9,12 +9,12 @@
 namespace kizuri {
 
 
-// SetState: procura pelo nome; se é um estado novo, inicia o crossfade.
+
 bool AnimatorStateMachineComponent::SetState(const std::string& name, float defaultBlend) {
     for (int i = 0; i < (int)States.size(); ++i) {
         if (States[i].Name != name) continue;
-        if (i == CurrentState) return true; // já está nele
-        // Acha uma transição específica (senão usa o blend padrão).
+        if (i == CurrentState) return true; 
+        
         float blend = defaultBlend;
         for (const auto& tr : Transitions) {
             if (tr.To == i && (tr.From == -1 || tr.From == CurrentState)) { blend = tr.BlendTime; break; }
@@ -33,8 +33,8 @@ bool AnimatorStateMachineComponent::IsInState(const std::string& name) const {
 }
 
 
-// Gera as instâncias de vegetação (determinístico pela seed): posições XZ
-// na área, escala aleatória e yaw aleatório; um raio vazio no centro.
+
+
 void FoliageComponent::Regenerate() {
     Instances.clear();
     if (Count == 0) return;
@@ -42,7 +42,7 @@ void FoliageComponent::Regenerate() {
     uint32_t state = Seed * 747796405u + 2891336453u;
     auto rnd = [&state]() {
         state ^= state << 13; state ^= state >> 17; state ^= state << 5;
-        return state * 1.0f / 4294967296.0f; // [0,1)
+        return state * 1.0f / 4294967296.0f; 
     };
     const float halfX = AreaSize.x * 0.5f, halfZ = AreaSize.y * 0.5f;
     const float avoidR = 1.5f;
@@ -66,7 +66,7 @@ void FoliageComponent::Regenerate() {
 
 void AudioSourceComponent::Play() {
     if (ClipPath.empty()) return;
-    // Carrega sob demanda (primeira vez) e já configura a atenuação.
+    
     if (Handle == kInvalidSound) {
         Handle = AudioEngine::LoadSound(Project::ResolvePath(ClipPath), ClipPath, false);
         if (Handle == kInvalidSound) return;
@@ -86,7 +86,7 @@ bool AudioSourceComponent::IsPlaying() const {
 }
 
 void Rigidbody2DComponent::ApplyLinearImpulse(const glm::vec2& impulse, bool wake) {
-    if (!RuntimeBody) return; // corpo ainda não criado (só existe durante o Play)
+    if (!RuntimeBody) return; 
     static_cast<b2Body*>(RuntimeBody)->ApplyLinearImpulseToCenter({ impulse.x, impulse.y }, wake);
 }
 
@@ -130,10 +130,10 @@ void Rigidbody2DComponent::SetFixedRotation(bool fixed) {
 void NativeScriptComponent::BindByName(const std::string& className) {
     ClassName = className;
 
-    // Captura só o nome (string), não um ponteiro de fábrica direto — se
-    // o GameModule for recarregado entre o Bind e a instanciação de fato
-    // (Play), essa busca por nome sempre pega a versão mais recente
-    // registrada, em vez de um factory apontando pro módulo antigo.
+    
+    
+    
+    
     InstantiateScript = [className]() -> NativeScript* {
         NativeScript* instance = ScriptEngine::GetRegistry().Create(className);
         if (!instance)
@@ -144,11 +144,11 @@ void NativeScriptComponent::BindByName(const std::string& className) {
 }
 
 void NativeScriptComponent::DestroyInstance() {
-    // Tipo completo aqui (NativeScript.hpp incluído no topo deste TU):
-    // `delete` seguro + nulo antes de liberar, pra qualquer reentrada.
+    
+    
     NativeScript* ptr = Instance;
     Instance = nullptr;
     delete ptr;
 }
 
-} // namespace kizuri
+} 

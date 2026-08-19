@@ -18,18 +18,18 @@
 
 namespace kizuri {
 
-// Definição única de s_Instance — mora só aqui, dentro do binário da
-// KizuriEngine. Antes isso era "static inline" no header, o que faz o
-// compilador gerar uma cópia separada da variável em CADA binário que
-// inclui o header (é assim que inline/COMDAT funciona dentro de UM
-// executável ou UMA DLL — mas KizuriEditor.exe e KizuriEngine.dll são
-// binários diferentes, sem fusão de símbolo entre eles). O construtor
-// (abaixo) sempre rodou dentro da DLL, então só a cópia da DLL era
-// inicializada; qualquer código do lado do executável que chamasse
-// Get() — se Get() também fosse inline — estaria lendo a cópia do
-// executável, que ficava para sempre nula. Get() agora só existe aqui,
-// então toda chamada — de onde for — atravessa a fronteira da DLL e lê
-// esta única variável de verdade.
+
+
+
+
+
+
+
+
+
+
+
+
 Application* Application::s_Instance = nullptr;
 
 Application& Application::Get() { return *s_Instance; }
@@ -53,7 +53,7 @@ Application::Application(const ApplicationSpec& spec) {
     AudioEngine::Init();
 
 #if !defined(KZ_PLATFORM_ANDROID)
-    // ImGui é UI de editor/desktop; no Android não existe (sem GLFW backend).
+    
     m_ImGuiLayer = new ImGuiLayer();
     PushOverlay(m_ImGuiLayer);
 #endif
@@ -99,13 +99,13 @@ bool Application::OnWindowResize(WindowResizeEvent& e) {
 void Application::Run() {
     KZ_CORE_INFO("Kizuri Engine: iniciando o loop principal.");
 #if defined(KZ_PLATFORM_ANDROID)
-    // Android: sem ImGui e sem GLFW — o delta é medido com chrono e os
-    // eventos do app chegam via AndroidPlatform (drenados pelo Window).
+    
+    
     using Clock = std::chrono::steady_clock;
     auto lastTick = Clock::now();
     while (m_Running && !AndroidPlatform::ShouldExit()) {
-        // Drena o ALooper do app glue (comandos de janela, toque, ciclo de
-        // vida) antes de processar o frame.
+        
+        
         AndroidPlatform::PumpGlue();
         auto now = Clock::now();
         float time = (float)std::chrono::duration<double>(now - lastTick).count();
@@ -129,7 +129,7 @@ void Application::Run() {
         m_LastFrameTime = time;
 
         if (!m_Minimized) {
-            RenderCommand::ResetFrameStats(); // zera draw calls/triângulos do frame
+            RenderCommand::ResetFrameStats(); 
             for (Layer* layer : m_LayerStack) {
                 KZ_CORE_TRACE("Application::Run — layer->OnUpdate ('{0}')", layer->GetName());
                 layer->OnUpdate(timestep);
@@ -152,4 +152,4 @@ void Application::Run() {
 #endif
 }
 
-} // namespace kizuri
+} 

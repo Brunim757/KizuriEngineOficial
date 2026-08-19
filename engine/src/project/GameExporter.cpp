@@ -28,7 +28,7 @@ namespace kizuri {
 
 static bool LooksLikeAssetPath(const std::string& s) {
     if (s.empty() || s.rfind("builtin:", 0) == 0) return false;
-    // Extensões comuns serializadas em .kzscene
+    
     static const char* exts[] = {
         ".png", ".jpg", ".jpeg", ".bmp", ".tga", ".gif",
         ".obj", ".wav", ".mp3", ".ogg", ".flac", ".kzprefab"
@@ -87,8 +87,8 @@ static bool CopyFileTo(const fs::path& src, const fs::path& dst, std::string& er
     return true;
 }
 
-// Copia a pasta inteira (usada pro jogo C#: assembly + deps + runtimeconfig
-// + runtime .NET self-contained, se o usuário publicou assim).
+
+
 static bool CopyDirectoryRecursive(const fs::path& srcDir, const fs::path& dstDir, std::string& err) {
     std::error_code ec;
     fs::create_directories(dstDir, ec);
@@ -111,7 +111,7 @@ static bool CopyDirectoryRecursive(const fs::path& srcDir, const fs::path& dstDi
     return true;
 }
 
-// UTF-8 -> UTF-16 (só Windows; pro CreateProcessW do publish).
+
 #if defined(_WIN32)
 static std::wstring ToWide(const std::string& s) {
     if (s.empty()) return L"";
@@ -123,9 +123,9 @@ static std::wstring ToWide(const std::string& s) {
 }
 #endif
 
-// Roda 'command' redirecionando stdout+stderr pra 'logFile' e espera o fim.
-// Devolve o código de saída (0 = sucesso). Sem janela de console no Windows
-// (CREATE_NO_WINDOW) — exportar não pode piscar um cmd pro usuário.
+
+
+
 static int RunAndCapture(const std::string& command, const fs::path& logFile, std::string& outError) {
 #if defined(_WIN32)
     std::string full = "cmd.exe /c \"" + command + " > \"" + logFile.string() + "\" 2>&1\"";
@@ -152,8 +152,8 @@ static int RunAndCapture(const std::string& command, const fs::path& logFile, st
 #endif
 }
 
-// RID padrão = plataforma do desenvolvedor (o KizuriGame copiado é o build
-// local, então o runtime publicado precisa casar com ele).
+
+
 static std::string DetectRid() {
 #if defined(_WIN32)
     return "win-x64";
@@ -164,8 +164,8 @@ static std::string DetectRid() {
 #endif
 }
 
-// Últimas linhas da saída do publish (pra o erro no modal não virar um
-// arquivo de 2MB de uma vez).
+
+
 static std::string Tail(const std::string& text, size_t maxChars) {
     if (text.size() <= maxChars) return text;
     size_t start = text.size() - maxChars;
@@ -173,9 +173,9 @@ static std::string Tail(const std::string& text, size_t maxChars) {
     return (nl == std::string::npos) ? text.substr(start) : text.substr(nl + 1);
 }
 
-// No publish self-contained, o assembly do jogo é o .dll que tem um
-// .runtimeconfig.json do lado (a Kizuri.Scripting.dll não tem). Devolve o
-// nome do arquivo (ex: "Game.dll") ou vazio com 'err' preenchido.
+
+
+
 static std::string FindGameAssembly(const fs::path& gameDir, std::string& err) {
     std::error_code ec;
     for (auto& entry : fs::directory_iterator(gameDir, ec)) {
@@ -215,7 +215,7 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
         return false;
     }
 
-    // Host + DLL da engine (+ runtimes MinGW se existirem na pasta bin).
+    
     const char* required[] = {
 #ifdef _WIN32
         "KizuriGame.exe", "KizuriEngine.dll"
@@ -233,7 +233,7 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
         if (!CopyFileTo(src, outDir / name, outError)) return false;
     }
 
-    // Copia DLLs auxiliares que costumam acompanhar o build MinGW.
+    
     for (auto& entry : fs::directory_iterator(binDir, ec)) {
         if (!entry.is_regular_file()) continue;
         auto ext = entry.path().extension().string();
@@ -245,7 +245,7 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
         if (!CopyFileTo(entry.path(), outDir / name, outError)) return false;
     }
 
-    // Scene + assets
+    
     std::ifstream in(sceneSrc);
     if (!in.is_open()) {
         outError = "Não foi possível abrir a cena: " + sceneSrc.string();
@@ -270,7 +270,7 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
     for (const auto& original : assets) {
         fs::path srcPath(original);
         if (!srcPath.is_absolute()) {
-            // Tenta relativo à cena, depois CWD.
+            
             fs::path cand = sceneDir / srcPath;
             if (fs::exists(cand)) srcPath = cand;
             else srcPath = fs::absolute(srcPath);
@@ -282,7 +282,7 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
 
         std::string fileName = srcPath.filename().string();
         fs::path dst = assetsOut / fileName;
-        // Evita colisão de nomes iguais vindos de pastas diferentes.
+        
         if (fs::exists(dst) && fs::equivalent(dst, srcPath) == false) {
             static int counter = 0;
             dst = assetsOut / (srcPath.stem().string() + "_" + std::to_string(++counter) + srcPath.extension().string());
@@ -301,12 +301,12 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
     }
     sceneFile << root.dump(4);
 
-    // Módulo do jogo. Dois caminhos:
-    //  1. GameProjectPath definido → `dotnet publish --self-contained` do
-    //     csproj do jogo pra <out>/Game/ (runtime .NET embutido — o jogador
-    //     não instala nada). É o fluxo normal de projeto.
-    //  2. Só GameModulePath → cópia da pasta do assembly (fallback; só serve
-    //     se já estiver publicado self-contained ou o jogador tiver o runtime).
+    
+    
+    
+    
+    
+    
     fs::path moduleOutPath;
     if (!request.GameProjectPath.empty()) {
         fs::path gameDir = outDir / "Game";
@@ -342,14 +342,14 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
         std::string asmName = FindGameAssembly(gameDir, gameAsm);
         if (asmName.empty()) { outError = gameAsm; return false; }
 
-        // Remove o apphost do .NET (<AssemblyName>.exe ou <AssemblyName> sem
-        // extensão) — quem roda o jogo é o KizuriGame, não o exe do publish.
+        
+        
         fs::path stem = fs::path(asmName).replace_extension().filename();
         fs::remove(gameDir / stem, pec);
         fs::remove(gameDir / (stem.string() + ".exe"), pec);
 
-        // Copia a engine pro lado do assembly: a resolução do P/Invoke
-        // 'KizuriEngine' nunca deve depender de PATH/CWD do jogador.
+        
+        
 #ifdef _WIN32
         fs::path engineDll = binDir / "KizuriEngine.dll";
 #else
@@ -407,8 +407,8 @@ bool GameExporter::Export(const GameExportRequest& request, std::string& outErro
                << "No Windows: dê dois cliques em Jogar.bat\n";
     }
 
-    // Build settings (game.json): lido pelo KizuriGame pra abrir a janela
-    // com o nome/resolução/versão definidos no export.
+    
+    
     std::ofstream gjson(outDir / "game.json");
     if (gjson.is_open()) {
         gjson << "{\n"
@@ -454,8 +454,8 @@ bool GameExporter::BuildGameModule(const std::string& csprojPath,
         return false;
     }
 
-    // A .dll do jogo é a que tem um .runtimeconfig.json do lado (a
-    // Kizuri.Scripting.dll não tem). Pega a mais recente em <projeto>/bin.
+    
+    
     if (!FindGameModuleDll(csprojPath, outDllPath)) {
         outError = "O build terminou mas não achou a .dll do jogo em "
             + (csproj.parent_path() / "bin").string();
@@ -466,10 +466,10 @@ bool GameExporter::BuildGameModule(const std::string& csprojPath,
     return true;
 }
 
-// Acha a .dll do jogo já COMPILADA (a mais recente com .runtimeconfig.json
-// ao lado, em <projeto>/bin), SEM compilar nada. É o caminho rápido que o
-// editor usa ao abrir o projeto — rodar dotnet build aí travaria a janela
-// (o build fica pro Play, que compila no fluxo estilo Unity).
+
+
+
+
 bool GameExporter::FindGameModuleDll(const std::string& csprojPath,
                                      std::string& outDllPath) {
     fs::path binDir = fs::path(csprojPath).parent_path() / "bin";
@@ -494,4 +494,4 @@ bool GameExporter::FindGameModuleDll(const std::string& csprojPath,
     return true;
 }
 
-} // namespace kizuri
+} 

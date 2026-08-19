@@ -1,8 +1,8 @@
 #pragma once
-// Serialização de componentes compartilhada entre SceneSerializer (.kzscene)
-// e Prefab (.kzprefab). Fica em src/ (não em include/) de propósito: é
-// detalhe de implementação, nenhum código de jogo deveria depender de
-// nlohmann::json diretamente através da API pública da engine.
+
+
+
+
 #include "kizuri/ecs/Entity.hpp"
 #include "kizuri/ecs/Components.hpp"
 #include "kizuri/ecs/Scene.hpp"
@@ -68,8 +68,8 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
     }
 }
 
-// Serializa uma única entidade (sem os filhos — quem chama decide se
-// percorre a hierarquia) para um objeto JSON, incluindo ID e Parent.
+
+
  inline nlohmann::json SerializeEntityJson(Entity entity) {
     nlohmann::json je;
     je["ID"] = (uint64_t)entity.GetUUID();
@@ -280,7 +280,7 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
     }
 
     if (entity.HasComponent<UIButtonComponent>()) {
-        je["UIButton"] = {}; // estado é runtime, não serializado
+        je["UIButton"] = {}; 
     }
 
     if (entity.HasComponent<Rigidbody2DComponent>()) {
@@ -338,7 +338,7 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
         };
     }
 
-    // ---- IA e Navegação (pilar AAA v0.34) ----
+    
     if (entity.HasComponent<NavGridComponent>()) {
         auto& ng = entity.GetComponent<NavGridComponent>();
         je["NavGrid"] = { { "Origin", Vec3ToJson(ng.Origin) }, { "Width", ng.Width },
@@ -393,10 +393,10 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
 
     if (entity.HasComponent<NativeScriptComponent>()) {
         auto& nsc = entity.GetComponent<NativeScriptComponent>();
-        // Só vale a pena salvar quando veio de BindByName (Bind<T>() em
-        // tempo de compilação não tem nome nenhum pra persistir — nesse
-        // caso o script é religado pelo próprio código do jogo, não pela
-        // cena). Uma classe vazia salva não faria sentido pra restaurar.
+        
+        
+        
+        
         if (!nsc.ClassName.empty())
             je["NativeScript"] = { { "ClassName", nsc.ClassName } };
     }
@@ -424,10 +424,10 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
     return je;
 }
 
-// Cria uma entidade a partir do JSON gerado por SerializeEntityJson.
-// 'uuid' força o UUID (usado pelo SceneSerializer, que quer preservar
-// referências salvas); passe 0 para gerar um novo (usado pelo Prefab, que
-// nunca deve reusar o UUID do original ao instanciar).
+
+
+
+
 inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint64_t uuid) {
     std::string tag = je.value("Tag", "Entidade");
     Entity entity = scene.CreateEntityWithUUID(uuid, tag);
@@ -461,7 +461,7 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
             : entity.AddComponent<LODComponent>();
         ApplyLODJson(je["LOD"], lod);
     } else if (entity.HasComponent<LODComponent>() && !entity.HasComponent<MeshRendererComponent>()) {
-        entity.RemoveComponent<LODComponent>(); // LOD sem malha não faz sentido
+        entity.RemoveComponent<LODComponent>(); 
     }
 
     if (je.contains("Terrain")) {
@@ -657,7 +657,7 @@ if (je.contains("SpriteAnimation")) {
         if (!mat.MetallicRoughnessMapPath.empty()) mat.MetallicRoughnessMap = Texture2D::Create(ResolveSerializedPath(mat.MetallicRoughnessMapPath));
         if (!mat.EmissiveMapPath.empty()) mat.EmissiveMap = Texture2D::Create(ResolveSerializedPath(mat.EmissiveMapPath));
         if (!mat.HeightMapPath.empty()) mat.HeightMap = Texture2D::Create(ResolveSerializedPath(mat.HeightMapPath));
-        RestoreGLTFTextureMaps(mr); // texturas embutidas no .glb voltam na recarga
+        RestoreGLTFTextureMaps(mr); 
     }
 
     if (je.contains("LOD")) {
@@ -728,7 +728,7 @@ if (je.contains("SpriteAnimation")) {
     }
 
     if (je.contains("UIButton")) {
-        entity.AddComponent<UIButtonComponent>(); // estado é runtime
+        entity.AddComponent<UIButtonComponent>(); 
     }
 
     if (je.contains("Rigidbody2D")) {
@@ -819,7 +819,7 @@ if (je.contains("SpriteAnimation")) {
         if (!pc.TexturePath.empty()) pc.Texture = Texture2D::Create(ResolveSerializedPath(pc.TexturePath));
     }
 
-    // ---- IA e Navegação (pilar AAA v0.34) ----
+    
     if (je.contains("NavGrid")) {
         auto& jn = je["NavGrid"];
         auto& ng = entity.AddComponent<NavGridComponent>();
@@ -891,7 +891,7 @@ if (je.contains("SpriteAnimation")) {
         ac.Loop = ja.value("Loop", true);
         ac.Speed = ja.value("Speed", 1.0f);
         ac.Time = ja.value("Time", 0.0f);
-        // Skin é carregada sob demanda no primeiro UpdateAnimators (Scene.cpp).
+        
     }
 
     if (je.contains("AnimatorSM")) {
@@ -916,20 +916,20 @@ if (je.contains("SpriteAnimation")) {
                 sm.Transitions.push_back(tr);
             }
         }
-        if (!sm.States.empty()) sm.CurrentState = 0; // começa tocando o 1º
+        if (!sm.States.empty()) sm.CurrentState = 0; 
     }
 
     return entity;
 }
 
-// Aplica um snapshot (gerado por SerializeEntityJson) numa entidade que já
-// EXISTE — diferente de DeserializeEntityJson, que sempre cria uma nova.
-// É o coração do undo/redo de edição de propriedade: adiciona/atualiza
-// cada componente presente no JSON e remove qualquer componente opcional
-// que a entidade tenha hoje mas que não apareça no snapshot (cobre o caso
-// de desfazer um "Adicionar Componente" ou refazer um "Remover
-// Componente"). ID e Parent são ignorados de propósito — essa função nunca
-// mexe em identidade nem em hierarquia, só nos componentes de dados.
+
+
+
+
+
+
+
+
 inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
     auto& tagc = entity.GetComponent<TagComponent>();
     tagc.Tag = je.value("Tag", entity.GetName());
@@ -1075,7 +1075,7 @@ if (je.contains("SpriteAnimation")) {
         mat.MetallicRoughnessMap = mat.MetallicRoughnessMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.MetallicRoughnessMapPath));
         mat.EmissiveMap = mat.EmissiveMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.EmissiveMapPath));
         mat.HeightMap = mat.HeightMapPath.empty() ? nullptr : Texture2D::Create(ResolveSerializedPath(mat.HeightMapPath));
-        RestoreGLTFTextureMaps(mr); // texturas embutidas no .glb voltam na recarga
+        RestoreGLTFTextureMaps(mr); 
     } else if (entity.HasComponent<MeshRendererComponent>()) {
         entity.RemoveComponent<MeshRendererComponent>();
     }
@@ -1086,7 +1086,7 @@ if (je.contains("SpriteAnimation")) {
             : entity.AddComponent<LODComponent>();
         ApplyLODJson(je["LOD"], lod);
     } else if (entity.HasComponent<LODComponent>() && !entity.HasComponent<MeshRendererComponent>()) {
-        entity.RemoveComponent<LODComponent>(); // LOD sem malha não faz sentido
+        entity.RemoveComponent<LODComponent>(); 
     }
 
     if (je.contains("Terrain")) {
@@ -1367,10 +1367,10 @@ if (je.contains("SpriteAnimation")) {
         ac.Loop = ja.value("Loop", true);
         ac.Speed = ja.value("Speed", 1.0f);
         ac.Time = ja.value("Time", 0.0f);
-        ac.Skin = nullptr; // recarrega sob demanda
+        ac.Skin = nullptr; 
     } else if (entity.HasComponent<AnimatorComponent>()) {
         entity.RemoveComponent<AnimatorComponent>();
     }
 }
 
-} // namespace kizuri::detail
+} 

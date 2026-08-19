@@ -378,6 +378,15 @@ void Renderer2D::Flush() {
 
     RenderCommand::DrawIndexed(s_Data.QuadVertexArray, s_Data.QuadIndexCount);
     ++s_Data.Stats.DrawCalls;
+
+    // CRÍTICO: zera os contadores depois de desenhar. ANTES isso não era
+    // feito — o próximo Flush (troca de textura no meio do frame ou o
+    // EndScene) redesenhava os quads JÁ desenhados, com a textura NOVA
+    // do lote atual. Sintoma real: o quadrado colorido do fundo saía
+    // estampado com o atlas inteiro (retângulos/caracteres atrás das
+    // letras, "que se movem junto com o fundo").
+    s_Data.QuadIndexCount = 0;
+    s_Data.QuadVertexBufferPtr = 0;
 }
 
 static void PushQuadVertices(const glm::mat4& transform, const glm::vec4& color, const glm::vec2 texCoords[4], float texIndex, float tiling) {

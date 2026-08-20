@@ -1452,7 +1452,7 @@ void Scene::SaveChunkWorld(const ChunkWorldComponent& cw) {
     std::string dir = Project::ResolvePath(
         Project::GetActive()->GetConfig().AssetDirectory + "/" + cw.ChunkFolder);
     std::error_code ec;
-    fs::create_directories(dir, ec);
+    std::filesystem::create_directories(dir, ec);
     ChunkSerializer serializer(this);
     serializer.SaveAll(dir);
 }

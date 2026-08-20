@@ -137,7 +137,8 @@ private:
     void UpdateAnimators(Timestep ts);
     void UpdateAudio(Timestep ts);
     void UnloadChunk(int cx, int cz);
-    void LoadChunk(int cx, int cz, ChunkWorldComponent& cw);
+    bool LoadChunk(int cx, int cz, ChunkWorldComponent& cw);
+    void SaveChunkWorld(const ChunkWorldComponent& cw);
     void RenderUI();
     void UpdateUIPointer();
     void CollectUIChildren(entt::entity parent, std::vector<entt::entity>& outStack) const;

@@ -4736,6 +4736,9 @@ void EditorLayer::DrawInspector() {
                 ImGui::DragFloat("Tamanho do chunk (m)", &cw.ChunkSize, 1.0f, 8.0f, 1024.0f);
                 ImGui::DragInt("Raio de carga", &cw.LoadRadius, 1, 0, 16);
                 ImGui::DragInt("Folga antes de descarregar", &cw.UnloadGrace, 1, 0, 16);
+                ImGui::DragInt("Chunks por frame", &cw.ChunksPerFrame, 1, 1, 20);
+                ImGui::DragFloat("Auto-save (s)", &cw.AutoSaveInterval, 5.0f, 0.0f, 600.0f,
+                    "%.0f (0 = off)");
                 char chunkFolderBuf[128];
                 strncpy(chunkFolderBuf, cw.ChunkFolder.c_str(), sizeof(chunkFolderBuf) - 1);
                 chunkFolderBuf[sizeof(chunkFolderBuf) - 1] = '\0';
@@ -4746,10 +4749,11 @@ void EditorLayer::DrawInspector() {
                 tagBuf[sizeof(tagBuf) - 1] = '\0';
                 if (ImGui::InputText("Tag do alvo", tagBuf, sizeof(tagBuf))) cw.TargetTag = tagBuf;
                 ImGui::Separator();
-                ImGui::TextDisabled("Runtime: arquivos Assets/<pasta>/chunk_CX_CZ.kzchunk\nsão carregados ao redor da entidade com a tag do alvo\n(a primeira câmera primária, se a tag não existir).");
+                ImGui::TextDisabled("Chunks: %d carregados, %d na fila",
+                    (int)cw.m_LoadedChunks.size(), (int)cw.m_PendingLoads.size());
+                ImGui::Separator();
                 if (ImGui::Button("Salvar chunks do mundo")) {
-
-                    std::string dir = "";
+                    std::string dir;
                     if (kizuri::Project::GetActive()) {
                         dir = kizuri::Project::ResolvePath(
                             kizuri::Project::GetActive()->GetConfig().AssetDirectory + "/" + cw.ChunkFolder);
@@ -4757,12 +4761,25 @@ void EditorLayer::DrawInspector() {
                         std::filesystem::create_directories(dir, ec);
                     }
                     if (!dir.empty()) {
-                        int saved = 0;
-                        m_ActiveScene->GetRegistry().view<kizuri::ChunkEntityComponent>().each([&](entt::entity e, kizuri::ChunkEntityComponent& ce) {
-                            std::string path = dir + "/chunk_" + std::to_string(ce.ChunkX) + "_" + std::to_string(ce.ChunkZ) + ".kzchunk";
-                            if (kizuri::ChunkSerializer(m_ActiveScene.get()).Save(path, ce.ChunkX, ce.ChunkZ)) ++saved;
-                        });
+                        int saved = kizuri::ChunkSerializer(m_ActiveScene.get()).SaveAll(dir);
                         if (saved > 0) KZ_CORE_INFO("Chunks salvos: {0} arquivo(s) em {1}", saved, dir);
+                    }
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Criar chunk vazio")) {
+                    std::string dir;
+                    if (kizuri::Project::GetActive()) {
+                        dir = kizuri::Project::ResolvePath(
+                            kizuri::Project::GetActive()->GetConfig().AssetDirectory + "/" + cw.ChunkFolder);
+                        std::error_code ec;
+                        std::filesystem::create_directories(dir, ec);
+                    }
+                    if (!dir.empty()) {
+                        glm::vec3 pos = m_SelectedEntity.GetComponent<kizuri::TransformComponent>().Translation;
+                        int cx = (int)glm::floor(pos.x / cw.ChunkSize);
+                        int cz = (int)glm::floor(pos.z / cw.ChunkSize);
+                        kizuri::ChunkSerializer(m_ActiveScene.get()).Save(
+                            kizuri::ChunkSerializer::ChunkPath(dir, cx, cz), cx, cz);
                     }
                 }
                 ImGui::TreePop();

@@ -485,10 +485,14 @@ struct ChunkWorldComponent {
     float ChunkSize = 64.0f;
     int LoadRadius = 2;
     int UnloadGrace = 1;
+    int ChunksPerFrame = 3;
+    float AutoSaveInterval = 0.0f;
     std::string ChunkFolder = "Chunks";
     std::string TargetTag = "Jogador";
 
+    bool m_Initialized = false;
     glm::vec3 m_LastTargetPos{ 0.0f };
+    float m_SaveTimer = 0.0f;
     std::vector<std::pair<int, int>> m_LoadedChunks;
     std::vector<std::pair<int, int>> m_PendingLoads;
 };

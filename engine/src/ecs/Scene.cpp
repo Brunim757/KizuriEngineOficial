@@ -30,6 +30,8 @@
 #include <limits>
 #include <cmath>
 #include <cstring>
+#include <filesystem>
+#include <unordered_set>
 
 namespace kizuri {
 
@@ -1341,6 +1343,7 @@ void Scene::UpdateChunkWorld(Timestep ts) {
     auto& cw = worldView.get<ChunkWorldComponent>(worldView.front());
     if (cw.ChunkSize <= 0.0f) return;
 
+    // Resolve alvo (tag do jogador ou primeira camera primaria ativa)
     glm::vec3 target = cw.m_LastTargetPos;
     bool haveTarget = false;
     if (!cw.TargetTag.empty()) {
@@ -1354,63 +1357,104 @@ void Scene::UpdateChunkWorld(Timestep ts) {
         auto camView = m_Registry.view<TransformComponent, CameraComponent>();
         for (auto e : camView) {
             auto& cam = camView.get<CameraComponent>(e);
-            if (!cam.Primary) continue;
+            if (!cam.Primary || !IsEntityActive(Entity{e, this})) continue;
             target = camView.get<TransformComponent>(e).Translation;
             haveTarget = true;
             break;
         }
     }
+    if (!haveTarget) return;
 
     int tx = (int)glm::floor(target.x / cw.ChunkSize);
     int tz = (int)glm::floor(target.z / cw.ChunkSize);
-    bool firstRun = cw.m_LoadedChunks.empty() && cw.m_PendingLoads.empty();
-    if (firstRun) {
 
-    } else if (target == cw.m_LastTargetPos && cw.m_PendingLoads.empty()) {
+    // Reavalia se o alvo andou pelo menos 1 chunk inteiro, ou se ha fila
+    float dx = target.x - cw.m_LastTargetPos.x;
+    float dz = target.z - cw.m_LastTargetPos.z;
+    float distSq = dx * dx + dz * dz;
+    float oneChunkSq = cw.ChunkSize * cw.ChunkSize;
+    bool chunkChanged = distSq >= oneChunkSq;
+    bool hasPending = !cw.m_PendingLoads.empty();
+
+    if (!cw.m_Initialized || chunkChanged || hasPending) {
+        cw.m_Initialized = true;
+        cw.m_LastTargetPos = target;
+    } else {
         return;
     }
-    cw.m_LastTargetPos = target;
 
     int radius = glm::max(cw.LoadRadius, 0);
     int grace = glm::max(cw.UnloadGrace, 0);
     const int ring = radius + grace;
 
-    std::vector<std::pair<int, int>> wanted;
-    for (int dz = -radius; dz <= radius; ++dz)
-        for (int dx = -radius; dx <= radius; ++dx)
-            wanted.push_back({ tx + dx, tz + dz });
-    std::sort(wanted.begin(), wanted.end());
-    wanted.erase(std::unique(wanted.begin(), wanted.end()), wanted.end());
+    // Descarrega chunks fora do anel (distancia euclidiana)
+    std::unordered_set<int64_t> wantedSet;
+    for (int dz = -ring; dz <= ring; ++dz)
+        for (int dx = -ring; dx <= ring; ++dx)
+            wantedSet.insert(((int64_t)(tx + dx) << 32) | (uint32_t)(tz + dz));
 
-    std::vector<std::pair<int, int>> keep;
+    std::vector<std::pair<int,int>> keep;
     for (auto& c : cw.m_LoadedChunks) {
-        bool inRing = (std::abs(c.first - tx) <= ring && std::abs(c.second - tz) <= ring);
-        if (!inRing) {
-            UnloadChunk(c.first, c.second);
-        } else {
+        int64_t key = ((int64_t)c.first << 32) | (uint32_t)c.second;
+        if (wantedSet.count(key)) {
             keep.push_back(c);
+        } else {
+            UnloadChunk(c.first, c.second);
         }
     }
     cw.m_LoadedChunks.swap(keep);
 
-    auto& pending = cw.m_PendingLoads;
-    for (auto& c : wanted) {
-        bool loaded = std::find(cw.m_LoadedChunks.begin(), cw.m_LoadedChunks.end(), c) != cw.m_LoadedChunks.end();
-        bool queued = std::find(pending.begin(), pending.end(), c) != pending.end();
-        if (!loaded && !queued) pending.push_back(c);
+    // Enfileira chunks desejados, ordenados por distancia ao alvo
+    cw.m_PendingLoads.clear();
+    for (int dz = -radius; dz <= radius; ++dz) {
+        for (int dx = -radius; dx <= radius; ++dx) {
+            int cx = tx + dx, cz = tz + dz;
+            int64_t key = ((int64_t)cx << 32) | (uint32_t)cz;
+            if (wantedSet.count(key) == 0) continue;
+            bool already = std::find(cw.m_LoadedChunks.begin(), cw.m_LoadedChunks.end(),
+                                     std::make_pair(cx, cz)) != cw.m_LoadedChunks.end();
+            if (already) continue;
+            cw.m_PendingLoads.push_back({cx, cz});
+        }
     }
+    std::sort(cw.m_PendingLoads.begin(), cw.m_PendingLoads.end(),
+        [tx, tz](const auto& a, const auto& b) {
+            int64_t da = (int64_t)(a.first - tx) * (a.first - tx) + (int64_t)(a.second - tz) * (a.second - tz);
+            int64_t db = (int64_t)(b.first - tx) * (b.first - tx) + (int64_t)(b.second - tz) * (b.second - tz);
+            return da < db;
+        });
 
+    // Carrega ChunksPerFrame chunks por frame
     int loadedThisFrame = 0;
-    while (loadedThisFrame < 2 && !pending.empty()) {
+    auto& pending = cw.m_PendingLoads;
+    while (loadedThisFrame < cw.ChunksPerFrame && !pending.empty()) {
         auto c = pending.front();
         pending.erase(pending.begin());
-        if (std::find(cw.m_LoadedChunks.begin(), cw.m_LoadedChunks.end(), c) != cw.m_LoadedChunks.end())
-            continue;
-        LoadChunk(c.first, c.second, cw);
-        cw.m_LoadedChunks.push_back(c);
-        ++loadedThisFrame;
+        bool already = std::find(cw.m_LoadedChunks.begin(), cw.m_LoadedChunks.end(),
+                                 c) != cw.m_LoadedChunks.end();
+        if (already) continue;
+        if (LoadChunk(c.first, c.second, cw)) {
+            cw.m_LoadedChunks.push_back(c);
+            ++loadedThisFrame;
+        }
     }
-    (void)ts;
+
+    // Auto-save periodico
+    cw.m_SaveTimer += ts;
+    if (cw.AutoSaveInterval > 0.0f && cw.m_SaveTimer >= cw.AutoSaveInterval) {
+        cw.m_SaveTimer = 0.0f;
+        SaveChunkWorld(cw);
+    }
+}
+
+void Scene::SaveChunkWorld(const ChunkWorldComponent& cw) {
+    if (!Project::GetActive()) return;
+    std::string dir = Project::ResolvePath(
+        Project::GetActive()->GetConfig().AssetDirectory + "/" + cw.ChunkFolder);
+    std::error_code ec;
+    fs::create_directories(dir, ec);
+    ChunkSerializer serializer(this);
+    serializer.SaveAll(dir);
 }
 
 void Scene::UnloadChunk(int cx, int cz) {
@@ -1422,28 +1466,42 @@ void Scene::UnloadChunk(int cx, int cz) {
         Entity entity{ e, this };
         if (entity) DestroyEntity(entity);
     }
+    // Limpa raiz do chunk se ficou sem filhos
+    Entity root = FindEntityByName("_chunk_" + std::to_string(cx) + "_" + std::to_string(cz));
+    if (root) {
+        auto& rel = root.GetComponent<RelationshipComponent>();
+        if (rel.Children.empty()) DestroyEntity(root);
+    }
 }
 
-void Scene::LoadChunk(int cx, int cz, ChunkWorldComponent& cw) {
-    std::string folder = cw.ChunkFolder;
-    if (!Project::GetActive()) return;
-    std::string dir = Project::GetActive()->GetConfig().AssetDirectory;
-    std::string path = Project::ResolvePath(dir + "/" + folder + "/chunk_" + std::to_string(cx) + "_" + std::to_string(cz) + ".kzchunk");
+bool Scene::LoadChunk(int cx, int cz, ChunkWorldComponent& cw) {
+    if (!Project::GetActive()) return false;
+    std::string dir = Project::ResolvePath(
+        Project::GetActive()->GetConfig().AssetDirectory + "/" + cw.ChunkFolder);
+    std::string path = ChunkSerializer::ChunkPath(dir, cx, cz);
 
     ChunkSerializer serializer(this);
-    if (!serializer.Load(path, cx, cz)) return;
+    if (!serializer.Load(path, cx, cz)) return false;
 
     Entity root = FindEntityByName("_chunk_" + std::to_string(cx) + "_" + std::to_string(cz));
-    if (!root) {
-        root = CreateEntity("_chunk_" + std::to_string(cx) + "_" + std::to_string(cz));
-    }
+    if (!root) root = CreateEntity("_chunk_" + std::to_string(cx) + "_" + std::to_string(cz));
+
     m_Registry.view<ChunkEntityComponent, RelationshipComponent>().each(
         [&](entt::entity e, ChunkEntityComponent& ce, RelationshipComponent& rel) {
             if (ce.ChunkX != cx || ce.ChunkZ != cz) return;
-            if (rel.Parent == UUID::Invalid()) {
-                SetParent(Entity{ e, this }, root);
-            }
+            if (rel.Parent == UUID::Invalid()) SetParent(Entity{e, this}, root);
         });
+
+    if (m_PhysicsWorld2D) {
+        m_Registry.view<ChunkEntityComponent, Rigidbody2DComponent>().each(
+            [&](entt::entity e, ChunkEntityComponent& ce, Rigidbody2DComponent&) {
+                if (ce.ChunkX != cx || ce.ChunkZ != cz) return;
+                RegisterPhysics2DEntity(Entity{e, this});
+            });
+    }
+
+    KZ_CORE_INFO("ChunkWorld: chunk ({0},{1}) carregado", cx, cz);
+    return true;
 }
 
 void Scene::RenderRuntimeView() {

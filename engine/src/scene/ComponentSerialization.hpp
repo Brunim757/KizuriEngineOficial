@@ -368,6 +368,8 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
             { "ChunkSize", cw.ChunkSize },
             { "LoadRadius", cw.LoadRadius },
             { "UnloadGrace", cw.UnloadGrace },
+            { "ChunksPerFrame", cw.ChunksPerFrame },
+            { "AutoSaveInterval", cw.AutoSaveInterval },
             { "ChunkFolder", cw.ChunkFolder },
             { "TargetTag", cw.TargetTag }
         };
@@ -870,6 +872,8 @@ if (je.contains("SpriteAnimation")) {
         cw.ChunkSize = jc.value("ChunkSize", 64.0f);
         cw.LoadRadius = jc.value("LoadRadius", 2);
         cw.UnloadGrace = jc.value("UnloadGrace", 1);
+        cw.ChunksPerFrame = jc.value("ChunksPerFrame", 3);
+        cw.AutoSaveInterval = jc.value("AutoSaveInterval", 0.0f);
         cw.ChunkFolder = jc.value("ChunkFolder", std::string("Chunks"));
         cw.TargetTag = jc.value("TargetTag", std::string("Jogador"));
     }

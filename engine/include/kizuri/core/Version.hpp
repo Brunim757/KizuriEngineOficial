@@ -1,6 +1,6 @@
 #pragma once
 
-#define KIZURI_VERSION       "0.38.3"
+#define KIZURI_VERSION       "0.39.0"
 #define KIZURI_VERSION_MAJOR 0
-#define KIZURI_VERSION_MINOR 37
-#define KIZURI_VERSION_PATCH 9
+#define KIZURI_VERSION_MINOR 39
+#define KIZURI_VERSION_PATCH 0

@@ -362,6 +362,22 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
         };
     }
 
+    if (entity.HasComponent<ChunkWorldComponent>()) {
+        auto& cw = entity.GetComponent<ChunkWorldComponent>();
+        je["ChunkWorld"] = {
+            { "ChunkSize", cw.ChunkSize },
+            { "LoadRadius", cw.LoadRadius },
+            { "UnloadGrace", cw.UnloadGrace },
+            { "ChunkFolder", cw.ChunkFolder },
+            { "TargetTag", cw.TargetTag }
+        };
+    }
+
+    if (entity.HasComponent<ChunkEntityComponent>()) {
+        auto& ce = entity.GetComponent<ChunkEntityComponent>();
+        je["ChunkEntity"] = { { "ChunkX", ce.ChunkX }, { "ChunkZ", ce.ChunkZ }, { "ChunkSeed", ce.ChunkSeed } };
+    }
+
     if (entity.HasComponent<ParticleSystemComponent>()) {
         auto& pc = entity.GetComponent<ParticleSystemComponent>();
         je["ParticleSystem"] = {
@@ -846,6 +862,24 @@ if (je.contains("SpriteAnimation")) {
         if (ji.contains("PatrolPoints") && ji["PatrolPoints"].is_array()) {
             for (auto& jp : ji["PatrolPoints"]) ai.PatrolPoints.push_back(JsonToVec3(jp));
         }
+    }
+
+    if (je.contains("ChunkWorld")) {
+        auto& jc = je["ChunkWorld"];
+        auto& cw = entity.AddComponent<ChunkWorldComponent>();
+        cw.ChunkSize = jc.value("ChunkSize", 64.0f);
+        cw.LoadRadius = jc.value("LoadRadius", 2);
+        cw.UnloadGrace = jc.value("UnloadGrace", 1);
+        cw.ChunkFolder = jc.value("ChunkFolder", std::string("Chunks"));
+        cw.TargetTag = jc.value("TargetTag", std::string("Jogador"));
+    }
+
+    if (je.contains("ChunkEntity")) {
+        auto& jc = je["ChunkEntity"];
+        auto& ce = entity.AddComponent<ChunkEntityComponent>();
+        ce.ChunkX = jc.value("ChunkX", 0);
+        ce.ChunkZ = jc.value("ChunkZ", 0);
+        ce.ChunkSeed = jc.value("ChunkSeed", (uint64_t)0);
     }
 
     if (je.contains("AudioSource")) {

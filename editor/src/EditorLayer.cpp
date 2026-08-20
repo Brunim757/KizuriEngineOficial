@@ -20,6 +20,7 @@
 #include "Updater.hpp"
 #include <kizuri/scripting/ScriptEngine.hpp>
 #include <kizuri/net/NetworkFacade.hpp>
+#include <kizuri/world/ChunkSerializer.hpp>
 #include <kizuri/core/CommandLineArgs.hpp>
 #include "kizuri/renderer/TextRenderer.hpp"
 #include <fstream>
@@ -4729,6 +4730,46 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<EnemyAIComponent>();
         }
 
+        if (m_SelectedEntity.HasComponent<ChunkWorldComponent>()) {
+            auto& cw = m_SelectedEntity.GetComponent<ChunkWorldComponent>();
+            if (DrawComponentHeader("Chunk World", &removeThis)) {
+                ImGui::DragFloat("Tamanho do chunk (m)", &cw.ChunkSize, 1.0f, 8.0f, 1024.0f);
+                ImGui::DragInt("Raio de carga", &cw.LoadRadius, 1, 0, 16);
+                ImGui::DragInt("Folga antes de descarregar", &cw.UnloadGrace, 1, 0, 16);
+                char chunkFolderBuf[128];
+                strncpy(chunkFolderBuf, cw.ChunkFolder.c_str(), sizeof(chunkFolderBuf) - 1);
+                chunkFolderBuf[sizeof(chunkFolderBuf) - 1] = '\0';
+                if (ImGui::InputText("Pasta dos chunks", chunkFolderBuf, sizeof(chunkFolderBuf)))
+                    cw.ChunkFolder = chunkFolderBuf;
+                char tagBuf[64];
+                strncpy(tagBuf, cw.TargetTag.c_str(), sizeof(tagBuf) - 1);
+                tagBuf[sizeof(tagBuf) - 1] = '\0';
+                if (ImGui::InputText("Tag do alvo", tagBuf, sizeof(tagBuf))) cw.TargetTag = tagBuf;
+                ImGui::Separator();
+                ImGui::TextDisabled("Runtime: arquivos Assets/<pasta>/chunk_CX_CZ.kzchunk\nsão carregados ao redor da entidade com a tag do alvo\n(a primeira câmera primária, se a tag não existir).");
+                if (ImGui::Button("Salvar chunks do mundo")) {
+
+                    std::string dir = "";
+                    if (kizuri::Project::GetActive()) {
+                        dir = kizuri::Project::ResolvePath(
+                            kizuri::Project::GetActive()->GetConfig().AssetDirectory + "/" + cw.ChunkFolder);
+                        std::error_code ec;
+                        std::filesystem::create_directories(dir, ec);
+                    }
+                    if (!dir.empty()) {
+                        int saved = 0;
+                        m_ActiveScene->GetRegistry().view<kizuri::ChunkEntityComponent>().each([&](entt::entity e, kizuri::ChunkEntityComponent& ce) {
+                            std::string path = dir + "/chunk_" + std::to_string(ce.ChunkX) + "_" + std::to_string(ce.ChunkZ) + ".kzchunk";
+                            if (kizuri::ChunkSerializer(m_ActiveScene.get()).Save(path, ce.ChunkX, ce.ChunkZ)) ++saved;
+                        });
+                        if (saved > 0) KZ_CORE_INFO("Chunks salvos: {0} arquivo(s) em {1}", saved, dir);
+                    }
+                }
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<ChunkWorldComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<FoliageComponent>()) {
             auto& fc = m_SelectedEntity.GetComponent<FoliageComponent>();
             if (DrawComponentHeader("Foliage (vegetação)", &removeThis)) {
@@ -5222,6 +5263,8 @@ void EditorLayer::DrawAddComponentButton() {
             m_SelectedEntity.AddComponent<NavAgentComponent>();
         if (!m_SelectedEntity.HasComponent<EnemyAIComponent>() && ImGui::MenuItem("Inimigo IA (patrulha/persegue)"))
             m_SelectedEntity.AddComponent<EnemyAIComponent>();
+        if (!m_SelectedEntity.HasComponent<ChunkWorldComponent>() && ImGui::MenuItem("Chunk World (mundo dividido em pedaços)"))
+            m_SelectedEntity.AddComponent<ChunkWorldComponent>();
         ImGui::Separator();
         if (!m_SelectedEntity.HasComponent<UICanvasComponent>() && ImGui::MenuItem("UI Canvas"))
             m_SelectedEntity.AddComponent<UICanvasComponent>();

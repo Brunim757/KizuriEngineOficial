@@ -7,6 +7,7 @@
 #include "kizuri/scripting/CSharpBridge.h"
 #include "kizuri/scene/SceneSerializer.hpp"
 #include "kizuri/scene/Prefab.hpp"
+#include "kizuri/world/ChunkSerializer.hpp"
 #include "kizuri/project/Project.hpp"
 #include "kizuri/renderer/Renderer2D.hpp"
 #include "kizuri/renderer/RenderCommand.hpp"
@@ -1306,6 +1307,7 @@ void Scene::OnUpdateRuntime(Timestep ts) {
 void Scene::OnUpdateRuntimeLogic(Timestep ts) {
     KZ_TRACE_SCOPE("Scene::OnUpdateRuntimeLogic");
     UpdateUIPointer();
+    UpdateChunkWorld(ts);
 
     m_InScriptUpdate = true;
     m_Registry.view<NativeScriptComponent>().each([this, ts](auto entityHandle, auto& nsc) {
@@ -1329,6 +1331,119 @@ void Scene::OnUpdateRuntimeLogic(Timestep ts) {
     UpdateSpriteAnimations(ts);
     UpdateAnimators(ts);
     UpdateAudio(ts);
+}
+
+void Scene::UpdateChunkWorld(Timestep ts) {
+    KZ_TRACE_SCOPE("Scene::UpdateChunkWorld");
+    auto worldView = m_Registry.view<ChunkWorldComponent>();
+    if (worldView.begin() == worldView.end()) return;
+
+    auto& cw = worldView.get<ChunkWorldComponent>(worldView.front());
+    if (cw.ChunkSize <= 0.0f) return;
+
+    glm::vec3 target = cw.m_LastTargetPos;
+    bool haveTarget = false;
+    if (!cw.TargetTag.empty()) {
+        Entity t = FindEntityByName(cw.TargetTag);
+        if (t && t.HasComponent<TransformComponent>()) {
+            target = t.GetComponent<TransformComponent>().Translation;
+            haveTarget = true;
+        }
+    }
+    if (!haveTarget) {
+        auto camView = m_Registry.view<TransformComponent, CameraComponent>();
+        for (auto e : camView) {
+            auto& cam = camView.get<CameraComponent>(e);
+            if (!cam.Primary) continue;
+            target = camView.get<TransformComponent>(e).Translation;
+            haveTarget = true;
+            break;
+        }
+    }
+
+    int tx = (int)glm::floor(target.x / cw.ChunkSize);
+    int tz = (int)glm::floor(target.z / cw.ChunkSize);
+    bool firstRun = cw.m_LoadedChunks.empty() && cw.m_PendingLoads.empty();
+    if (firstRun) {
+
+    } else if (target == cw.m_LastTargetPos && cw.m_PendingLoads.empty()) {
+        return;
+    }
+    cw.m_LastTargetPos = target;
+
+    int radius = glm::max(cw.LoadRadius, 0);
+    int grace = glm::max(cw.UnloadGrace, 0);
+    const int ring = radius + grace;
+
+    std::vector<std::pair<int, int>> wanted;
+    for (int dz = -radius; dz <= radius; ++dz)
+        for (int dx = -radius; dx <= radius; ++dx)
+            wanted.push_back({ tx + dx, tz + dz });
+    std::sort(wanted.begin(), wanted.end());
+    wanted.erase(std::unique(wanted.begin(), wanted.end()), wanted.end());
+
+    std::vector<std::pair<int, int>> keep;
+    for (auto& c : cw.m_LoadedChunks) {
+        bool inRing = (std::abs(c.first - tx) <= ring && std::abs(c.second - tz) <= ring);
+        if (!inRing) {
+            UnloadChunk(c.first, c.second);
+        } else {
+            keep.push_back(c);
+        }
+    }
+    cw.m_LoadedChunks.swap(keep);
+
+    auto& pending = cw.m_PendingLoads;
+    for (auto& c : wanted) {
+        bool loaded = std::find(cw.m_LoadedChunks.begin(), cw.m_LoadedChunks.end(), c) != cw.m_LoadedChunks.end();
+        bool queued = std::find(pending.begin(), pending.end(), c) != pending.end();
+        if (!loaded && !queued) pending.push_back(c);
+    }
+
+    int loadedThisFrame = 0;
+    while (loadedThisFrame < 2 && !pending.empty()) {
+        auto c = pending.front();
+        pending.erase(pending.begin());
+        if (std::find(cw.m_LoadedChunks.begin(), cw.m_LoadedChunks.end(), c) != cw.m_LoadedChunks.end())
+            continue;
+        LoadChunk(c.first, c.second, cw);
+        cw.m_LoadedChunks.push_back(c);
+        ++loadedThisFrame;
+    }
+    (void)ts;
+}
+
+void Scene::UnloadChunk(int cx, int cz) {
+    std::vector<entt::entity> doomed;
+    m_Registry.view<ChunkEntityComponent>().each([&](entt::entity e, ChunkEntityComponent& ce) {
+        if (ce.ChunkX == cx && ce.ChunkZ == cz) doomed.push_back(e);
+    });
+    for (entt::entity e : doomed) {
+        Entity entity{ e, this };
+        if (entity) DestroyEntity(entity);
+    }
+}
+
+void Scene::LoadChunk(int cx, int cz, ChunkWorldComponent& cw) {
+    std::string folder = cw.ChunkFolder;
+    if (!Project::GetActive()) return;
+    std::string dir = Project::GetActive()->GetConfig().AssetDirectory;
+    std::string path = Project::ResolvePath(dir + "/" + folder + "/chunk_" + std::to_string(cx) + "_" + std::to_string(cz) + ".kzchunk");
+
+    ChunkSerializer serializer(this);
+    if (!serializer.Load(path, cx, cz)) return;
+
+    Entity root = FindEntityByName("_chunk_" + std::to_string(cx) + "_" + std::to_string(cz));
+    if (!root) {
+        root = CreateEntity("_chunk_" + std::to_string(cx) + "_" + std::to_string(cz));
+    }
+    m_Registry.view<ChunkEntityComponent, RelationshipComponent>().each(
+        [&](entt::entity e, ChunkEntityComponent& ce, RelationshipComponent& rel) {
+            if (ce.ChunkX != cx || ce.ChunkZ != cz) return;
+            if (rel.Parent == UUID::Invalid()) {
+                SetParent(Entity{ e, this }, root);
+            }
+        });
 }
 
 void Scene::RenderRuntimeView() {

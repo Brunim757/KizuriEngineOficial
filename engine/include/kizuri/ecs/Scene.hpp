@@ -28,6 +28,7 @@ namespace kizuri {
 class Entity;
 class PerspectiveCamera;
 class NavGrid;
+struct ChunkWorldComponent;
 
 class Scene {
 public:
@@ -105,6 +106,8 @@ public:
 
     void OnUpdateRuntimeLogic(Timestep ts);
 
+    void UpdateChunkWorld(Timestep ts);
+
     void RenderRuntimeView();
 
     void RenderRuntimeWithEditorCamera(class PerspectiveCamera& editorCamera);
@@ -133,6 +136,8 @@ private:
     void UpdateSpriteAnimations(Timestep ts);
     void UpdateAnimators(Timestep ts);
     void UpdateAudio(Timestep ts);
+    void UnloadChunk(int cx, int cz);
+    void LoadChunk(int cx, int cz, ChunkWorldComponent& cw);
     void RenderUI();
     void UpdateUIPointer();
     void CollectUIChildren(entt::entity parent, std::vector<entt::entity>& outStack) const;

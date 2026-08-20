@@ -14,6 +14,7 @@
 #include <string>
 #include <functional>
 #include <vector>
+#include <utility>
 #include <memory>
 
 namespace kizuri {
@@ -478,6 +479,24 @@ struct EnemyAIComponent {
     int m_PatrolIndex = 0;
     bool m_HasTarget = false;
     uint32_t m_TargetHandle = 0;
+};
+
+struct ChunkWorldComponent {
+    float ChunkSize = 64.0f;
+    int LoadRadius = 2;
+    int UnloadGrace = 1;
+    std::string ChunkFolder = "Chunks";
+    std::string TargetTag = "Jogador";
+
+    glm::vec3 m_LastTargetPos{ 0.0f };
+    std::vector<std::pair<int, int>> m_LoadedChunks;
+    std::vector<std::pair<int, int>> m_PendingLoads;
+};
+
+struct ChunkEntityComponent {
+    int ChunkX = 0;
+    int ChunkZ = 0;
+    uint64_t ChunkSeed = 0;
 };
 
 }

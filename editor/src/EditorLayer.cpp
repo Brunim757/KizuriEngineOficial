@@ -1599,7 +1599,6 @@ void EditorLayer::CheckHotReload(Timestep ts) {
     std::error_code ec;
     if (!std::filesystem::is_directory(csDir, ec)) return;
 
-    auto now = std::filesystem::file_time_type::clock::now();
     bool changed = false;
     for (auto& entry : std::filesystem::directory_iterator(csDir, ec)) {
         if (entry.path().extension() != ".cs") continue;

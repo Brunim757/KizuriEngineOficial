@@ -682,31 +682,6 @@ void EditorLayer::CreateDemoScene2D() {
 
 
 // ===== Helper: textura procedural =====
-static Ref<kizuri::Texture2D> MakeSolidColor4x4Atlas() {
-    constexpr int T = 4;
-    constexpr int S = 32;
-    constexpr int W = T * S, H = T * S;
-    std::vector<uint8_t> px(W * H * 4);
-    uint32_t colors[4][4] = {
-        {0x3a9e4d, 0x43783c, 0x5e3b2e, 0x7a6c5e},
-        {0x2e8b57, 0x6b8e23, 0xb8860b, 0x8fbc8f},
-        {0xd2691e, 0xf4a460, 0xdeb887, 0xfaf0e6},
-        {0x556b2f, 0x228b22, 0xcd853f, 0x8b7d6b},
-    };
-    for (int cy = 0; cy < T; ++cy) for (int cx = 0; cx < T; ++cx) {
-        uint32_t c = colors[cy][cx];
-        for (int py = 0; py < S; ++py) for (int pi = 0; pi < S; ++pi) {
-            int i = ((cy*S+py)*W + (cx*S+pi))*4;
-            px[i]   = (c>>16)&0xff;
-            px[i+1] = (c>>8)&0xff;
-            px[i+2] = c&0xff;
-            px[i+3] = 0xff;
-        }
-    }
-    auto tex = kizuri::Texture2D::Create(W, H);
-    tex->SetData(px.data(), (uint32_t)px.size());
-    return tex;
-}
 
 static Ref<kizuri::Texture2D> MakeBallSpriteSheet(int frames, int framePx) {
     int W = frames * framePx, H = framePx;

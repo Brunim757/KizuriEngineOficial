@@ -43,10 +43,6 @@ static std::string FindContentFile(const std::string& relative) {
     return "";
 }
 
-static std::string PickDemoAsset(const char* kzresName, const char* contentRelative) {
-    if (HasEmbeddedResource(kzresName)) return std::string("kzres://") + kzresName;
-    return FindContentFile(contentRelative);
-}
 
 static bool DecomposeTransform(const glm::mat4& transform, glm::vec3& outTranslation, glm::vec3& outRotation, glm::vec3& outScale) {
     glm::vec3 skew;

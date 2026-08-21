@@ -112,6 +112,8 @@ public:
 
     void RenderRuntimeWithEditorCamera(class PerspectiveCamera& editorCamera);
 
+    void ReloadAllScripts();
+
     bool HasPrimaryCamera();
 
     void OnUpdateEditor3D(Timestep ts, class PerspectiveCamera& editorCamera);
@@ -139,7 +141,6 @@ private:
     void UnloadChunk(int cx, int cz);
     bool LoadChunk(int cx, int cz, ChunkWorldComponent& cw);
     void SaveChunkWorld(const ChunkWorldComponent& cw);
-    void ReloadAllScripts();
     void RenderUI();
     void UpdateUIPointer();
     void CollectUIChildren(entt::entity parent, std::vector<entt::entity>& outStack) const;

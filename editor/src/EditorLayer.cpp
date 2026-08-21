@@ -1575,8 +1575,7 @@ void EditorLayer::CheckHotReload(Timestep ts) {
             if (m_HotReloadBuildOk && m_ActiveScene) {
                 if (kizuri::ScriptEngine::LoadModule(m_HotReloadDllPath)) {
                     m_ActiveScene->ReloadAllScripts();
-                    KZ_CORE_INFO("Hot reload: scripts recarregados com sucesso ({0} scripts).",
-                                 kizuri::ScriptEngine::GetRegistry().size());
+                    KZ_CORE_INFO("Hot reload: scripts recarregados com sucesso.");
                 } else {
                     KZ_CORE_ERROR("Hot reload: falha ao recarregar módulo: {0}",
                                   kizuri::ScriptEngine::GetLastError());

@@ -1642,7 +1642,7 @@ void EditorLayer::StartHotReloadBuild() {
         std::string dll, err;
         m_HotReloadBuildOk = GameExporter::BuildGameModule(csproj, engineRoot, dll, err);
         m_HotReloadDllPath = dll;
-        m_HotReloadError = err;
+        m_HotReloadBuildError = err;
         m_HotReloadBuildDone = true;
     });
 }

@@ -1944,10 +1944,25 @@ void EditorLayer::DrawDockspace() {
         ImGui::Separator();
         if (ImGui::BeginMenu("Demonstrações", m_SceneState == SceneState::Edit)) {
             if (ImGui::MenuItem("2D — Sprites, física e UI")) CreateDemoScene2D();
-            if (ImGui::MenuItem("3D — PBR, esqueleto e céu físico")) CreateDemoScene3D();
+            if (ImGui::MenuItem("3D — PBR, esqueleto e céu")) CreateDemoScene3D();
+            if (ImGui::MenuItem("2.5D — Mundo 3D + camada 2D + HUD")) CreateDemo25D();
+            ImGui::Separator();
+            if (ImGui::MenuItem("Tilemap — Mapa com colisão")) CreateDemoTilemap();
+            if (ImGui::MenuItem("Animação 2D — Sprite sheets")) CreateDemoSpriteAnim();
+            if (ImGui::MenuItem("Câmera Follow 2D")) CreateDemoCameraFollow2D();
+            ImGui::Separator();
+            if (ImGui::MenuItem("Física 3D — Caixas e esferas")) CreateDemoFisica3D();
+            if (ImGui::MenuItem("Luzes — Pontuais, spots e sombras")) CreateDemoLuzes();
+            if (ImGui::MenuItem("Partículas — Fogo, fumaça e faíscas")) CreateDemoParticulas();
+            if (ImGui::MenuItem("Terreno — Heightmap procedural")) CreateDemoTerreno();
+            ImGui::Separator();
+            if (ImGui::MenuItem("Timeline — Animação por keyframes")) CreateDemoTimeline();
+            if (ImGui::MenuItem("LOD — Níveis de detalhe")) CreateDemoLOD();
+            if (ImGui::MenuItem("Efeitos — Decals, foliage")) CreateDemoEfeitos();
             ImGui::Separator();
             if (ImGui::MenuItem("IA — Patrulha e perseguição")) CreateDemoSceneAI();
             if (ImGui::MenuItem("Rede — Multiplayer local")) CreateDemoSceneNet();
+            if (ImGui::MenuItem("Chunk World — Mundo em pedaços")) CreateDemoChunk();
             ImGui::Separator();
             if (ImGui::MenuItem("Jogo completo — Mini-jogo com placar")) CreateDemoSceneGame();
             ImGui::EndMenu();

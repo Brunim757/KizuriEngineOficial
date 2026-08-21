@@ -91,6 +91,19 @@ private:
 
     void CreateDemoSceneNet();
 
+    void CreateDemoTilemap();
+    void CreateDemoSpriteAnim();
+    void CreateDemoFisica3D();
+    void CreateDemoLuzes();
+    void CreateDemoParticulas();
+    void CreateDemoTerreno();
+    void CreateDemoTimeline();
+    void CreateDemoLOD();
+    void CreateDemoEfeitos();
+    void CreateDemoChunk();
+    void CreateDemo25D();
+    void CreateDemoCameraFollow2D();
+
     kizuri::Entity CreateEntityFromAsset(const std::string& path, const glm::vec3& worldPos);
 
     void AutoSwitchViewportMode();

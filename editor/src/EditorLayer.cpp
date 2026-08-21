@@ -35,14 +35,6 @@
 
 using namespace kizuri;
 
-static std::string FindContentFile(const std::string& relative) {
-    std::string a = "content/" + relative;
-    if (std::filesystem::exists(a)) return a;
-    std::string b = "../content/" + relative;
-    if (std::filesystem::exists(b)) return b;
-    return "";
-}
-
 
 static bool DecomposeTransform(const glm::mat4& transform, glm::vec3& outTranslation, glm::vec3& outRotation, glm::vec3& outScale) {
     glm::vec3 skew;

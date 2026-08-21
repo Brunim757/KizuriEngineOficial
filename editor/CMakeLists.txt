@@ -5,6 +5,7 @@ endif()
 add_executable(KizuriEditor
     src/EditorApp.cpp
     src/EditorLayer.cpp
+    src/DemoScenes.cpp
     src/Updater.cpp
     src/AndroidExporter.cpp
     src/UI/Icons.cpp

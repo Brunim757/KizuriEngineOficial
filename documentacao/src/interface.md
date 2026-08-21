@@ -28,7 +28,7 @@ mostrar/ocultar pelo menu **Janelas** (na barra de menus).
 
 - **Arquivo** — projetos, cenas, exportar jogo, voltar ao Hub
 - **Editar** — desfazer/refazer, duplicar/excluir
-- **Cena** — salvar/abrir, cenas de demonstração, modo 2D/3D
+- **Cena** — salvar/abrir, **Demonstrações** (submenu com uma demo por recurso), modo 2D/3D
 - **Exibir** — modo do viewport (2D/3D), fullscreen, Configurações
 - **Janelas** — mostrar/ocultar cada painel
 - **Ajuda** — versão, atalhos

@@ -7,6 +7,33 @@
 #include <kizuri/core/Log.hpp>
 #include <glm/gtc/random.hpp>
 #include <cstdio>
+#include <string>
+#include <filesystem>
+#include <kizuri/core/EmbeddedContent.hpp>
+#include <kizuri/renderer/Renderer3D.hpp>
+
+static std::string FindContentFile(const std::string& name) {
+    namespace fs = std::filesystem;
+    auto tryPath = [&](const std::string& a) {
+        if (fs::exists(a)) return a;
+        return std::string();
+    };
+    if (auto r = tryPath(name); !r.empty()) return r;
+    if (auto r = tryPath("content/" + name); !r.empty()) return r;
+    if (auto r = tryPath("../content/" + name); !r.empty()) return r;
+    return {};
+}
+
+static bool HasEmbeddedResource(const std::string& path) {
+    return HasEmbeddedResource(path);
+}
+
+static std::string PickDemoAsset(const char* primary, const char* fallback) {
+    if (!primary || !primary[0]) return {};
+    auto p = FindContentFile(primary);
+    if (!p.empty()) return p;
+    return fallback ? fallback : "";
+}
 
 using namespace kizuri;
 void EditorLayer::CreateDemoScene3D() {
@@ -670,11 +697,11 @@ static Ref<kizuri::Texture2D> MakeSolidColor4x4Atlas() {
     };
     for (int cy = 0; cy < T; ++cy) for (int cx = 0; cx < T; ++cx) {
         uint32_t c = colors[cy][cx];
-        for (int py = 0; py < S; ++py) for (int px = 0; px < S; ++px) {
-            int i = ((cy*S+py)*W + (cx*S+px))*4;
-            px[i]   = (c>>24)&0xff;
-            px[i+1] = (c>>16)&0xff;
-            px[i+2] = (c>> 8)&0xff;
+        for (int py = 0; py < S; ++py) for (int pi = 0; pi < S; ++pi) {
+            int i = ((cy*S+py)*W + (cx*S+pi))*4;
+            px[i]   = (c>>16)&0xff;
+            px[i+1] = (c>>8)&0xff;
+            px[i+2] = c&0xff;
             px[i+3] = 0xff;
         }
     }
@@ -690,8 +717,8 @@ static Ref<kizuri::Texture2D> MakeBallSpriteSheet(int frames, int framePx) {
     for (int f = 0; f < frames; ++f) {
         float squash = (f < frames/2) ? 1.0f + 0.2f*((float)f/(frames/2)) : 1.0f - 0.2f*((float)(f-frames/2)/(frames/2));
         float cy = (float)framePx*0.5f + 2.0f*(1.0f-squash);
-        for (int py = 0; py < framePx; ++py) for (int px_ = 0; px_ < framePx; ++px_) {
-            float dx = (float)px_ - (float)framePx*0.5f;
+        for (int py = 0; py < framePx; ++py) for (int pi = 0; pi < framePx; ++pi) {
+            float dx = (float)pi - (float)framePx*0.5f;
             float dy = (float)py  - cy;
             float rx = r * squash;
             if (dx*dx/(rx*rx) + (squash>1.0f?dy*dy/(r/squash*r/squash):dy*dy/(r*squash*squash)) <= 1.0f) {
@@ -814,7 +841,7 @@ void EditorLayer::CreateDemoFisica3D() {
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     auto& lc = sun.AddComponent<kizuri::LightComponent>();
     lc.Type = kizuri::LightType::Directional; lc.Color = {1,1,1}; lc.Intensity = 2.0f;
-    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(45),glm::radians(30),0};
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(45f),glm::radians(30f),0};
 
     Entity floor = m_ActiveScene->CreateEntity("Floor");
     auto& fm = floor.AddComponent<kizuri::MeshRendererComponent>();
@@ -824,7 +851,7 @@ void EditorLayer::CreateDemoFisica3D() {
     floor.AddComponent<kizuri::Rigidbody3DComponent>().Type=kizuri::Rigidbody3DComponent::BodyType::Static;
     floor.AddComponent<kizuri::BoxCollider3DComponent>().HalfExtents={10,0.1f,10};
 
-    auto* shapes[]={"builtin:cube","builtin:cube","builtin:cube","builtin:sphere","builtin:cube"};
+    const char* shapes[] = {"builtin:cube","builtin:cube","builtin:cube","builtin:sphere","builtin:cube"};
     for (int i = 0; i < 5; ++i) {
         Entity e = m_ActiveScene->CreateEntity("Fallen " + std::to_string(i));
         auto& m = e.AddComponent<kizuri::MeshRendererComponent>();
@@ -881,9 +908,9 @@ void EditorLayer::CreateDemoLuzes() {
         e.GetComponent<kizuri::TransformComponent>().Translation = pos;
         e.GetComponent<kizuri::TransformComponent>().Rotation = dir;
     };
-    makeLight("Spot Left",{-4,6,-2},{glm::radians(60),0,0},{1,1,0.8f},4,kizuri::LightType::Spot,15,true);
+    makeLight("Spot Left",{-4,6,-2},{glm::radians(60f),0,0},{1,1,0.8f},4,kizuri::LightType::Spot,15,true);
     makeLight("Point Fill",{3,4,-6},{0,0,0},{0.2f,0.3f,0.8f},1.5f,kizuri::LightType::Point,10,false);
-    makeLight("Spot Right",{4,6,-2},{glm::radians(60),glm::radians(180),0},{1,0.9f,0.6f},3,kizuri::LightType::Spot,12,false);
+    makeLight("Spot Right",{4,6,-2},{glm::radians(60f),glm::radians(180f),0},{1,0.9f,0.6f},3,kizuri::LightType::Spot,12,false);
 
     for (int i = 0; i < 3; ++i) {
         Entity e = m_ActiveScene->CreateEntity("Column " + std::to_string(i));
@@ -910,7 +937,7 @@ void EditorLayer::CreateDemoParticulas() {
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
     sun.GetComponent<kizuri::LightComponent>().Intensity = 1.2f;
-    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50),glm::radians(30),0};
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50f),glm::radians(30f),0};
 
     Entity floor = m_ActiveScene->CreateEntity("Floor");
     auto& fm = floor.AddComponent<kizuri::MeshRendererComponent>();
@@ -960,7 +987,7 @@ void EditorLayer::CreateDemoTerreno() {
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
     sun.GetComponent<kizuri::LightComponent>().Intensity = 2.0f;
-    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50),glm::radians(30),0};
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50f),glm::radians(30f),0};
 
     Entity terrain = m_ActiveScene->CreateEntity("Terrain");
     auto& tc = terrain.AddComponent<kizuri::TerrainComponent>();
@@ -995,7 +1022,7 @@ void EditorLayer::CreateDemoTimeline() {
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
     sun.GetComponent<kizuri::LightComponent>().Intensity = 1.8f;
-    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50),0,0};
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50f),0,0};
 
     Entity floor = m_ActiveScene->CreateEntity("Floor");
     auto& fm = floor.AddComponent<kizuri::MeshRendererComponent>();
@@ -1044,7 +1071,7 @@ void EditorLayer::CreateDemoLOD() {
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
     sun.GetComponent<kizuri::LightComponent>().Intensity = 1.5f;
-    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(45),glm::radians(30),0};
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(45f),glm::radians(30f),0};
 
     for (int i = 0; i < 5; ++i) {
         Entity e = m_ActiveScene->CreateEntity("Sphere LOD " + std::to_string(i));
@@ -1084,7 +1111,7 @@ void EditorLayer::CreateDemoEfeitos() {
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
     sun.GetComponent<kizuri::LightComponent>().Intensity = 1.8f;
-    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50),0,0};
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50f),0,0};
 
     Entity wall = m_ActiveScene->CreateEntity("Parede");
     auto& wm = wall.AddComponent<kizuri::MeshRendererComponent>();
@@ -1138,7 +1165,7 @@ void EditorLayer::CreateDemo25D() {
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
     sun.GetComponent<kizuri::LightComponent>().Intensity = 1.5f;
-    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50),0,0};
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50f),0,0};
 
     Entity floor = m_ActiveScene->CreateEntity("Floor");
     auto& fm = floor.AddComponent<kizuri::MeshRendererComponent>();

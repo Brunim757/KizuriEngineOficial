@@ -772,7 +772,7 @@ void EditorLayer::CreateDemoTilemap() {
     tm.Tiles.resize(24*14, 0);
     for (int x = 0; x < 24; ++x) { tm.Tiles[x + 13*24] = 1; tm.Tiles[x + 12*24] = 2; }
     for (int i = 0; i < 4; ++i) { int bx = 4+i*5; for (int x=bx;x<bx+3&&x<24;++x) tm.Tiles[x+8*24]=3; }
-    tm.SolidTileValues = {1.0f, 2.0f, 3.0f};
+    tm.SolidTileValues = {1, 2, 3};
     tileEntity.GetComponent<kizuri::TransformComponent>().Translation = {-12.0, -7.0, 0.0};
 
     Entity player = m_ActiveScene->CreateEntity("Player");
@@ -834,7 +834,7 @@ void EditorLayer::CreateDemoFisica3D() {
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
     cc.PerspectiveFOV = 55.0f;
     cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 8.0f, 14.0f};
-    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-20),0,0};
+    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-20.0f),0,0};
 
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     auto& lc = sun.AddComponent<kizuri::LightComponent>();
@@ -878,7 +878,7 @@ void EditorLayer::CreateDemoLuzes() {
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
     cc.PerspectiveFOV = 55.0f;
     cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 5.0f, 12.0f};
-    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-15),0,0};
+    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-15.0f),0,0};
 
     Entity floor = m_ActiveScene->CreateEntity("Floor");
     auto& fm = floor.AddComponent<kizuri::MeshRendererComponent>();
@@ -930,7 +930,7 @@ void EditorLayer::CreateDemoParticulas() {
     auto& cc = cam.AddComponent<kizuri::CameraComponent>();
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
     cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 3.0f, 8.0f};
-    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-10),0,0};
+    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-10.0f),0,0};
 
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
@@ -980,7 +980,7 @@ void EditorLayer::CreateDemoTerreno() {
     auto& cc = cam.AddComponent<kizuri::CameraComponent>();
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
     cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 12.0f, 18.0f};
-    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-30),0,0};
+    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-30.0f),0,0};
 
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
@@ -1015,7 +1015,7 @@ void EditorLayer::CreateDemoTimeline() {
     auto& cc = cam.AddComponent<kizuri::CameraComponent>();
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
     cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 5.0f, 12.0f};
-    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-20),0,0};
+    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-20.0f),0,0};
 
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
@@ -1064,7 +1064,7 @@ void EditorLayer::CreateDemoLOD() {
     auto& cc = cam.AddComponent<kizuri::CameraComponent>();
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
     cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 2.0f, 3.0f};
-    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-10),0,0};
+    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-10.0f),0,0};
 
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
@@ -1104,7 +1104,7 @@ void EditorLayer::CreateDemoEfeitos() {
     auto& cc = cam.AddComponent<kizuri::CameraComponent>();
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
     cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 4.0f, 10.0f};
-    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-15),0,0};
+    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-15.0f),0,0};
 
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
@@ -1153,7 +1153,7 @@ void EditorLayer::CreateDemo25D() {
     auto& cc = cam.AddComponent<kizuri::CameraComponent>();
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
     cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 4.0f, 10.0f};
-    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-15),0,0};
+    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-15.0f),0,0};
 
     Entity ortho = m_ActiveScene->CreateEntity("Camera 2D (HUD)");
     auto& oc = ortho.AddComponent<kizuri::CameraComponent>();

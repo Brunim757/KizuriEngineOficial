@@ -34,7 +34,7 @@ servem de ponto de partida pra copiar configurações pro seu jogo.
 | **LOD** | Esferas com LODComponent — afaste pra ver redução de triângulos |
 | **Efeitos** | Decal projetado, foliage instanciada (60 árvores), occluder |
 
-## Hibridos
+## Híbridos
 
 | Demo | O que mostra |
 |------|--------------|
@@ -61,18 +61,9 @@ configurados.
 :::
 
 ::: dica
-Todas as demos usam **texturas procedurais** (geradas em tempo de
-criação) — não precisam do Content Pack pra funcionar.
+Todas as demos usam **texturas procedurais** — não precisam do Content
+Pack pra funcionar. Abra e rode sem dependências extras.
 :::
-
-## Como as demos são organizadas
-
-Cada demo é gerada por código dentro do editor (arquivo `DemoScenes.cpp`)
-— não são arquivos `.kzscene` salvos. Isso garante que a demo sempre usa
-os valores padrão atualizados da engine, sem depender de arquivos antigos.
-
-Adicionar uma demo nova = uma função nova em `DemoScenes.cpp` + um item
-no submenu Cena → Demonstrações.
 
 ## Fluxo recomendado
 

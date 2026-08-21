@@ -24,9 +24,7 @@ static std::string FindContentFile(const std::string& name) {
     return {};
 }
 
-static bool HasEmbeddedResource(const std::string& path) {
-    return HasEmbeddedResource(path);
-}
+
 
 static std::string PickDemoAsset(const char* primary, const char* fallback) {
     if (!primary || !primary[0]) return {};
@@ -61,7 +59,7 @@ void EditorLayer::CreateDemoScene3D() {
     Entity light2 = m_ActiveScene->CreateEntity("Luz de Preenchimento");
     auto& lc2 = light2.AddComponent<LightComponent>();
     lc2.Type = LightType::Directional;
-    lc2.Color = { 0.35f, 0.45f, 0.8f };
+    lc2.Color = { 0.35f, 0.45.0f, 0.8f };
     lc2.Intensity = 0.35f;
     light2.GetComponent<TransformComponent>().Rotation = { glm::radians(30.0f), glm::radians(-140.0f), 0.0f };
 
@@ -89,7 +87,7 @@ void EditorLayer::CreateDemoScene3D() {
     if (!hdri.empty()) {
         Renderer3D::SetEnvironmentHDRIPath(hdri);
         KZ_CORE_INFO("Demo 3D: céu HDRI do content pack carregado ({0}).", hdri);
-    } else if (HasEmbeddedResource("skies/sky_gradient.hdr")) {
+    } else if (kizuri::HasEmbeddedResource(std::string("skies/sky_gradient.hdr"))) {
         Renderer3D::SetEnvironmentHDRIPath("kzres://skies/sky_gradient.hdr");
         KZ_CORE_INFO("Demo 3D: céu EMBUTIDO (kzres://skies/sky_gradient.hdr).");
     }
@@ -722,7 +720,7 @@ static Ref<kizuri::Texture2D> MakeBallSpriteSheet(int frames, int framePx) {
             float dy = (float)py  - cy;
             float rx = r * squash;
             if (dx*dx/(rx*rx) + (squash>1.0f?dy*dy/(r/squash*r/squash):dy*dy/(r*squash*squash)) <= 1.0f) {
-                int i = (py*W + f*framePx + px_)*4;
+                int i = (py*W + f*framePx + pi)*4;
                 px[i] = 220; px[i+1] = 60; px[i+2] = 30; px[i+3] = 255;
             }
         }
@@ -741,8 +739,8 @@ static Ref<kizuri::Texture2D> MakeTileAtlas4x4() {
                     0xd4a574, 0xf0c882, 0xe8d5b0, 0xf8f4ee,
                     0x3b6e2c, 0x228b22, 0xa0785a, 0x6b5b4f};
     for (int cy = 0; cy < T; ++cy) for (int cx = 0; cx < T; ++cx)
-        for (int py = 0; py < S; ++py) for (int px_ = 0; px_ < S; ++px_) {
-            int i = ((cy*S+py)*W + (cx*S+px_))*4;
+        for (int py = 0; py < S; ++py) for (int pi = 0; pi < S; ++pi) {
+            int i = ((cy*S+py)*W + (cx*S+pi))*4;
             uint32_t v = c[cy*T+cx];
             px[i]=v>>16; px[i+1]=(v>>8)&0xff; px[i+2]=v&0xff; px[i+3]=255;
         }
@@ -774,21 +772,21 @@ void EditorLayer::CreateDemoTilemap() {
     tm.Tiles.resize(24*14, 0);
     for (int x = 0; x < 24; ++x) { tm.Tiles[x + 13*24] = 1; tm.Tiles[x + 12*24] = 2; }
     for (int i = 0; i < 4; ++i) { int bx = 4+i*5; for (int x=bx;x<bx+3&&x<24;++x) tm.Tiles[x+8*24]=3; }
-    tm.SolidTileValues = {1,2,3};
-    tileEntity.GetComponent<kizuri::TransformComponent>().Translation = {-12.0f,-7.0f,0.0f};
+    tm.SolidTileValues = {1.0f, 2.0f, 3.0f};
+    tileEntity.GetComponent<kizuri::TransformComponent>().Translation = {-12.0, -7.0, 0.0};
 
     Entity player = m_ActiveScene->CreateEntity("Player");
     auto& sr = player.AddComponent<kizuri::SpriteRendererComponent>();
     sr.Color = {0.25f,0.6f,0.9f,1.0f}; sr.SortingLayer = 5;
     player.AddComponent<kizuri::Rigidbody2DComponent>();
     player.GetComponent<kizuri::Rigidbody2DComponent>().Type = kizuri::Rigidbody2DComponent::BodyType::Dynamic;
-    player.AddComponent<kizuri::BoxCollider2DComponent>().Size = {0.45f,0.9f};
-    player.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 10.0f, 0.0f};
+    player.AddComponent<kizuri::BoxCollider2DComponent>().Size = {0.45.0f,0.9f};
+    player.GetComponent<kizuri::TransformComponent>().Translation = {0.0, 10.0, 0.0};
 
     Entity text = m_ActiveScene->CreateEntity("Hint");
     auto& tc = text.AddComponent<kizuri::TextComponent>();
     tc.Text = "Tilemap + Box2D Physics"; tc.FontSize = 28; tc.SortingLayer = 10;
-    text.GetComponent<kizuri::TransformComponent>().Translation = {-6.5f,13.5f,0.0f};
+    text.GetComponent<kizuri::TransformComponent>().Translation = {-6.5, 13.5, 0.0};
 }
 
 // ===== DemoSpriteAnim (2D) =====
@@ -806,7 +804,7 @@ void EditorLayer::CreateDemoSpriteAnim() {
 
     auto sheet = MakeBallSpriteSheet(8,32);
     const char* labels[] = {"Loop 6 FPS","Loop 12 FPS","One-shot 24 FPS"};
-    float fps[] = {6.0f,12.0f,24.0f};
+    float fps[] = {6.0, 12.0, 24.0};
     bool loops[] = {true,true,false};
     for (int i = 0; i < 3; ++i) {
         Entity e = m_ActiveScene->CreateEntity(labels[i]);
@@ -835,21 +833,21 @@ void EditorLayer::CreateDemoFisica3D() {
     auto& cc = cam.AddComponent<kizuri::CameraComponent>();
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
     cc.PerspectiveFOV = 55.0f;
-    cam.GetComponent<kizuri::TransformComponent>().Translation = {0,8,14};
+    cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 8.0f, 14.0f};
     cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-20),0,0};
 
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     auto& lc = sun.AddComponent<kizuri::LightComponent>();
-    lc.Type = kizuri::LightType::Directional; lc.Color = {1,1,1}; lc.Intensity = 2.0f;
-    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(45f),glm::radians(30f),0};
+    lc.Type = kizuri::LightType::Directional; lc.Color = {1.0, 1.0, 1.0}; lc.Intensity = 2.0f;
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(45.0f), glm::radians(30.0f), 0.0f};
 
     Entity floor = m_ActiveScene->CreateEntity("Floor");
     auto& fm = floor.AddComponent<kizuri::MeshRendererComponent>();
     fm.MeshSource="builtin:plane"; fm.MeshAsset=kizuri::Mesh::FromSource(fm.MeshSource);
-    fm.MeshMaterial.Albedo={0.3f,0.3f,0.3f}; fm.MeshMaterial.Roughness=0.9f;
-    floor.GetComponent<kizuri::TransformComponent>().Scale={20,1,20};
+    fm.MeshMaterial.Albedo={0.3, 0.3, 0.3}; fm.MeshMaterial.Roughness=0.9f;
+    floor.GetComponent<kizuri::TransformComponent>().Scale={20.0f, 1.0f, 20.0f};
     floor.AddComponent<kizuri::Rigidbody3DComponent>().Type=kizuri::Rigidbody3DComponent::BodyType::Static;
-    floor.AddComponent<kizuri::BoxCollider3DComponent>().HalfExtents={10,0.1f,10};
+    floor.AddComponent<kizuri::BoxCollider3DComponent>().HalfExtents={10.0f, 0.1, 10.0f};
 
     const char* shapes[] = {"builtin:cube","builtin:cube","builtin:cube","builtin:sphere","builtin:cube"};
     for (int i = 0; i < 5; ++i) {
@@ -860,11 +858,11 @@ void EditorLayer::CreateDemoFisica3D() {
         m.MeshMaterial.Roughness = 0.4f;
         auto& t = e.GetComponent<kizuri::TransformComponent>();
         t.Translation = {(float)i*1.2f - 2.4f, 8.0f + i*2.5f, 0};
-        t.Scale = {0.8f,0.8f,0.8f};
+        t.Scale = {0.8, 0.8, 0.8};
         e.AddComponent<kizuri::Rigidbody3DComponent>().Type = kizuri::Rigidbody3DComponent::BodyType::Dynamic;
         if (shapes[i]==std::string("builtin:sphere"))
             e.AddComponent<kizuri::SphereCollider3DComponent>().Radius=0.4f;
-        else e.AddComponent<kizuri::BoxCollider3DComponent>().HalfExtents={0.4f,0.4f,0.4f};
+        else e.AddComponent<kizuri::BoxCollider3DComponent>().HalfExtents={0.4, 0.4, 0.4};
     }
 }
 
@@ -879,14 +877,14 @@ void EditorLayer::CreateDemoLuzes() {
     auto& cc = cam.AddComponent<kizuri::CameraComponent>();
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
     cc.PerspectiveFOV = 55.0f;
-    cam.GetComponent<kizuri::TransformComponent>().Translation = {0,5,12};
+    cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 5.0f, 12.0f};
     cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-15),0,0};
 
     Entity floor = m_ActiveScene->CreateEntity("Floor");
     auto& fm = floor.AddComponent<kizuri::MeshRendererComponent>();
     fm.MeshSource="builtin:plane"; fm.MeshAsset=kizuri::Mesh::FromSource(fm.MeshSource);
-    fm.MeshMaterial.Albedo={0.05f,0.05f,0.06f}; fm.MeshMaterial.Roughness=0.95f;
-    floor.GetComponent<kizuri::TransformComponent>().Scale={30,1,30};
+    fm.MeshMaterial.Albedo={0.05, 0.05, 0.06}; fm.MeshMaterial.Roughness=0.95f;
+    floor.GetComponent<kizuri::TransformComponent>().Scale={30.0f, 1.0f, 30.0f};
 
     auto makeSphere=[&](const char* name, glm::vec3 pos, glm::vec3 color, glm::vec3 emissive, float intensity){
         Entity e = m_ActiveScene->CreateEntity(name);
@@ -895,11 +893,11 @@ void EditorLayer::CreateDemoLuzes() {
         m.MeshMaterial.Albedo = color; m.MeshMaterial.Emissive = emissive;
         m.MeshMaterial.EmissiveStrength = intensity; m.MeshMaterial.Roughness = 0.3f;
         e.GetComponent<kizuri::TransformComponent>().Translation = pos;
-        e.GetComponent<kizuri::TransformComponent>().Scale = {0.6f,0.6f,0.6f};
+        e.GetComponent<kizuri::TransformComponent>().Scale = {0.6, 0.6, 0.6};
     };
-    makeSphere("Red Light",{-5,0.2f,0},{1,0,0},{1,0,0},2);
-    makeSphere("Green Light",{0,0.2f,-4},{0,1,0},{0,1,0},2);
-    makeSphere("Blue Light",{5,0.2f,0},{0,0.3f,1},{0,0.3f,1},2);
+    makeSphere("Red Light",{-5.0f, 0.2, 0.0f},{1.0f, 0.0f, 0.0f},{1.0f, 0.0f, 0.0f},2);
+    makeSphere("Green Light",{0.0f, 0.2, -4.0f},{0.0f, 1.0f, 0.0f},{0.0f, 1.0f, 0.0f},2);
+    makeSphere("Blue Light",{5.0f, 0.2, 0.0f},{0.0f, 0.3, 1.0f},{0.0f, 0.3, 1.0f},2);
 
     auto makeLight=[&](const char* name, glm::vec3 pos, glm::vec3 dir, glm::vec3 color, float intensity, kizuri::LightType type, float range, bool shadow){
         Entity e = m_ActiveScene->CreateEntity(name);
@@ -908,17 +906,17 @@ void EditorLayer::CreateDemoLuzes() {
         e.GetComponent<kizuri::TransformComponent>().Translation = pos;
         e.GetComponent<kizuri::TransformComponent>().Rotation = dir;
     };
-    makeLight("Spot Left",{-4,6,-2},{glm::radians(60f),0,0},{1,1,0.8f},4,kizuri::LightType::Spot,15,true);
-    makeLight("Point Fill",{3,4,-6},{0,0,0},{0.2f,0.3f,0.8f},1.5f,kizuri::LightType::Point,10,false);
-    makeLight("Spot Right",{4,6,-2},{glm::radians(60f),glm::radians(180f),0},{1,0.9f,0.6f},3,kizuri::LightType::Spot,12,false);
+    makeLight("Spot Left",{-4.0f, 6.0f, -2.0f},{glm::radians(60.0f),0,0},{1.0f, 1.0f, 0.8},4,kizuri::LightType::Spot,15,true);
+    makeLight("Point Fill",{3.0f, 4.0f, -6.0f},{0.0f, 0.0f, 0.0f},{0.2, 0.3, 0.8},1.5f,kizuri::LightType::Point,10,false);
+    makeLight("Spot Right",{4.0f, 6.0f, -2.0f},{glm::radians(60.0f),glm::radians(180.0f),0},{1.0f, 0.9, 0.6},3,kizuri::LightType::Spot,12,false);
 
     for (int i = 0; i < 3; ++i) {
         Entity e = m_ActiveScene->CreateEntity("Column " + std::to_string(i));
         auto& m = e.AddComponent<kizuri::MeshRendererComponent>();
         m.MeshSource="builtin:cylinder"; m.MeshAsset=kizuri::Mesh::FromSource(m.MeshSource);
-        m.MeshMaterial.Albedo={0.15f,0.15f,0.18f}; m.MeshMaterial.Roughness=0.6f;
+        m.MeshMaterial.Albedo={0.15, 0.15, 0.18}; m.MeshMaterial.Roughness=0.6f;
         e.GetComponent<kizuri::TransformComponent>().Translation={(float)(i-1)*4.0f,0.75f,-2.0f};
-        e.GetComponent<kizuri::TransformComponent>().Scale={0.4f,1.5f,0.4f};
+        e.GetComponent<kizuri::TransformComponent>().Scale={0.4, 1.5, 0.4};
     }
 }
 
@@ -931,19 +929,19 @@ void EditorLayer::CreateDemoParticulas() {
     Entity cam = m_ActiveScene->CreateEntity("Camera");
     auto& cc = cam.AddComponent<kizuri::CameraComponent>();
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
-    cam.GetComponent<kizuri::TransformComponent>().Translation = {0,3,8};
+    cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 3.0f, 8.0f};
     cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-10),0,0};
 
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
     sun.GetComponent<kizuri::LightComponent>().Intensity = 1.2f;
-    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50f),glm::radians(30f),0};
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50f), glm::radians(30.0f), 0.0f};
 
     Entity floor = m_ActiveScene->CreateEntity("Floor");
     auto& fm = floor.AddComponent<kizuri::MeshRendererComponent>();
     fm.MeshSource="builtin:plane"; fm.MeshAsset=kizuri::Mesh::FromSource(fm.MeshSource);
-    fm.MeshMaterial.Albedo={0.15f,0.15f,0.18f};
-    floor.GetComponent<kizuri::TransformComponent>().Scale={20,1,20};
+    fm.MeshMaterial.Albedo={0.15, 0.15, 0.18};
+    floor.GetComponent<kizuri::TransformComponent>().Scale={20.0f, 1.0f, 20.0f};
 
     auto makeEmitter=[&](const char* name, glm::vec3 pos, glm::vec3 velMin, glm::vec3 velMax,
                           glm::vec3 grav, glm::vec4 sc, glm::vec4 ec, float rate, float ltMin, float ltMax,
@@ -963,12 +961,12 @@ void EditorLayer::CreateDemoParticulas() {
         e.GetComponent<kizuri::TransformComponent>().Translation=pos;
     };
 
-    makeEmitter("Fire",{-4,1.5f,0},{-0.1f,2.0f,-0.1f},{0.1f,4.0f,0.1f},{0,1.5f,0},
-        {1,0.7f,0.1f,1},{1,0.1f,0.0f,0.0f},40,0.5f,1.2f,0.08f,0.25f,true,{1,0.8f,0.3f});
-    makeEmitter("Smoke",{0,1.5f,0},{-0.2f,0.8f,-0.2f},{0.2f,2.0f,0.2f},{0,0.3f,0},
-        {0.6f,0.6f,0.6f,0.6f},{0.4f,0.4f,0.4f,0.0f},20,1.0f,2.0f,0.3f,0.8f,false,{0.5f,0.5f,0.5f});
-    makeEmitter("Sparks",{4,0.5f,0},{-1.0f,5.0f,-1.0f},{1.0f,8.0f,1.0f},{0,-9.8f,0},
-        {1,1,0.3f,1},{1,0.6f,0.1f,0.0f},60,0.3f,0.8f,0.04f,0.1f,true,{1,0.9f,0.5f});
+    makeEmitter("Fire",{-4.0f, 1.5, 0.0f},{-0.1, 2.0, -0.1},{0.1, 4.0, 0.1},{0.0f, 1.5, 0.0f},
+        {1,0.7f,0.1f,1},{1,0.1f,0.0f,0.0f},40,0.5f,1.2f,0.08f,0.25f,true,{1.0f, 0.8, 0.3});
+    makeEmitter("Smoke",{0.0f, 1.5, 0.0f},{-0.2, 0.8, -0.2},{0.2, 2.0, 0.2},{0.0f, 0.3, 0.0f},
+        {0.6f,0.6f,0.6f,0.6f},{0.4f,0.4f,0.4f,0.0f},20,1.0f,2.0f,0.3f,0.8f,false,{0.5, 0.5, 0.5});
+    makeEmitter("Sparks",{4.0f, 0.5, 0.0f},{-1.0, 5.0, -1.0},{1.0, 8.0, 1.0},{0.0f, -9.8, 0.0f},
+        {1,1,0.3f,1},{1,0.6f,0.1f,0.0f},60,0.3f,0.8f,0.04f,0.1f,true,{1.0f, 0.9, 0.5});
 }
 
 // ===== DemoTerreno (3D) =====
@@ -981,29 +979,29 @@ void EditorLayer::CreateDemoTerreno() {
     Entity cam = m_ActiveScene->CreateEntity("Camera");
     auto& cc = cam.AddComponent<kizuri::CameraComponent>();
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
-    cam.GetComponent<kizuri::TransformComponent>().Translation = {0,12,18};
+    cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 12.0f, 18.0f};
     cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-30),0,0};
 
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
     sun.GetComponent<kizuri::LightComponent>().Intensity = 2.0f;
-    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50f),glm::radians(30f),0};
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50f), glm::radians(30.0f), 0.0f};
 
     Entity terrain = m_ActiveScene->CreateEntity("Terrain");
     auto& tc = terrain.AddComponent<kizuri::TerrainComponent>();
     tc.Segments = 64; tc.Size = 80.0f; tc.HeightScale = 8.0f; tc.Seed = 42;
     tc.Regenerate();
     terrain.AddComponent<kizuri::MeshRendererComponent>().MeshSource = "builtin:plane";
-    terrain.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial.Albedo = {0.28f,0.45f,0.22f};
+    terrain.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial.Albedo = {0.28, 0.45, 0.22};
     terrain.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial.Roughness = 0.95f;
     terrain.GetComponent<kizuri::MeshRendererComponent>().MeshAsset = terrain.GetComponent<kizuri::TerrainComponent>().GeneratedMesh;
 
     Entity water = m_ActiveScene->CreateEntity("Water");
     auto& wm = water.AddComponent<kizuri::MeshRendererComponent>();
     wm.MeshSource="builtin:plane"; wm.MeshAsset=kizuri::Mesh::FromSource(wm.MeshSource);
-    wm.MeshMaterial.Albedo={0.05f,0.15f,0.35f}; wm.MeshMaterial.Metallic=0.9f; wm.MeshMaterial.Roughness=0.05f;
-    water.GetComponent<kizuri::TransformComponent>().Translation = {0,1.2f,0};
-    water.GetComponent<kizuri::TransformComponent>().Scale = {50,1,50};
+    wm.MeshMaterial.Albedo={0.05, 0.15, 0.35}; wm.MeshMaterial.Metallic=0.9f; wm.MeshMaterial.Roughness=0.05f;
+    water.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 1.2, 0.0f};
+    water.GetComponent<kizuri::TransformComponent>().Scale = {50.0f, 1.0f, 50.0f};
 }
 
 // ===== DemoTimeline (3D) =====
@@ -1016,7 +1014,7 @@ void EditorLayer::CreateDemoTimeline() {
     Entity cam = m_ActiveScene->CreateEntity("Camera");
     auto& cc = cam.AddComponent<kizuri::CameraComponent>();
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
-    cam.GetComponent<kizuri::TransformComponent>().Translation = {0,5,12};
+    cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 5.0f, 12.0f};
     cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-20),0,0};
 
     Entity sun = m_ActiveScene->CreateEntity("Sun");
@@ -1027,30 +1025,30 @@ void EditorLayer::CreateDemoTimeline() {
     Entity floor = m_ActiveScene->CreateEntity("Floor");
     auto& fm = floor.AddComponent<kizuri::MeshRendererComponent>();
     fm.MeshSource="builtin:plane"; fm.MeshAsset=kizuri::Mesh::FromSource(fm.MeshSource);
-    fm.MeshMaterial.Albedo={0.2f,0.2f,0.22f};
-    floor.GetComponent<kizuri::TransformComponent>().Scale={30,1,30};
+    fm.MeshMaterial.Albedo={0.2, 0.2, 0.22};
+    floor.GetComponent<kizuri::TransformComponent>().Scale={30.0f, 1.0f, 30.0f};
 
     Entity platform = m_ActiveScene->CreateEntity("Plataforma");
     auto& pm = platform.AddComponent<kizuri::MeshRendererComponent>();
     pm.MeshSource="builtin:cube"; pm.MeshAsset=kizuri::Mesh::FromSource(pm.MeshSource);
-    pm.MeshMaterial.Albedo={0.3f,0.6f,0.9f};
-    platform.GetComponent<kizuri::TransformComponent>().Translation = {-5,2,0};
-    platform.GetComponent<kizuri::TransformComponent>().Scale = {3,0.4f,3};
+    pm.MeshMaterial.Albedo={0.3, 0.6, 0.9};
+    platform.GetComponent<kizuri::TransformComponent>().Translation = {-5.0f, 2.0f, 0.0f};
+    platform.GetComponent<kizuri::TransformComponent>().Scale = {3.0f, 0.4, 3.0f};
     auto& tpl = platform.AddComponent<kizuri::TimelineComponent>();
     tpl.Keyframes = {
-        {-5.0f, {0,0,0}, {0,0,0}, {1,1,1}}, {5.0f, {0,0,0}, {0,0,0}, {1,1,1}},
-        {5.0f, {0,0,0}, {0,0,90}, {1,1,1}}, {-5.0f, {0,0,0}, {0,0,360}, {1,1,1}},
+        {-5.0f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}}, {5.0f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}},
+        {5.0f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 90.0f}, {1.0f, 1.0f, 1.0f}}, {-5.0f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 360.0f}, {1.0f, 1.0f, 1.0f}},
     };
     tpl.Loop = true; tpl.Speed = 0.5f;
 
     Entity torus = m_ActiveScene->CreateEntity("Torus");
     auto& ttm = torus.AddComponent<kizuri::MeshRendererComponent>();
     ttm.MeshSource="builtin:torus"; ttm.MeshAsset=kizuri::Mesh::FromSource(ttm.MeshSource);
-    ttm.MeshMaterial.Albedo={0.9f,0.3f,0.3f}; ttm.MeshMaterial.Roughness=0.3f;
-    torus.GetComponent<kizuri::TransformComponent>().Translation = {0,3,0};
+    ttm.MeshMaterial.Albedo={0.9, 0.3, 0.3}; ttm.MeshMaterial.Roughness=0.3f;
+    torus.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 3.0f, 0.0f};
     auto& ttl = torus.AddComponent<kizuri::TimelineComponent>();
     ttl.Keyframes = {
-        {0.0f, {0,3,0}, {0,0,0}, {1,1,1}}, {0.0f, {0,3,0}, {0,360,0}, {1,1,1}},
+        {0.0f, {0.0f, 3.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}}, {0.0f, {0.0f, 3.0f, 0.0f}, {0.0f, 360.0f, 0.0f}, {1.0f, 1.0f, 1.0f}},
     };
     ttl.Loop = true; ttl.Speed = 1.0f;
 }
@@ -1065,13 +1063,13 @@ void EditorLayer::CreateDemoLOD() {
     Entity cam = m_ActiveScene->CreateEntity("Camera");
     auto& cc = cam.AddComponent<kizuri::CameraComponent>();
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
-    cam.GetComponent<kizuri::TransformComponent>().Translation = {0,2,3};
+    cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 2.0f, 3.0f};
     cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-10),0,0};
 
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
     sun.GetComponent<kizuri::LightComponent>().Intensity = 1.5f;
-    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(45f),glm::radians(30f),0};
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(45.0f), glm::radians(30.0f), 0.0f};
 
     for (int i = 0; i < 5; ++i) {
         Entity e = m_ActiveScene->CreateEntity("Sphere LOD " + std::to_string(i));
@@ -1092,7 +1090,7 @@ void EditorLayer::CreateDemoLOD() {
     Entity label = m_ActiveScene->CreateEntity("Label");
     auto& tc = label.AddComponent<kizuri::TextComponent>();
     tc.Text = "LOD: afaste para ver menos triangulos"; tc.FontSize = 26; tc.SortingLayer = 10;
-    label.GetComponent<kizuri::TransformComponent>().Translation = {-8,6,0};
+    label.GetComponent<kizuri::TransformComponent>().Translation = {-8.0f, 6.0f, 0.0f};
 }
 
 // ===== DemoEfeitos (3D) =====
@@ -1105,7 +1103,7 @@ void EditorLayer::CreateDemoEfeitos() {
     Entity cam = m_ActiveScene->CreateEntity("Camera");
     auto& cc = cam.AddComponent<kizuri::CameraComponent>();
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
-    cam.GetComponent<kizuri::TransformComponent>().Translation = {0,4,10};
+    cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 4.0f, 10.0f};
     cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-15),0,0};
 
     Entity sun = m_ActiveScene->CreateEntity("Sun");
@@ -1116,32 +1114,32 @@ void EditorLayer::CreateDemoEfeitos() {
     Entity wall = m_ActiveScene->CreateEntity("Parede");
     auto& wm = wall.AddComponent<kizuri::MeshRendererComponent>();
     wm.MeshSource="builtin:cube"; wm.MeshAsset=kizuri::Mesh::FromSource(wm.MeshSource);
-    wm.MeshMaterial.Albedo={0.4f,0.35f,0.3f};
-    wall.GetComponent<kizuri::TransformComponent>().Translation = {0,1.5f,-2};
-    wall.GetComponent<kizuri::TransformComponent>().Scale = {12,3,0.3f};
+    wm.MeshMaterial.Albedo={0.4, 0.35, 0.3};
+    wall.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 1.5, -2.0f};
+    wall.GetComponent<kizuri::TransformComponent>().Scale = {12.0f, 3.0f, 0.3};
 
     Entity floor = m_ActiveScene->CreateEntity("Floor");
     auto& ff = floor.AddComponent<kizuri::MeshRendererComponent>();
     ff.MeshSource="builtin:plane"; ff.MeshAsset=kizuri::Mesh::FromSource(ff.MeshSource);
-    ff.MeshMaterial.Albedo={0.3f,0.3f,0.32f};
-    floor.GetComponent<kizuri::TransformComponent>().Scale = {20,1,20};
+    ff.MeshMaterial.Albedo={0.3, 0.3, 0.32};
+    floor.GetComponent<kizuri::TransformComponent>().Scale = {20.0f, 1.0f, 20.0f};
 
     Entity decal = m_ActiveScene->CreateEntity("Decal");
     decal.AddComponent<kizuri::DecalComponent>().Color = {1,0,0,0.7f};
-    decal.GetComponent<kizuri::TransformComponent>().Translation = {0,1.55f,-1.7f};
-    decal.GetComponent<kizuri::TransformComponent>().Scale = {2,2,0.1f};
+    decal.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 1.55, -1.7};
+    decal.GetComponent<kizuri::TransformComponent>().Scale = {2.0f, 2.0f, 0.1};
 
     Entity foliage = m_ActiveScene->CreateEntity("Foliage");
     auto& fc = foliage.AddComponent<kizuri::FoliageComponent>();
     fc.MeshSource="builtin:cone"; fc.AreaSize={10,10}; fc.Count=60;
     fc.ScaleMin=0.5f; fc.ScaleMax=1.5f; fc.HeightScale=3.0f;
     fc.Color={0.15f,0.5f,0.2f,1.0f}; fc.Seed=7;
-    foliage.GetComponent<kizuri::TransformComponent>().Translation = {0,0,-5};
+    foliage.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 0.0f, -5.0f};
 
     Entity label = m_ActiveScene->CreateEntity("Label");
     auto& tc = label.AddComponent<kizuri::TextComponent>();
     tc.Text = "Decal vermelho + foliage instanciada (60 arvores)"; tc.FontSize = 24; tc.SortingLayer = 10;
-    label.GetComponent<kizuri::TransformComponent>().Translation = {-8,5,0};
+    label.GetComponent<kizuri::TransformComponent>().Translation = {-8.0f, 5.0f, 0.0f};
 }
 
 // ===== Demo2_5D (hybrid 3D + 2D + HUD) =====
@@ -1154,7 +1152,7 @@ void EditorLayer::CreateDemo25D() {
     Entity cam = m_ActiveScene->CreateEntity("Camera 3D");
     auto& cc = cam.AddComponent<kizuri::CameraComponent>();
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
-    cam.GetComponent<kizuri::TransformComponent>().Translation = {0,4,10};
+    cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 4.0f, 10.0f};
     cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-15),0,0};
 
     Entity ortho = m_ActiveScene->CreateEntity("Camera 2D (HUD)");
@@ -1170,44 +1168,44 @@ void EditorLayer::CreateDemo25D() {
     Entity floor = m_ActiveScene->CreateEntity("Floor");
     auto& fm = floor.AddComponent<kizuri::MeshRendererComponent>();
     fm.MeshSource="builtin:plane"; fm.MeshAsset=kizuri::Mesh::FromSource(fm.MeshSource);
-    fm.MeshMaterial.Albedo={0.18f,0.18f,0.2f};
-    floor.GetComponent<kizuri::TransformComponent>().Scale = {20,1,20};
+    fm.MeshMaterial.Albedo={0.18, 0.18, 0.2};
+    floor.GetComponent<kizuri::TransformComponent>().Scale = {20.0f, 1.0f, 20.0f};
 
     Entity pillar1 = m_ActiveScene->CreateEntity("Pillar L");
     auto& p1 = pillar1.AddComponent<kizuri::MeshRendererComponent>();
     p1.MeshSource="builtin:cylinder"; p1.MeshAsset=kizuri::Mesh::FromSource(p1.MeshSource);
-    p1.MeshMaterial.Albedo={0.5f,0.4f,0.3f};
-    pillar1.GetComponent<kizuri::TransformComponent>().Translation = {-4,1.5f,0};
-    pillar1.GetComponent<kizuri::TransformComponent>().Scale = {0.5f,3,0.5f};
+    p1.MeshMaterial.Albedo={0.5, 0.4, 0.3};
+    pillar1.GetComponent<kizuri::TransformComponent>().Translation = {-4.0f, 1.5, 0.0f};
+    pillar1.GetComponent<kizuri::TransformComponent>().Scale = {0.5, 3.0f, 0.5};
 
     Entity pillar2 = m_ActiveScene->CreateEntity("Pillar R");
     auto& p2 = pillar2.AddComponent<kizuri::MeshRendererComponent>();
     p2.MeshSource="builtin:cylinder"; p2.MeshAsset=kizuri::Mesh::FromSource(p2.MeshSource);
-    p2.MeshMaterial.Albedo={0.5f,0.4f,0.3f};
-    pillar2.GetComponent<kizuri::TransformComponent>().Translation = {4,1.5f,0};
-    pillar2.GetComponent<kizuri::TransformComponent>().Scale = {0.5f,3,0.5f};
+    p2.MeshMaterial.Albedo={0.5, 0.4, 0.3};
+    pillar2.GetComponent<kizuri::TransformComponent>().Translation = {4.0f, 1.5, 0.0f};
+    pillar2.GetComponent<kizuri::TransformComponent>().Scale = {0.5, 3.0f, 0.5};
 
     Entity wall = m_ActiveScene->CreateEntity("Back Wall");
     auto& bw = wall.AddComponent<kizuri::MeshRendererComponent>();
     bw.MeshSource="builtin:cube"; bw.MeshAsset=kizuri::Mesh::FromSource(bw.MeshSource);
-    bw.MeshMaterial.Albedo={0.2f,0.18f,0.22f};
-    wall.GetComponent<kizuri::TransformComponent>().Translation = {0,1.5f,-3};
-    wall.GetComponent<kizuri::TransformComponent>().Scale = {14,3,0.2f};
+    bw.MeshMaterial.Albedo={0.2, 0.18, 0.22};
+    wall.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 1.5, -3.0f};
+    wall.GetComponent<kizuri::TransformComponent>().Scale = {14.0f, 3.0f, 0.2};
 
     Entity sprite = m_ActiveScene->CreateEntity("2D Player");
     auto& sr = sprite.AddComponent<kizuri::SpriteRendererComponent>();
     sr.Color = {0.2f,0.7f,1.0f,1.0f}; sr.SortingLayer = 1;
-    sprite.GetComponent<kizuri::TransformComponent>().Translation = {0,0,0};
+    sprite.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 0.0f, 0.0f};
 
     Entity coin = m_ActiveScene->CreateEntity("2D Coin");
     auto& cr = coin.AddComponent<kizuri::CircleRendererComponent>();
     cr.Color = {1,0.85f,0.2f,1}; cr.Thickness = 1.0f; cr.SortingLayer = 2;
-    coin.GetComponent<kizuri::TransformComponent>().Translation = {2,0.8f,0};
+    coin.GetComponent<kizuri::TransformComponent>().Translation = {2.0f, 0.8, 0.0f};
 
     Entity hud = m_ActiveScene->CreateEntity("HUD");
     auto& tc = hud.AddComponent<kizuri::TextComponent>();
     tc.Text = "2.5D Demo — 3D world + 2D sprites + HUD"; tc.FontSize = 28; tc.SortingLayer = 100;
-    hud.GetComponent<kizuri::TransformComponent>().Translation = {-4,3,0};
+    hud.GetComponent<kizuri::TransformComponent>().Translation = {-4.0f, 3.0f, 0.0f};
 
     Entity uicanvas = m_ActiveScene->CreateEntity("HUD Canvas");
     uicanvas.AddComponent<kizuri::UICanvasComponent>().OrthoSize = 5.0f;
@@ -1231,23 +1229,23 @@ void EditorLayer::CreateDemoCameraFollow2D() {
     cc.Type = kizuri::CameraComponent::ProjectionType::Orthographic2D;
     cc.Primary = true; cc.OrthoSize = 8.0f;
     cam.AddComponent<kizuri::CameraFollowComponent>().TargetName = "Alvo";
-    cam.GetComponent<kizuri::CameraFollowComponent>().Offset = {0,2,-1};
+    cam.GetComponent<kizuri::CameraFollowComponent>().Offset = {0.0f, 2.0f, -1.0f};
 
     Entity ground = m_ActiveScene->CreateEntity("Chao");
     auto& gr = ground.AddComponent<kizuri::SpriteRendererComponent>();
     gr.Color = {0.28f,0.32f,0.38f,1.0f};
-    ground.GetComponent<kizuri::TransformComponent>().Translation = {0,-3.5f,0};
-    ground.GetComponent<kizuri::TransformComponent>().Scale = {30,0.5f,1};
+    ground.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, -3.5, 0.0f};
+    ground.GetComponent<kizuri::TransformComponent>().Scale = {30.0f, 0.5, 1.0f};
 
     Entity alvo = m_ActiveScene->CreateEntity("Alvo");
     auto& ar = alvo.AddComponent<kizuri::SpriteRendererComponent>();
     ar.Color = {0.25f,0.6f,0.9f,1.0f}; ar.SortingLayer = 5;
-    alvo.GetComponent<kizuri::TransformComponent>().Translation = {-8,0,0};
+    alvo.GetComponent<kizuri::TransformComponent>().Translation = {-8.0f, 0.0f, 0.0f};
 
     auto& tl = alvo.AddComponent<kizuri::TimelineComponent>();
     tl.Keyframes = {
-        {-8.0f, {0,0,0}, {0,0,0}, {1,1,1}}, {8.0f, {0,0,0}, {0,0,0}, {1,1,1}},
-        {8.0f, {0,0,0}, {0,0,0}, {1,1,1}}, {-8.0f, {0,0,0}, {0,0,0}, {1,1,1}},
+        {-8.0f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}}, {8.0f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}},
+        {8.0f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}}, {-8.0f, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}},
     };
     tl.Loop = true; tl.Speed = 2.0f;
 
@@ -1275,7 +1273,7 @@ void EditorLayer::CreateDemoChunk() {
     Entity player = m_ActiveScene->CreateEntity("Jogador");
     auto& sr = player.AddComponent<kizuri::SpriteRendererComponent>();
     sr.Color = {0.25f,0.6f,0.9f,1.0f}; sr.SortingLayer = 5;
-    player.GetComponent<kizuri::TransformComponent>().Translation = {0,0,0};
+    player.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 0.0f, 0.0f};
 
     Entity world = m_ActiveScene->CreateEntity("Mundo Chunked");
     world.AddComponent<kizuri::ChunkWorldComponent>();
@@ -1291,7 +1289,7 @@ void EditorLayer::CreateDemoChunk() {
         csr.Color = {((colors[ci%5])>>16)/255.0f, ((colors[ci%5]>>8)&0xff)/255.0f, ((colors[ci%5])&0xff)/255.0f, 1.0f};
         csr.SortingLayer = 0;
         chunk.GetComponent<kizuri::TransformComponent>().Translation = {(float)cx*32, (float)cz*32, 0};
-        chunk.GetComponent<kizuri::TransformComponent>().Scale = {32,32,1};
+        chunk.GetComponent<kizuri::TransformComponent>().Scale = {32.0f, 32.0f, 1.0f};
         chunk.AddComponent<kizuri::ChunkEntityComponent>().ChunkX = cx;
         chunk.GetComponent<kizuri::ChunkEntityComponent>().ChunkZ = cz;
     }
@@ -1299,6 +1297,6 @@ void EditorLayer::CreateDemoChunk() {
     Entity label = m_ActiveScene->CreateEntity("Label");
     auto& tc = label.AddComponent<kizuri::TextComponent>();
     tc.Text = "Chunked World: mova o jogador para ver chunks carregar/descarregar"; tc.FontSize = 24; tc.SortingLayer = 10;
-    label.GetComponent<kizuri::TransformComponent>().Translation = {-15,16,0};
+    label.GetComponent<kizuri::TransformComponent>().Translation = {-15.0f, 16.0f, 0.0f};
 }
 

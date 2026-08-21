@@ -59,7 +59,7 @@ void EditorLayer::CreateDemoScene3D() {
     Entity light2 = m_ActiveScene->CreateEntity("Luz de Preenchimento");
     auto& lc2 = light2.AddComponent<LightComponent>();
     lc2.Type = LightType::Directional;
-    lc2.Color = { 0.35f, 0.45.0f, 0.8f };
+    lc2.Color = { 0.35f, 0.45f, 0.8f };
     lc2.Intensity = 0.35f;
     light2.GetComponent<TransformComponent>().Rotation = { glm::radians(30.0f), glm::radians(-140.0f), 0.0f };
 
@@ -780,8 +780,8 @@ void EditorLayer::CreateDemoTilemap() {
     sr.Color = {0.25f,0.6f,0.9f,1.0f}; sr.SortingLayer = 5;
     player.AddComponent<kizuri::Rigidbody2DComponent>();
     player.GetComponent<kizuri::Rigidbody2DComponent>().Type = kizuri::Rigidbody2DComponent::BodyType::Dynamic;
-    player.AddComponent<kizuri::BoxCollider2DComponent>().Size = {0.45.0f,0.9f};
-    player.GetComponent<kizuri::TransformComponent>().Translation = {0.0, 10.0, 0.0};
+    player.AddComponent<kizuri::BoxCollider2DComponent>().Size = {0.45f,0.9f};
+    player.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 10.0f, 0.0f};
 
     Entity text = m_ActiveScene->CreateEntity("Hint");
     auto& tc = text.AddComponent<kizuri::TextComponent>();
@@ -847,7 +847,7 @@ void EditorLayer::CreateDemoFisica3D() {
     fm.MeshMaterial.Albedo={0.3, 0.3, 0.3}; fm.MeshMaterial.Roughness=0.9f;
     floor.GetComponent<kizuri::TransformComponent>().Scale={20.0f, 1.0f, 20.0f};
     floor.AddComponent<kizuri::Rigidbody3DComponent>().Type=kizuri::Rigidbody3DComponent::BodyType::Static;
-    floor.AddComponent<kizuri::BoxCollider3DComponent>().HalfExtents={10.0f, 0.1, 10.0f};
+    floor.AddComponent<kizuri::BoxCollider3DComponent>().HalfExtents={10.0f, 0.1f, 10.0f};
 
     const char* shapes[] = {"builtin:cube","builtin:cube","builtin:cube","builtin:sphere","builtin:cube"};
     for (int i = 0; i < 5; ++i) {
@@ -935,7 +935,7 @@ void EditorLayer::CreateDemoParticulas() {
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
     sun.GetComponent<kizuri::LightComponent>().Intensity = 1.2f;
-    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50f), glm::radians(30.0f), 0.0f};
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50.0f), glm::radians(30.0f), 0.0f};
 
     Entity floor = m_ActiveScene->CreateEntity("Floor");
     auto& fm = floor.AddComponent<kizuri::MeshRendererComponent>();
@@ -985,7 +985,7 @@ void EditorLayer::CreateDemoTerreno() {
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
     sun.GetComponent<kizuri::LightComponent>().Intensity = 2.0f;
-    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50f), glm::radians(30.0f), 0.0f};
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50.0f), glm::radians(30.0f), 0.0f};
 
     Entity terrain = m_ActiveScene->CreateEntity("Terrain");
     auto& tc = terrain.AddComponent<kizuri::TerrainComponent>();
@@ -1020,7 +1020,7 @@ void EditorLayer::CreateDemoTimeline() {
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
     sun.GetComponent<kizuri::LightComponent>().Intensity = 1.8f;
-    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50f),0,0};
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50.0f),0,0};
 
     Entity floor = m_ActiveScene->CreateEntity("Floor");
     auto& fm = floor.AddComponent<kizuri::MeshRendererComponent>();
@@ -1109,7 +1109,7 @@ void EditorLayer::CreateDemoEfeitos() {
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
     sun.GetComponent<kizuri::LightComponent>().Intensity = 1.8f;
-    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50f),0,0};
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50.0f),0,0};
 
     Entity wall = m_ActiveScene->CreateEntity("Parede");
     auto& wm = wall.AddComponent<kizuri::MeshRendererComponent>();
@@ -1163,7 +1163,7 @@ void EditorLayer::CreateDemo25D() {
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
     sun.GetComponent<kizuri::LightComponent>().Intensity = 1.5f;
-    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50f),0,0};
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50.0f),0,0};
 
     Entity floor = m_ActiveScene->CreateEntity("Floor");
     auto& fm = floor.AddComponent<kizuri::MeshRendererComponent>();

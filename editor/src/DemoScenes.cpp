@@ -723,6 +723,22 @@ static Ref<kizuri::Texture2D> MakeTileAtlas4x4() {
     tex->SetData(px.data(),(uint32_t)px.size());
     return tex;
 }
+static Ref<kizuri::Texture2D> MakeDecalTexture() {
+    constexpr int S = 64;
+    std::vector<uint8_t> px(S*S*4);
+    float cx = (float)S * 0.5f, cy = (float)S * 0.5f, r = (float)(S/2 - 2);
+    for (int y = 0; y < S; ++y) for (int x = 0; x < S; ++x) {
+        float dx = (float)x - cx, dy = (float)y - cy;
+        int i = (y*S + x) * 4;
+        float d = sqrtf(dx*dx + dy*dy);
+        float a = (d < r) ? 1.0f - 0.3f * (d / r) : 0.0f;
+        px[i] = 255; px[i+1] = 50; px[i+2] = 50; px[i+3] = (uint8_t)(a * 255);
+    }
+    auto tex = kizuri::Texture2D::Create(S, S);
+    tex->SetData(px.data(), (uint32_t)px.size());
+    return tex;
+}
+
 
 // ===== DemoTilemap (2D) =====
 void EditorLayer::CreateDemoTilemap() {
@@ -783,8 +799,7 @@ void EditorLayer::CreateDemoSpriteAnim() {
     bool loops[] = {true,true,false};
     for (int i = 0; i < 3; ++i) {
         Entity e = m_ActiveScene->CreateEntity(labels[i]);
-        auto& sr = e.AddComponent<kizuri::SpriteRendererComponent>();
-        sr.Color = {1,1,1,1};
+        e.AddComponent<kizuri::TransformComponent>(); // ensure transform exists
         auto& an = e.AddComponent<kizuri::SpriteAnimationComponent>();
         an.SheetTexture = sheet; an.FramesPerRow = 8; an.TotalFrames = 8;
         an.FPS = fps[i]; an.Loop = loops[i]; an.SortingLayer = 5;
@@ -1039,7 +1054,15 @@ void EditorLayer::CreateDemoLOD() {
     auto& cc = cam.AddComponent<kizuri::CameraComponent>();
     cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
     cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 2.0f, 3.0f};
-    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-10.0f),0,0};
+    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-10.0f),0.0f,0.0f};
+    auto& camTL = cam.AddComponent<kizuri::TimelineComponent>();
+    camTL.Keyframes = {
+        {0.0f, {0.0f,2.0f,3.0f}, {glm::radians(10.0f),0.0f,0.0f}, {1.0f,1.0f,1.0f}},
+        {4.0f, {12.0f,2.0f,8.0f}, {glm::radians(5.0f),glm::radians(-30.0f),0.0f}, {1.0f,1.0f,1.0f}},
+        {8.0f, {0.0f,2.0f,18.0f}, {glm::radians(15.0f),glm::radians(-60.0f),0.0f}, {1.0f,1.0f,1.0f}},
+        {12.0f, {0.0f,2.0f,3.0f}, {glm::radians(10.0f),0.0f,0.0f}, {1.0f,1.0f,1.0f}},
+    };
+    camTL.Loop = true; camTL.Speed = 0.5f;
 
     Entity sun = m_ActiveScene->CreateEntity("Sun");
     sun.AddComponent<kizuri::LightComponent>().Type = kizuri::LightType::Directional;
@@ -1099,8 +1122,12 @@ void EditorLayer::CreateDemoEfeitos() {
     ff.MeshMaterial.Albedo={0.3, 0.3, 0.32};
     floor.GetComponent<kizuri::TransformComponent>().Scale = {20.0f, 1.0f, 20.0f};
 
+    auto decalTex = MakeDecalTexture();
     Entity decal = m_ActiveScene->CreateEntity("Decal");
-    decal.AddComponent<kizuri::DecalComponent>().Color = {1,0,0,0.7f};
+    decal.AddComponent<kizuri::DecalComponent>();
+    decal.GetComponent<kizuri::DecalComponent>().Texture = decalTex;
+    decal.GetComponent<kizuri::DecalComponent>().Color = {1,0,0,0.7f};
+    decal.GetComponent<kizuri::DecalComponent>().SortingLayer = -1;
     decal.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 1.55, -1.7};
     decal.GetComponent<kizuri::TransformComponent>().Scale = {2.0f, 2.0f, 0.1};
 
@@ -1108,6 +1135,7 @@ void EditorLayer::CreateDemoEfeitos() {
     auto& fc = foliage.AddComponent<kizuri::FoliageComponent>();
     fc.MeshSource="builtin:cone"; fc.AreaSize={10,10}; fc.Count=60;
     fc.ScaleMin=0.5f; fc.ScaleMax=1.5f; fc.HeightScale=3.0f;
+    fc.MeshAsset=kizuri::Mesh::FromSource(fc.MeshSource);
     fc.Color={0.15f,0.5f,0.2f,1.0f}; fc.Seed=7;
     foliage.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 0.0f, -5.0f};
 

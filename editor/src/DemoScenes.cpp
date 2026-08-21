@@ -8,6 +8,7 @@
 #include <glm/gtc/random.hpp>
 #include <cstdio>
 
+using namespace kizuri;
 void EditorLayer::CreateDemoScene3D() {
     if (m_SceneState != SceneState::Edit) return;
 

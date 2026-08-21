@@ -23,7 +23,7 @@ usa renderer, IA e narrativa; um racing usa física de veículos 🌍 sem o
 resto. Nenhuma feature obriga o jogo a ser "GTA".
 
 ## 1. Mundo aberto / streaming
-- [ ] Chunked world: dividir a cena em chunks carregados/descarregados por distância
+- [x] Chunked world: dividir a cena em chunks carregados/descarregados por distância
 - [ ] Terreno de altura (heightmap) com LOD por distancia (não só cubos)
 - [ ] Vegetação/objetos instanciados (GPU instancing já existe p/ partículas — expandir)
 - [ ] Navmesh do mundo inteiro com streaming (hoje o NavGrid é por cena)

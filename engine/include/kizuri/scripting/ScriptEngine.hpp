@@ -9,6 +9,7 @@ public:
 
     static bool LoadModule(const std::string& path);
     static void UnloadModule();
+    static bool ReloadModule();
     static bool IsModuleLoaded();
 
     static const std::string& GetLastError();

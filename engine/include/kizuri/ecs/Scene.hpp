@@ -139,6 +139,7 @@ private:
     void UnloadChunk(int cx, int cz);
     bool LoadChunk(int cx, int cz, ChunkWorldComponent& cw);
     void SaveChunkWorld(const ChunkWorldComponent& cw);
+    void ReloadAllScripts();
     void RenderUI();
     void UpdateUIPointer();
     void CollectUIChildren(entt::entity parent, std::vector<entt::entity>& outStack) const;

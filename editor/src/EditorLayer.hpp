@@ -207,6 +207,21 @@ private:
     int m_ExportHeight = 720;
     bool m_AutoCompileOnPlay = true;
 
+    // Hot reload: recompila automaticamente C# durante o Play
+    bool m_HotReloadEnabled = false;
+    std::atomic<bool> m_HotReloadBuildActive{ false };
+    std::atomic<bool> m_HotReloadBuildDone{ false };
+    std::atomic<bool> m_HotReloadCancelled{ false };
+    std::atomic<bool> m_HotReloadPendingRecompile{ false };
+    std::thread m_HotReloadBuildThread;
+    std::string m_HotReloadDllPath;
+    std::string m_HotReloadError;
+    bool m_HotReloadBuildOk = false;
+    float m_HotReloadWatchTimer = 0.0f;
+    std::map<std::string, std::filesystem::file_time_type> m_HotReloadFileTimes;
+    void CheckHotReload(Timestep ts);
+    void StartHotReloadBuild();
+
     bool m_PlayUsesGameCamera = true;
     bool m_ShowStats = true;
     bool m_ShowTextDiag = false;

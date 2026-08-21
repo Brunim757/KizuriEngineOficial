@@ -67,6 +67,13 @@ void ScriptEngine::UnloadModule() {
     s_LoadedPath.clear();
 }
 
+bool ScriptEngine::ReloadModule() {
+    if (s_LoadedPath.empty()) return false;
+    std::string path = s_LoadedPath;
+    KZ_CORE_INFO("Hot reload: reiniciando runtime C# e recarregando {0}", path);
+    return LoadModule(path);
+}
+
 bool ScriptEngine::IsModuleLoaded() { return scripting::CoreCLRHost::IsInitialized(); }
 
 const std::string& ScriptEngine::GetLastError() { return s_LastError; }

@@ -1457,6 +1457,17 @@ void Scene::SaveChunkWorld(const ChunkWorldComponent& cw) {
     serializer.SaveAll(dir);
 }
 
+void Scene::ReloadAllScripts() {
+    KZ_TRACE_SCOPE("Scene::ReloadAllScripts");
+    m_Registry.view<NativeScriptComponent>().each([&](auto entityHandle, NativeScriptComponent& nsc) {
+        if (nsc.Instance) {
+            if (nsc.DestroyScript) nsc.DestroyScript(&nsc);
+            nsc.Instance = nullptr;
+        }
+        StartScriptIfNeeded(Entity{ entityHandle, this });
+    });
+}
+
 void Scene::UnloadChunk(int cx, int cz) {
     std::vector<entt::entity> doomed;
     m_Registry.view<ChunkEntityComponent>().each([&](entt::entity e, ChunkEntityComponent& ce) {

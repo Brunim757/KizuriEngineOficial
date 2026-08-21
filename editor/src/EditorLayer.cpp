@@ -300,6 +300,7 @@ void EditorLayer::OnUpdate(Timestep ts) {
         }
         m_ActiveScene->SetUIMouseNDC(ndc, Input::IsMouseButtonPressed(Mouse::Left));
 
+        CheckHotReload(ts);
         m_ActiveScene->OnUpdateRuntimeLogic(ts);
         if (m_PlayUsesGameCamera && m_ActiveScene->HasPrimaryCamera()) {
             m_ActiveScene->RenderRuntimeView();
@@ -1554,6 +1555,96 @@ void EditorLayer::OnSceneStop() {
     m_ActiveScene = m_EditorScene;
     m_EditorScene = nullptr;
     m_SceneState = SceneState::Edit;
+
+    // Cancela hot reload build em andamento
+    if (m_HotReloadBuildActive) {
+        m_HotReloadCancelled = true;
+        if (m_HotReloadBuildThread.joinable()) m_HotReloadBuildThread.join();
+    }
+    m_HotReloadEnabled = false;
+    m_HotReloadPendingRecompile = false;
+}
+
+void EditorLayer::CheckHotReload(Timestep ts) {
+    if (!m_HotReloadEnabled || m_SceneState != SceneState::Play) return;
+    if (m_PlayBuildActive) return;
+    if (m_HotReloadBuildActive) {
+        if (m_HotReloadBuildDone) {
+            if (m_HotReloadBuildThread.joinable()) m_HotReloadBuildThread.join();
+            m_HotReloadBuildActive = false;
+            if (m_HotReloadBuildOk && m_ActiveScene) {
+                if (kizuri::ScriptEngine::LoadModule(m_HotReloadDllPath)) {
+                    m_ActiveScene->ReloadAllScripts();
+                    KZ_CORE_INFO("Hot reload: scripts recarregados com sucesso ({0} scripts).",
+                                 kizuri::ScriptEngine::GetRegistry().size());
+                } else {
+                    KZ_CORE_ERROR("Hot reload: falha ao recarregar módulo: {0}",
+                                  kizuri::ScriptEngine::GetLastError());
+                }
+            }
+            m_HotReloadPendingRecompile = false;
+        }
+        return;
+    }
+
+    // Verifica mudanças em Source/*.cs a cada 1s
+    m_HotReloadWatchTimer += ts;
+    if (m_HotReloadWatchTimer < 1.0f) return;
+    m_HotReloadWatchTimer = 0.0f;
+
+    if (m_HotReloadPendingRecompile) return;
+
+    // Escaneia Source/ pra mudanças em .cs
+    if (!kizuri::Project::GetActive()) return;
+    std::string csDir = kizuri::Project::GetActive()->GetProjectDirectory() + "/Source";
+    std::error_code ec;
+    if (!std::filesystem::is_directory(csDir, ec)) return;
+
+    auto now = std::filesystem::file_time_type::clock::now();
+    bool changed = false;
+    for (auto& entry : std::filesystem::directory_iterator(csDir, ec)) {
+        if (entry.path().extension() != ".cs") continue;
+        auto mtime = std::filesystem::last_write_time(entry.path(), ec);
+        if (ec) continue;
+        auto it = m_HotReloadFileTimes.find(entry.path().string());
+        if (it == m_HotReloadFileTimes.end()) {
+            m_HotReloadFileTimes[entry.path().string()] = mtime;
+        } else if (mtime > it->second) {
+            it->second = mtime;
+            changed = true;
+        }
+    }
+    if (changed) {
+        m_HotReloadPendingRecompile = true;
+        KZ_CORE_INFO("Hot reload: alteração detectada em .cs — recompilando...");
+    }
+
+    m_HotReloadPendingRecompile = false;
+    StartHotReloadBuild();
+}
+
+void EditorLayer::StartHotReloadBuild() {
+    std::string csproj, engineRoot;
+    GetGameBuildInfo(csproj, engineRoot);
+    if (csproj.empty()) {
+        KZ_CORE_WARN("Hot reload: projeto não tem csproj configurado.");
+        return;
+    }
+    if (m_HotReloadBuildThread.joinable()) m_HotReloadBuildThread.join();
+    m_HotReloadBuildError.clear();
+    m_HotReloadDllPath.clear();
+    m_HotReloadBuildOk = false;
+    m_HotReloadBuildDone = false;
+    m_HotReloadCancelled = false;
+    m_HotReloadBuildActive = true;
+
+    m_HotReloadBuildThread = std::thread([this, csproj, engineRoot]() {
+        std::string dll, err;
+        m_HotReloadBuildOk = GameExporter::BuildGameModule(csproj, engineRoot, dll, err);
+        m_HotReloadDllPath = dll;
+        m_HotReloadError = err;
+        m_HotReloadBuildDone = true;
+    });
 }
 
 void EditorLayer::NewScene() {
@@ -2568,6 +2659,11 @@ void EditorLayer::DrawGameModuleModal() {
         ImGui::Spacing();
 
         ImGui::Checkbox("Compilar C# automaticamente no Play", &m_AutoCompileOnPlay);
+        ImGui::SameLine();
+        ImGui::Checkbox("Hot reload em runtime", &m_HotReloadEnabled);
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("Detecta mudanças em .cs e recompila automaticamente durante o Play.\n"
+                             "Os scripts são destruídos e recriados com os novos dados.");
         ImGui::Spacing();
 
         const ImVec4 accent(0.82f, 0.24f, 0.27f, 1.0f);

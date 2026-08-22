@@ -1321,3 +1321,53 @@ void EditorLayer::CreateDemoChunk() {
     label.GetComponent<kizuri::TransformComponent>().Translation = {-20.0f, 25.0f, 0.0f};
 }
 
+void EditorLayer::CreateDemoDayNight() {
+    if (m_SceneState != SceneState::Edit) return;
+    m_ActiveScene = CreateRef<kizuri::Scene>("Demo Day/Night Cycle");
+    m_ScenePath.clear(); m_SelectedEntity = {};
+
+    Entity cam = m_ActiveScene->CreateEntity("Camera");
+    auto& cc = cam.AddComponent<kizuri::CameraComponent>();
+    cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
+    cc.PerspectiveFOV = 60.0f;
+    cc.Primary = true;
+    cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 15.0f, 30.0f};
+    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-20.0f), 0.0f, 0.0f};
+
+    Entity sun = m_ActiveScene->CreateEntity("Sol");
+    auto& lc = sun.AddComponent<kizuri::LightComponent>();
+    lc.Type = kizuri::LightType::Directional;
+    lc.Color = {1.0f, 0.98f, 0.92f};
+    lc.Intensity = 2.0f;
+    lc.CastShadow = true;
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50.0f), 0.0f, 0.0f};
+    auto& dn = sun.AddComponent<kizuri::DayNightCycleComponent>();
+    dn.TimeOfDay = 6.0f;
+    dn.DayLength = 60.0f;
+    dn.AutoAdvance = true;
+    dn.SunElevation = 50.0f;
+
+    Entity ground = m_ActiveScene->CreateEntity("Chão");
+    auto& gm = ground.AddComponent<kizuri::MeshRendererComponent>();
+    gm.MeshSource = "builtin:plane";
+    gm.MeshAsset = kizuri::Mesh::FromSource(gm.MeshSource);
+    gm.MeshMaterial.Albedo = {0.3f, 0.55f, 0.2f};
+    gm.MeshMaterial.Roughness = 0.9f;
+    ground.GetComponent<kizuri::TransformComponent>().Scale = {200.0f, 1.0f, 200.0f};
+
+    Entity cube = m_ActiveScene->CreateEntity("Cubo");
+    auto& cm = cube.AddComponent<kizuri::MeshRendererComponent>();
+    cm.MeshSource = "builtin:cube";
+    cm.MeshAsset = kizuri::Mesh::FromSource(cm.MeshSource);
+    cm.MeshMaterial.Albedo = {0.8f, 0.3f, 0.2f};
+    cm.MeshMaterial.Roughness = 0.4f;
+    cube.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 2.0f, 0.0f};
+
+    Entity label = m_ActiveScene->CreateEntity("Label");
+    auto& tc = label.AddComponent<kizuri::TextComponent>();
+    tc.Text = "Day/Night Cycle: 60s por dia completo, sol orbitando automaticamente";
+    tc.FontSize = 24;
+    tc.SortingLayer = 10;
+    label.GetComponent<kizuri::TransformComponent>().Translation = {-30.0f, 20.0f, 0.0f};
+}
+

@@ -547,4 +547,55 @@ struct ChunkEntityComponent {
     uint64_t ChunkSeed = 0;
 };
 
+struct DayNightCycleComponent {
+    float TimeOfDay = 8.0f;
+    float DayLength = 120.0f;
+    bool AutoAdvance = true;
+
+    float SunElevation = 60.0f;
+    float SunAzimuth = 0.0f;
+
+    glm::vec3 DayColor = { 1.0f, 0.98f, 0.92f };
+    float DayIntensity = 2.0f;
+    glm::vec3 SunsetColor = { 1.0f, 0.55f, 0.2f };
+    float SunsetIntensity = 1.2f;
+    glm::vec3 NightColor = { 0.1f, 0.12f, 0.2f };
+    float NightIntensity = 0.15f;
+
+    glm::vec3 GetSunDirection() const {
+        float angle = (TimeOfDay / 24.0f) * 2.0f * 3.14159265f - 3.14159265f * 0.5f;
+        float elev = glm::radians(SunElevation);
+        return glm::normalize(glm::vec3(
+            cos(elev) * cos(glm::radians(SunAzimuth) + angle),
+            sin(elev),
+            cos(elev) * sin(glm::radians(SunAzimuth) + angle)));
+    }
+
+    glm::vec3 GetLightColor() const {
+        float h = TimeOfDay - glm::floor(TimeOfDay / 24.0f) * 24.0f;
+        float sunrise = 6.0f, sunset = 18.0f;
+        if (h >= sunrise && h <= sunrise + 1.5f) {
+            float t = (h - sunrise) / 1.5f;
+            return glm::mix(NightColor, SunsetColor, t) * 0.5f + glm::mix(glm::vec3(0), DayColor, t) * 0.5f;
+        }
+        if (h > sunrise + 1.5f && h < sunset - 1.5f) return DayColor;
+        if (h >= sunset - 1.5f && h <= sunset) {
+            float t = (h - (sunset - 1.5f)) / 1.5f;
+            return glm::mix(DayColor, SunsetColor, t) * 0.5f + glm::mix(glm::vec3(0), NightColor, t) * 0.5f;
+        }
+        return NightColor;
+    }
+
+    float GetLightIntensity() const {
+        float h = TimeOfDay - glm::floor(TimeOfDay / 24.0f) * 24.0f;
+        float sunrise = 6.0f, sunset = 18.0f;
+        if (h >= sunrise && h <= sunrise + 1.5f)
+            return glm::mix(NightIntensity, DayIntensity, (h - sunrise) / 1.5f);
+        if (h > sunrise + 1.5f && h < sunset - 1.5f) return DayIntensity;
+        if (h >= sunset - 1.5f && h <= sunset)
+            return glm::mix(DayIntensity, NightIntensity, (h - (sunset - 1.5f)) / 1.5f);
+        return NightIntensity;
+    }
+};
+
 }

@@ -385,6 +385,18 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
         je["ChunkEntity"] = { { "ChunkX", ce.ChunkX }, { "ChunkZ", ce.ChunkZ }, { "ChunkSeed", ce.ChunkSeed } };
     }
 
+    if (entity.HasComponent<DayNightCycleComponent>()) {
+        auto& dn = entity.GetComponent<DayNightCycleComponent>();
+        je["DayNightCycle"] = {
+            { "TimeOfDay", dn.TimeOfDay }, { "DayLength", dn.DayLength },
+            { "AutoAdvance", dn.AutoAdvance },
+            { "SunElevation", dn.SunElevation }, { "SunAzimuth", dn.SunAzimuth },
+            { "DayColor", Vec3ToJson(dn.DayColor) }, { "DayIntensity", dn.DayIntensity },
+            { "SunsetColor", Vec3ToJson(dn.SunsetColor) }, { "SunsetIntensity", dn.SunsetIntensity },
+            { "NightColor", Vec3ToJson(dn.NightColor) }, { "NightIntensity", dn.NightIntensity }
+        };
+    }
+
     if (entity.HasComponent<ParticleSystemComponent>()) {
         auto& pc = entity.GetComponent<ParticleSystemComponent>();
         je["ParticleSystem"] = {
@@ -900,6 +912,22 @@ if (je.contains("SpriteAnimation")) {
         ce.ChunkX = jc.value("ChunkX", 0);
         ce.ChunkZ = jc.value("ChunkZ", 0);
         ce.ChunkSeed = jc.value("ChunkSeed", (uint64_t)0);
+    }
+
+    if (je.contains("DayNightCycle")) {
+        auto& jd = je["DayNightCycle"];
+        auto& dn = entity.AddComponent<DayNightCycleComponent>();
+        dn.TimeOfDay = jd.value("TimeOfDay", 8.0f);
+        dn.DayLength = jd.value("DayLength", 120.0f);
+        dn.AutoAdvance = jd.value("AutoAdvance", true);
+        dn.SunElevation = jd.value("SunElevation", 60.0f);
+        dn.SunAzimuth = jd.value("SunAzimuth", 0.0f);
+        if (jd.contains("DayColor")) dn.DayColor = JsonToVec3(jd["DayColor"]);
+        dn.DayIntensity = jd.value("DayIntensity", 2.0f);
+        if (jd.contains("SunsetColor")) dn.SunsetColor = JsonToVec3(jd["SunsetColor"]);
+        dn.SunsetIntensity = jd.value("SunsetIntensity", 1.2f);
+        if (jd.contains("NightColor")) dn.NightColor = JsonToVec3(jd["NightColor"]);
+        dn.NightIntensity = jd.value("NightIntensity", 0.15f);
     }
 
     if (je.contains("AudioSource")) {

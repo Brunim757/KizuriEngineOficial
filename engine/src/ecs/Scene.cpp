@@ -1329,6 +1329,7 @@ void Scene::OnUpdateRuntimeLogic(Timestep ts) {
     UpdateCharacterControllers(ts);
     UpdateEnemyAI(ts);
     UpdateNavAgents(ts);
+    UpdateDayNightCycles(ts);
     UpdateParticleSystems(ts);
     UpdateSpriteAnimations(ts);
     UpdateAnimators(ts);
@@ -2490,6 +2491,22 @@ void Scene::UpdateNavAgents(Timestep ts) {
             float k = glm::clamp(na.TurnSpeed * dt, 0.0f, 1.0f);
             tc.Rotation.y = cur + diff * k;
         }
+    }
+}
+
+void Scene::UpdateDayNightCycles(Timestep ts) {
+    auto view = m_Registry.view<TransformComponent, LightComponent, DayNightCycleComponent>();
+    for (auto e : view) {
+        auto& lc = view.get<LightComponent>(e);
+        if (lc.Type != LightType::Directional) continue;
+        auto& dn = view.get<DayNightCycleComponent>(e);
+        if (dn.AutoAdvance) {
+            dn.TimeOfDay += (float)ts * (24.0f / dn.DayLength);
+            if (dn.TimeOfDay >= 24.0f) dn.TimeOfDay -= 24.0f;
+        }
+        lc.Direction = -dn.GetSunDirection();
+        lc.Color = dn.GetLightColor();
+        lc.Intensity = dn.GetLightIntensity();
     }
 }
 

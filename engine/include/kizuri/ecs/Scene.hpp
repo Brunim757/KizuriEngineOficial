@@ -165,6 +165,7 @@ private:
     void BuildNavGrids();
     void UpdateEnemyAI(Timestep ts);
     void UpdateNavAgents(Timestep ts);
+    void UpdateDayNightCycles(Timestep ts);
     NavGrid* FindGridNear(const glm::vec3& pos) const;
 
     std::string m_Name;

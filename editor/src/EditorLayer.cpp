@@ -2040,6 +2040,7 @@ void EditorLayer::DrawDockspace() {
             if (ImGui::MenuItem("IA — Patrulha e perseguição")) CreateDemoSceneAI();
             if (ImGui::MenuItem("Rede — Multiplayer local")) CreateDemoSceneNet();
             if (ImGui::MenuItem("Chunk World — Mundo em pedaços (3D)")) CreateDemoChunk();
+            if (ImGui::MenuItem("Day/Night Cycle — Sol e céu dinâmico")) CreateDemoDayNight();
             ImGui::Separator();
             if (ImGui::MenuItem("Jogo completo — Mini-jogo com placar")) CreateDemoSceneGame();
             ImGui::EndMenu();
@@ -4274,6 +4275,27 @@ void EditorLayer::DrawInspector() {
             if (removeThis) m_SelectedEntity.RemoveComponent<ChunkWorldComponent>();
         }
 
+        if (m_SelectedEntity.HasComponent<DayNightCycleComponent>()) {
+            auto& dn = m_SelectedEntity.GetComponent<DayNightCycleComponent>();
+            if (DrawComponentHeader("Day/Night Cycle", &removeThis)) {
+                ImGui::DragFloat("Hora do dia", &dn.TimeOfDay, 0.1f, 0.0f, 24.0f);
+                ImGui::DragFloat("Duração do dia (s)", &dn.DayLength, 1.0f, 10.0f, 3600.0f);
+                ImGui::Checkbox("Avançar automaticamente", &dn.AutoAdvance);
+                ImGui::Separator();
+                ImGui::DragFloat("Elevação do sol", &dn.SunElevation, 1.0f, 0.0f, 90.0f);
+                ImGui::DragFloat("Azimute do sol", &dn.SunAzimuth, 1.0f, 0.0f, 360.0f);
+                ImGui::Separator();
+                ImGui::ColorEdit3("Cor do dia", &dn.DayColor.x);
+                ImGui::DragFloat("Intensidade do dia", &dn.DayIntensity, 0.1f, 0.0f, 5.0f);
+                ImGui::ColorEdit3("Cor do pôr-do-sol", &dn.SunsetColor.x);
+                ImGui::DragFloat("Intensidade do pôr-do-sol", &dn.SunsetIntensity, 0.1f, 0.0f, 5.0f);
+                ImGui::ColorEdit3("Cor da noite", &dn.NightColor.x);
+                ImGui::DragFloat("Intensidade da noite", &dn.NightIntensity, 0.01f, 0.0f, 2.0f);
+                ImGui::TreePop();
+            }
+            if (removeThis) m_SelectedEntity.RemoveComponent<DayNightCycleComponent>();
+        }
+
         if (m_SelectedEntity.HasComponent<FoliageComponent>()) {
             auto& fc = m_SelectedEntity.GetComponent<FoliageComponent>();
             if (DrawComponentHeader("Foliage (vegetação)", &removeThis)) {
@@ -4738,6 +4760,8 @@ void EditorLayer::DrawAddComponentButton() {
             m_SelectedEntity.AddComponent<TilemapComponent>();
         if (!m_SelectedEntity.HasComponent<ParticleSystemComponent>() && ImGui::MenuItem("Particle System"))
             m_SelectedEntity.AddComponent<ParticleSystemComponent>();
+        if (!m_SelectedEntity.HasComponent<DayNightCycleComponent>() && ImGui::MenuItem("Day/Night Cycle"))
+            m_SelectedEntity.AddComponent<DayNightCycleComponent>();
         if (!m_SelectedEntity.HasComponent<AudioSourceComponent>() && ImGui::MenuItem("Audio Source"))
             m_SelectedEntity.AddComponent<AudioSourceComponent>();
         if (!m_SelectedEntity.HasComponent<Rigidbody2DComponent>() && ImGui::MenuItem("Rigidbody 2D"))

@@ -1371,3 +1371,141 @@ void EditorLayer::CreateDemoDayNight() {
     label.GetComponent<kizuri::TransformComponent>().Translation = {-30.0f, 20.0f, 0.0f};
 }
 
+void EditorLayer::CreateDemoTerrainLOD() {
+    if (m_SceneState != SceneState::Edit) return;
+    m_ActiveScene = CreateRef<kizuri::Scene>("Demo Terreno LOD");
+    m_ScenePath.clear(); m_SelectedEntity = {};
+
+    Entity cam = m_ActiveScene->CreateEntity("Camera");
+    auto& cc = cam.AddComponent<kizuri::CameraComponent>();
+    cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
+    cc.PerspectiveFOV = 60.0f;
+    cc.Primary = true;
+    cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 40.0f, 60.0f};
+    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-25.0f), 0.0f, 0.0f};
+    cam.AddComponent<kizuri::TimelineComponent>();
+    auto& tl = cam.GetComponent<kizuri::TimelineComponent>();
+    tl.Playing = true; tl.Loop = true; tl.Speed = 0.5f;
+    tl.Keyframes.push_back({0.0f, {0, 40, 60}, {0, 0, 0}, {1, 1, 1}});
+    tl.Keyframes.push_back({5.0f, {60, 25, 0}, {0, 0, 0}, {1, 1, 1}});
+    tl.Keyframes.push_back({10.0f, {0, 40, -60}, {0, 0, 0}, {1, 1, 1}});
+    tl.Keyframes.push_back({15.0f, {-60, 25, 0}, {0, 0, 0}, {1, 1, 1}});
+    tl.Keyframes.push_back({20.0f, {0, 40, 60}, {0, 0, 0}, {1, 1, 1}});
+
+    Entity sun = m_ActiveScene->CreateEntity("Sol");
+    auto& lc = sun.AddComponent<kizuri::LightComponent>();
+    lc.Type = kizuri::LightType::Directional;
+    lc.Color = {1.0f, 0.98f, 0.92f};
+    lc.Intensity = 2.0f;
+    lc.CastsShadow = true;
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50.0f), glm::radians(30.0f), 0.0f};
+
+    Entity terrain = m_ActiveScene->CreateEntity("Terreno LOD");
+    auto& tc = terrain.AddComponent<kizuri::TerrainComponent>();
+    tc.Segments = 128;
+    tc.Size = 200.0f;
+    tc.HeightScale = 15.0f;
+    tc.Seed = 7;
+    tc.LODLevels.push_back({64, 40.0f});
+    tc.LODLevels.push_back({32, 80.0f});
+    tc.LODLevels.push_back({16, 150.0f});
+    tc.LODDistanceMultiplier = 1.0f;
+    tc.Regenerate();
+    if (!terrain.HasComponent<kizuri::MeshRendererComponent>())
+        terrain.AddComponent<kizuri::MeshRendererComponent>();
+    terrain.GetComponent<kizuri::MeshRendererComponent>().MeshAsset = tc.GeneratedMesh;
+    terrain.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial.Albedo = {0.35f, 0.55f, 0.2f};
+    terrain.GetComponent<kizuri::MeshRendererComponent>().MeshMaterial.Roughness = 0.9f;
+    if (!terrain.HasComponent<kizuri::Rigidbody3DComponent>()) {
+        auto& rb = terrain.AddComponent<kizuri::Rigidbody3DComponent>();
+        rb.Type = kizuri::Rigidbody3DComponent::BodyType::Static;
+    }
+
+    Entity label = m_ActiveScene->CreateEntity("Label");
+    auto& ltc = label.AddComponent<kizuri::TextComponent>();
+    ltc.Text = "Terreno LOD: 128→64→32→16 segments por distância. Câmera orbita automaticamente.";
+    ltc.FontSize = 24;
+    ltc.SortingLayer = 10;
+    label.GetComponent<kizuri::TransformComponent>().Translation = {-35.0f, 25.0f, 0.0f};
+}
+
+void EditorLayer::CreateDemoVegetation() {
+    if (m_SceneState != SceneState::Edit) return;
+    m_ActiveScene = CreateRef<kizuri::Scene>("Demo Vegetação — Instancing + Wind");
+    m_ScenePath.clear(); m_SelectedEntity = {};
+
+    Entity cam = m_ActiveScene->CreateEntity("Camera");
+    auto& cc = cam.AddComponent<kizuri::CameraComponent>();
+    cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
+    cc.PerspectiveFOV = 60.0f;
+    cc.Primary = true;
+    cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 12.0f, 25.0f};
+    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-15.0f), 0.0f, 0.0f};
+    cam.AddComponent<kizuri::TimelineComponent>();
+    auto& tl = cam.GetComponent<kizuri::TimelineComponent>();
+    tl.Playing = true; tl.Loop = true; tl.Speed = 0.3f;
+    tl.Keyframes.push_back({0.0f, {0, 12, 25}, {0, 0, 0}, {1, 1, 1}});
+    tl.Keyframes.push_back({8.0f, {20, 8, 10}, {0, 0, 0}, {1, 1, 1}});
+    tl.Keyframes.push_back({16.0f, {-15, 15, 5}, {0, 0, 0}, {1, 1, 1}});
+    tl.Keyframes.push_back({24.0f, {0, 12, 25}, {0, 0, 0}, {1, 1, 1}});
+
+    Entity sun = m_ActiveScene->CreateEntity("Sol");
+    auto& lc = sun.AddComponent<kizuri::LightComponent>();
+    lc.Type = kizuri::LightType::Directional;
+    lc.Color = {1.0f, 0.95f, 0.85f};
+    lc.Intensity = 2.0f;
+    lc.CastsShadow = true;
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(55.0f), glm::radians(20.0f), 0.0f};
+
+    Entity ground = m_ActiveScene->CreateEntity("Chão");
+    auto& gm = ground.AddComponent<kizuri::MeshRendererComponent>();
+    gm.MeshSource = "builtin:plane";
+    gm.MeshAsset = kizuri::Mesh::FromSource(gm.MeshSource);
+    gm.MeshMaterial.Albedo = {0.3f, 0.5f, 0.18f};
+    gm.MeshMaterial.Roughness = 0.9f;
+    ground.GetComponent<kizuri::TransformComponent>().Scale = {100.0f, 1.0f, 100.0f};
+
+    Entity f1 = m_ActiveScene->CreateEntity("Árvores grandes");
+    auto& fc1 = f1.AddComponent<kizuri::FoliageComponent>();
+    fc1.MeshSource = "builtin:cylinder";
+    fc1.AreaSize = {30.0f, 30.0f};
+    fc1.Count = 80;
+    fc1.ScaleMin = 2.0f;
+    fc1.ScaleMax = 5.0f;
+    fc1.HeightScale = 1.0f;
+    fc1.Seed = 1;
+    fc1.Color = {0.25f, 0.45f, 0.15f, 1.0f};
+    fc1.WindStrength = 0.2f;
+
+    Entity f2 = m_ActiveScene->CreateEntity("Arbustos");
+    auto& fc2 = f2.AddComponent<kizuri::FoliageComponent>();
+    fc2.MeshSource = "builtin:cone";
+    fc2.AreaSize = {40.0f, 40.0f};
+    fc2.Count = 200;
+    fc2.ScaleMin = 0.3f;
+    fc2.ScaleMax = 1.5f;
+    fc2.HeightScale = 0.5f;
+    fc2.Seed = 42;
+    fc2.Color = {0.2f, 0.55f, 0.15f, 1.0f};
+    fc2.WindStrength = 0.3f;
+
+    Entity f3 = m_ActiveScene->CreateEntity("Capim");
+    auto& fc3 = f3.AddComponent<kizuri::FoliageComponent>();
+    fc3.MeshSource = "builtin:cone";
+    fc3.AreaSize = {50.0f, 50.0f};
+    fc3.Count = 500;
+    fc3.ScaleMin = 0.1f;
+    fc3.ScaleMax = 0.4f;
+    fc3.HeightScale = 0.3f;
+    fc3.Seed = 99;
+    fc3.Color = {0.35f, 0.65f, 0.2f, 1.0f};
+    fc3.WindStrength = 0.4f;
+
+    Entity label = m_ActiveScene->CreateEntity("Label");
+    auto& ltc = label.AddComponent<kizuri::TextComponent>();
+    ltc.Text = "Vegetação: instancing com sombras + wind. 3 camadas com intensidades de vento diferentes.";
+    ltc.FontSize = 24;
+    ltc.SortingLayer = 10;
+    label.GetComponent<kizuri::TransformComponent>().Translation = {-40.0f, 20.0f, 0.0f};
+}
+

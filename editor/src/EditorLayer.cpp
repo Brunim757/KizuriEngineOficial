@@ -2032,6 +2032,8 @@ void EditorLayer::DrawDockspace() {
             if (ImGui::MenuItem("Luzes — Pontuais, spots e sombras")) CreateDemoLuzes();
             if (ImGui::MenuItem("Partículas — Fogo, fumaça e faíscas")) CreateDemoParticulas();
             if (ImGui::MenuItem("Terreno — Heightmap procedural")) CreateDemoTerreno();
+            if (ImGui::MenuItem("Terreno LOD — Resolução por distância")) CreateDemoTerrainLOD();
+            if (ImGui::MenuItem("Vegetação — Instancing, sombras e wind")) CreateDemoVegetation();
             ImGui::Separator();
             if (ImGui::MenuItem("Timeline — Animação por keyframes")) CreateDemoTimeline();
             if (ImGui::MenuItem("LOD — Níveis de detalhe")) CreateDemoLOD();

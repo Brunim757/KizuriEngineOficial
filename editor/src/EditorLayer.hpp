@@ -102,6 +102,8 @@ private:
     void CreateDemoEfeitos();
     void CreateDemoChunk();
     void CreateDemoDayNight();
+    void CreateDemoTerrainLOD();
+    void CreateDemoVegetation();
     void CreateDemo25D();
     void CreateDemoCameraFollow2D();
 

@@ -826,7 +826,7 @@ seguintes. Ordem de implementação = ordem de dependência.
 
 ### 1. Mundo aberto / streaming
 - [x] **Terreno de altura (heightmap) com LOD por distância** — LODLevel struct, downsampling do heightmap, troca dinâmica por distância à câmera
-- [ ] Vegetação/objetos instanciados (GPU instancing já existe p/ partículas — expandir)
+- [x] **Vegetação/objetos instanciados** — GPU instancing expandido: sombras para instâncias, wind animation no vertex shader, WindStrength no FoliageComponent
 - [ ] Navmesh do mundo inteiro com streaming (hoje o NavGrid é por cena)
 - [ ] Céu dinâmico com ciclo dia/noite (hoje é procedural estático)
 - [ ] Clima: chuva, neblina volumétrica, vento
@@ -860,7 +860,7 @@ seguintes. Ordem de implementação = ordem de dependência.
 - [ ] Dublagem por linha de diálogo
 
 ### 6. Renderer/qualidade
-- [ ] Vegetação com sombra própria + wind
+- [x] **Vegetação com sombra própria + wind** — shadow pass instanciado + wind sinusoidal no vertex shader
 - [ ] Diferimentos de qualidade: escala de resolução dinâmica, VRS (se suportado)
 - [ ] Reflexos por plano/SSR estáveis + reflexos em vidro de carro
 - [ ] HDR em janelas/neon (emissivos já existem)

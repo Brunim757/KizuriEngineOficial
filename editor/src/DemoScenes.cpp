@@ -1265,18 +1265,29 @@ void EditorLayer::CreateDemoChunk() {
     if (m_SceneState != SceneState::Edit) return;
     m_ActiveScene = CreateRef<kizuri::Scene>("Demo Chunked World");
     m_ScenePath.clear(); m_SelectedEntity = {};
-    m_ViewportMode = ViewportMode::Mode2D;
-    m_Editor2DZoom = 40.0f; m_Editor2DCamPos = {0,0}; m_Editor2DFirstMouseLook = true;
 
     Entity cam = m_ActiveScene->CreateEntity("Camera");
     auto& cc = cam.AddComponent<kizuri::CameraComponent>();
-    cc.Type = kizuri::CameraComponent::ProjectionType::Orthographic2D;
-    cc.Primary = true; cc.OrthoSize = 30.0f;
+    cc.Type = kizuri::CameraComponent::ProjectionType::Perspective3D;
+    cc.PerspectiveFOV = 60.0f;
+    cam.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 50.0f, 50.0f};
+    cam.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(-45.0f), 0.0f, 0.0f};
+
+    Entity sun = m_ActiveScene->CreateEntity("Sun");
+    auto& lc = sun.AddComponent<kizuri::LightComponent>();
+    lc.Type = kizuri::LightType::Directional;
+    lc.Color = {1.0f, 1.0f, 0.95f};
+    lc.Intensity = 2.0f;
+    sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50.0f), glm::radians(30.0f), 0.0f};
 
     Entity player = m_ActiveScene->CreateEntity("Jogador");
-    auto& sr = player.AddComponent<kizuri::SpriteRendererComponent>();
-    sr.Color = {0.25f,0.6f,0.9f,1.0f}; sr.SortingLayer = 5;
-    player.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 0.0f, 0.0f};
+    auto& pm = player.AddComponent<kizuri::MeshRendererComponent>();
+    pm.MeshSource = "builtin:cube";
+    pm.MeshAsset = kizuri::Mesh::FromSource(pm.MeshSource);
+    pm.MeshMaterial.Albedo = {0.2f, 0.5f, 0.9f};
+    pm.MeshMaterial.Roughness = 0.3f;
+    player.GetComponent<kizuri::TransformComponent>().Translation = {0.0f, 1.5f, 0.0f};
+    player.GetComponent<kizuri::TransformComponent>().Scale = {1.0f, 2.0f, 1.0f};
 
     Entity world = m_ActiveScene->CreateEntity("Mundo Chunked");
     world.AddComponent<kizuri::ChunkWorldComponent>();
@@ -1284,22 +1295,29 @@ void EditorLayer::CreateDemoChunk() {
     world.GetComponent<kizuri::ChunkWorldComponent>().LoadRadius = 2;
     world.GetComponent<kizuri::ChunkWorldComponent>().ChunkSize = 32.0f;
 
-    uint32_t colors[] = {0x3a8a4c, 0xb87333, 0x228b22, 0x8b6f47, 0x4e7c3a};
-    for (int cz = -1; cz <= 1; ++cz) for (int cx = -1; cx <= 1; ++cx) {
+    uint32_t colors[] = {0x3a8a4c, 0xb87333, 0x228b22, 0x8b6f47, 0x4e7c3a, 0x556b2f, 0xcd853f, 0x708090};
+    for (int cz = -2; cz <= 2; ++cz) for (int cx = -2; cx <= 2; ++cx) {
         int ci = abs(cx) + abs(cz);
         Entity chunk = m_ActiveScene->CreateEntity("Chunk " + std::to_string(cx) + "_" + std::to_string(cz));
-        auto& csr = chunk.AddComponent<kizuri::SpriteRendererComponent>();
-        csr.Color = {((colors[ci%5])>>16)/255.0f, ((colors[ci%5]>>8)&0xff)/255.0f, ((colors[ci%5])&0xff)/255.0f, 1.0f};
-        csr.SortingLayer = 0;
-        chunk.GetComponent<kizuri::TransformComponent>().Translation = {(float)cx*32, (float)cz*32, 0};
-        chunk.GetComponent<kizuri::TransformComponent>().Scale = {32.0f, 32.0f, 1.0f};
+        auto& cm = chunk.AddComponent<kizuri::MeshRendererComponent>();
+        cm.MeshSource = "builtin:plane";
+        cm.MeshAsset = kizuri::Mesh::FromSource(cm.MeshSource);
+        cm.MeshMaterial.Albedo = {
+            ((colors[ci % 8] >> 16) & 0xff) / 255.0f,
+            ((colors[ci % 8] >> 8) & 0xff) / 255.0f,
+            (colors[ci % 8] & 0xff) / 255.0f };
+        cm.MeshMaterial.Roughness = 0.9f;
+        chunk.GetComponent<kizuri::TransformComponent>().Translation = {(float)cx * 32.0f, 0.0f, (float)cz * 32.0f};
+        chunk.GetComponent<kizuri::TransformComponent>().Scale = {32.0f, 1.0f, 32.0f};
         chunk.AddComponent<kizuri::ChunkEntityComponent>().ChunkX = cx;
         chunk.GetComponent<kizuri::ChunkEntityComponent>().ChunkZ = cz;
     }
 
     Entity label = m_ActiveScene->CreateEntity("Label");
     auto& tc = label.AddComponent<kizuri::TextComponent>();
-    tc.Text = "Chunked World: mova o jogador para ver chunks carregar/descarregar"; tc.FontSize = 24; tc.SortingLayer = 10;
-    label.GetComponent<kizuri::TransformComponent>().Translation = {-15.0f, 16.0f, 0.0f};
+    tc.Text = "Chunked World: chunks no XZ plane, carregam/descarregam por distância";
+    tc.FontSize = 24;
+    tc.SortingLayer = 10;
+    label.GetComponent<kizuri::TransformComponent>().Translation = {-20.0f, 25.0f, 0.0f};
 }
 

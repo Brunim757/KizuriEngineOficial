@@ -2039,7 +2039,7 @@ void EditorLayer::DrawDockspace() {
             ImGui::Separator();
             if (ImGui::MenuItem("IA — Patrulha e perseguição")) CreateDemoSceneAI();
             if (ImGui::MenuItem("Rede — Multiplayer local")) CreateDemoSceneNet();
-            if (ImGui::MenuItem("Chunk World — Mundo em pedaços")) CreateDemoChunk();
+            if (ImGui::MenuItem("Chunk World — Mundo em pedaços (3D)")) CreateDemoChunk();
             ImGui::Separator();
             if (ImGui::MenuItem("Jogo completo — Mini-jogo com placar")) CreateDemoSceneGame();
             ImGui::EndMenu();

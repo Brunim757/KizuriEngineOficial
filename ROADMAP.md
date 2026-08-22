@@ -825,7 +825,7 @@ seguintes. Ordem de implementação = ordem de dependência.
 > sustentar projetos AAA. Cada item é um trabalho independente.
 
 ### 1. Mundo aberto / streaming
-- [ ] Terreno de altura (heightmap) com LOD por distância (não só cubos)
+- [x] **Terreno de altura (heightmap) com LOD por distância** — LODLevel struct, downsampling do heightmap, troca dinâmica por distância à câmera
 - [ ] Vegetação/objetos instanciados (GPU instancing já existe p/ partículas — expandir)
 - [ ] Navmesh do mundo inteiro com streaming (hoje o NavGrid é por cena)
 - [ ] Céu dinâmico com ciclo dia/noite (hoje é procedural estático)

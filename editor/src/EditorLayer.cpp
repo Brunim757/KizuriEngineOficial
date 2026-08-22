@@ -4292,6 +4292,7 @@ void EditorLayer::DrawInspector() {
                 regen |= ImGui::DragFloat("Escala máxima", &fc.ScaleMax, 0.05f, 0.1f, 10.0f);
                 regen |= ImGui::DragInt("Semente", (int*)&fc.Seed, 1);
                 regen |= ImGui::Checkbox("Vazio no centro", &fc.AvoidCenter);
+                ImGui::DragFloat("Força do vento", &fc.WindStrength, 0.01f, 0.0f, 2.0f);
                 ImGui::ColorEdit4("Cor", &fc.Color.x);
                 if (ImGui::Button("Regenerar vegetação") || regen) fc.Regenerate();
                 ImGui::TextDisabled("Instâncias: %zu · 1 draw call · a malha vem do campo acima.", fc.Instances.size());

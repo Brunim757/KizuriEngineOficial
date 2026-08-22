@@ -82,6 +82,7 @@ struct FoliageComponent {
     float ScaleMin = 0.6f, ScaleMax = 1.3f;
     uint32_t Seed = 42;
     bool AvoidCenter = true;
+    float WindStrength = 0.15f;
 
     std::vector<glm::mat4> Instances;
     Ref<Mesh> MeshAsset;

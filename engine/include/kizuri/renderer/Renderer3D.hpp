@@ -155,6 +155,8 @@ public:
     static void SubmitDecal(const glm::mat4& transform, const Ref<Texture2D>& texture,
                             const glm::vec4& tint = glm::vec4(1.0f));
 
+    static void SetWind(float strength, float time) { s_WindStrength = strength; s_WindTime = time; }
+
 private:
     struct DrawCommand {
         Ref<Mesh> MeshAsset;
@@ -268,6 +270,8 @@ private:
     static std::vector<ParticleBatch> s_ParticleBatches;
     static uint32_t s_ParticleVAO, s_ParticleQuadVBO, s_ParticleEBO, s_ParticleInstanceVBO;
     static Ref<Shader> s_ParticleShader;
+    static float s_WindStrength;
+    static float s_WindTime;
 };
 
 }

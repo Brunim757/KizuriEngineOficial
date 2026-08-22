@@ -129,7 +129,8 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
                           { "HeightScale", fc.HeightScale }, { "Count", fc.Count },
                           { "ScaleMin", fc.ScaleMin }, { "ScaleMax", fc.ScaleMax },
                           { "Seed", fc.Seed }, { "AvoidCenter", fc.AvoidCenter },
-                          { "Color", Vec4ToJson(fc.Color) } };
+                          { "Color", Vec4ToJson(fc.Color) },
+                          { "WindStrength", fc.WindStrength } };
     }
 
     if (entity.HasComponent<OccluderComponent>()) {
@@ -588,6 +589,7 @@ if (je.contains("CharacterController")) {
         fc.Seed = jf.value("Seed", 42u);
         fc.AvoidCenter = jf.value("AvoidCenter", true);
         fc.Color = JsonToVec4(jf["Color"]);
+        fc.WindStrength = jf.value("WindStrength", 0.15f);
         fc.Regenerate();
     } else if (entity.HasComponent<FoliageComponent>()) {
         entity.RemoveComponent<FoliageComponent>();
@@ -1014,6 +1016,7 @@ inline void ApplyEntityStateJson(Entity entity, const nlohmann::json& je) {
         fc.Seed = jf.value("Seed", 42u);
         fc.AvoidCenter = jf.value("AvoidCenter", true);
         fc.Color = JsonToVec4(jf["Color"]);
+        fc.WindStrength = jf.value("WindStrength", 0.15f);
         fc.Regenerate();
     } else if (entity.HasComponent<FoliageComponent>()) {
         entity.RemoveComponent<FoliageComponent>();

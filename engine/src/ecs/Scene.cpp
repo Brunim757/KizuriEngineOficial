@@ -2549,6 +2549,18 @@ void Scene::UpdateCameraFollowers(Timestep ts) {
 void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
     KZ_TRACE_SCOPE("Scene::RenderScene3D");
 
+    static float s_WindAccum = 0.0f;
+    s_WindAccum += 0.016f;
+
+    float maxWind = 0.0f;
+    auto folView = m_Registry.view<TransformComponent, FoliageComponent>();
+    for (auto fe : folView) {
+        auto& fc = folView.get<FoliageComponent>(fe);
+        if (IsEntityActive(Entity{ fe, this }) && fc.WindStrength > maxWind)
+            maxWind = fc.WindStrength;
+    }
+    Renderer3D::SetWind(maxWind, s_WindAccum);
+
     glm::mat4 cullVP = glm::mat4(0.0f);
     glm::vec3 camPos(0.0f);
     bool cullCam = false;

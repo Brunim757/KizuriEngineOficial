@@ -62,6 +62,8 @@ float Renderer3D::s_CamFOV = 45.0f, Renderer3D::s_CamAspect = 16.0f / 9.0f;
 float Renderer3D::s_CamNear = 0.1f, Renderer3D::s_CamFar = 1000.0f;
 
 GraphicsSettings Renderer3D::s_Settings;
+float Renderer3D::s_WindStrength = 0.0f;
+float Renderer3D::s_WindTime = 0.0f;
 uint32_t Renderer3D::s_HDRFBO = 0, Renderer3D::s_HDRColorBuffer = 0, Renderer3D::s_HDRDepthTexture = 0;
 uint32_t Renderer3D::s_MSAAHDRFBO = 0, Renderer3D::s_MSAAHDRColor = 0, Renderer3D::s_MSAAHDRDepthRBO = 0;
 int Renderer3D::s_CurrentMSAA = 1;
@@ -136,6 +138,8 @@ uniform mat4 u_JointMatrices[64];
 uniform bool u_Instanced;
 uniform mat4 u_InstanceMatrices[128];
 uniform int u_InstanceCount;
+uniform float u_Time;
+uniform float u_WindStrength;
 
 out vec3 v_FragPos;
 out vec3 v_Normal;
@@ -145,15 +149,17 @@ void main() {
     vec3 pos = a_Position;
     vec3 nrm = a_Normal;
     if (u_Animated) {
-        // 4 juntas por vértice (peso 0 nos não usados). Índices chegam como
-        // float e viram int() aqui — GLSL 330 não tem índice dinâmico de
-        // array, mas mat4 por índice de atributo int() é constante.
         mat4 skin = u_JointMatrices[int(a_JointIndices.x)] * a_JointWeights.x
                   + u_JointMatrices[int(a_JointIndices.y)] * a_JointWeights.y
                   + u_JointMatrices[int(a_JointIndices.z)] * a_JointWeights.z
                   + u_JointMatrices[int(a_JointIndices.w)] * a_JointWeights.w;
         pos = vec3(skin * vec4(a_Position, 1.0));
         nrm = mat3(skin) * a_Normal;
+    }
+    if (u_WindStrength > 0.0) {
+        float h = clamp(pos.y * 0.5, 0.0, 1.0);
+        pos.x += sin(u_Time * 1.5 + pos.z * 0.3) * u_WindStrength * h;
+        pos.z += cos(u_Time * 1.2 + pos.x * 0.3) * u_WindStrength * h * 0.5;
     }
     mat4 model = u_Transform;
     if (u_Instanced && gl_InstanceID < u_InstanceCount)
@@ -1684,6 +1690,11 @@ uniform mat4 u_LightSpaceMatrix;
 uniform mat4 u_Model;
 uniform bool u_Animated;
 uniform mat4 u_JointMatrices[64];
+uniform bool u_Instanced;
+uniform mat4 u_InstanceMatrices[128];
+uniform int u_InstanceCount;
+uniform float u_Time;
+uniform float u_WindStrength;
 
 void main() {
     vec3 pos = a_Position;
@@ -1694,7 +1705,15 @@ void main() {
                   + u_JointMatrices[int(a_JointIndices.w)] * a_JointWeights.w;
         pos = vec3(skin * vec4(a_Position, 1.0));
     }
-    gl_Position = u_LightSpaceMatrix * u_Model * vec4(pos, 1.0);
+    if (u_WindStrength > 0.0) {
+        float heightFactor = clamp(pos.y * 0.5, 0.0, 1.0);
+        pos.x += sin(u_Time * 1.5 + pos.z * 0.3) * u_WindStrength * heightFactor;
+        pos.z += cos(u_Time * 1.2 + pos.x * 0.3) * u_WindStrength * heightFactor * 0.5;
+    }
+    mat4 model = u_Model;
+    if (u_Instanced && gl_InstanceID < u_InstanceCount)
+        model = model * u_InstanceMatrices[gl_InstanceID];
+    gl_Position = u_LightSpaceMatrix * model * vec4(pos, 1.0);
 }
 )";
 
@@ -2191,6 +2210,8 @@ void Renderer3D::RenderPlanarReflection([[maybe_unused]] const glm::vec3& planeP
         s_MeshShader->SetFloat("u_FogDensity", s_Settings.FogDensity);
         s_MeshShader->SetFloat("u_FogHeight", s_Settings.FogHeight);
         s_MeshShader->SetFloat("u_FogHeightFalloff", s_Settings.FogHeightFalloff);
+        s_MeshShader->SetFloat("u_WindStrength", s_WindStrength);
+        s_MeshShader->SetFloat("u_Time", s_WindTime);
 
         s_MeshShader->SetInt("u_LightCount", (int)s_LightList.size());
         for (size_t i = 0; i < s_LightList.size(); ++i) {
@@ -2705,10 +2726,13 @@ void Renderer3D::EndScene() {
         }
     }
 
-    if (!s_DrawList.empty() && s_HasShadowCaster) {
+    if ((!s_DrawList.empty() || !s_InstanceBatches.empty()) && s_HasShadowCaster) {
         ComputeCascades(s_ShadowCaster.Direction);
         glCullFace(GL_FRONT);
         s_ShadowShader->Bind();
+        s_ShadowShader->SetFloat("u_WindStrength", s_WindStrength);
+        s_ShadowShader->SetFloat("u_Time", s_WindTime);
+        s_ShadowShader->SetInt("u_Instanced", 0);
         uint32_t shadowSize = (uint32_t)s_Settings.ShadowMapSize;
         for (int c = 0; c < kCascadeCount; ++c) {
             glBindFramebuffer(GL_FRAMEBUFFER, s_ShadowFBO[c]);
@@ -2717,6 +2741,7 @@ void Renderer3D::EndScene() {
             s_ShadowShader->SetMat4("u_LightSpaceMatrix", s_LightSpaceMatrix[c]);
             for (auto& cmd : s_DrawList) {
                 s_ShadowShader->SetMat4("u_Model", cmd.Transform);
+                s_ShadowShader->SetInt("u_Instanced", 0);
 
                 if (cmd.Joints.empty()) {
                     s_ShadowShader->SetInt("u_Animated", 0);
@@ -2729,6 +2754,23 @@ void Renderer3D::EndScene() {
                 }
                 RenderCommand::DrawIndexed(cmd.MeshAsset->GetVertexArray(), cmd.MeshAsset->GetIndexCount());
             }
+            for (auto& batch : s_InstanceBatches) {
+                s_ShadowShader->SetMat4("u_Model", glm::mat4(1.0f));
+                s_ShadowShader->SetInt("u_Animated", 0);
+                s_ShadowShader->SetInt("u_Instanced", 1);
+                const std::vector<glm::mat4>& T = batch.Transforms;
+                uint32_t done = 0;
+                while (done < (uint32_t)T.size()) {
+                    uint32_t n = std::min((uint32_t)T.size() - done, 128u);
+                    s_ShadowShader->SetInt("u_InstanceCount", (int)n);
+                    for (uint32_t i = 0; i < n; ++i)
+                        s_ShadowShader->SetMat4("u_InstanceMatrices[" + std::to_string(i) + "]", T[done + i]);
+                    glDrawElementsInstanced(GL_TRIANGLES, (GLsizei)batch.MeshAsset->GetIndexCount(),
+                                            GL_UNSIGNED_INT, nullptr, (GLsizei)n);
+                    done += n;
+                }
+            }
+            s_ShadowShader->SetInt("u_Instanced", 0);
         }
         glCullFace(GL_BACK);
     }
@@ -2781,6 +2823,8 @@ void Renderer3D::EndScene() {
         s_MeshShader->SetFloat("u_FogDensity", s_Settings.FogDensity);
         s_MeshShader->SetFloat("u_FogHeight", s_Settings.FogHeight);
         s_MeshShader->SetFloat("u_FogHeightFalloff", s_Settings.FogHeightFalloff);
+        s_MeshShader->SetFloat("u_WindStrength", s_WindStrength);
+        s_MeshShader->SetFloat("u_Time", s_WindTime);
 
         s_MeshShader->SetInt("u_LightCount", (int)s_LightList.size());
         for (size_t i = 0; i < s_LightList.size(); ++i) {

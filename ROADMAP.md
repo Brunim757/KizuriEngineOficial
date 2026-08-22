@@ -828,7 +828,7 @@ seguintes. Ordem de implementação = ordem de dependência.
 - [x] **Terreno de altura (heightmap) com LOD por distância** — LODLevel struct, downsampling do heightmap, troca dinâmica por distância à câmera
 - [x] **Vegetação/objetos instanciados** — GPU instancing expandido: sombras para instâncias, wind animation no vertex shader, WindStrength no FoliageComponent
 - [ ] Navmesh do mundo inteiro com streaming (hoje o NavGrid é por cena)
-- [ ] Céu dinâmico com ciclo dia/noite (hoje é procedural estático)
+- [x] **Céu dinâmico com ciclo dia/noite** — DayNightCycleComponent, luz direcional rotativa, cores interpoladas dia/pôr-do-sol/noite
 - [ ] Clima: chuva, neblina volumétrica, vento
 - [ ] Water rendering (planície de água com reflexos/refração)
 - [ ] Posto de carregamento: save do mundo em chunks

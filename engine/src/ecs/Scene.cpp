@@ -2504,9 +2504,13 @@ void Scene::UpdateDayNightCycles(Timestep ts) {
             dn.TimeOfDay += (float)ts * (24.0f / dn.DayLength);
             if (dn.TimeOfDay >= 24.0f) dn.TimeOfDay -= 24.0f;
         }
-        lc.Direction = -dn.GetSunDirection();
         lc.Color = dn.GetLightColor();
         lc.Intensity = dn.GetLightIntensity();
+        auto& tc = view.get<TransformComponent>(e);
+        glm::vec3 sunDir = dn.GetSunDirection();
+        tc.Rotation.x = glm::degrees(-asin(sunDir.y));
+        tc.Rotation.z = glm::degrees(atan2(sunDir.x, sunDir.z));
+        tc.Rotation.y = 0.0f;
     }
 }
 

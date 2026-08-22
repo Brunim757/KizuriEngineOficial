@@ -151,6 +151,11 @@ struct LODComponent {
 };
 
 struct TerrainComponent {
+    struct LODLevel {
+        uint32_t Segments = 16;
+        float Distance = 50.0f;
+    };
+
     uint32_t Segments = 64;
     float Size = 100.0f;
     float HeightScale = 5.0f;
@@ -158,12 +163,50 @@ struct TerrainComponent {
     Ref<Mesh> GeneratedMesh;
 
     std::vector<float> Heightmap;
+    std::vector<LODLevel> LODLevels;
+    std::vector<Ref<Mesh>> LODMeshes;
+    float LODDistanceMultiplier = 1.0f;
 
     void Regenerate() {
         if (Heightmap.size() >= (size_t)(Segments + 1) * (Segments + 1))
             GeneratedMesh = Mesh::CreateTerrainFromHeightmap(Segments, Size, Heightmap);
         else
             GeneratedMesh = Mesh::CreateTerrain(Segments, Size, HeightScale, Seed);
+        RegenerateLODs();
+    }
+
+    void RegenerateLODs() {
+        LODMeshes.clear();
+        LODMeshes.reserve(LODLevels.size());
+        for (auto& lod : LODLevels) {
+            uint32_t s = glm::clamp(lod.Segments, 2u, Segments);
+            if (Heightmap.size() >= (size_t)(Segments + 1) * (Segments + 1)) {
+                std::vector<float> downsampled((size_t)(s + 1) * (s + 1));
+                for (uint32_t i = 0; i <= s; ++i) {
+                    for (uint32_t j = 0; j <= s; ++j) {
+                        uint32_t si = i * Segments / s;
+                        uint32_t sj = j * Segments / s;
+                        downsampled[i * (s + 1) + j] = Heightmap[si * (Segments + 1) + sj];
+                    }
+                }
+                LODMeshes.push_back(Mesh::CreateTerrainFromHeightmap(s, Size, downsampled));
+            } else {
+                LODMeshes.push_back(Mesh::CreateTerrain(s, Size, HeightScale, Seed));
+            }
+        }
+    }
+
+    Ref<Mesh> GetLODMesh(float distance) const {
+        if (LODMeshes.empty()) return GeneratedMesh;
+        int idx = -1;
+        float d = distance * LODDistanceMultiplier;
+        for (int i = 0; i < (int)LODLevels.size(); ++i) {
+            if (d >= LODLevels[i].Distance) idx = i;
+            else break;
+        }
+        if (idx >= 0 && idx < (int)LODMeshes.size() && LODMeshes[idx])
+            return LODMeshes[idx];
+        return GeneratedMesh;
     }
 };
 

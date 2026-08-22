@@ -203,8 +203,12 @@ inline void ApplyLODJson(nlohmann::json::const_reference jlod, LODComponent& lod
 
     if (entity.HasComponent<TerrainComponent>()) {
         auto& t = entity.GetComponent<TerrainComponent>();
+        nlohmann::json jlod = nlohmann::json::array();
+        for (auto& lod : t.LODLevels)
+            jlod.push_back({ { "Segments", lod.Segments }, { "Distance", lod.Distance } });
         je["Terrain"] = { { "Segments", t.Segments }, { "Size", t.Size },
-                          { "HeightScale", t.HeightScale }, { "Seed", t.Seed } };
+                          { "HeightScale", t.HeightScale }, { "Seed", t.Seed },
+                          { "LODLevels", jlod }, { "LODDistanceMultiplier", t.LODDistanceMultiplier } };
     }
 
     if (entity.HasComponent<AnimationBlendComponent>()) {
@@ -478,6 +482,11 @@ inline Entity DeserializeEntityJson(const nlohmann::json& je, Scene& scene, uint
         t.Size = jt.value("Size", 100.0f);
         t.HeightScale = jt.value("HeightScale", 5.0f);
         t.Seed = jt.value("Seed", 1u);
+        t.LODDistanceMultiplier = jt.value("LODDistanceMultiplier", 1.0f);
+        t.LODLevels.clear();
+        if (jt.contains("LODLevels"))
+            for (auto& jlod : jt["LODLevels"])
+                t.LODLevels.push_back({ jlod.value("Segments", 16u), jlod.value("Distance", 50.0f) });
         t.Regenerate();
         if (entity.HasComponent<MeshRendererComponent>())
             entity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;
@@ -677,6 +686,11 @@ if (je.contains("SpriteAnimation")) {
         t.Size = jt.value("Size", 100.0f);
         t.HeightScale = jt.value("HeightScale", 5.0f);
         t.Seed = jt.value("Seed", 1u);
+        t.LODDistanceMultiplier = jt.value("LODDistanceMultiplier", 1.0f);
+        t.LODLevels.clear();
+        if (jt.contains("LODLevels"))
+            for (auto& jlod : jt["LODLevels"])
+                t.LODLevels.push_back({ jlod.value("Segments", 16u), jlod.value("Distance", 50.0f) });
         t.Regenerate();
         if (entity.HasComponent<MeshRendererComponent>())
             entity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;
@@ -1114,6 +1128,11 @@ if (je.contains("SpriteAnimation")) {
         t.Size = jt.value("Size", 100.0f);
         t.HeightScale = jt.value("HeightScale", 5.0f);
         t.Seed = jt.value("Seed", 1u);
+        t.LODDistanceMultiplier = jt.value("LODDistanceMultiplier", 1.0f);
+        t.LODLevels.clear();
+        if (jt.contains("LODLevels"))
+            for (auto& jlod : jt["LODLevels"])
+                t.LODLevels.push_back({ jlod.value("Segments", 16u), jlod.value("Distance", 50.0f) });
         t.Regenerate();
         if (entity.HasComponent<MeshRendererComponent>())
             entity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;

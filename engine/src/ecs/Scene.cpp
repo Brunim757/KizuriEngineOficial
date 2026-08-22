@@ -2731,7 +2731,10 @@ void Scene::RenderScene3D(PerspectiveCamera* overrideCamera) {
 
             if (auto* terr = m_Registry.try_get<TerrainComponent>(me); terr) {
                 if (!terr->GeneratedMesh) terr->Regenerate();
-                if (terr->GeneratedMesh) mesh = terr->GeneratedMesh;
+                if (terr->GeneratedMesh) {
+                    float dist = glm::distance(glm::vec3(world[3]), camPos);
+                    mesh = terr->GetLODMesh(dist);
+                }
             }
             Renderer3D::Submit(mesh, mr.MeshMaterial, world, mr.LightmapTexture);
         }

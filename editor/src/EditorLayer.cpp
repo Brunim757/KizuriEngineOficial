@@ -3920,6 +3920,51 @@ void EditorLayer::DrawInspector() {
                     if (m_SelectedEntity.HasComponent<MeshRendererComponent>())
                         m_SelectedEntity.GetComponent<MeshRendererComponent>().MeshAsset = t.GeneratedMesh;
                 }
+
+                ImGui::Separator();
+                if (ImGui::TreeNode("LOD por distância")) {
+                    ImGui::DragFloat("Multiplicador", &t.LODDistanceMultiplier, 0.1f, 0.1f, 10.0f);
+                    for (int i = 0; i < (int)t.LODLevels.size(); ++i) {
+                        ImGui::PushID(i);
+                        auto& lod = t.LODLevels[i];
+                        ImGui::Text("Nível %d:", i);
+                        ImGui::SameLine(80);
+                        ImGui::SetNextItemWidth(80);
+                        ImGui::DragInt("##seg", (int*)&lod.Segments, 1, 2, (int)t.Segments);
+                        ImGui::SameLine(170);
+                        ImGui::SetNextItemWidth(80);
+                        ImGui::DragFloat("##dist", &lod.Distance, 1.0f, 1.0f, 500.0f, "%.0f m");
+                        ImGui::SameLine(260);
+                        if (ImGui::Button("-")) {
+                            t.LODLevels.erase(t.LODLevels.begin() + i);
+                            t.LODMeshes.clear();
+                            t.Regenerate();
+                            i--;
+                            ImGui::PopID();
+                            continue;
+                        }
+                        ImGui::PopID();
+                    }
+                    if (ImGui::Button("+ Adicionar nível")) {
+                        uint32_t lastSeg = t.Segments / 2;
+                        float lastDist = 50.0f;
+                        if (!t.LODLevels.empty()) {
+                            lastSeg = glm::max(4u, t.LODLevels.back().Segments / 2);
+                            lastDist = t.LODLevels.back().Distance + 50.0f;
+                        }
+                        t.LODLevels.push_back({ lastSeg, lastDist });
+                        t.Regenerate();
+                    }
+                    if (ImGui::Button("Gerar LOD automático")) {
+                        t.LODLevels.clear();
+                        t.LODLevels.push_back({ t.Segments / 2, 60.0f });
+                        t.LODLevels.push_back({ t.Segments / 4, 120.0f });
+                        t.LODLevels.push_back({ glm::max(4u, t.Segments / 8), 200.0f });
+                        t.Regenerate();
+                    }
+                    ImGui::TreePop();
+                }
+
                 ImGui::TreePop();
             }
             if (removeThis) m_SelectedEntity.RemoveComponent<TerrainComponent>();

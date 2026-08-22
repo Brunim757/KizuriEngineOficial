@@ -1339,7 +1339,7 @@ void EditorLayer::CreateDemoDayNight() {
     lc.Type = kizuri::LightType::Directional;
     lc.Color = {1.0f, 0.98f, 0.92f};
     lc.Intensity = 2.0f;
-    lc.CastShadow = true;
+    lc.CastsShadow = true;
     sun.GetComponent<kizuri::TransformComponent>().Rotation = {glm::radians(50.0f), 0.0f, 0.0f};
     auto& dn = sun.AddComponent<kizuri::DayNightCycleComponent>();
     dn.TimeOfDay = 6.0f;
